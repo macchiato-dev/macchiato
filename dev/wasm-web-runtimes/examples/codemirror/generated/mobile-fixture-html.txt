@@ -1,0 +1,3139 @@
+
+<!-- dev/machines-pages/machine-runner/index.html -->
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Macchiato Machine Runner</title>
+<body>
+<main id="machine-runner"></main>
+<script type="module">
+  import { startMachineRunner } from "./machine-runner.js";
+  startMachineRunner(document.getElementById("machine-runner"));
+</script>
+</body>
+</html>
+
+<!-- dev/machines-pages/machines/index.html -->
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Macchiato Machines</title>
+<body>
+<main>
+  <h1>Macchiato Machines</h1>
+  <p>Documentation, conformance tests, and examples for small web machines.</p>
+  <p><a href="http://machines-dev.localhost:3030/">Open the local development playground</a></p>
+</main>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/prosemirror/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProseMirror in QuickJS</title>
+<link rel="stylesheet" href="./loading.css">
+<body data-example="prosemirror"><div class="runtime-status">Starting ProseMirror in QuickJS…</div>
+<script type="module" src="./host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/wordgard/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wordgard in QuickJS</title>
+<link rel="stylesheet" href="./loading.css">
+<body data-example="wordgard"><div class="runtime-status">Starting Wordgard in QuickJS…</div>
+<script type="module" src="./host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/xterm/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xterm.js in QuickJS</title>
+<style>
+  :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    background: #090d14; color: #d8e2f0; }
+  main { width: min(720px, 100%); }
+  h1 { margin: 0 0 8px; color: #69e6d3; font-size: clamp(34px, 7vw, 58px); }
+  p { margin: 0 0 28px; color: #9eb0c7; }
+  nav { display: grid; gap: 14px; }
+  a { display: block; padding: 20px; border: 1px solid #38536b; border-radius: 12px;
+    background: #121c29; color: inherit; text-decoration: none; }
+  a:hover { border-color: #69e6d3; background: #19283a; }
+  strong { display: block; margin-bottom: 5px; font-size: 19px; }
+  span { color: #9eb0c7; }
+</style>
+<main><h1>xterm.js in QuickJS</h1>
+  <p>Two terminal surfaces running inside QuickJS WebAssembly.</p>
+  <nav>
+    <a href="./terminal/"><strong>Interactive terminal</strong>
+      <span>Type and select text without a continuously repainting application.</span></a>
+    <a href="./pong/"><strong>Pong</strong>
+      <span>Exercise keyboard input, timers, ANSI rendering, and animation.</span></a>
+  </nav>
+</main>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/xterm/pong/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xterm.js Pong in QuickJS</title>
+<link rel="stylesheet" href="/loading.css">
+<body data-example="xterm"><div class="runtime-status">Starting xterm.js Pong in QuickJS…</div>
+<script type="module" src="/host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/xterm/terminal/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interactive xterm.js in QuickJS</title>
+<link rel="stylesheet" href="/loading.css">
+<body data-example="xterm-terminal"><div class="runtime-status">Starting xterm.js in QuickJS…</div>
+<script type="module" src="/host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/canonical/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMirror on wasm-web-container</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/direct/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direct CodeMirror comparison</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<script src="../generated/codemirror-full.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/fixtures/example.html -->
+<!doctype html>
+<meta charset="utf-8">
+<title>Small article</title>
+<article>
+  <h1>A small article</h1>
+  <p>A constrained document can still be useful and expressive.</p>
+  <p><a href="https://en.wikipedia.org/wiki/WebAssembly">Read about WebAssembly</a>.</p>
+</article>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/full/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full CodeMirror UI in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../generated/codemirror-canonical.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+    const machine = new WasmWebMachine(module, document, {
+      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+      services: {
+        route: { get: () => "/", listen() {} },
+        storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      },
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `QuickJS CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMirror in QuickJS</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+  body { max-width: 48rem; margin: 0 auto; padding: clamp(2rem, 8vw, 6rem) 1.5rem;
+    background: #282c34; color: #d7dae0; }
+  h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: -.04em; }
+  p { margin: 0 0 2.5rem; color: #abb2bf; line-height: 1.55; }
+  nav { display: grid; gap: .75rem; }
+  a { display: block; padding: 1rem 1.1rem; border: 1px solid #454b57;
+    border-radius: 8px; color: #e5c07b; text-decoration: none; background: #21252b; }
+  a:hover, a:focus-visible { border-color: #61afef; background: #252a31; outline: none; }
+  strong { display: block; margin-bottom: .2rem; font-size: 1rem; }
+  span { color: #abb2bf; font-size: .9rem; }
+</style>
+<h1>CodeMirror in QuickJS</h1>
+<p>Each demo runs CodeMirror inside Bellard QuickJS compiled to WebAssembly and
+projects its constrained DOM into this browser.</p>
+<nav aria-label="CodeMirror demos">
+  <a href="./microesnext/"><strong>MicroESNext</strong><span>The new Rust engine running through the shared WebAssembly entry ABI.</span></a>
+  <a href="./microquickjs/"><strong>MicroQuickJS</strong><span>The Babel-lowered build with focused ungap collection ponyfills.</span></a>
+  <a href="./canonical/"><strong>Canonical host workbench</strong><span>CodeMirror using the same wasm-web-container host as Cat Memory and Mahjong.</span></a>
+  <a href="./simple/"><strong>Simple editor</strong><span>Small document and a deliberately small CodeMirror configuration.</span></a>
+  <a href="./full/"><strong>Full UI</strong><span>Languages, search, folding, history, completion, gutters, and the One Dark theme.</span></a>
+  <a href="./large/"><strong>Large document</strong><span>A 500-line TypeScript stress case at the playground example ceiling.</span></a>
+  <a href="./multi/"><strong>Tabbed files</strong><span>Three independent editors with search and navigation across every file.</span></a>
+</nav>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/instrumented/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instrumented CodeMirror in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../instrumented-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/large/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Large CodeMirror Document in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor" data-wasm="./generated/codemirror-large.wasm"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microesnext/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple CodeMirror in MicroESNext</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const wasm = new URL(location.href).searchParams.get("wasm") ||
+      "../generated/codemirror-microesnext.wasm";
+    const response = await fetch(wasm);
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const machine = new WasmWebMachine(module, document, {
+      services: {
+        route: { get: () => "/", listen() {} },
+        storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      },
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroESNext CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microesnext/multi/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed CodeMirror in MicroESNext</title>
+<link rel="stylesheet" href="../../demo.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-multi-microesnext.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const machine = new WasmWebMachine(module, document);
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroESNext multi-file CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/benchmark/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuickJS runtime benchmark</title>
+<link rel="stylesheet" href="../benchmark.css">
+<main>
+  <p class="eyebrow">Same CodeMirror workload</p>
+  <h1>Three CodeMirror runtimes</h1>
+  <p class="lede">A warmed comparison using all six runtime orders with the
+    same full editor, source text, viewport, browser process, and key-by-key trace.</p>
+  <div id="results" aria-live="polite">Loading the latest result…</div>
+  <nav>
+    <a href="../full/">Run the MicroQuickJS editor</a>
+    <a href="/quickjs/full/">Run the QuickJS editor</a>
+    <a href="http://codemirror-comparison.localhost:3030/">View side-by-side recordings</a>
+  </nav>
+</main>
+<script type="module" src="../benchmark.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/full/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full CodeMirror UI in MicroQuickJS</title>
+<link rel="stylesheet" href="../../demo.css">
+<main>
+  <div id="editor"></div>
+  <div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+</main>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-microquickjs.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+    const machine = new WasmWebMachine(module, document, {
+      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+      services: {
+        route: { get: () => "/", listen() {} },
+        storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      },
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroQuickJS CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMirror in MicroQuickJS</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+  body { max-width: 48rem; margin: 0 auto; padding: clamp(2rem, 8vw, 6rem) 1.5rem;
+    background: #282c34; color: #d7dae0; }
+  h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: -.04em; }
+  p { color: #abb2bf; line-height: 1.55; }
+  nav { display: grid; gap: .75rem; margin-top: 2rem; }
+  a { display: block; padding: 1rem 1.1rem; border: 1px solid #454b57;
+    border-radius: 8px; color: #e5c07b; text-decoration: none; background: #21252b; }
+  a:hover, a:focus-visible { border-color: #61afef; background: #252a31; outline: none; }
+  strong { display: block; margin-bottom: .2rem; }
+  span { color: #abb2bf; font-size: .9rem; }
+</style>
+<h1>CodeMirror in MicroQuickJS</h1>
+<p>The CodeMirror application is transpiled with Babel, compiled to
+  MicroQuickJS bytecode, and executed in WebAssembly. Native C collections
+  provide the missing modern collection semantics.</p>
+<nav aria-label="MicroQuickJS demos and measurements">
+  <a href="./full/"><strong>Full UI</strong><span>Languages, search, folding, history, completion, gutters, and One Dark.</span></a>
+  <a href="./multi/"><strong>Tabbed files</strong><span>Three independent editors with search and navigation across every file.</span></a>
+  <a href="./benchmark/"><strong>Runtime benchmark</strong><span>The same warmed CodeMirror workload in QuickJS and MicroQuickJS.</span></a>
+  <a href="http://codemirror-comparison.localhost:3030/"><strong>Side-by-side recordings</strong><span>Interaction recordings in the shared CodeMirror comparison archive.</span></a>
+</nav>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/multi/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed CodeMirror in MicroQuickJS</title>
+<link rel="stylesheet" href="../../demo.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-multi-microquickjs.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+    const machine = new WasmWebMachine(module, document, {
+      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/multi/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed CodeMirror in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../generated/codemirror-multi.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const machine = new WasmWebMachine(module, document);
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `QuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/simple/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple CodeMirror in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor" data-wasm="./generated/codemirror-simple.wasm"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/test/pages/direct/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blank direct CodeMirror comparison</title>
+<link rel="stylesheet" href="../../../demo.css">
+<div id="editor" data-initial="blank"></div>
+<script src="../../../generated/codemirror-full.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/test/pages/wasm/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blank QuickJS/Wasm CodeMirror comparison</title>
+<link rel="stylesheet" href="../../../demo.css">
+<div id="editor" data-initial="blank"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../../../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/cat-memory/index.html -->
+<!doctype html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+<!-- The guest may retain meaningful source comments as DOM nodes. -->
+<svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+<path d="M20 48 L30 18 L44 40 Z" fill="#f0a93a">
+</path>
+<path d="M80 48 L70 18 L56 40 Z" fill="#f0a93a">
+</path>
+<ellipse cx="50" cy="58" rx="34" ry="28" fill="#f0a93a">
+</ellipse>
+<circle cx="38" cy="54" r="5" fill="#1b1533">
+</circle>
+<circle cx="62" cy="54" r="5" fill="#1b1533">
+</circle>
+<path d="M46 64 Q50 68 54 64 Q50 70 46 64 Z" fill="#ea7154">
+</path>
+</svg>
+<h1>
+Cat Memory Match
+</h1>
+<p class="tagline">
+Sixteen cards, eight cats. Find every pair.
+</p>
+<div class="statline">
+<div class="stat">
+<span class="stat-label">
+Moves
+</span>
+<span class="stat-value" id="moves">
+0
+</span>
+</div>
+<div class="stat">
+<span class="stat-label">
+Pairs
+</span>
+<span class="stat-value" id="matches">
+0/8
+</span>
+</div>
+</div>
+<div class="table">
+<div id="board" role="grid" aria-label="Memory game board">
+</div>
+</div>
+<div class="controls">
+<button id="reset" type="button">
+New game
+</button>
+<div id="win" role="status" aria-label="Game result">
+</div>
+</div>
+</main>
+<script src="cat-memory.js">
+</script>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/index.html -->
+<!doctype html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+</main>
+<script src="mahjong.js">
+</script>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>wasm-web-machine examples</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #17142c; color: #f2edf9; }
+    main { width: min(34rem, calc(100% - 2rem)); }
+    h1 { margin: 0 0 1.25rem; font-size: clamp(1.7rem, 6vw, 2.5rem); }
+    nav { display: grid; gap: .65rem; }
+    a { padding: 1rem 1.1rem; border: 1px solid #514a72; border-radius: .75rem;
+      background: #211d3a; color: inherit; text-decoration: none; }
+    a:hover, a:focus-visible { border-color: #b7a6e5; background: #292347; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>wasm-web-machine examples</h1>
+    <nav aria-label="Examples">
+      <a href="./cat-memory/">Cat Memory — WebAssembly</a>
+      <a href="./plain-web/cat-memory/">Cat Memory — plain web page</a>
+      <a href="./mahjong/">Mahjong — WebAssembly</a>
+      <a href="./plain-web/mahjong/">Mahjong — plain web page</a>
+    </nav>
+  </main>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/mahjong-example.html -->
+<!doctype html>
+<meta charset="utf-8">
+<body>
+<noscript>This application requires JavaScript and WebAssembly.</noscript>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const encoder = new TextEncoder();
+  const prefix = `-wwc--${location.pathname.replace(/\W+/g, "-")
+    .replace(/^-|-$/g, "") || "root"}--`;
+  const area = (kind) => kind === "local" ? [localStorage, 8192] :
+    kind === "session" ? [sessionStorage, 128 * 1024] : null;
+  const key = (name) => prefix + name;
+  const size = (storage, replacementKey, replacementValue) => {
+    let bytes = 0;
+    for (let index = 0; index < storage.length; index++) {
+      const found = storage.key(index);
+      if (!found?.startsWith(prefix) || found === replacementKey) continue;
+      bytes += encoder.encode(found).length +
+        encoder.encode(storage.getItem(found) || "").length;
+    }
+    return bytes + encoder.encode(replacementKey).length +
+      encoder.encode(replacementValue).length;
+  };
+  const storage = {
+    get(kind, name) { return area(kind)?.[0].getItem(key(name)) ?? null; },
+    set(kind, name, value) {
+      const selected = area(kind);
+      if (!selected) throw new Error("Unknown storage area");
+      const [storageArea, limit] = selected;
+      const storageKey = key(name);
+      if (size(storageArea, storageKey, value) > limit) {
+        throw new Error(`${kind} storage quota exceeded`);
+      }
+      storageArea.setItem(storageKey, value);
+    },
+    delete(kind, name) { area(kind)?.[0].removeItem(key(name)); },
+    listen(kind, name, callback) {
+      const storageKey = key(name);
+      addEventListener("storage", (event) => {
+        if (kind === "local" && event.storageArea === localStorage &&
+            event.key === storageKey) callback();
+      });
+    },
+  };
+  const allowFont = [
+    "a0d054c4af557de20afd6ca59f47ab353bcaec49c63ff04b6c9d39d0f8910557",
+    "22219fb90e3b9bd28debd1825fe8d9a0154a0e31f8b3fa601ac1a0a5aa5e6d1b",
+    "d80df8ff5aecd299a61549f9e29ab1ed0b9b05f4ea71d50fe978e07d5240b235",
+  ];
+  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
+  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    allowFont,
+    services: { storage },
+    stamp: new Uint8Array(stamp),
+  });
+  await machine.onmsg(0);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/wasm-example.html -->
+<!doctype html>
+<meta charset="utf-8">
+<body>
+<noscript>This application requires JavaScript and WebAssembly.</noscript>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
+  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: new Uint8Array(stamp),
+  });
+  await machine.onmsg(0);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/sqlite-book/index.html -->
+<!doctype html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>
+SQLite Documentation Reader
+</p>
+</header>
+<main id="book">
+</main>
+<footer>
+<p>
+An offline reading edition built from the public-domain SQLite documentation.
+</p>
+</footer>
+<script src="sqlite-book.js">
+</script>
+</body>
+</html>
+
+<!-- examples/dom-use-demo/page.html -->
+<main class="page">
+  <h1>Neighborhood Library</h1>
+  <p>A quiet place for reading, research, community classes, and after-school study.</p>
+  <h2>Hours</h2>
+  <ul class="service-list">
+    <li><strong>Monday-Friday:</strong> 9:00 AM to 7:00 PM</li>
+    <li><strong>Saturday:</strong> 10:00 AM to 5:00 PM</li>
+    <li><strong>Sunday:</strong> 12:00 PM to 4:00 PM</li>
+  </ul>
+  <h2>Services</h2>
+  <ul class="service-list">
+    <li><strong>Computers:</strong> public workstations and printing</li>
+    <li><strong>Events:</strong> story time, workshops, and book groups</li>
+    <li><strong>Help desk:</strong> research support and account questions</li>
+  </ul>
+</main>
+
+<!-- examples/focused-app/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Macchiato Focused Apps</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"@macchiato-dev/quickjs-emscripten-sandbox":"./-/quickjs-emscripten-sandbox/index.js","@jitl/quickjs-ffi-types":"./-/quickjs-emscripten-sandbox/ffi-types.js","@jitl/quickjs-singlefile-browser-release-sync":"./-/quickjs-emscripten-sandbox/singlefile-browser-release-sync.js","quickjs-emscripten-core":"./-/quickjs-emscripten-sandbox/quickjs-core.js","@macchiato-dev/browser-use/quickjs-dom-guest":"./browser-use-quickjs-dom-guest.js"}}</script>
+</head>
+<body>
+  <div class="app" data-sidebar="visible">
+    <aside class="sidebar" data-tab="documents" aria-label="Collections and documents">
+      <div class="sidebar-tabs" role="tablist" aria-label="Sidebar view">
+        <button id="documents-tab" role="tab" aria-selected="true" aria-controls="documents">Documents</button>
+        <button id="info-tab" role="tab" aria-selected="false" aria-controls="document-info">Info</button>
+        <button id="activity-tab" role="tab" aria-selected="false" aria-controls="activity">Activity</button>
+      </div>
+      <header class="collection-header">
+        <div class="collection-picker">
+          <button id="collection-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"></button>
+          <div id="collection-menu" class="collection-menu" hidden>
+            <div class="collection-menu-header">
+              <strong>Collections</strong>
+              <button id="new-collection" class="icon-button" aria-label="New collection" title="New collection"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5h7l2 2h9v10H3zM12 11v5m-2.5-2.5h5"/></svg></button>
+            </div>
+            <div id="collection-options" role="listbox"></div>
+          </div>
+        </div>
+      </header>
+      <div class="collection-actions">
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 5 5"/></svg><input id="search" type="text" role="searchbox" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Search collection"></label>
+        <button id="filter" class="icon-button" aria-label="Filter documents: all" title="Filter"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg></button>
+        <button id="new-document" class="icon-button" aria-label="Add document" title="Add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <ul id="documents" class="documents"></ul>
+      <section id="document-info" class="document-info" role="tabpanel" aria-labelledby="info-tab" hidden>
+        <p class="document-info__eyebrow">Current document</p>
+        <h2 id="info-title">No document selected</h2>
+        <dl>
+          <div><dt>Collection</dt><dd id="info-collection">—</dd></div>
+          <div><dt>Storage</dt><dd id="info-storage">—</dd></div>
+          <div><dt>Size</dt><dd id="info-size">—</dd></div>
+          <div><dt>Updated</dt><dd id="info-updated">—</dd></div>
+        </dl>
+        <details><summary>Sandbox configuration</summary><pre id="info-sandbox"></pre></details>
+        <button id="download-document" class="info-download" disabled>Download</button>
+      </section>
+      <section id="activity" class="activity" role="tabpanel" aria-labelledby="activity-tab" hidden>
+        <p class="activity__eyebrow">Workspace activity</p>
+        <ol id="activity-list" class="activity-list"></ol>
+      </section>
+      <footer class="sidebar-footer">
+        <button id="profile" class="profile" aria-label="Profile and hosting"><span class="avatar">M</span><span><strong>Local workspace</strong><small>Self-hosted</small></span></button>
+        <button id="settings" class="icon-button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg></button>
+        <button id="open-command-palette" class="icon-button" aria-label="Command palette" title="Command palette (⌘K)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7 10 2 2-2 2m5 0h5"/></svg></button>
+      </footer>
+    </aside>
+    <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
+    <div id="sidebar-control" class="sidebar-control" data-side="left">
+      <button id="toggle-sidebar" class="sidebar-control__primary" aria-label="Hide sidebar">
+        <svg class="sidebar-control__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>
+        <svg class="sidebar-control__layout" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+      </button>
+      <button id="sidebar-control-more" class="sidebar-control__more" aria-label="Sidebar actions">•••</button>
+      <button id="sidebar-control-drag" class="sidebar-control__drag" aria-label="Move sidebar control"><svg viewBox="0 0 16 24" aria-hidden="true"><path d="M5 5h.01M11 5h.01M5 12h.01M11 12h.01M5 19h.01M11 19h.01"/></svg></button>
+      <div id="sidebar-control-menu" class="sidebar-control-menu" role="menu" hidden>
+        <button id="sidebar-menu-visibility" role="menuitem">Hide</button>
+        <button id="sidebar-menu-side" role="menuitem">Move to Right</button>
+      </div>
+    </div>
+    <main class="main">
+      <section id="empty" class="empty"><div class="empty-icon"></div><h1>Choose or create an app</h1><p>Documents run with their own inspectable sandbox configuration.</p></section>
+      <article id="workspace" class="workspace" hidden>
+        <header class="document-header">
+          <div><p class="eyebrow">Declarative app preview</p><h1 id="document-title"></h1><p id="document-summary"></p><p id="app-detection" class="app-detection"></p><div id="app-packages" class="app-packages"></div></div>
+          <details class="sandbox-details"><summary>Sandbox</summary><pre id="sandbox"></pre></details>
+        </header>
+        <iframe id="app-preview" title="Declarative app preview" sandbox="allow-same-origin"></iframe>
+      </article>
+      <output id="status" class="status" aria-live="polite"></output>
+    </main>
+  </div>
+  <input id="file" type="file" accept=".html,.htm,.css,.js,.mjs,text/html,text/css,text/javascript,application/javascript" hidden>
+  <div class="drop-overlay">Drop a file to create an app</div>
+  <dialog id="collection-dialog"><form id="collection-form"><h2>New collection</h2><label>Name<input name="name" required maxlength="80"></label><label>Storage<select name="storage"><option value="session">Session Storage</option><option value="local">Local Storage</option><option value="memory">Memory</option></select></label><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Create collection</button></div></form></dialog>
+  <dialog id="import-dialog"><form><h2>Import as an app</h2><label>Name<input name="name" required></label><label>Collection<select id="import-collection" name="collection"></select></label><textarea name="content" hidden></textarea><p>Files over 1 MB default to Memory so browser storage is not unexpectedly exhausted.</p><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Import</button></div></form></dialog>
+  <div id="document-actions" class="document-actions-popover" role="menu" hidden><button id="document-hide-sidebar" role="menuitem">Hide</button></div>
+  <dialog id="command-palette" class="command-palette" data-command-dialog aria-label="Search commands">
+    <div class="command-palette__surface">
+      <div class="command-palette__search">
+        <svg class="command-palette__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input type="text" role="searchbox" autocomplete="off" data-command-input aria-label="Search commands" placeholder="Search commands…">
+        <kbd>Esc</kbd>
+      </div>
+      <div class="command-palette__list" data-command-list>
+        <button id="command-show-sidebar" class="command-palette__item" data-command-label="show sidebar"><span>Show Sidebar</span><kbd>Enter</kbd></button>
+      </div>
+    </div>
+  </dialog>
+  <script type="module" src="./client.js"></script>
+</body>
+</html>
+
+<!-- examples/mahjong/index.html -->
+<!doctype html>
+<html>
+<head>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main id="app"></main>
+  <script src="./game-model.js"></script>
+  <script src="./application.js"></script>
+</body>
+</html>
+
+<!-- examples/resources-website/index.html -->
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resources.co</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="layout">
+
+    <!-- BRAND + HEADER PATH -->
+    <header class="box brand" data-screen-label="brand">
+      <nav class="brand__path" id="brand-path" aria-label="Path">
+        <a class="brand__home" href="/" aria-label="Resources.co home">Resources<span class="dot">.co</span></a>
+      </nav>
+    </header>
+
+    <!-- USERBAR -->
+    <section class="box userbar" data-screen-label="userbar">
+      <div class="ub-pop">
+        <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span class="ub-dot"></span>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <div class="menu__head">Notifications</div>
+          <div class="menu__empty">You're all caught up.</div>
+        </div>
+      </div>
+      <div class="ub-pop">
+        <button class="ub-icon" aria-label="Create new" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>New project</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>New organization</button>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><line x1="12" y1="15" x2="12" y2="3"></line></svg>Import resource</button>
+        </div>
+      </div>
+      <div class="ub-pop">
+        <button class="ub-acct" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
+          <span class="ub-avatar">MD</span>
+          <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <div class="menu__acct">
+            <span class="ub-avatar">MD</span>
+            <div class="menu__acct-meta"><span class="menu__acct-name">macchiato-dev</span><span>Signed in</span></div>
+          </div>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5"></path><path d="m2 12 10 5 10-5"></path></svg>Your projects</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Your profile</button>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>Settings</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Help &amp; docs</button>
+          <div class="menu__sep"></div>
+          <div class="menu__head">Appearance</div>
+          <div class="seg" role="group" aria-label="Appearance">
+            <button class="seg__btn" aria-pressed="true">Dark</button>
+            <button class="seg__btn" aria-pressed="false">Light</button>
+            <button class="seg__btn" aria-pressed="false">System</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN CONTENT -->
+    <div class="main" id="main">
+      <div id="content" class="content-root"><section class="box block"><div class="block__eyebrow">Self-hosted building blocks</div><h1>Infrastructure you own, composed from parts.</h1><p>Resources.co is a startup building self-hostable primitives for the web — containers, components, and usage providers you run on your own stack, wired together however you like.</p><p>Pick a section from the panel on the right to start, or browse the full catalogue.</p></section><section class="box block"><h2>Featured collections</h2><div class="items"><a href="#resources/containers"><span class="it-name">resources/containers</span><span class="it-desc">Self-hostable runtimes for everything you ship.</span></a><a href="#macchiato/components"><span class="it-name">macchiato/components</span><span class="it-desc">Composable UI and service building blocks.</span></a><a href="#resources/usage-providers"><span class="it-name">resources/usage-providers</span><span class="it-desc">DOM, Style, and Navigator state — shared cleanly.</span></a><a href="#halcyon/design-tokens"><span class="it-name">halcyon/design-tokens</span><span class="it-desc">A living spec for color, type, and spacing.</span></a><a href="#northwind/adapters"><span class="it-name">northwind/adapters</span><span class="it-desc">Uniform interfaces to external services and data.</span></a></div></section></div>
+    </div>
+
+    <!-- NAV -->
+    <nav class="box nav" data-screen-label="nav" aria-label="Primary">
+      <a data-section="home" aria-current="page"><span>Home</span></a>
+      <a data-section="explore"><span>Explore</span></a>
+      <a data-section="about"><span>About</span></a>
+      <a data-section="blog"><span>Blog</span></a>
+      <div class="nav__sep"></div>
+      <div class="nav__label">Trending</div>
+      <a class="nav__sub" data-section="macchiato/components"><span>components</span></a>
+      <a class="nav__sub" data-section="resources/containers"><span>containers</span></a>
+      <a class="nav__sub" data-section="halcyon/design-tokens"><span>design tokens</span></a>
+    </nav>
+
+    <!-- FOOTER -->
+    <footer class="box footer" data-screen-label="footer">
+      <div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div>
+    </footer>
+
+  </main>
+</body>
+</html>
+
+<!-- examples/resources-website/page.html -->
+<main class="layout">
+
+    <!-- BRAND + HEADER PATH -->
+    <header class="box brand" data-screen-label="brand">
+      <nav class="brand__path" id="brand-path" aria-label="Path">
+        <a class="brand__home" href="/" aria-label="Resources.co home">Resources<span class="dot">.co</span></a>
+      </nav>
+    </header>
+
+    <!-- USERBAR -->
+    <section class="box userbar" data-screen-label="userbar">
+      <div class="ub-pop">
+        <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+          <span class="ub-dot"></span>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <div class="menu__head">Notifications</div>
+          <div class="menu__empty">You're all caught up.</div>
+        </div>
+      </div>
+      <div class="ub-pop">
+        <button class="ub-icon" aria-label="Create new" aria-haspopup="true" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>New project</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>New organization</button>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><line x1="12" y1="15" x2="12" y2="3"></line></svg>Import resource</button>
+        </div>
+      </div>
+      <div class="ub-pop">
+        <button class="ub-acct" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
+          <span class="ub-avatar">MD</span>
+          <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+        <div class="popover user-menu" role="menu">
+          <div class="menu__acct">
+            <span class="ub-avatar">MD</span>
+            <div class="menu__acct-meta"><span class="menu__acct-name">macchiato-dev</span><span>Signed in</span></div>
+          </div>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5"></path><path d="m2 12 10 5 10-5"></path></svg>Your projects</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Your profile</button>
+          <div class="menu__sep"></div>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>Settings</button>
+          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Help &amp; docs</button>
+          <div class="menu__sep"></div>
+          <div class="menu__head">Appearance</div>
+          <div class="seg" role="group" aria-label="Appearance">
+            <button class="seg__btn" aria-pressed="true">Dark</button>
+            <button class="seg__btn" aria-pressed="false">Light</button>
+            <button class="seg__btn" aria-pressed="false">System</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAIN CONTENT -->
+    <div class="main" id="main">
+      <div id="content" class="content-root"><section class="box block"><div class="block__eyebrow">Self-hosted building blocks</div><h1>Infrastructure you own, composed from parts.</h1><p>Resources.co is a startup building self-hostable primitives for the web — containers, components, and usage providers you run on your own stack, wired together however you like.</p><p>Pick a section from the panel on the right to start, or browse the full catalogue.</p></section><section class="box block"><h2>Featured collections</h2><div class="items"><a href="#resources/containers"><span class="it-name">resources/containers</span><span class="it-desc">Self-hostable runtimes for everything you ship.</span></a><a href="#macchiato/components"><span class="it-name">macchiato/components</span><span class="it-desc">Composable UI and service building blocks.</span></a><a href="#resources/usage-providers"><span class="it-name">resources/usage-providers</span><span class="it-desc">DOM, Style, and Navigator state — shared cleanly.</span></a><a href="#halcyon/design-tokens"><span class="it-name">halcyon/design-tokens</span><span class="it-desc">A living spec for color, type, and spacing.</span></a><a href="#northwind/adapters"><span class="it-name">northwind/adapters</span><span class="it-desc">Uniform interfaces to external services and data.</span></a></div></section></div>
+    </div>
+
+    <!-- NAV -->
+    <nav class="box nav" data-screen-label="nav" aria-label="Primary">
+      <a data-section="home" aria-current="page"><span>Home</span></a>
+      <a data-section="explore"><span>Explore</span></a>
+      <a data-section="about"><span>About</span></a>
+      <a data-section="blog"><span>Blog</span></a>
+      <div class="nav__sep"></div>
+      <div class="nav__label">Trending</div>
+      <a class="nav__sub" data-section="macchiato/components"><span>components</span></a>
+      <a class="nav__sub" data-section="resources/containers"><span>containers</span></a>
+      <a class="nav__sub" data-section="halcyon/design-tokens"><span>design tokens</span></a>
+    </nav>
+
+    <!-- FOOTER -->
+    <footer class="box footer" data-screen-label="footer">
+      <div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div>
+    </footer>
+
+  </main>
+
+<!-- examples/todo-matrix/source.html -->
+<div id="app"></div>
+<script type="module">
+const STORAGE_KEY = "todo-matrix-state";
+const SAMPLE = [
+  ["Task", "Design", "Build", "Review", "Ship"],
+  ["Header", "", "", "", ""],
+  ["Schemas", "", "", "", ""],
+  ["Playwright", "", "", "", ""],
+  ["Commit", "", "", "", ""],
+].map((row) => row.join("\t")).join("\n");
+
+let model = load();
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function splitLine(line, delimiter) {
+  return line.split(delimiter).map((cell) => cell.trim());
+}
+
+function parseMatrix(text) {
+  const lines = String(text || SAMPLE).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const delimiter = lines.some((line) => line.includes("\t")) ? "\t" : ",";
+  const rows = lines.map((line) => splitLine(line, delimiter));
+  const width = Math.max(2, ...rows.map((row) => row.length));
+  while (rows.length < 2) rows.push([]);
+  rows.forEach((row) => { while (row.length < width) row.push(""); });
+  const columns = rows[0].slice(1).map((value, index) => value || `Column ${index + 1}`);
+  const rowHeaders = rows.slice(1).map((row, index) => row[0] || `Row ${index + 1}`);
+  const cells = rowHeaders.map((_, rowIndex) => columns.map((__, columnIndex) => {
+    const value = rows[rowIndex + 1][columnIndex + 1].toLowerCase();
+    if (value === "x" || value === "1" || value === "yes" || value === "done" || value === "complete") return "done";
+    if (value === "/" || value === "wip" || value === "doing" || value === "construction" || value === "under construction") return "doing";
+    return "open";
+  }));
+  return { columns, rowHeaders, cells };
+}
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (saved && saved.columns && saved.rowHeaders && saved.cells) return saved;
+  } catch (_err) {}
+  return null;
+}
+
+function save() {
+  if (model) localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
+}
+
+function normalizeState(value) {
+  if (value === true || value === "done") return "done";
+  if (value === "doing") return "doing";
+  return "open";
+}
+
+function nextState(value) {
+  const state = normalizeState(value);
+  if (state === "open") return "doing";
+  if (state === "doing") return "done";
+  return "open";
+}
+
+function stateLabel(value) {
+  const state = normalizeState(value);
+  if (state === "done") return "complete";
+  if (state === "doing") return "under construction";
+  return "open";
+}
+
+function label(row, column, state) {
+  return `${row} / ${column}: ${stateLabel(state)}`;
+}
+
+function renderEntry(root) {
+  const shell = el("main", "matrix-app");
+  const entry = el("section", "matrix-entry");
+  entry.setAttribute("data-view", "entry");
+
+  const copy = el("div", "entry-copy");
+  copy.appendChild(el("p", "eyebrow", "Todo Matrix"));
+  copy.appendChild(el("h1", "", "Paste a grid"));
+  copy.appendChild(el("p", "", "Use tabs, or commas when the cells themselves do not contain commas. The first row and first column become headers."));
+
+  const panel = el("div", "entry-panel");
+  const textarea = el("textarea", "matrix-source");
+  textarea.id = "matrix-source";
+  textarea.setAttribute("placeholder", "Task\tDesign\tBuild\tShip\nHeader\t\t\t\nDocs\t\t\t");
+  textarea.value = SAMPLE;
+  const go = el("button", "go-button", "Go");
+  go.id = "go-button";
+  go.setAttribute("type", "button");
+  go.addEventListener("click", () => {
+    model = parseMatrix(go.value);
+    save();
+    render();
+  });
+  panel.appendChild(textarea);
+  panel.appendChild(go);
+
+  entry.appendChild(copy);
+  entry.appendChild(panel);
+  shell.appendChild(entry);
+  root.appendChild(shell);
+}
+
+function renderBoard(root) {
+  const shell = el("main", "matrix-app");
+  const board = el("section", "matrix-board");
+  board.setAttribute("data-view", "board");
+  const head = el("div", "board-head");
+  const restart = el("button", "restart-button");
+  restart.id = "restart-button";
+  restart.setAttribute("type", "button");
+  restart.setAttribute("aria-label", "Start over");
+  restart.setAttribute("title", "Start over");
+  const restartIcon = el("span", "restart-icon");
+  restartIcon.setAttribute("aria-hidden", "true");
+  restartIcon.appendChild(el("span", "restart-page"));
+  restartIcon.appendChild(el("span", "restart-plus"));
+  const restartTip = el("span", "restart-tip", "Start over");
+  restart.appendChild(restartIcon);
+  restart.appendChild(restartTip);
+  restart.addEventListener("click", () => {
+    localStorage.removeItem(STORAGE_KEY);
+    model = null;
+    render();
+  });
+  head.appendChild(restart);
+
+  const wrap = el("div", "matrix-wrap");
+  const grid = el("div", "task-grid");
+  grid.setAttribute("aria-label", "Todo matrix");
+  const headRow = el("div", "matrix-row matrix-head-row");
+  headRow.appendChild(el("div", "matrix-heading matrix-corner"));
+  model.columns.forEach((column) => {
+    const heading = el("div", "matrix-heading matrix-column-heading");
+    heading.appendChild(el("span", "column-label", column));
+    headRow.appendChild(heading);
+  });
+  grid.appendChild(headRow);
+
+  model.rowHeaders.forEach((rowHeader, rowIndex) => {
+    const row = el("div", "matrix-row");
+    const rowHeading = el("div", "matrix-heading matrix-row-heading");
+    rowHeading.appendChild(el("span", "row-label", rowHeader));
+    row.appendChild(rowHeading);
+    model.columns.forEach((column, columnIndex) => {
+      const state = normalizeState(model.cells[rowIndex][columnIndex]);
+      const button = el("button", "cell-toggle");
+      button.setAttribute("type", "button");
+      button.setAttribute("data-state", state);
+      button.setAttribute("aria-pressed", state === "open" ? "false" : "true");
+      button.setAttribute("aria-label", label(rowHeader, column, state));
+      button.addEventListener("click", () => {
+        model.cells[rowIndex][columnIndex] = nextState(model.cells[rowIndex][columnIndex]);
+        save();
+        render();
+      });
+      row.appendChild(button);
+    });
+    grid.appendChild(row);
+  });
+  wrap.appendChild(grid);
+  board.appendChild(head);
+  board.appendChild(wrap);
+  shell.appendChild(board);
+  root.appendChild(shell);
+}
+
+function render() {
+  const root = document.getElementById("app");
+  root.innerHTML = "";
+  if (model) renderBoard(root);
+  else renderEntry(root);
+}
+
+render();
+</script>
+
+<!-- examples/todo/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Todo — Guest DOM Prototype</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #4a306d;
+    margin: 0;
+    padding: 2rem 1rem;
+    color: #e0e0e0;
+  }
+  .todoapp {
+    max-width: 550px;
+    margin: 0 auto;
+    background: #1e1e24;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 25px 50px rgba(0,0,0,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  h1 {
+    text-align: center;
+    font-size: 4rem;
+    font-weight: 200;
+    color: rgba(255, 255, 255, 0.06);
+    margin: 0.5rem 0;
+    letter-spacing: -2px;
+  }
+  .header {
+    border-bottom: 1px solid #333340;
+  }
+  .input-wrap {
+    position: relative;
+  }
+  .new-todo {
+    width: 100%;
+    padding: 16px 70px 16px 16px;
+    font-size: 24px;
+    font-weight: 300;
+    border: none;
+    outline: none;
+    background: #1e1e24;
+    box-shadow: inset 0 -2px 1px rgba(0,0,0,0.2);
+    color: #e0e0e0;
+  }
+  .new-todo::placeholder {
+    font-style: italic;
+    font-weight: 300;
+    color: #3d3d4a;
+  }
+  .add-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #7c5cc7;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 14px;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, background 0.2s;
+  }
+  .add-btn:hover {
+    background: #8d6dd8;
+  }
+  .new-todo:not(:placeholder-shown) + .add-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .todo-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .todo-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    border-bottom: 1px solid #333340;
+    font-size: 24px;
+    font-weight: 300;
+    transition: background 0.2s;
+    background: #1e1e24;
+  }
+  .todo-item:hover {
+    background: #2a2a38;
+  }
+  .todo-item.dragging {
+    opacity: 0.5;
+    background: #2a2a38;
+  }
+  .todo-item.over {
+    border-top: 2px solid #9b7ed8;
+  }
+  .drag-handle {
+    width: 40px;
+    height: 100%;
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #4a4a5a;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+    flex-shrink: 0;
+  }
+  .todo-item:hover .drag-handle {
+    opacity: 1;
+  }
+  .drag-handle:hover {
+    color: #777788;
+  }
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+  .todo-item .toggle {
+    width: 40px;
+    height: 40px;
+    margin: 0 6px 0 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    appearance: none;
+    border: 1px solid #4a4a5a;
+    border-radius: 50%;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+  .todo-item .toggle:checked {
+    border-color: #5a7a5a;
+  }
+  .todo-item .toggle:checked::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 10px;
+    height: 18px;
+    border: solid #5a7a5a;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, -60%) rotate(45deg);
+  }
+  .todo-item label {
+    flex: 1;
+    padding: 15px 15px 15px 5px;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+    cursor: text;
+    transition: color 0.2s;
+    color: #e0e0e0;
+  }
+  .todo-item.completed label {
+    text-decoration: line-through;
+    color: #5d5d70;
+  }
+  .todo-item .edit {
+    display: none;
+    flex: 1;
+    padding: 14px 15px 14px 5px;
+    field-sizing: content;
+    min-height: 58px;
+    max-height: 12rem;
+    font-size: 24px;
+    font-family: inherit;
+    font-weight: 300;
+    line-height: 1.35;
+    border: 1px solid #4a4a5a;
+    box-shadow: inset 0 -1px 5px rgba(0,0,0,0.3);
+    outline: none;
+    color: #e0e0e0;
+    background: #1e1e24;
+    margin: 0;
+    overflow: auto;
+    resize: vertical;
+  }
+  .todo-item.editing .edit {
+    display: block;
+  }
+  .todo-item.editing label {
+    display: none;
+  }
+  .todo-item .destroy {
+    width: 40px;
+    height: 40px;
+    font-size: 30px;
+    color: #888899;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s, color 0.2s;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .todo-item:hover .destroy {
+    opacity: 1;
+  }
+  .destroy:hover {
+    color: #e57373;
+  }
+  .footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 15px;
+    border-top: 1px solid #333340;
+    color: #888899;
+    font-size: 14px;
+  }
+  .todo-count strong {
+    font-weight: 600;
+    color: #e0e0e0;
+  }
+  .filters {
+    display: flex;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .filters a {
+    color: inherit;
+    text-decoration: none;
+    padding: 3px 7px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    transition: border-color 0.2s;
+    cursor: pointer;
+    user-select: none;
+  }
+  .filters a:hover {
+    border-color: rgba(155, 126, 216, 0.2);
+  }
+  .filters a.selected {
+    border-color: rgba(155, 126, 216, 0.4);
+  }
+  .clear-completed {
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    transition: color 0.2s, text-decoration 0.2s;
+  }
+  .clear-completed:hover {
+    text-decoration: underline;
+  }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script type="module">
+// ===================== GUEST DOM SIMULATION =====================
+class GuestNode {
+  constructor() {
+    this.parentNode = null;
+    /** @type {GuestNode[]} */
+    this.children = [];
+  }
+  appendChild(child) {
+    if (child.parentNode) child.parentNode.removeChild(child);
+    child.parentNode = this;
+    this.children.push(child);
+    return child;
+  }
+  removeChild(child) {
+    const idx = this.children.indexOf(child);
+    if (idx !== -1) {
+      this.children.splice(idx, 1);
+      child.parentNode = null;
+    }
+    return child;
+  }
+  insertBefore(newNode, refNode) {
+    if (newNode.parentNode) newNode.parentNode.removeChild(newNode);
+    const idx = refNode ? this.children.indexOf(refNode) : -1;
+    if (idx === -1) {
+      this.children.push(newNode);
+    } else {
+      this.children.splice(idx, 0, newNode);
+    }
+    newNode.parentNode = this;
+    return newNode;
+  }
+}
+
+class GuestElement extends GuestNode {
+  constructor(tagName) {
+    super();
+    this.tagName = tagName;
+    this.attributes = {};
+    this._classList = new Set();
+    this._style = {};
+    this._listeners = {};
+    this._textContent = '';
+    this._value = '';
+  }
+  get id() { return this.attributes.id || ''; }
+  set id(v) { if (v) this.attributes.id = v; else delete this.attributes.id; }
+  get className() { return Array.from(this._classList).join(' '); }
+  set className(v) { this._classList = new Set(String(v).split(/\s+/).filter(Boolean)); }
+  get textContent() { return this._textContent; }
+  set textContent(v) {
+    this._textContent = String(v);
+    this.children = [];
+  }
+  get value() { return this._value; }
+  set value(v) { this._value = String(v); }
+  get classList() {
+    const self = this;
+    return {
+      add(...c) { c.forEach(x => x && self._classList.add(x)); },
+      remove(...c) { c.forEach(x => self._classList.delete(x)); },
+      toggle(c) { self._classList.has(c) ? self._classList.delete(c) : self._classList.add(c); },
+      contains(c) { return self._classList.has(c); },
+    };
+  }
+  get style() {
+    const self = this;
+    return new Proxy(self._style, {
+      set(t, p, v) { t[p] = v; return true; }
+    });
+  }
+  setAttribute(n, v) { this.attributes[n] = String(v); }
+  getAttribute(n) { return this.attributes[n]; }
+  removeAttribute(n) { delete this.attributes[n]; }
+  addEventListener(event, handler) {
+    if (!this._listeners[event]) this._listeners[event] = [];
+    this._listeners[event].push(handler);
+  }
+  removeEventListener(event, handler) {
+    if (!this._listeners[event]) return;
+    this._listeners[event] = this._listeners[event].filter(h => h !== handler);
+  }
+}
+
+class GuestDocument {
+  constructor() {
+    this.body = this.createElement('body');
+  }
+  createElement(tagName) { return new GuestElement(tagName); }
+  createTextNode(text) {
+    const el = new GuestElement('__text__');
+    el.textContent = text;
+    return el;
+  }
+  getElementById(id) { return this._findId(this.body, id); }
+  _findId(node, id) {
+    if (node.attributes && node.attributes.id === id) return node;
+    for (const c of node.children) { const f = this._findId(c, id); if (f) return f; }
+    return null;
+  }
+}
+
+// ===================== HOST RENDERER =====================
+class HostRenderer {
+  constructor(realDoc) {
+    this.realDoc = realDoc;
+    this.map = new WeakMap();
+  }
+  render(guest) {
+    if (guest.tagName === '__text__') {
+      return this.realDoc.createTextNode(guest.textContent);
+    }
+    const real = this.realDoc.createElement(guest.tagName);
+    this.map.set(guest, real);
+    for (const [k, v] of Object.entries(guest.attributes)) real.setAttribute(k, v);
+    if (guest.tagName === 'input' || guest.tagName === 'textarea') real.value = guest.value;
+    if (guest._classList.size) real.className = Array.from(guest._classList).join(' ');
+    for (const [k, v] of Object.entries(guest._style)) real.style[k] = v;
+    for (const [evt, handlers] of Object.entries(guest._listeners)) {
+      handlers.forEach(h => real.addEventListener(evt, e => {
+          const ge = {
+          target: { value: e.target.value, checked: e.target.checked, dataset: e.target.dataset },
+          preventDefault: () => e.preventDefault(),
+          stopPropagation: () => e.stopPropagation(),
+          key: e.key,
+          metaKey: e.metaKey,
+          ctrlKey: e.ctrlKey,
+          shiftKey: e.shiftKey,
+          dataTransfer: e.dataTransfer ? {
+            getData: t => e.dataTransfer.getData(t),
+            setData: (t, d) => e.dataTransfer.setData(t, d),
+            effectAllowed: e.dataTransfer.effectAllowed,
+          } : null,
+        };
+        h(ge);
+      }));
+    }
+    for (const c of guest.children) real.appendChild(this.render(c));
+    if (!guest.children.length && guest._textContent) real.textContent = guest._textContent;
+    return real;
+  }
+  sync(guestRoot, realParent) {
+    realParent.innerHTML = '';
+    realParent.appendChild(this.render(guestRoot));
+  }
+}
+
+// ===================== TODO APP =====================
+let state = {
+  todos: JSON.parse(localStorage.getItem('guest-todos') || '[]'),
+  filter: 'all',
+  editingId: null,
+};
+
+function save() {
+  localStorage.setItem('guest-todos', JSON.stringify(state.todos));
+}
+
+function setState(patch) {
+  state = { ...state, ...patch };
+  save();
+  render();
+}
+
+function nextId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+}
+
+const doc = new GuestDocument();
+const renderer = new HostRenderer(document);
+
+function addTodo(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+  setState({ todos: [...state.todos, { id: nextId(), text: trimmed, completed: false, order: state.todos.length }] });
+}
+
+function buildApp() {
+  const filtered = state.todos.filter(t =>
+    state.filter === 'all' ? true :
+    state.filter === 'active' ? !t.completed :
+    t.completed
+  );
+  const activeCount = state.todos.filter(t => !t.completed).length;
+
+  const app = doc.createElement('div');
+  app.className = 'todoapp';
+
+  const header = doc.createElement('header');
+  header.className = 'header';
+
+  const h1 = doc.createElement('h1');
+  h1.textContent = 'todos';
+  header.appendChild(h1);
+
+  const inputWrap = doc.createElement('div');
+  inputWrap.className = 'input-wrap';
+
+  const input = doc.createElement('input');
+  input.className = 'new-todo';
+  input.setAttribute('placeholder', 'What needs to be done?');
+  input.setAttribute('autofocus', 'true');
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      addTodo(e.target.value);
+      e.target.value = '';
+    }
+  });
+  inputWrap.appendChild(input);
+
+  const addBtn = doc.createElement('button');
+  addBtn.className = 'add-btn';
+  addBtn.textContent = 'Add';
+  addBtn.addEventListener('click', () => {
+    const realInput = document.querySelector('.new-todo');
+    if (realInput) {
+      addTodo(realInput.value);
+      realInput.value = '';
+    }
+  });
+  inputWrap.appendChild(addBtn);
+
+  header.appendChild(inputWrap);
+
+  app.appendChild(header);
+
+  if (state.todos.length) {
+    const list = doc.createElement('ul');
+    list.className = 'todo-list';
+    list.id = 'todo-list';
+
+    filtered.forEach((todo, index) => {
+      const item = doc.createElement('li');
+      item.className = 'todo-item' + (todo.completed ? ' completed' : '') + (state.editingId === todo.id ? ' editing' : '');
+      item.setAttribute('draggable', 'true');
+      item.setAttribute('data-id', todo.id);
+      item.setAttribute('data-index', String(index));
+
+      const handle = doc.createElement('span');
+      handle.className = 'drag-handle';
+      handle.textContent = '⋮⋮';
+      handle.setAttribute('title', 'Drag to reorder');
+      item.appendChild(handle);
+
+      const toggle = doc.createElement('input');
+      toggle.className = 'toggle';
+      toggle.setAttribute('type', 'checkbox');
+      if (todo.completed) toggle.setAttribute('checked', 'checked');
+      toggle.addEventListener('change', () => {
+        setState({
+          todos: state.todos.map(t => t.id === todo.id ? { ...t, completed: !t.completed } : t)
+        });
+      });
+      item.appendChild(toggle);
+
+      const label = doc.createElement('label');
+      label.textContent = todo.text;
+      label.addEventListener('dblclick', () => setState({ editingId: todo.id }));
+      item.appendChild(label);
+
+      const edit = doc.createElement('textarea');
+      edit.className = 'edit';
+      edit.setAttribute('rows', '1');
+      edit.value = todo.text;
+      edit.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          const text = e.target.value.trim();
+          if (text) {
+            setState({
+              todos: state.todos.map(t => t.id === todo.id ? { ...t, text } : t),
+              editingId: null,
+            });
+          }
+        } else if (e.key === 'Escape') {
+          setState({ editingId: null });
+        }
+      });
+      edit.addEventListener('blur', e => {
+        const text = e.target.value.trim();
+        if (text) {
+          setState({
+            todos: state.todos.map(t => t.id === todo.id ? { ...t, text } : t),
+            editingId: null,
+          });
+        }
+      });
+      item.appendChild(edit);
+
+      const destroy = doc.createElement('button');
+      destroy.className = 'destroy';
+      destroy.textContent = '×';
+      destroy.addEventListener('click', () => {
+        setState({ todos: state.todos.filter(t => t.id !== todo.id) });
+      });
+      item.appendChild(destroy);
+
+      // Drag events
+      item.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', todo.id);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      item.addEventListener('drop', e => {
+        e.preventDefault();
+        const draggedId = e.dataTransfer.getData('text/plain');
+        if (draggedId === todo.id) return;
+        const fromIdx = state.todos.findIndex(t => t.id === draggedId);
+        const toIdx = state.todos.findIndex(t => t.id === todo.id);
+        if (fromIdx === -1 || toIdx === -1) return;
+        const next = [...state.todos];
+        const [moved] = next.splice(fromIdx, 1);
+        next.splice(toIdx, 0, moved);
+        setState({ todos: next });
+      });
+
+      list.appendChild(item);
+    });
+    app.appendChild(list);
+
+    const footer = doc.createElement('footer');
+    footer.className = 'footer';
+
+    const count = doc.createElement('span');
+    count.className = 'todo-count';
+    count.innerHTML = `<strong>${activeCount}</strong> item${activeCount !== 1 ? 's' : ''} left`;
+    footer.appendChild(count);
+
+    const filters = doc.createElement('ul');
+    filters.className = 'filters';
+    const filtersData = [
+      { label: 'All', val: 'all' },
+      { label: 'Active', val: 'active' },
+      { label: 'Completed', val: 'completed' },
+    ];
+    filtersData.forEach(f => {
+      const li = doc.createElement('li');
+      const a = doc.createElement('a');
+      a.textContent = f.label;
+      if (state.filter === f.val) a.className = 'selected';
+      a.addEventListener('click', () => setState({ filter: f.val }));
+      li.appendChild(a);
+      filters.appendChild(li);
+    });
+    footer.appendChild(filters);
+
+    const clearBtn = doc.createElement('button');
+    clearBtn.className = 'clear-completed';
+    clearBtn.textContent = 'Clear completed';
+    if (!state.todos.some(t => t.completed)) clearBtn.className += ' hidden';
+    clearBtn.addEventListener('click', () => {
+      setState({ todos: state.todos.filter(t => !t.completed) });
+    });
+    footer.appendChild(clearBtn);
+
+    app.appendChild(footer);
+  }
+
+  return app;
+}
+
+function render() {
+  const guestRoot = buildApp();
+  const realApp = document.getElementById('app');
+  renderer.sync(guestRoot, realApp);
+  if (state.editingId) {
+    const input = realApp.querySelector('.todo-item.editing .edit');
+    if (input) {
+      input.focus();
+      input.selectionStart = input.selectionEnd = input.value.length;
+    }
+  }
+}
+
+render();
+</script>
+</body>
+</html>
+
+<!-- packages/dashboard/src/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Macchiato Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #4a306d;
+    margin: 0;
+    padding: 2rem 1rem;
+    color: #e0e0e0;
+    line-height: 1.5;
+  }
+  .container {
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 2rem;
+    font-weight: 300;
+    margin: 0 0 1.5rem;
+    color: #fff;
+  }
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin: 2rem 0 1rem;
+    color: #c4b5e0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .card {
+    background: #1e1e24;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .site-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .site-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #333340;
+  }
+  .site-item:last-child {
+    border-bottom: none;
+  }
+  .site-name {
+    font-weight: 500;
+    color: #fff;
+  }
+  .site-dir {
+    font-size: 0.85rem;
+    color: #888899;
+    font-family: monospace;
+  }
+  .remove-btn {
+    background: none;
+    border: none;
+    color: #888899;
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0 0.25rem;
+    transition: color 0.2s;
+  }
+  .remove-btn:hover {
+    color: #e57373;
+  }
+  .empty {
+    color: #555566;
+    font-style: italic;
+  }
+  .add-form {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .add-form input {
+    flex: 1;
+    min-width: 120px;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #333340;
+    border-radius: 4px;
+    background: #242430;
+    color: #e0e0e0;
+    font-size: 0.95rem;
+  }
+  .add-form input::placeholder {
+    color: #555566;
+  }
+  .add-form button {
+    padding: 0.6rem 1rem;
+    background: #7c5cc7;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .add-form button:hover {
+    background: #8d6dd8;
+  }
+  .status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+  .status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #5a7a5a;
+  }
+  .version {
+    color: #555566;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Macchiato Dashboard</h1>
+  <div class="version">Version 0.1.0</div>
+
+  <h2>Status</h2>
+  <div class="card">
+    <div class="status">
+      <span class="status-dot"></span>
+      <span>Server running</span>
+    </div>
+  </div>
+
+  <h2>Sites</h2>
+  <div class="card">
+    <ul class="site-list" id="site-list"></ul>
+  </div>
+
+  <h2>Add Site</h2>
+  <div class="card">
+    <form class="add-form" id="add-form">
+      <input type="text" id="subdomain" placeholder="subdomain" required>
+      <input type="text" id="directory" placeholder="directory" required>
+      <button type="submit">Add</button>
+    </form>
+  </div>
+</div>
+
+<script>
+async function loadSites() {
+  const res = await fetch('/api/sites');
+  const sites = await res.json();
+  const list = document.getElementById('site-list');
+  if (sites.length === 0) {
+    list.innerHTML = '<li class="empty">No sites configured</li>';
+    return;
+  }
+  list.innerHTML = sites.map(s => `
+    <li class="site-item">
+      <div>
+        <div class="site-name">${escapeHtml(s.subdomain)}.localhost</div>
+        <div class="site-dir">${escapeHtml(s.directory)}</div>
+      </div>
+      <button class="remove-btn" data-subdomain="${escapeHtml(s.subdomain)}" title="Remove">×</button>
+    </li>
+  `).join('');
+
+  list.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const subdomain = btn.dataset.subdomain;
+      await fetch('/api/sites', {
+        method: 'DELETE',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ subdomain }),
+      });
+      loadSites();
+    });
+  });
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+document.getElementById('add-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const subdomain = document.getElementById('subdomain').value.trim();
+  const directory = document.getElementById('directory').value.trim();
+  if (!subdomain || !directory) return;
+  await fetch('/api/sites', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ subdomain, directory }),
+  });
+  document.getElementById('subdomain').value = '';
+  document.getElementById('directory').value = '';
+  loadSites();
+});
+
+loadSites();
+</script>
+</body>
+</html>
+
+<!-- packages/declarative-app-server/example/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quick Counter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <p class="eyebrow">standard-web-app</p>
+    <h1>Quick Counter</h1>
+    <p class="intro">An ordinary page whose application script runs inside QuickJS.</p>
+    <section class="counter" aria-label="Counter controls">
+      <output id="count" aria-live="polite">0</output>
+      <div class="actions">
+        <button id="increment" type="button">Add one</button>
+        <button id="reset" type="button">Reset</button>
+      </div>
+      <p id="activity" class="activity">Ready.</p>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
+
+<!-- packages/dom-use/examples/wasm-browser/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dom-use · QuickJS WebAssembly</title>
+  <style>body{max-width:48rem;margin:4rem auto;padding:0 1.5rem;background:#0b1513;color:#e8f5f1;font:18px/1.5 system-ui}#app{padding:2rem;border:1px solid #37645a;border-radius:1rem}code{color:#75e4c8}</style>
+</head>
+<body>
+  <p><code>dom-use</code> host → QuickJS WebAssembly guest</p>
+  <main id="app">Starting sandbox…</main>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
+
+<!-- packages/element-use/example/frame.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>element-use example frame</title>
+    <style>
+      html, body, #game {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+      }
+      body {
+        overflow: auto;
+        background: #102e29;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <script type="module" src="/frame.js"></script>
+  </body>
+</html>
+
+<!-- packages/element-use/example/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>element-use Mahjong surface</title>
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">@macchiato-dev/element-use</p>
+        <h1>One game, one small element surface</h1>
+        <p>
+          The Mahjong script runs in QuickJS. Its allowlisted element bridge
+          renders inside a sandboxed iframe.
+        </p>
+      </div><span id="state">Loading…</span>
+    </header>
+    <main>
+      <section class="game">
+        <div id="game"></div><output id="error" role="alert"></output>
+      </section>
+      <section class="source">
+        <nav aria-label="Source files"></nav>
+        <pre><code id="source">Select a source file.</code></pre>
+      </section>
+    </main>
+    <script type="module" src="/client.js"></script>
+  </body>
+</html>
+
+<!-- packages/presentation-use/runner.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Presentation container</title>
+  <style>html,body,[data-presentation-root]{width:100%;height:100%;margin:0}body{overflow:hidden;background:#07100f;color:#eef8f5;font-family:system-ui}[data-presentation-root]{outline:none}html[data-document-surface]{overflow-x:hidden;overflow-y:auto}html[data-document-surface] body[data-presentation-root]{height:auto;min-height:100%;overflow:visible}[data-presentation-root][data-runtime="blocked"]{display:grid;place-items:center;padding:2rem}</style>
+</head>
+<body data-presentation-root tabindex="0"><script src="/-/resources-site/presentation-runner.js"></script></body>
+</html>
+
+<!-- packages/virtual-dom-use/examples/basic/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>Virtual DOM Use Editor</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="importmap">__IMPORT_MAP__</script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">QuickJS guest / browser host</p>
+      <h1>Shared virtual editor surface</h1>
+      <p>The host and guest retain the same canonical virtual DOM. Atomic batches update both copies and a digest detects divergence.</p>
+    </header>
+    <div id="editor"></div>
+    <details><summary>Boundary inspection</summary><pre id="inspection"></pre></details>
+    <p class="error" id="error" role="alert"></p>
+  </main>
+  <script type="module" src="/client.js"></script>
+</body>
+</html>
+
+<!-- packages/wasm-web-container/examples/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Wasm Web Container examples</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #17142c; color: #f2edf9; }
+    main { width: min(34rem, calc(100% - 2rem)); }
+    h1 { margin: 0 0 .45rem; font-size: clamp(1.7rem, 6vw, 2.5rem); }
+    p { margin: 0 0 1.25rem; color: #c9c0dc; line-height: 1.5; }
+    nav { display: grid; gap: .65rem; }
+    a { padding: 1rem 1.1rem; border: 1px solid #514a72; border-radius: .75rem;
+      background: #211d3a; color: inherit; text-decoration: none; }
+    a:hover, a:focus-visible { border-color: #b7a6e5; background: #292347; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Wasm Web Container</h1>
+    <p>Bounded WebAssembly applications with constrained web capabilities.</p>
+    <nav aria-label="Examples">
+      <a href="./cat-memory/">Cat Memory — WebAssembly</a>
+      <a href="./plain-web/cat-memory/">Cat Memory — plain web page</a>
+      <a href="./mahjong/">Mahjong — WebAssembly</a>
+      <a href="./plain-web/mahjong/">Mahjong — plain web page</a>
+      <a href="./sqlite-book/">SQLite Documentation Reader — WebAssembly</a>
+    </nav>
+  </main>
+</body>
+</html>
+
+<!-- packages/website/blog-examples/markdown-editor/dist/index.html -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Markdown editor</title><link rel="stylesheet" href="./app.css"></head>
+<body><div class="viewbar" role="toolbar" aria-label="Editor view"><div class="preview-identity" tabindex="0"><span class="preview-identity__title" data-preview-title>Preview</span><span class="preview-identity__tooltip" role="tooltip"><strong data-preview-full-title>Preview</strong><code data-preview-url>/</code></span></div><div class="view-controls"><button type="button" data-view="editor">Editor</button><button type="button" data-view="split" aria-pressed="true">Split</button><button type="button" data-view="preview">Preview</button></div></div><main data-view="split"><section class="source" aria-label="Project source"><div id="editor"></div></section><div class="splitter" role="separator" aria-label="Resize editor and preview" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" tabindex="0"></div><section class="preview" aria-label="Project preview"><div id="preview"></div><iframe id="project-preview" title="Project preview" sandbox="allow-scripts" hidden></iframe></section></main><script type="module" src="./app.js"></script></body></html>
+
+<!-- packages/website/blog-examples/markdown-editor/index.html -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Markdown editor</title><link rel="stylesheet" href="./app.css"></head>
+<body><div class="viewbar" role="toolbar" aria-label="Editor view"><div class="preview-identity" tabindex="0"><span class="preview-identity__title" data-preview-title>Preview</span><span class="preview-identity__tooltip" role="tooltip"><strong data-preview-full-title>Preview</strong><code data-preview-url>/</code></span></div><div class="view-controls"><button type="button" data-view="editor">Editor</button><button type="button" data-view="split" aria-pressed="true">Split</button><button type="button" data-view="preview">Preview</button></div></div><main data-view="split"><section class="source" aria-label="Project source"><div id="editor"></div></section><div class="splitter" role="separator" aria-label="Resize editor and preview" aria-orientation="vertical" aria-valuemin="20" aria-valuemax="80" aria-valuenow="50" tabindex="0"></div><section class="preview" aria-label="Project preview"><div id="preview"></div><iframe id="project-preview" title="Project preview" sandbox="allow-scripts" hidden></iframe></section></main><script type="module" src="./app.js"></script></body></html>
+
+<!-- packages/website/blog-examples/vtv/dist/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Archived Resources.co visual JSON editor</title>
+    <link rel="stylesheet" href="app.css">
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <main id="app" aria-label="Visual JSON editor example"></main>
+  </body>
+</html>
+
+<!-- packages/website/blog-examples/vtv/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Archived Resources.co visual JSON editor</title>
+    <link rel="stylesheet" href="app.css">
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <main id="app" aria-label="Visual JSON editor example"></main>
+  </body>
+</html>
+
+<!-- packages/website/project-output-frame.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; connect-src 'self'; img-src data:; font-src data:; style-src 'unsafe-inline'">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Project output</title>
+  <style>
+    html, body { min-height: 100%; margin: 0; background: transparent; }
+    .project-output-root { min-height: 100%; }
+    .project-output-root[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <div id="project-output-a" class="project-output-root"></div>
+  <script type="module">/* PROJECT_OUTPUT_FRAME_CONTROLLER */</script>
+</body>
+</html>
+
+<!-- dev/machines-pages/machine-runner/index.html -->
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Macchiato Machine Runner</title>
+<body>
+<main id="machine-runner"></main>
+<script type="module">
+  import { startMachineRunner } from "./machine-runner.js";
+  startMachineRunner(document.getElementById("machine-runner"));
+</script>
+</body>
+</html>
+
+<!-- dev/machines-pages/machines/index.html -->
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>Macchiato Machines</title>
+<body>
+<main>
+  <h1>Macchiato Machines</h1>
+  <p>Documentation, conformance tests, and examples for small web machines.</p>
+  <p><a href="http://machines-dev.localhost:3030/">Open the local development playground</a></p>
+</main>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/prosemirror/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProseMirror in QuickJS</title>
+<link rel="stylesheet" href="./loading.css">
+<body data-example="prosemirror"><div class="runtime-status">Starting ProseMirror in QuickJS…</div>
+<script type="module" src="./host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/wordgard/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wordgard in QuickJS</title>
+<link rel="stylesheet" href="./loading.css">
+<body data-example="wordgard"><div class="runtime-status">Starting Wordgard in QuickJS…</div>
+<script type="module" src="./host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/xterm/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xterm.js in QuickJS</title>
+<style>
+  :root { color-scheme: dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    background: #090d14; color: #d8e2f0; }
+  main { width: min(720px, 100%); }
+  h1 { margin: 0 0 8px; color: #69e6d3; font-size: clamp(34px, 7vw, 58px); }
+  p { margin: 0 0 28px; color: #9eb0c7; }
+  nav { display: grid; gap: 14px; }
+  a { display: block; padding: 20px; border: 1px solid #38536b; border-radius: 12px;
+    background: #121c29; color: inherit; text-decoration: none; }
+  a:hover { border-color: #69e6d3; background: #19283a; }
+  strong { display: block; margin-bottom: 5px; font-size: 19px; }
+  span { color: #9eb0c7; }
+</style>
+<main><h1>xterm.js in QuickJS</h1>
+  <p>Two terminal surfaces running inside QuickJS WebAssembly.</p>
+  <nav>
+    <a href="./terminal/"><strong>Interactive terminal</strong>
+      <span>Type and select text without a continuously repainting application.</span></a>
+    <a href="./pong/"><strong>Pong</strong>
+      <span>Exercise keyboard input, timers, ANSI rendering, and animation.</span></a>
+  </nav>
+</main>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/xterm/pong/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>xterm.js Pong in QuickJS</title>
+<link rel="stylesheet" href="/loading.css">
+<body data-example="xterm"><div class="runtime-status">Starting xterm.js Pong in QuickJS…</div>
+<script type="module" src="/host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/browser-editors/xterm/terminal/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interactive xterm.js in QuickJS</title>
+<link rel="stylesheet" href="/loading.css">
+<body data-example="xterm-terminal"><div class="runtime-status">Starting xterm.js in QuickJS…</div>
+<script type="module" src="/host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/canonical/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMirror on wasm-web-container</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/direct/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direct CodeMirror comparison</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<script src="../generated/codemirror-full.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/fixtures/example.html -->
+<!doctype html>
+<meta charset="utf-8">
+<title>Small article</title>
+<article>
+  <h1>A small article</h1>
+  <p>A constrained document can still be useful and expressive.</p>
+  <p><a href="https://en.wikipedia.org/wiki/WebAssembly">Read about WebAssembly</a>.</p>
+</article>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/full/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full CodeMirror UI in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../generated/codemirror-canonical.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+    const machine = new WasmWebMachine(module, document, {
+      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+      services: {
+        route: { get: () => "/", listen() {} },
+        storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      },
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `QuickJS CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMirror in QuickJS</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+  body { max-width: 48rem; margin: 0 auto; padding: clamp(2rem, 8vw, 6rem) 1.5rem;
+    background: #282c34; color: #d7dae0; }
+  h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: -.04em; }
+  p { margin: 0 0 2.5rem; color: #abb2bf; line-height: 1.55; }
+  nav { display: grid; gap: .75rem; }
+  a { display: block; padding: 1rem 1.1rem; border: 1px solid #454b57;
+    border-radius: 8px; color: #e5c07b; text-decoration: none; background: #21252b; }
+  a:hover, a:focus-visible { border-color: #61afef; background: #252a31; outline: none; }
+  strong { display: block; margin-bottom: .2rem; font-size: 1rem; }
+  span { color: #abb2bf; font-size: .9rem; }
+</style>
+<h1>CodeMirror in QuickJS</h1>
+<p>Each demo runs CodeMirror inside Bellard QuickJS compiled to WebAssembly and
+projects its constrained DOM into this browser.</p>
+<nav aria-label="CodeMirror demos">
+  <a href="./microesnext/"><strong>MicroESNext</strong><span>The new Rust engine running through the shared WebAssembly entry ABI.</span></a>
+  <a href="./microquickjs/"><strong>MicroQuickJS</strong><span>The Babel-lowered build with focused ungap collection ponyfills.</span></a>
+  <a href="./canonical/"><strong>Canonical host workbench</strong><span>CodeMirror using the same wasm-web-container host as Cat Memory and Mahjong.</span></a>
+  <a href="./simple/"><strong>Simple editor</strong><span>Small document and a deliberately small CodeMirror configuration.</span></a>
+  <a href="./full/"><strong>Full UI</strong><span>Languages, search, folding, history, completion, gutters, and the One Dark theme.</span></a>
+  <a href="./large/"><strong>Large document</strong><span>A 500-line TypeScript stress case at the playground example ceiling.</span></a>
+  <a href="./multi/"><strong>Tabbed files</strong><span>Three independent editors with search and navigation across every file.</span></a>
+</nav>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/instrumented/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instrumented CodeMirror in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../instrumented-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/large/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Large CodeMirror Document in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor" data-wasm="./generated/codemirror-large.wasm"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microesnext/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple CodeMirror in MicroESNext</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const wasm = new URL(location.href).searchParams.get("wasm") ||
+      "../generated/codemirror-microesnext.wasm";
+    const response = await fetch(wasm);
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const machine = new WasmWebMachine(module, document, {
+      services: {
+        route: { get: () => "/", listen() {} },
+        storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      },
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroESNext CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microesnext/multi/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed CodeMirror in MicroESNext</title>
+<link rel="stylesheet" href="../../demo.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-multi-microesnext.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const machine = new WasmWebMachine(module, document);
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroESNext multi-file CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/benchmark/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QuickJS runtime benchmark</title>
+<link rel="stylesheet" href="../benchmark.css">
+<main>
+  <p class="eyebrow">Same CodeMirror workload</p>
+  <h1>Three CodeMirror runtimes</h1>
+  <p class="lede">A warmed comparison using all six runtime orders with the
+    same full editor, source text, viewport, browser process, and key-by-key trace.</p>
+  <div id="results" aria-live="polite">Loading the latest result…</div>
+  <nav>
+    <a href="../full/">Run the MicroQuickJS editor</a>
+    <a href="/quickjs/full/">Run the QuickJS editor</a>
+    <a href="http://codemirror-comparison.localhost:3030/">View side-by-side recordings</a>
+  </nav>
+</main>
+<script type="module" src="../benchmark.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/full/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Full CodeMirror UI in MicroQuickJS</title>
+<link rel="stylesheet" href="../../demo.css">
+<main>
+  <div id="editor"></div>
+  <div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+</main>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-microquickjs.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+    const machine = new WasmWebMachine(module, document, {
+      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+      services: {
+        route: { get: () => "/", listen() {} },
+        storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      },
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroQuickJS CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CodeMirror in MicroQuickJS</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+  body { max-width: 48rem; margin: 0 auto; padding: clamp(2rem, 8vw, 6rem) 1.5rem;
+    background: #282c34; color: #d7dae0; }
+  h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: -.04em; }
+  p { color: #abb2bf; line-height: 1.55; }
+  nav { display: grid; gap: .75rem; margin-top: 2rem; }
+  a { display: block; padding: 1rem 1.1rem; border: 1px solid #454b57;
+    border-radius: 8px; color: #e5c07b; text-decoration: none; background: #21252b; }
+  a:hover, a:focus-visible { border-color: #61afef; background: #252a31; outline: none; }
+  strong { display: block; margin-bottom: .2rem; }
+  span { color: #abb2bf; font-size: .9rem; }
+</style>
+<h1>CodeMirror in MicroQuickJS</h1>
+<p>The CodeMirror application is transpiled with Babel, compiled to
+  MicroQuickJS bytecode, and executed in WebAssembly. Native C collections
+  provide the missing modern collection semantics.</p>
+<nav aria-label="MicroQuickJS demos and measurements">
+  <a href="./full/"><strong>Full UI</strong><span>Languages, search, folding, history, completion, gutters, and One Dark.</span></a>
+  <a href="./multi/"><strong>Tabbed files</strong><span>Three independent editors with search and navigation across every file.</span></a>
+  <a href="./benchmark/"><strong>Runtime benchmark</strong><span>The same warmed CodeMirror workload in QuickJS and MicroQuickJS.</span></a>
+  <a href="http://codemirror-comparison.localhost:3030/"><strong>Side-by-side recordings</strong><span>Interaction recordings in the shared CodeMirror comparison archive.</span></a>
+</nav>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/multi/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed CodeMirror in MicroQuickJS</title>
+<link rel="stylesheet" href="../../demo.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../../generated/codemirror-multi-microquickjs.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+    const machine = new WasmWebMachine(module, document, {
+      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    });
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/multi/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabbed CodeMirror in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<main id="workspace"></main>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const status = document.querySelector(".runtime-status");
+  try {
+    const response = await fetch("../generated/codemirror-multi.wasm");
+    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
+    const module = await WebAssembly.compileStreaming(response);
+    const machine = new WasmWebMachine(module, document);
+    await machine.onmsg(0);
+    document.body.dataset.ready = "true";
+    status.remove();
+  } catch (error) {
+    status.dataset.error = "";
+    status.textContent = `QuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
+    throw error;
+  }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/simple/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simple CodeMirror in QuickJS</title>
+<link rel="stylesheet" href="../demo.css">
+<div id="editor" data-wasm="./generated/codemirror-simple.wasm"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/test/pages/direct/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blank direct CodeMirror comparison</title>
+<link rel="stylesheet" href="../../../demo.css">
+<div id="editor" data-initial="blank"></div>
+<script src="../../../generated/codemirror-full.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/test/pages/wasm/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blank QuickJS/Wasm CodeMirror comparison</title>
+<link rel="stylesheet" href="../../../demo.css">
+<div id="editor" data-initial="blank"></div>
+<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
+<script type="module" src="../../../canonical-host.js"></script>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/cat-memory/index.html -->
+<!doctype html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+<!-- The guest may retain meaningful source comments as DOM nodes. -->
+<svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+<path d="M20 48 L30 18 L44 40 Z" fill="#f0a93a">
+</path>
+<path d="M80 48 L70 18 L56 40 Z" fill="#f0a93a">
+</path>
+<ellipse cx="50" cy="58" rx="34" ry="28" fill="#f0a93a">
+</ellipse>
+<circle cx="38" cy="54" r="5" fill="#1b1533">
+</circle>
+<circle cx="62" cy="54" r="5" fill="#1b1533">
+</circle>
+<path d="M46 64 Q50 68 54 64 Q50 70 46 64 Z" fill="#ea7154">
+</path>
+</svg>
+<h1>
+Cat Memory Match
+</h1>
+<p class="tagline">
+Sixteen cards, eight cats. Find every pair.
+</p>
+<div class="statline">
+<div class="stat">
+<span class="stat-label">
+Moves
+</span>
+<span class="stat-value" id="moves">
+0
+</span>
+</div>
+<div class="stat">
+<span class="stat-label">
+Pairs
+</span>
+<span class="stat-value" id="matches">
+0/8
+</span>
+</div>
+</div>
+<div class="table">
+<div id="board" role="grid" aria-label="Memory game board">
+</div>
+</div>
+<div class="controls">
+<button id="reset" type="button">
+New game
+</button>
+<div id="win" role="status" aria-label="Game result">
+</div>
+</div>
+</main>
+<script src="cat-memory.js">
+</script>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/index.html -->
+<!doctype html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+</main>
+<script src="mahjong.js">
+</script>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>wasm-web-machine examples</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #17142c; color: #f2edf9; }
+    main { width: min(34rem, calc(100% - 2rem)); }
+    h1 { margin: 0 0 1.25rem; font-size: clamp(1.7rem, 6vw, 2.5rem); }
+    nav { display: grid; gap: .65rem; }
+    a { padding: 1rem 1.1rem; border: 1px solid #514a72; border-radius: .75rem;
+      background: #211d3a; color: inherit; text-decoration: none; }
+    a:hover, a:focus-visible { border-color: #b7a6e5; background: #292347; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>wasm-web-machine examples</h1>
+    <nav aria-label="Examples">
+      <a href="./cat-memory/">Cat Memory — WebAssembly</a>
+      <a href="./plain-web/cat-memory/">Cat Memory — plain web page</a>
+      <a href="./mahjong/">Mahjong — WebAssembly</a>
+      <a href="./plain-web/mahjong/">Mahjong — plain web page</a>
+    </nav>
+  </main>
+</body>
+</html>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/mahjong-example.html -->
+<!doctype html>
+<meta charset="utf-8">
+<body>
+<noscript>This application requires JavaScript and WebAssembly.</noscript>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const encoder = new TextEncoder();
+  const prefix = `-wwc--${location.pathname.replace(/\W+/g, "-")
+    .replace(/^-|-$/g, "") || "root"}--`;
+  const area = (kind) => kind === "local" ? [localStorage, 8192] :
+    kind === "session" ? [sessionStorage, 128 * 1024] : null;
+  const key = (name) => prefix + name;
+  const size = (storage, replacementKey, replacementValue) => {
+    let bytes = 0;
+    for (let index = 0; index < storage.length; index++) {
+      const found = storage.key(index);
+      if (!found?.startsWith(prefix) || found === replacementKey) continue;
+      bytes += encoder.encode(found).length +
+        encoder.encode(storage.getItem(found) || "").length;
+    }
+    return bytes + encoder.encode(replacementKey).length +
+      encoder.encode(replacementValue).length;
+  };
+  const storage = {
+    get(kind, name) { return area(kind)?.[0].getItem(key(name)) ?? null; },
+    set(kind, name, value) {
+      const selected = area(kind);
+      if (!selected) throw new Error("Unknown storage area");
+      const [storageArea, limit] = selected;
+      const storageKey = key(name);
+      if (size(storageArea, storageKey, value) > limit) {
+        throw new Error(`${kind} storage quota exceeded`);
+      }
+      storageArea.setItem(storageKey, value);
+    },
+    delete(kind, name) { area(kind)?.[0].removeItem(key(name)); },
+    listen(kind, name, callback) {
+      const storageKey = key(name);
+      addEventListener("storage", (event) => {
+        if (kind === "local" && event.storageArea === localStorage &&
+            event.key === storageKey) callback();
+      });
+    },
+  };
+  const allowFont = [
+    "a0d054c4af557de20afd6ca59f47ab353bcaec49c63ff04b6c9d39d0f8910557",
+    "22219fb90e3b9bd28debd1825fe8d9a0154a0e31f8b3fa601ac1a0a5aa5e6d1b",
+    "d80df8ff5aecd299a61549f9e29ab1ed0b9b05f4ea71d50fe978e07d5240b235",
+  ];
+  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
+  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    allowFont,
+    services: { storage },
+    stamp: new Uint8Array(stamp),
+  });
+  await machine.onmsg(0);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/web/wasm-example.html -->
+<!doctype html>
+<meta charset="utf-8">
+<body>
+<noscript>This application requires JavaScript and WebAssembly.</noscript>
+<script type="module">
+  import WasmWebMachine from "../wasm-web-machine.js";
+
+  const module = await WebAssembly.compileStreaming(fetch("./main.wasm"));
+  const [stamp] = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: new Uint8Array(stamp),
+  });
+  await machine.onmsg(0);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/sqlite-book/index.html -->
+<!doctype html>
+<html>
+<head>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+<p>
+SQLite Documentation Reader
+</p>
+</header>
+<main id="book">
+</main>
+<footer>
+<p>
+An offline reading edition built from the public-domain SQLite documentation.
+</p>
+</footer>
+<script src="sqlite-book.js">
+</script>
+</body>
+</html>
+
+<!-- examples/dom-use-demo/page.html -->
+<main class="page">
+  <h1>Neighborhood Library</h1>
+  <p>A quiet place for reading, research, community classes, and after-school study.</p>
+  <h2>Hours</h2>
+  <ul class="service-list">
+    <li><strong>Monday-Friday:</strong> 9:00 AM to 7:00 PM</li>
+    <li><strong>Saturday:</strong> 10:00 AM to 5:00 PM</li>
+    <li><strong>Sunday:</strong> 12:00 PM to 4:00 PM</li>
+  </ul>
+  <h2>Services</h2>
+  <ul class="service-list">
+    <li><strong>Computers:</strong> public workstations and printing</li>
+    <li><strong>Events:</strong> story time, workshops, and book groups</li>
+    <li><strong>Help desk:</strong> research support and account questions</li>
+  </ul>
+</main>
+
+<!-- examples/focused-app/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Macchiato Focused Apps</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"@macchiato-dev/quickjs-emscripten-sandbox":"./-/quickjs-emscripten-sandbox/index.js","@jitl/quickjs-ffi-types":"./-/quickjs-emscripten-sandbox/ffi-types.js","@jitl/quickjs-singlefile-browser-release-sync":"./-/quickjs-emscripten-sandbox/singlefile-browser-release-sync.js","quickjs-emscripten-core":"./-/quickjs-emscripten-sandbox/quickjs-core.js","@macchiato-dev/browser-use/quickjs-dom-guest":"./browser-use-quickjs-dom-guest.js"}}</script>
+</head>
+<body>
+  <div class="app" data-sidebar="visible">
+    <aside class="sidebar" data-tab="documents" aria-label="Collections and documents">
+      <div class="sidebar-tabs" role="tablist" aria-label="Sidebar view">
+        <button id="documents-tab" role="tab" aria-selected="true" aria-controls="documents">Documents</button>
+        <button id="info-tab" role="tab" aria-selected="false" aria-controls="document-info">Info</button>
+        <button id="activity-tab" role="tab" aria-selected="false" aria-controls="activity">Activity</button>
+      </div>
+      <header class="collection-header">
+        <div class="collection-picker">
+          <button id="collection-trigger" type="button" aria-haspopup="listbox" aria-expanded="false"></button>
+          <div id="collection-menu" class="collection-menu" hidden>
+            <div class="collection-menu-header">
+              <strong>Collections</strong>
+              <button id="new-collection" class="icon-button" aria-label="New collection" title="New collection"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5h7l2 2h9v10H3zM12 11v5m-2.5-2.5h5"/></svg></button>
+            </div>
+            <div id="collection-options" role="listbox"></div>
+          </div>
+        </div>
+      </header>
+      <div class="collection-actions">
+        <label class="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 5 5"/></svg><input id="search" type="text" role="searchbox" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Search collection"></label>
+        <button id="filter" class="icon-button" aria-label="Filter documents: all" title="Filter"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg></button>
+        <button id="new-document" class="icon-button" aria-label="Add document" title="Add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      </div>
+      <ul id="documents" class="documents"></ul>
+      <section id="document-info" class="document-info" role="tabpanel" aria-labelledby="info-tab" hidden>
+        <p class="document-info__eyebrow">Current document</p>
+        <h2 id="info-title">No document selected</h2>
+        <dl>
+          <div><dt>Collection</dt><dd id="info-collection">—</dd></div>
+          <div><dt>Storage</dt><dd id="info-storage">—</dd></div>
+          <div><dt>Size</dt><dd id="info-size">—</dd></div>
+          <div><dt>Updated</dt><dd id="info-updated">—</dd></div>
+        </dl>
+        <details><summary>Sandbox configuration</summary><pre id="info-sandbox"></pre></details>
+        <button id="download-document" class="info-download" disabled>Download</button>
+      </section>
+      <section id="activity" class="activity" role="tabpanel" aria-labelledby="activity-tab" hidden>
+        <p class="activity__eyebrow">Workspace activity</p>
+        <ol id="activity-list" class="activity-list"></ol>
+      </section>
+      <footer class="sidebar-footer">
+        <button id="profile" class="profile" aria-label="Profile and hosting"><span class="avatar">M</span><span><strong>Local workspace</strong><small>Self-hosted</small></span></button>
+        <button id="settings" class="icon-button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v3m0 12v3M3 12h3m12 0h3M5.6 5.6l2.1 2.1m8.6 8.6 2.1 2.1m0-12.8-2.1 2.1m-8.6 8.6-2.1 2.1"/></svg></button>
+        <button id="open-command-palette" class="icon-button" aria-label="Command palette" title="Command palette (⌘K)"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m7 10 2 2-2 2m5 0h5"/></svg></button>
+      </footer>
+    </aside>
+    <div id="sidebar-resizer" class="sidebar-resizer" aria-hidden="true"></div>
+    <div id="sidebar-control" class="sidebar-control" data-side="left">
+      <button id="toggle-sidebar" class="sidebar-control__primary" aria-label="Hide sidebar">
+        <svg class="sidebar-control__arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>
+        <svg class="sidebar-control__layout" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
+      </button>
+      <button id="sidebar-control-more" class="sidebar-control__more" aria-label="Sidebar actions">•••</button>
+      <button id="sidebar-control-drag" class="sidebar-control__drag" aria-label="Move sidebar control"><svg viewBox="0 0 16 24" aria-hidden="true"><path d="M5 5h.01M11 5h.01M5 12h.01M11 12h.01M5 19h.01M11 19h.01"/></svg></button>
+      <div id="sidebar-control-menu" class="sidebar-control-menu" role="menu" hidden>
+        <button id="sidebar-menu-visibility" role="menuitem">Hide</button>
+        <button id="sidebar-menu-side" role="menuitem">Move to Right</button>
+      </div>
+    </div>
+    <main class="main">
+      <section id="empty" class="empty"><div class="empty-icon"></div><h1>Choose or create an app</h1><p>Documents run with their own inspectable sandbox configuration.</p></section>
+      <article id="workspace" class="workspace" hidden>
+        <header class="document-header">
+          <div><p class="eyebrow">Declarative app preview</p><h1 id="document-title"></h1><p id="document-summary"></p><p id="app-detection" class="app-detection"></p><div id="app-packages" class="app-packages"></div></div>
+          <details class="sandbox-details"><summary>Sandbox</summary><pre id="sandbox"></pre></details>
+        </header>
+        <iframe id="app-preview" title="Declarative app preview" sandbox="allow-same-origin"></iframe>
+      </article>
+      <output id="status" class="status" aria-live="polite"></output>
+    </main>
+  </div>
+  <input id="file" type="file" accept=".html,.htm,.css,.js,.mjs,text/html,text/css,text/javascript,application/javascript" hidden>
+  <div class="drop-overlay">Drop a file to create an app</div>
+  <dialog id="collection-dialog"><form id="collection-form"><h2>New collection</h2><label>Name<input name="name" required maxlength="80"></label><label>Storage<select name="storage"><option value="session">Session Storage</option><option value="local">Local Storage</option><option value="memory">Memory</option></select></label><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Create collection</button></div></form></dialog>
+  <dialog id="import-dialog"><form><h2>Import as an app</h2><label>Name<input name="name" required></label><label>Collection<select id="import-collection" name="collection"></select></label><textarea name="content" hidden></textarea><p>Files over 1 MB default to Memory so browser storage is not unexpectedly exhausted.</p><div class="dialog-actions"><button type="button" data-close>Cancel</button><button>Import</button></div></form></dialog>
+  <div id="document-actions" class="document-actions-popover" role="menu" hidden><button id="document-hide-sidebar" role="menuitem">Hide</button></div>
+  <dialog id="command-palette" class="command-palette" data-command-dialog aria-label="Search commands">
+    <div class="command-palette__surface">
+      <div class="command-palette__search">
+        <svg class="command-palette__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+        <input type="text" role="searchbox" autocomplete="off" data-command-input aria-label="Search commands" placeholder="Search commands…">
+        <kbd>Esc</kbd>
+      </div>
+      <div class="command-palette__list" data-command-list>
+        <button id="command-show-sidebar" class="command-palette__item" data-command-label="show sidebar"><span>Show Sidebar</span><kbd>Enter</kbd></button>
+      </div>
+    </div>
+  </dialog>
+  <script type="module" src="./client.js"></script>
+</body>
+</html>
+
+<style>
+/* embedded CSS state begins above the final viewport
+   viewport state continuation 1
+   viewport state continuation 2
+   viewport state continuation 3
+   viewport state continuation 4
+   viewport state continuation 5
+   viewport state continuation 6
+   viewport state continuation 7
+   viewport state continuation 8
+   viewport state continuation 9
+   viewport state continuation 10
+   viewport state continuation 11
+   viewport state continuation 12
+   viewport state continuation 13
+   viewport state continuation 14
+   viewport state continuation 15
+   viewport state continuation 16
+   viewport state continuation 17
+   viewport state continuation 18
+   viewport state continuation 19
+   viewport state continuation 20
+   viewport state continuation 21
+   viewport state continuation 22
+   viewport state continuation 23
+   viewport state continuation 24
+   viewport state continuation 25
+   viewport state continuation 26
+   viewport state continuation 27
+   viewport state continuation 28
+   viewport state continuation 29
+   viewport state continuation 30
+   viewport state continuation 31
+   viewport state continuation 32
+   viewport state continuation 33
+   viewport state continuation 34
+   viewport state continuation 35
+   viewport state continuation 36
+   viewport state continuation 37
+   viewport state continuation 38
+   viewport state continuation 39
+   viewport state continuation 40
+   viewport state continuation 41
+   viewport state continuation 42
+   viewport state continuation 43
+   viewport state continuation 44
+   viewport state continuation 45
+   viewport state continuation 46
+   viewport state continuation 47
+   viewport state continuation 48
+   viewport state continuation 49
+   viewport state continuation 50
+   viewport state continuation 51
+   viewport state continuation 52
+   viewport state continuation 53
+   viewport state continuation 54
+   viewport state continuation 55
+   viewport state continuation 56
+   viewport state continuation 57
+   viewport state continuation 58
+   viewport state continuation 59
+   viewport state continuation 60
+   viewport state continuation 61
+   viewport state continuation 62
+   viewport state continuation 63
+   viewport state continuation 64
+   viewport state continuation 65
+   viewport state continuation 66
+   viewport state continuation 67
+   viewport state continuation 68
+   viewport state continuation 69
+   viewport state continuation 70
+   viewport state continuation 71
+   viewport state continuation 72
+   viewport state continuation 73
+   viewport state continuation 74
+   viewport state continuation 75
+   viewport state continuation 76
+   viewport state continuation 77
+   viewport state continuation 78
+   viewport state continuation 79
+   viewport state continuation 80
+   viewport state continuation 81
+   viewport state continuation 82
+   viewport state continuation 83
+   viewport state continuation 84
+   viewport state continuation 85
+   viewport state continuation 86
+   viewport state continuation 87
+   viewport state continuation 88
+   viewport state continuation 89
+   viewport state continuation 90
+   viewport state continuation 91
+   viewport state continuation 92
+   viewport state continuation 93
+   viewport state continuation 94
+   viewport state continuation 95
+   viewport state continuation 96
+*/
+.viewport-probe { color: rebeccapurple; }
+</style>
+<script>
+/* embedded JavaScript state crosses a line */
+const viewportScript = `mixed
+HTML and JavaScript`;
+</script>

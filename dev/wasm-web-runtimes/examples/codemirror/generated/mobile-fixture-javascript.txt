@@ -1,0 +1,3346 @@
+
+/* packages/website/content-form-client.js */
+import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
+import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
+import { containerElementNames } from "/-/resources-site/container-elements.js";
+import { buildProject as buildProjectInMachine, downloadProjectArchive, frontendTheme, importProjectArchive, mountResourcesProjectEditor, mountResourcesProjectPreview, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
+import { parseProjectHtml } from "./project-html-parser.js";
+
+const PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
+function isProjectImage(file) {
+  const extension = String(file?.path || "").split(".").at(-1).toLowerCase();
+  return PROJECT_IMAGE_TYPES.has(extension) && /^data:image\//.test(file?.content || "");
+}
+
+function buildProject(files, config) { return buildProjectInMachine(files, config); }
+
+function queryParameter(name) {
+  const match = new RegExp("(?:^|&)" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^&]*)")
+    .exec(String(location.search || "").replace(/^\?/, ""));
+  return match ? decodeURIComponent(match[1].replace(/\+/g, " ")) : null;
+}
+
+function internalHref(link) {
+  const href = link?.getAttribute?.("href") || "";
+  return href.startsWith("/") && !href.startsWith("//") ? href : null;
+}
+
+for (const split of document.querySelectorAll("[data-save-split]")) {
+  const trigger = split.querySelector("[data-save-menu-trigger]");
+  const menu = split.querySelector("[data-save-menu]");
+  trigger.addEventListener("click", () => {
+    const opening = menu.hidden;
+    menu.hidden = !opening;
+    trigger.setAttribute("aria-expanded", String(opening));
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!split.contains(event.target)) { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); }
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest?.("a[href]");
+  if (!link || link.classList.contains("project-close")) return;
+  const target = internalHref(link);
+  if (target && /^\/[^/?#]+\/[^/?#]+(?:[?#].*)?$/.test(target)) {
+    let stack = [];
+    try { stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || []; } catch {}
+    const current = location.pathname + location.search;
+    if (stack.at(-1) !== current) stack.push(current);
+    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
+  }
+});
+for (const close of document.querySelectorAll(".project-close")) {
+  let stack = [];
+  try { stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || []; } catch {}
+  if (!Array.isArray(stack)) stack = [];
+  const previous = stack.at(-1);
+  close.href = typeof previous === "string" && previous.startsWith("/") ? previous : "/";
+  close.addEventListener("click", () => {
+    stack.pop();
+    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
+  });
+}
+
+for (const overflow of document.querySelectorAll("[data-project-overflow]")) {
+  const trigger = overflow.querySelector("[data-project-overflow-trigger]");
+  const menu = overflow.querySelector("[data-project-overflow-menu]");
+  trigger.addEventListener("click", () => {
+    const opening = menu.hidden;
+    menu.hidden = !opening;
+    trigger.setAttribute("aria-expanded", String(opening));
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!overflow.contains(event.target)) { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); }
+  });
+}
+
+for (const fields of document.querySelectorAll("[data-project-fields]")) {
+  const modal = fields.querySelector("[data-version-title-modal]");
+  if (!modal) continue;
+  const input = modal.querySelector("[data-version-title-input]");
+  const hidden = fields.querySelector("[data-version-title]");
+  const close = () => { modal.hidden = true; input.value = ""; };
+  fields.querySelector("[data-open-version-title]")?.addEventListener("click", () => {
+    fields.querySelector("[data-save-menu]").hidden = true;
+    modal.hidden = false;
+    input.focus();
+  });
+  modal.querySelector("[data-version-title-cancel]").addEventListener("click", close);
+  modal.querySelector("[data-version-title-save]").addEventListener("click", () => {
+    hidden.value = input.value.trim();
+    modal.hidden = true;
+    fields.closest("form")?.requestSubmit(fields.querySelector("[data-project-submit]"));
+  });
+  modal.addEventListener("pointerdown", (event) => { if (event.target === modal) close(); });
+}
+
+const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function slugify(value) {
+  const text = String(value || "");
+  const normalized = typeof text.normalize === "function" ? text.normalize("NFKD") : text;
+  return normalized.replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "").slice(0, 63).replace(/-+$/g, "");
+}
+
+const DRAFT_KEY = "resources_project_draft_v5";
+const CHECKPOINT_MS = 300_000;
+const STARTING_POINTS = Object.freeze({
+  article: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>A small article</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <article>\n    <h1>A small article</h1>\n    <p><a href=\"https://en.wikipedia.org/wiki/Hypertext\">Hypertext</a> connects documents through links and gives the web its navigable structure.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/WebAssembly\">WebAssembly</a> provides a portable execution format for programs in the browser.</p>\n    <p><a href=\"https://en.wikipedia.org/wiki/Capability-based_security\">Capability-based security</a> limits programs to the authority they are explicitly given.</p>\n  </article>\n</body>\n</html>" },
+      { path: "style.css", content: "body {\n  margin: 0;\n  font: 17px/1.6 system-ui, sans-serif;\n  color: #eef2ff;\n  background: #151717;\n}\narticle {\n  max-width: 44rem;\n  margin: auto;\n  padding: 3rem 2rem;\n}\na { color: #30d5c8; }\n" },
+    ],
+    config: { entry: "index.html", template: "article", container: "article", containerOptions: { allowedLinkPatterns: ["*.wikipedia.org"], links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+  },
+  hello: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <title>Hello, HTML</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main>\n    <h1>Hello, HTML</h1>\n    <p>This small page is made from familiar HTML elements.</p>\n    <ul><li>A heading</li><li>A paragraph</li><li>A list</li></ul>\n  </main>\n</body>\n</html>" },
+      { path: "style.css", content: "body {\n  margin: 0;\n  min-height: 100vh;\n  display: grid;\n  place-items: center;\n  font-family: system-ui, sans-serif;\n  color: #f5f7f7;\n  background: #171a1a;\n}\nmain {\n  max-width: 42rem;\n  padding: 2rem;\n}\n" },
+    ],
+    config: { entry: "index.html", template: "hello", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+  },
+  html: {
+    files: [{ path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>Single-file document</title>\n  <style>body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 18px system-ui; color: #eef2ff; background: #171a1a; }</style>\n</head>\n<body><main><h1>Single-file document</h1><p>HTML, CSS, and JavaScript can live together here.</p></main></body>\n</html>" }],
+    config: { entry: "index.html", template: "html", sandbox: { network: false, storage: "session" } },
+  },
+  clock: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Digital clock</title>\n<main><h1 id=\"time\">--:--:--</h1><p id=\"date\">Waiting for the sandbox…</p></main>\n<script src=\"./script.js\"></script>" },
+      { path: "style.css", content: "body { margin: 0; font-family: ui-monospace, monospace; color: #f5f7f7; background: #171a1a; }\nmain { padding: 3rem; text-align: center; }\nh1 { font-size: clamp(2rem, 10vw, 5rem); }\n" },
+      { path: "script.js", content: "const pad = (value) => String(value).padStart(2, \"0\");\nfunction tick() {\n  const now = new Date();\n  document.getElementById(\"time\").textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;\n  document.getElementById(\"date\").textContent = now.toLocaleDateString();\n}\ntick();\nsetInterval(tick, 1000);" },
+    ],
+    config: { entry: "index.html", template: "clock", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  mark: {
+    files: [{ path: "image.svg", content: "<svg viewBox=\"0 0 640 420\" role=\"img\" aria-labelledby=\"mark-title\">\n  <title id=\"mark-title\">Logo mark</title>\n  <defs><linearGradient id=\"mark-gradient\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0%\" stop-color=\"#30d5c8\"/><stop offset=\"100%\" stop-color=\"#3267e3\"/></linearGradient></defs>\n  <circle cx=\"320\" cy=\"210\" r=\"160\" fill=\"url(#mark-gradient)\"/>\n  <path d=\"M 245 285 L 320 120 L 395 285 Z\" fill=\"#151717\"/>\n</svg>" }],
+    config: { entry: "image.svg", template: "mark", container: "svg", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  chart: {
+    files: [{ path: "image.svg", content: "<svg viewBox=\"0 0 720 440\" role=\"img\" aria-labelledby=\"chart-title\">\n  <title id=\"chart-title\">Bar chart</title>\n  <line x1=\"80\" y1=\"360\" x2=\"660\" y2=\"360\" stroke=\"#839099\"/>\n  <rect x=\"130\" y=\"210\" width=\"90\" height=\"150\" rx=\"8\" fill=\"#30d5c8\"/>\n  <rect x=\"315\" y=\"120\" width=\"90\" height=\"240\" rx=\"8\" fill=\"#3267e3\"/>\n  <rect x=\"500\" y=\"170\" width=\"90\" height=\"190\" rx=\"8\" fill=\"#ae79ff\"/>\n  <text x=\"148\" y=\"395\" fill=\"#eef2ff\">HTML</text><text x=\"340\" y=\"395\" fill=\"#eef2ff\">SVG</text><text x=\"510\" y=\"395\" fill=\"#eef2ff\">Canvas</text>\n</svg>" }],
+    config: { entry: "image.svg", template: "chart", container: "svg", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  ball: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Bouncing ball</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"Animated bouncing ball\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\nlet x = 90, y = 80, dx = 5, dy = 4;\nfunction frame() {\n  x += dx; y += dy;\n  if (x < 28 || x > canvas.width - 28) dx *= -1;\n  if (y < 28 || y > canvas.height - 28) dy *= -1;\n  context.clearRect(0, 0, canvas.width, canvas.height);\n  context.fillStyle = \"#30d5c8\"; context.beginPath(); context.arc(x, y, 26, 0, Math.PI * 2); context.fill();\n  requestAnimationFrame(frame);\n}\nframe();" },
+    ],
+    config: { entry: "index.html", template: "ball", container: "canvas", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  stars: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Starfield</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"Animated starfield\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\nconst width = canvas.width, height = canvas.height;\nconst stars = Array.from({ length: 120 }, () => ({ x: Math.random() - 0.5, y: Math.random() - 0.5, z: Math.random() }));\nlet last = null;\nfunction frame(time) {\n  if (last === null) last = time;\n  const elapsed = Math.min((time - last) / 1000, 0.1); last = time;\n  context.fillStyle = \"rgba(0,0,0,0.4)\"; context.fillRect(0, 0, width, height);\n  for (const star of stars) {\n    star.z -= 0.5 * elapsed;\n    if (star.z <= 0.02) { star.x = Math.random() - 0.5; star.y = Math.random() - 0.5; star.z = 1; }\n    const x = width / 2 + (star.x / star.z) * width;\n    const y = height / 2 + (star.y / star.z) * height;\n    context.fillStyle = \"#cdd9ff\"; context.beginPath(); context.arc(x, y, (1 - star.z) * 2.3, 0, Math.PI * 2); context.fill();\n  }\n  requestAnimationFrame(frame);\n}\nrequestAnimationFrame(frame);" },
+    ],
+    config: { entry: "index.html", template: "stars", container: "canvas", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "memory" } },
+  },
+  paint: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Canvas paint</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"Click to paint colorful squares\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst context = canvas.getContext(\"2d\");\ncontext.fillStyle = \"#111827\";\ncontext.fillRect(0, 0, canvas.width, canvas.height);\nlet color = 0;\ncanvas.addEventListener(\"click\", (event) => {\n  const box = canvas.getBoundingClientRect();\n  const x = (event.clientX - box.left) * canvas.width / box.width;\n  const y = (event.clientY - box.top) * canvas.height / box.height;\n  const colors = [\"#30d5c8\", \"#ae79ff\", \"#ff8f6b\", \"#facc15\"];\n  context.fillStyle = colors[color++ % colors.length];\n  context.fillRect(x - 18, y - 18, 36, 36);\n});" },
+    ],
+    config: { entry: "index.html", template: "paint", container: "canvas", sandbox: { network: false, storage: "memory" } },
+  },
+  webgl: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>WebGL triangle</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"A triangle drawn with WebGL\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst gl = canvas.getContext(\"webgl\", { preserveDrawingBuffer: true });\nif (!gl) throw new Error(\"WebGL is unavailable\");\nfunction shader(type, source) {\n  const value = gl.createShader(type);\n  gl.shaderSource(value, source);\n  gl.compileShader(value);\n  if (!gl.getShaderParameter(value, gl.COMPILE_STATUS)) throw new Error(\"Shader compilation failed\");\n  return value;\n}\nconst program = gl.createProgram();\ngl.attachShader(program, shader(gl.VERTEX_SHADER, \"attribute vec2 point; void main(){ gl_Position=vec4(point,0.0,1.0); }\"));\ngl.attachShader(program, shader(gl.FRAGMENT_SHADER, \"precision mediump float; void main(){ gl_FragColor=vec4(0.19,0.84,0.78,1.0); }\"));\ngl.linkProgram(program);\nif (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(\"Program linking failed\");\ngl.useProgram(program);\nconst buffer = gl.createBuffer();\ngl.bindBuffer(gl.ARRAY_BUFFER, buffer);\ngl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-0.75,-0.65, 0.75,-0.65, 0,0.75]), gl.STATIC_DRAW);\nconst point = gl.getAttribLocation(program, \"point\");\ngl.enableVertexAttribArray(point);\ngl.vertexAttribPointer(point, 2, gl.FLOAT, false, 0, 0);\ngl.viewport(0, 0, canvas.width, canvas.height);\ngl.clearColor(0.06, 0.09, 0.16, 1);\ngl.clear(gl.COLOR_BUFFER_BIT);\ngl.drawArrays(gl.TRIANGLES, 0, 3);" },
+    ],
+    config: { entry: "index.html", template: "webgl", container: "canvas", sandbox: { network: false, storage: "memory" } },
+  },
+  webgpu: {
+    files: [
+      { path: "index.html", content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>WebGPU triangle</title>\n<canvas width=\"720\" height=\"440\" aria-label=\"A triangle drawn with WebGPU\"></canvas>\n<script src=\"./script.js\"></script>" },
+      { path: "script.js", content: "const canvas = document.querySelector(\"canvas\");\nconst gpu = canvas.getContext(\"webgpu\");\nif (!gpu) throw new Error(\"WebGPU is unavailable\");\ngpu.renderTriangle();" },
+    ],
+    config: { entry: "index.html", template: "webgpu", container: "canvas", sandbox: { network: false, storage: "memory" } },
+  },
+  three: {
+    files: [
+      { path: "scene.js", content: "const canvas = document.querySelector(\"canvas\");\nconst geometry = new THREE.BufferGeometry();\ngeometry.setAttribute(\"position\", new THREE.Float32BufferAttribute([-0.72,-0.62,0, 0.72,-0.62,0, 0,0.72,0], 3));\nconst points = geometry.getAttribute(\"position\").array;\nconst gl = canvas.getContext(\"webgl\", { preserveDrawingBuffer: true });\nfunction shader(type, source) { const item = gl.createShader(type); gl.shaderSource(item, source); gl.compileShader(item); return item; }\nconst program = gl.createProgram();\ngl.attachShader(program, shader(gl.VERTEX_SHADER, \"attribute vec3 point; void main(){ gl_Position=vec4(point,1.0); }\"));\ngl.attachShader(program, shader(gl.FRAGMENT_SHADER, \"precision mediump float; void main(){ gl_FragColor=vec4(1.0,0.56,0.42,1.0); }\"));\ngl.linkProgram(program); gl.useProgram(program);\nconst buffer = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buffer); gl.bufferData(gl.ARRAY_BUFFER, points, gl.STATIC_DRAW);\nconst point = gl.getAttribLocation(program, \"point\"); gl.enableVertexAttribArray(point); gl.vertexAttribPointer(point, 3, gl.FLOAT, false, 0, 0);\ngl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0.06,0.09,0.16,1); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES,0,3);" },
+      { path: "three-build-runtime.js", content: "module.exports = { build: function (source, config) { return { files: [\n  { path: 'index.html', content: '<!doctype html><meta charset=\\\"utf-8\\\"><title>Three.js triangle</title><canvas width=\\\"720\\\" height=\\\"440\\\" aria-label=\\\"A triangle built with Three.js\\\"></canvas><script src=\\\"./three-runtime.js\\\"><\\/script><script src=\\\"./scene.js\\\"><\\/script>' },\n  { path: 'three-runtime.js', content: BUILD_API.runtime('three') },\n  { path: 'scene.js', content: source }\n], config: { entry: 'index.html', template: config.template } }; } };" },
+      { path: "build.js", content: "module.exports = function (input) { return input.runtime.build(input.application, input.config); };" },
+    ],
+    config: { entry: "scene.js", template: "three", build: { runtime: "three-build-runtime.js", script: "build.js", application: "scene.js" }, sandbox: { network: false, storage: "memory" } },
+  },
+  vue: {
+    files: [
+      { path: "App.vue", content: "<template>\n  <main>\n    <h1>Vue SFC</h1>\n    <button @click=\"count++\">Count {{ count }}</button>\n  </main>\n</template>\n\n<script>\nexport default {\n  data() { return { count: 0 }; }\n};\n</script>\n\n<style>\nbody { margin: 0; display: flex; min-height: 100vh; align-items: center; justify-content: center; font: 16px system-ui; background: #182120; color: #edf7f5; }\nmain { text-align: center; }\nbutton { padding: 0.6rem 1rem; border: 0; border-radius: 0.5rem; color: #102523; background: #55d8c9; cursor: pointer; }\n</style>" },
+      { path: "vue-build-runtime.js", content: "module.exports = {\n  build: function (source, path, config) {\n    var compiled = BUILD_API.compileVue(source, path);\n    var component = compiled.script.replace(/export\\s+default/, 'var component =');\n    var render = 'var render = (new Function(\\\"Vue\\\", ' + JSON.stringify(compiled.render) + '))(Vue);\\ncomponent.render = render;\\nVue.createApp(component).mount(\\\"#app\\\");';\n    return {\n      files: [\n        { path: 'index.html', content: '<!doctype html><html><head><meta charset=\\\"utf-8\\\"><title>Vue SFC</title><link rel=\\\"stylesheet\\\" href=\\\"./style.css\\\"></head><body><div id=\\\"app\\\"></div><script src=\\\"./vue-runtime.js\\\"><\\/script><script src=\\\"./app.js\\\"><\\/script></body></html>' },\n        { path: 'style.css', content: compiled.styles },\n        { path: 'vue-runtime.js', content: BUILD_API.runtime('vue') },\n        { path: 'app.js', content: component + '\\n' + render }\n      ],\n      config: { entry: 'index.html', template: config.template, stylesheets: ['style.css'] }\n    };\n  }\n};" },
+      { path: "build.js", content: "module.exports = function (input) {\n  return input.runtime.build(input.application, input.applicationPath, input.config);\n};" },
+    ],
+    config: { entry: "App.vue", template: "vue", build: { runtime: "vue-build-runtime.js", script: "build.js", application: "App.vue" }, sandbox: { network: false, storage: "memory" } },
+  },
+  svelte: {
+    files: [
+      { path: "App.svelte", content: "<script>\n  let count = 0;\n</script>\n\n<main>\n  <h1>Svelte</h1>\n  <button onclick={() => count++}>Count {count}</button>\n</main>\n\n<style>\n  :global(body) { margin: 0; display: grid; min-height: 100vh; place-items: center; font: 16px system-ui; background: #221b1b; color: #fff3ed; }\n  main { text-align: center; }\n  button { padding: 0.6rem 1rem; border: 0; border-radius: 0.5rem; color: #32170f; background: #ff8f6b; cursor: pointer; }\n</style>" },
+      { path: "svelte-build-runtime.js", content: "module.exports = {\n  build: function (source, path, config) {\n    var compiled = BUILD_API.compileSvelte(source, path).code\n      .replace(/^import ['\"]svelte\\/internal\\/(?:disclose-version|flags\\/legacy)['\"];?\\s*$/gm, '')\n      .replace(/^import \\* as \\$ from ['\"]svelte\\/internal\\/client['\"];?\\s*$/m, 'var $ = SvelteInternal;')\n      .replace('export default function App', 'function App');\n    compiled += '\\nSvelte.mount(App, { target: document.getElementById(\\\"app\\\") });';\n    return {\n      files: [\n        { path: 'index.html', content: '<!doctype html><html><head><meta charset=\\\"utf-8\\\"><title>Svelte</title></head><body><div id=\\\"app\\\"></div><script src=\\\"./svelte-runtime.js\\\"><\\/script><script src=\\\"./app.js\\\"><\\/script></body></html>' },\n        { path: 'svelte-runtime.js', content: BUILD_API.runtime('svelte') },\n        { path: 'app.js', content: compiled }\n      ],\n      config: { entry: 'index.html', template: config.template }\n    };\n  }\n};" },
+      { path: "build.js", content: "module.exports = function (input) {\n  return input.runtime.build(input.application, input.applicationPath, input.config);\n};" },
+    ],
+    config: { entry: "App.svelte", template: "svelte", build: { runtime: "svelte-build-runtime.js", script: "build.js", application: "App.svelte" }, sandbox: { network: false, storage: "memory" } },
+  },
+  blank: {
+    files: [{ path: "index.html", content: "" }],
+    config: { entry: "index.html", template: "blank", container: "page", containerOptions: { links: { addTargetBlank: true } }, sandbox: { network: false, storage: "session" } },
+  },
+  slides: {
+    files: [{ path: "index.html", content: "<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Small presentation</title><style>html,body{margin:0;height:100%;background:#101321;color:#f4f6ff;font:20px system-ui}main{height:100%;display:grid;place-items:center;text-align:center}small{color:#9da8d8}</style></head><body><main><div><h1>Small presentation</h1><p>A portable, single-file starting point.</p><small>Import a Resources project ZIP to replace it.</small></div></main></body></html>" }],
+    config: { entry: "index.html", template: "slides", container: "single-file-web-app", sandbox: { network: false, storage: "session" } },
+  },
+});
+
+for (const select of document.querySelectorAll("[data-project-template]")) {
+  const before = select.querySelector('option[value="vue"]');
+  for (const [value, label] of [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]) {
+    if (select.querySelector(`option[value="${value}"]`)) continue;
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    select.insertBefore(option, before);
+  }
+}
+
+const generatedSlugs = new WeakMap();
+function slugPair(source) {
+  const slugId = source.dataset.slugSource || (source.id === "project-name" ? "project-slug" : source.id === "organization-name" ? "organization-slug" : "");
+  const slug = document.getElementById(slugId);
+  const error = document.getElementById(slug?.getAttribute("aria-describedby"));
+  return slug && error ? { slug, error } : null;
+}
+function validateSlug(slug, error, touched = true) {
+  const invalid = slug.value !== "" && !slugPattern.test(slug.value);
+  slug.setCustomValidity(invalid ? error.dataset.message : "");
+  slug.setAttribute("aria-invalid", invalid ? "true" : "false");
+  error.hidden = !invalid || !touched;
+}
+document.addEventListener("input", (event) => {
+  const source = event.target.closest?.("[data-slug-source], #project-name, #organization-name");
+  if (source) {
+    const pair = slugPair(source);
+    if (!pair) return;
+    const previous = generatedSlugs.get(source) ?? pair.slug.value;
+    if (pair.slug.value !== "" && pair.slug.value !== previous) return;
+    const generated = slugify(source.value);
+    generatedSlugs.set(source, generated);
+    pair.slug.value = generated;
+    validateSlug(pair.slug, pair.error, false);
+    return;
+  }
+  const slug = event.target.closest?.("#project-slug, #organization-slug");
+  if (!slug) return;
+  const error = document.getElementById(slug.getAttribute("aria-describedby"));
+  if (error) validateSlug(slug, error);
+});
+document.addEventListener("focusout", (event) => {
+  const slug = event.target.closest?.("#project-slug, #organization-slug");
+  if (!slug) return;
+  const error = document.getElementById(slug.getAttribute("aria-describedby"));
+  if (error) validateSlug(slug, error);
+});
+document.querySelector("[data-try-form]")?.addEventListener("submit", (event) => event.preventDefault());
+function attachInstantTooltip(button, label = button.dataset.instantTooltip, shouldShow = () => true) {
+  if (!label || button.dataset.instantTooltipAttached === "true") return;
+  button.dataset.instantTooltip = label;
+  button.dataset.instantTooltipAttached = "true";
+  let tooltip = null;
+  let showTimer = null;
+  const show = () => {
+    if (!shouldShow(button) || button.getAttribute("aria-expanded") === "true") return;
+    if (!tooltip) {
+      tooltip = document.createElement("span");
+      tooltip.className = "instant-tooltip";
+      tooltip.textContent = label;
+      document.body.append(tooltip);
+    }
+    requestAnimationFrame(() => {
+      if (!tooltip) return;
+      tooltip.dataset.visible = "";
+      const anchor = button.getBoundingClientRect();
+      const width = tooltip.offsetWidth;
+      const left = Math.max(8, Math.min(innerWidth - width - 8, anchor.left + anchor.width / 2 - width / 2));
+      tooltip.style.left = `${left}px`;
+      tooltip.style.top = `${anchor.bottom + 4}px`;
+    });
+  };
+  const hide = () => {
+    clearTimeout(showTimer);
+    showTimer = null;
+    tooltip?.remove();
+    tooltip = null;
+  };
+  button._hideInstantTooltip = hide;
+  button.addEventListener("pointerenter", () => {
+    if (!shouldShow(button)) return;
+    clearTimeout(showTimer);
+    showTimer = setTimeout(show, 600);
+  });
+  button.addEventListener("pointerleave", hide);
+  button.addEventListener("pointerdown", hide);
+  button.addEventListener("dragstart", hide);
+  button.addEventListener("focus", show);
+  button.addEventListener("blur", hide);
+  button.addEventListener("instanttooltiphide", hide);
+}
+for (const button of document.querySelectorAll("button[data-instant-tooltip]")) {
+  attachInstantTooltip(button);
+}
+document.addEventListener("click", (event) => {
+  event.target.closest?.("[data-dismiss-draft-flash]")?.closest("[data-draft-flash]")?.remove();
+  const open = event.target.closest?.("[data-open-draft-delete], [data-open-project-delete]");
+  if (open) open.closest("[data-project-fields]")?.querySelector("[data-destructive-confirm]")?.removeAttribute("hidden");
+  const cancel = event.target.closest?.("[data-cancel-delete]");
+  if (cancel) cancel.closest("[data-destructive-confirm]")?.setAttribute("hidden", "");
+  if (event.target.closest?.("[data-confirm-draft-delete]")) {
+    sessionStorage.removeItem(DRAFT_KEY);
+    location.reload();
+  }
+});
+
+function draftHistory(snapshot) {
+  const empty = emptyProjectSnapshot();
+  const createdAt = Date.now();
+  return { snapshot, checkpoint: snapshot, snapshots: [snapshot], patches: [diffProjectSnapshots(empty, snapshot)], versionTimes: [createdAt], createdAt, lastVersionAt: createdAt };
+}
+
+function rebuildDraft(patches, sequence = patches.length) {
+  let snapshot = emptyProjectSnapshot();
+  for (const patch of patches.slice(0, sequence)) snapshot = applyProjectPatch(snapshot, patch);
+  return snapshot;
+}
+
+function relativeVersionTime(timestamp, now = Date.now()) {
+  const then = new Date(Number(timestamp));
+  const current = new Date(now);
+  const seconds = Math.max(0, Math.floor((current - then) / 1000));
+  const spanish = document.documentElement.lang === "es";
+  const amount = (value, singular, plural) => `${value} ${value === 1 ? singular : plural}`;
+  if (seconds < 60) return `${amount(seconds, spanish ? "segundo" : "second", spanish ? "segundos" : "seconds")} ${spanish ? "atrás" : "ago"}`;
+  const minutes = Math.floor(seconds / 60);
+  const remainderSeconds = seconds % 60;
+  if (minutes < 60) {
+    const parts = [amount(minutes, spanish ? "minuto" : "minute", spanish ? "minutos" : "minutes")];
+    if (remainderSeconds) parts.push(amount(remainderSeconds, spanish ? "segundo" : "second", spanish ? "segundos" : "seconds"));
+    return `${parts.join(" ")} ${spanish ? "atrás" : "ago"}`;
+  }
+  const sameDay = then.getFullYear() === current.getFullYear() && then.getMonth() === current.getMonth() && then.getDate() === current.getDate();
+  if (sameDay || seconds < 8 * 3600) {
+    const hours = Math.floor(minutes / 60);
+    const remainderMinutes = minutes % 60;
+    const parts = [amount(hours, spanish ? "hora" : "hour", spanish ? "horas" : "hours")];
+    if (remainderMinutes) parts.push(amount(remainderMinutes, spanish ? "minuto" : "minute", spanish ? "minutos" : "minutes"));
+    return `${parts.join(" ")} ${spanish ? "atrás" : "ago"}`;
+  }
+  const dayStart = new Date(current.getFullYear(), current.getMonth(), current.getDate());
+  const thenDayStart = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+  const days = Math.round((dayStart - thenDayStart) / 86_400_000);
+  const clock = formatVersionClock(then, spanish);
+  if (days === 1) return `${spanish ? "Ayer" : "Yesterday"} ${clock}`;
+  const weekdays = spanish
+    ? ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
+    : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  if (days < 7) return `${weekdays[then.getDay()]} ${clock}`;
+  const months = spanish
+    ? ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+    : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return spanish
+    ? `${then.getDate()} ${months[then.getMonth()]} ${then.getFullYear()}, ${clock}`
+    : `${months[then.getMonth()]} ${then.getDate()}, ${then.getFullYear()}, ${clock}`;
+}
+
+function formatVersionClock(date, spanish = document.documentElement.lang === "es") {
+  const englishUS = !spanish && /^en-US\b/i.test(navigator.language || "");
+  if (!englishUS) return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  const hour = date.getHours();
+  return `${hour % 12 || 12}:${String(date.getMinutes()).padStart(2, "0")}${hour < 12 ? "am" : "pm"}`;
+}
+
+function formatVersionDateTime(timestamp) {
+  const date = new Date(Number(timestamp));
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${formatVersionClock(date)}`;
+}
+
+function versionChoice(label, timestamp, { current = false, sequence = 0, title = "", latest = false } = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "project-editor__version";
+  if (title) {
+    const name = document.createElement("span");
+    name.className = "project-editor__version-title";
+    name.textContent = title;
+    button.append(name);
+  }
+  const time = document.createElement("span");
+  time.textContent = label;
+  time.dataset.versionTime = String(Number(timestamp));
+  button.append(time);
+  if (latest) {
+    const badge = document.createElement("span");
+    badge.className = "project-editor__latest";
+    badge.textContent = "LATEST";
+    button.append(badge);
+  }
+  button.title = formatVersionDateTime(timestamp);
+  if (sequence) button.dataset.versionSequence = String(sequence);
+  if (current) {
+    button.setAttribute("aria-current", "true");
+  }
+  return button;
+}
+
+async function mountProjectRoot(root) {
+  const editorMount = root.querySelector("[data-project-editor-mount]");
+  const preview = root.querySelector("[data-project-preview]");
+  const snapshotField = root.querySelector("[data-project-snapshot]");
+  const status = root.querySelector("[data-project-status]");
+  const statusSave = root.querySelector("[data-project-save]");
+  const statusError = root.querySelector("[data-project-error]");
+  const statusNotice = root.querySelector("[data-project-notice]");
+  const versionButton = root.closest(".project-create__layout")?.querySelector("[data-project-versions-proxy]") || root.querySelector("[data-project-versions]");
+  const versionCount = versionButton.querySelector(".project-editor__version-count");
+  const currentVersion = versionButton.querySelector("[data-current-version]");
+  const historyPanel = root.querySelector("[data-project-history]");
+  const versionList = historyPanel.querySelector("[data-project-version-list]");
+  // A transformed focused-view ancestor would otherwise make `position:
+  // fixed` relative to the project surface instead of the viewport.
+  document.body.append(historyPanel);
+  const projectId = root.dataset.projectId;
+  const persistence = root.dataset.persistence || "stored";
+  const draft = persistence === "session";
+  const memoryOnly = persistence === "memory";
+  const readOnly = root.dataset.readOnly === "true";
+  const pendingSnapshotKey = projectId ? `resources_project_pending_v1:${projectId}` : "";
+  const initialProjectLayout = root.closest(".project-create__layout");
+  const initialDetailsButton = root.querySelector('[data-project-view="details"]');
+  const initiallyNarrow = globalThis.matchMedia?.("(max-width: 760px)").matches === true;
+  if (initialProjectLayout) initialProjectLayout.dataset.detailsVisible = String(!initiallyNarrow);
+  initialDetailsButton?.setAttribute("aria-pressed", String(!initiallyNarrow));
+  root.dataset.draftState = "clean";
+  let restoredDraft = false;
+  const snapshotUrl = root.querySelector("[data-project-snapshot-url]")?.dataset.projectSnapshotUrl;
+  let workspacePayload = null;
+  if (snapshotUrl) {
+    try {
+      const response = await fetch(snapshotUrl, { headers: { Accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) throw new Error(`Project workspace response: ${response.status}`);
+      workspacePayload = await response.json();
+      snapshotField.value = JSON.stringify(workspacePayload.snapshot);
+      versionCount.textContent = String(workspacePayload.versionCount || 1);
+      const draftFlash = root.closest(".project-create__layout")?.querySelector("[data-draft-flash]");
+      if (draftFlash && workspacePayload.hasUnpublishedChanges) draftFlash.hidden = false;
+      else draftFlash?.remove();
+    } catch (error) {
+      root.dataset.editorMachineState = "failed";
+      status.dataset.state = "error";
+      status.hidden = false;
+      statusError.hidden = false;
+      statusError.textContent = `Project failed to load: ${error.message}`;
+      return;
+    }
+  }
+  if (typeof snapshotField?.value !== "string") {
+    throw new Error("Project snapshot field is unavailable");
+  }
+  let parsedSnapshot;
+  try {
+    parsedSnapshot = JSON.parse(snapshotField.value);
+  } catch (error) {
+    throw new Error(`Project snapshot JSON is invalid: ${error?.message || error}`);
+  }
+  let state = normalizeProjectSnapshot(parsedSnapshot);
+  // Keep very large project history on the host. Mirroring multi-megabyte
+  // snapshots into the editor VM delays (and can prevent) the first render,
+  // while the existing host history path has the same observable behavior.
+  const historyInEditorMachine = snapshotField.value.length <= 256_000;
+  let recoveredPendingSnapshot = false;
+  if (!readOnly && !draft && !memoryOnly && pendingSnapshotKey) {
+    try {
+      const pendingValue = sessionStorage.getItem(pendingSnapshotKey);
+      if (pendingValue) {
+        const recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
+        if (!projectPatchIsEmpty(diffProjectSnapshots(state, recovered))) {
+          state = recovered;
+          snapshotField.value = JSON.stringify(state);
+          recoveredPendingSnapshot = true;
+        } else {
+          sessionStorage.removeItem(pendingSnapshotKey);
+        }
+      }
+    } catch {
+      sessionStorage.removeItem(pendingSnapshotKey);
+    }
+  }
+  if (workspacePayload) {
+    const fields = root.closest(".project-create__layout")?.querySelector("[data-project-fields]");
+    const templateField = fields?.querySelector("[data-project-template]");
+    const patternsField = fields?.querySelector("#project-link-patterns");
+    if (templateField) templateField.value = state.config?.template || "article";
+    if (patternsField) patternsField.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
+  }
+  const requestedTemplate = memoryOnly
+    ? /^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$/.exec(location.pathname)?.[1]
+      || queryParameter("template")
+    : null;
+  if (requestedTemplate && STARTING_POINTS[requestedTemplate]) {
+    state = normalizeProjectSnapshot(STARTING_POINTS[requestedTemplate]);
+    snapshotField.value = JSON.stringify(state);
+  }
+  let currentSnapshot = state;
+  let viewingHistorical = false;
+  let selected = state.files.some((file) => file.path === state.config?.entry) ? state.config.entry : state.files[0]?.path || "config";
+  const tabSessionKey = `resources_project_tabs_v1:${projectId || persistence}`;
+  let openTabs = [];
+  try { openTabs = JSON.parse(sessionStorage.getItem(tabSessionKey)) || []; } catch {}
+  if (!openTabs.length) openTabs = Array.isArray(state.config?.editorTabs) ? [...state.config.editorTabs] : [selected];
+  let ready = false;
+  let pending = recoveredPendingSnapshot;
+  let saveTimer = 0;
+  let pendingDestructive = false;
+  let templateOnlyPending = false;
+  let changeGeneration = 0;
+  let unsavedChangeCount = 0;
+  let currentUpdatedAt = recoveredPendingSnapshot ? Date.now() : Number(workspacePayload?.updatedAt || Date.now());
+  let saving = false;
+  let localHistory = null;
+  let editorController = null;
+  let editorGeneration = 0;
+  let previewController = null;
+  let previewTimer = 0;
+  let editorPreviewTimer = 0;
+  let previewGeneration = 0;
+  let outputFrame = null;
+  let outputFramePort = null;
+  let outputFrameReady = null;
+  let outputFrameRequested = true;
+  const syncOutputTheme = () => {
+    const theme = frontendTheme();
+    if (outputFrame) {
+      outputFrame.style.colorScheme = theme;
+      outputFrame.style.backgroundColor = theme === "light" ? "#e7ecff" : "#151717";
+    }
+    outputFramePort?.postMessage({ type: "theme", colorScheme: theme });
+  };
+  let activeError = "";
+  let activeErrorAction = null;
+  let activeStatusSurface = "output";
+  let activeNotice = false;
+  let persistenceState = status.dataset.state || "normal";
+  function showCurrentVersion() {
+    currentVersion.textContent = relativeVersionTime(currentUpdatedAt);
+    currentVersion.dataset.versionTime = String(currentUpdatedAt);
+    currentVersion.title = formatVersionDateTime(currentUpdatedAt);
+  }
+
+  function refreshSubmitLabel() {
+    const button = root.closest("form")?.querySelector("[data-project-submit]");
+    if (!button || draft) return;
+    button.textContent = button.dataset.defaultLabel;
+    const disabled = unsavedChangeCount === 0
+      && workspacePayload?.hasUnpublishedChanges !== true
+      && !recoveredPendingSnapshot;
+    button.disabled = disabled;
+    const menuTrigger = root.closest("form")?.querySelector("[data-save-menu-trigger]");
+    if (disabled) menuTrigger?.setAttribute("disabled", "");
+    else menuTrigger?.removeAttribute("disabled");
+  }
+  refreshSubmitLabel();
+
+  function showSelectedVersion(label, timestamp) {
+    currentVersion.textContent = label;
+    currentVersion.dataset.versionTime = String(Number(timestamp));
+    currentVersion.title = formatVersionDateTime(timestamp);
+  }
+
+  if (draft || memoryOnly) {
+    if (draft) {
+      const navigationEntries = typeof performance.getEntriesByType === "function" ?
+        performance.getEntriesByType("navigation") : [];
+      const navigationType = navigationEntries[0]?.type;
+      if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+      try {
+        const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
+        if (stored?.patches?.length) {
+          restoredDraft = true;
+          localHistory = stored;
+          localHistory.versionTimes ||= stored.patches.map((_, index) => Number(stored.createdAt || Date.now()) + index);
+          localHistory.snapshots ||= stored.patches.map((_, index) => rebuildDraft(stored.patches, index + 1));
+          state = normalizeProjectSnapshot(stored.snapshot);
+        }
+      } catch {
+        sessionStorage.removeItem(DRAFT_KEY);
+      }
+    }
+    localHistory ||= draftHistory(state);
+    versionCount.textContent = String(localHistory.patches.length);
+  }
+  if (restoredDraft) {
+    root.dataset.draftState = "saved";
+    root.closest("form")?.querySelector("[data-draft-actions]")?.removeAttribute("hidden");
+    root.closest("form")?.querySelector("[data-new-draft-flash]")?.removeAttribute("hidden");
+  }
+
+  function selectedContent() {
+    if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
+    return state.files.find((file) => file.path === selected)?.content ?? "";
+  }
+
+  function mode() {
+    return selected.endsWith(".md") ? "markdown" : "code";
+  }
+
+  function language() {
+    if (selected === "config") return "json";
+    if (selected.endsWith(".ts") || selected.endsWith(".tsx") || selected.endsWith(".mts") || selected.endsWith(".cts")) return "typescript";
+    if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".cjs") || selected.endsWith(".jsx")) return "javascript";
+    if (selected.endsWith(".vue")) return "vue";
+    if (selected.endsWith(".svelte")) return "svelte";
+    if (selected.endsWith(".html") || selected.endsWith(".htm") || selected.endsWith(".svg")) return "html";
+    if (selected.endsWith(".css")) return "css";
+    if (selected.endsWith(".md")) return "markdown";
+    return "plain";
+  }
+
+  function sendContent({ resetHistoryOnEdit = false } = {}) {
+    if (!ready || !editorController) return;
+    root.dataset.editorLoading = "true";
+    const selectedFile = state.files.find((file) => file.path === selected);
+    editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
+    editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
+    editorMount.hidden = isProjectImage(selectedFile);
+    if (isProjectImage(selectedFile)) {
+      const image = document.createElement("img");
+      image.className = "project-editor__image-view";
+      image.src = selectedFile.content;
+      image.alt = selectedFile.path;
+      editorMount.parentElement.append(image);
+      delete root.dataset.editorLoading;
+      return;
+    }
+    editorController.setContent(selectedContent(), language(), {
+      path: selected, readOnly: readOnly || selected === "config", resetHistoryOnEdit,
+    });
+    delete root.dataset.editorLoading;
+  }
+
+  async function renderPreview() {
+    if (root.dataset.outputOwner === "editor") return;
+    clearTimeout(editorPreviewTimer);
+    editorPreviewTimer = 0;
+    const generation = ++previewGeneration;
+    root.dataset.outputMachineState = "starting";
+    activeError = "";
+    renderStatusState();
+    try {
+      editorController?.projectStatus.begin(generation);
+    } catch (error) {
+      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
+    }
+    let previewState = state;
+    if (state.config?.build) {
+      try { previewState = normalizeProjectSnapshot(await buildProject(state.files, state.config)); }
+      catch (error) {
+        if (generation === previewGeneration) {
+          root.dataset.outputMachineState = "failed";
+          setStatus(`Build blocked: ${error.message}`, "error", null, "output");
+        }
+        return;
+      }
+      if (generation !== previewGeneration) return;
+    }
+    const entry = previewState.config?.entry || "index.html";
+    const source = previewState.files.find((file) => file.path === entry)?.content || "";
+    const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
+    root.querySelector("[data-preview-title]").textContent = title;
+    const outputOptions = previewState.config?.output || {};
+    // The Machine Controller will own the optional iframe transport. Until
+    // that transport is selected, keep the frontend guest on a plain element
+    // and give only that element to the disposable output machine.
+    const useOutputFrame = false;
+    let surfaceHost, surfaceRoot, surfaceBody;
+    if (useOutputFrame) {
+      if (!outputFrame) {
+        outputFrame = document.createElement("iframe");
+        outputFrame.className = "project-editor__preview-surface";
+        outputFrame.title = `${title} output`;
+        outputFrame.src = "/-/resources-site/project-output-frame.html";
+        outputFrame.style.cssText = "display:block;width:100%;height:100%;border:0";
+        outputFrame.style.colorScheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
+        outputFrame.style.backgroundColor = document.documentElement.dataset.theme === "light" ? "#e7ecff" : "#151717";
+        outputFrame.hidden = true;
+        outputFrameReady = new Promise((resolve, reject) => {
+          outputFrame.addEventListener("load", () => {
+            const channel = new MessageChannel();
+            channel.port1.addEventListener("message", (event) => {
+              if (event.data?.type === "ready") { outputFramePort = channel.port1; resolve(); }
+            });
+            channel.port1.start();
+            outputFrame.contentWindow.postMessage({ protocol: "resources-project-output-frame-v1", type: "connect" }, location.origin, [channel.port2]);
+          }, { once: true });
+          outputFrame.addEventListener("error", () => reject(new Error("Project output frame failed to load")), { once: true });
+        });
+        preview.append(outputFrame);
+      }
+      surfaceHost = outputFrame;
+      await outputFrameReady;
+      if (generation !== previewGeneration) return;
+      preview.dataset.outputSurface = "iframe";
+    } else {
+      surfaceHost = document.createElement("div");
+      surfaceHost.className = "project-editor__preview-surface";
+      surfaceRoot = surfaceHost;
+      surfaceBody = document.createElement("div");
+      surfaceRoot.append(surfaceBody);
+      preview.replaceChildren(surfaceHost);
+      preview.dataset.outputSurface = "direct";
+    }
+    surfaceBody.dataset.projectOutputMount = String(generation);
+    const parsed = parseProjectHtml(source);
+    // Projects share one web-page container. A project may narrow or extend
+    // its authored surface through its generated DOM schema, but choosing a
+    // separate built-in container is no longer part of the editing model.
+    const allowed = new Set();
+    containerElementNames("web-page").forEach((name) => allowed.add(name));
+    for (const name of Object.keys(previewState.config?.domSchema?.nodes || {})) allowed.add(name);
+    const scripts = [];
+    const violations = [];
+    const structuralElement = (node) => ["script", "style", "link", "meta", "head", "html", "body"].includes(node.localName)
+      || (node.localName === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg");
+    const reject = (message) => {
+      if (!violations.some((violation) => violation.message === message)) violations.push(new Error(message));
+    };
+    const projectFile = (path) => previewState.files.find((candidate) => candidate.path === path);
+    const resolveModulePath = (from, specifier) => {
+      const parts = from.split("/");
+      parts.pop();
+      for (const part of specifier.split("/")) {
+        if (!part || part === ".") continue;
+        if (part === "..") parts.pop();
+        else parts.push(part);
+      }
+      return parts.join("/");
+    };
+    const bundleProjectModule = (path, source, seen = new Set()) => {
+      if (seen.has(path)) return "";
+      seen.add(path);
+      const imports = [];
+      const body = source.replace(/^[ \t]*import\s+(?:[^"']+?\s+from\s+)?["']([^"']+)["'];?[ \t]*$/gm,
+        (_statement, specifier) => {
+          if (!specifier.startsWith(".")) throw new Error(`Module import is outside the project: ${specifier}`);
+          const dependencyPath = resolveModulePath(path, specifier);
+          const dependency = projectFile(dependencyPath);
+          if (!dependency) throw new Error(`Project module not found: ${dependencyPath}`);
+          imports.push(bundleProjectModule(dependencyPath, dependency.content, seen));
+          return "";
+        }).replace(/^\s*export\s+(?=(?:const|let|var|function|class)\b)/gm, "");
+      if (/^\s*export\s/m.test(body)) throw new Error(`Unsupported module export in ${path}`);
+      return `${imports.join("\n")}\n${body}`;
+    };
+    for (const script of parsed.querySelectorAll("script")) {
+      let ancestor = script.parentElement;
+      let blocked = false;
+      while (ancestor && ancestor !== parsed.body) {
+        if (!structuralElement(ancestor) && !allowed.has(ancestor.localName)) { blocked = true; break; }
+        ancestor = ancestor.parentElement;
+      }
+      if (blocked) continue;
+      const src = script.getAttribute("src");
+      const module = script.getAttribute("type") === "module";
+      if (src) {
+        const path = src.replace(/^\.\//, "");
+        const file = projectFile(path);
+        if (file) scripts.push({ source: path, code: module
+          ? `(async function () {\n${bundleProjectModule(path, file.content)}\n})();`
+          : file.content });
+      } else if (script.textContent.trim()) scripts.push({ source: entry, code: module
+        ? `(async function () {\n${bundleProjectModule(entry, script.textContent)}\n})();`
+        : script.textContent });
+    }
+    const fragment = document.createDocumentFragment();
+    const projectedAttributes = new WeakMap();
+    function copy(node, parent) {
+      if (node.nodeType === Node.TEXT_NODE) { parent.append(document.createTextNode(node.textContent)); return; }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const name = node.localName;
+      const structural = structuralElement(node);
+      if (!allowed.has(name) || structural) {
+        if (!structural) {
+          reject(`<${name}> was omitted because the ${previewState.config?.container || "selected"} container schema does not allow it.`);
+          return;
+        }
+        if (["html", "body"].includes(name)) {
+          for (const child of node.childNodes) copy(child, parent);
+        }
+        return;
+      }
+      const element = node.namespaceURI === "http://www.w3.org/2000/svg"
+        ? document.createElementNS("http://www.w3.org/2000/svg", name)
+        : document.createElement(name);
+      for (const attribute of ["id", "class", "title", "role", "type", "tabindex", "hidden", "maxlength", "placeholder",
+        "aria-label", "aria-live", "aria-modal", "aria-haspopup", "aria-expanded"]) {
+        if (node.hasAttribute(attribute) && (attribute === "hidden" || /^[- A-Za-z0-9_.,:]+$/.test(node.getAttribute(attribute))))
+          element.setAttribute(attribute, node.getAttribute(attribute));
+      }
+      if (name === "canvas") {
+        for (const attribute of ["width", "height"]) if (/^[0-9]{1,5}$/.test(node.getAttribute(attribute) || "")) element.setAttribute(attribute, node.getAttribute(attribute));
+      }
+      if (name === "a" && node.getAttribute("href")) {
+        const href = node.getAttribute("href");
+        const patterns = previewState.config?.containerOptions?.allowedLinkPatterns || previewState.config?.container?.allowedLinkPatterns || [];
+        if (urlMatchesAllowedPatterns(href, patterns)) {
+          const attributes = [["href", href]];
+          const authoredTarget = node.getAttribute("target");
+          if (authoredTarget) attributes.push(["target", authoredTarget]);
+          else if ((previewState.config?.containerOptions?.links || previewState.config?.container?.links)?.addTargetBlank !== false) attributes.push(["target", "_blank"]);
+          projectedAttributes.set(element, attributes);
+        } else {
+          reject(`The href for ${href} was omitted because it is outside the allowed URL patterns.`);
+        }
+      }
+      if (node.namespaceURI === "http://www.w3.org/2000/svg") {
+        const svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id", "offset", "stop-color", "gradientUnits"]);
+        for (const attribute of node.attributes) {
+          if (svgAttributes.has(attribute.name) && /^[- A-Za-z0-9.,#()%]+$/.test(attribute.value)) element.setAttribute(attribute.name, attribute.value);
+        }
+      }
+      for (const child of node.childNodes) copy(child, element);
+      parent.append(element);
+    }
+    for (const child of parsed.body.childNodes) copy(child, fragment);
+    const staging = document.createElement("div");
+    staging.append(fragment);
+    const serializeOutputNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) return [0, node.textContent];
+      const attributes = [];
+      for (let index = 0; index < node.attributes.length; index++) {
+        const attribute = node.attributes[index];
+        attributes.push([attribute.name, attribute.value]);
+      }
+      for (const attribute of projectedAttributes.get(node) || []) attributes.push(attribute);
+      const children = [];
+      for (let index = 0; index < node.childNodes.length; index++) {
+        children.push(serializeOutputNode(node.childNodes[index]));
+      }
+      return [1, node.localName, node.namespaceURI === "http://www.w3.org/2000/svg" ? 1 : 0,
+        attributes, children];
+    };
+    const outputTree = [];
+    for (let index = 0; index < staging.childNodes.length; index++) {
+      outputTree.push(serializeOutputNode(staging.childNodes[index]));
+    }
+    let stylesheetPaths = previewState.config?.stylesheets;
+    if (!stylesheetPaths) {
+      stylesheetPaths = [];
+      const links = parsed.querySelectorAll('link[rel="stylesheet"][href]');
+      for (let index = 0; index < links.length; index++) {
+        stylesheetPaths.push(links[index].getAttribute("href").replace(/^\.\//, ""));
+      }
+    }
+    const styles = parsed.querySelectorAll("style");
+    const cssParts = [];
+    for (let index = 0; index < styles.length; index++) cssParts.push(styles[index].textContent || "");
+    for (const path of stylesheetPaths) {
+      const file = previewState.files.find((candidate) => candidate.path === path);
+      if (file) cssParts.push(file.content || "");
+    }
+    const css = cssParts.join("\n");
+    let renderedCss = "";
+    if (css) renderedCss = css;
+    let stagedRoot = "";
+    if (useOutputFrame) {
+      await new Promise((resolve) => {
+        const receive = (event) => {
+          if (event.data?.type !== "staged" || event.data.generation !== generation) return;
+          stagedRoot = event.data.root;
+          outputFramePort.removeEventListener("message", receive);
+          resolve();
+        };
+        outputFramePort.addEventListener("message", receive);
+        outputFramePort.postMessage({
+          type: "stage",
+          generation,
+          css: renderedCss,
+          colorScheme: document.documentElement.dataset.theme === "light" ? "light" : "dark",
+        });
+      });
+      if (generation !== previewGeneration) return;
+      surfaceBody = surfaceHost.contentDocument?.getElementById(stagedRoot);
+      if (!surfaceBody) throw new Error("Project output frame root is unavailable");
+    }
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(async () => {
+      if (generation !== previewGeneration) return;
+      try {
+        const allowedTags = [];
+        allowed.forEach((tag) => {
+          if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
+        });
+        const controller = await mountResourcesProjectPreview({
+          rootKey: String(generation),
+          root: surfaceBody, statusRoot: preview, scripts: [], violations,
+          tags: allowedTags,
+          files: previewState.files,
+          allowedFetchOrigins: previewState.config?.containerOptions?.allowedFetchOrigins
+            || previewState.config?.capabilities?.fetch?.resources || [],
+          allowedLinkPatterns: previewState.config?.containerOptions?.allowedLinkPatterns || [],
+          allowNavigate: (value) => urlMatchesAllowedPatterns(value,
+            previewState.config?.containerOptions?.allowedLinkPatterns || []),
+          environment: { language: document.documentElement.lang || "en" },
+          onViolation(error) {
+            if (generation !== previewGeneration) return;
+            const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
+            if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error", null, "output");
+          },
+        });
+        if (generation !== previewGeneration) controller.destroy();
+        else {
+          if (useOutputFrame) {
+            controller.setContent(outputTree);
+            await controller.run(scripts);
+          } else {
+            await controller.load({ tree: outputTree,
+              stylesheets: renderedCss ? [renderedCss] : [], scripts });
+          }
+          if (useOutputFrame) {
+            await new Promise((resolve) => {
+              const receive = (event) => {
+                if (event.data?.type !== "committed" || event.data.generation !== generation) return;
+                outputFramePort.removeEventListener("message", receive);
+                resolve();
+              };
+              outputFramePort.addEventListener("message", receive);
+              outputFramePort.postMessage({ type: "commit", generation });
+            });
+            if (generation !== previewGeneration) { controller.destroy(); return; }
+            outputFrame.hidden = false;
+            for (const child of [...preview.children]) if (child !== outputFrame) child.remove();
+          }
+          previewController?.destroy();
+          previewController = controller;
+          root.dataset.outputMachineState = "ready";
+          delete preview.dataset.previewViolations;
+          delete preview.dataset.canvasCommands;
+          const inspection = controller.inspect?.();
+          const machine = inspection?.machine;
+          preview.dataset.projectMachineId = machine?.machineId || "wasm-web-machine";
+          preview.dataset.projectPrograms = String(inspection?.programs || 0);
+        }
+      } catch (error) {
+        if (generation === previewGeneration) root.dataset.outputMachineState = "failed";
+        setStatus(`Blocked: ${error.message}`, true, null, "output");
+        queueMicrotask(() => {
+          if (generation === previewGeneration) routeProjectStatus(generation, { type: "blocked", message: error.message });
+        });
+      }
+    }, 120);
+  }
+
+  function routeProjectStatus(generation, event) {
+    try {
+      return editorController?.projectStatus.report(generation, event) || null;
+    } catch (error) {
+      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
+      return null;
+    }
+  }
+
+  function disposeProjectMachine() {
+    previewGeneration += 1;
+    clearTimeout(previewTimer);
+    previewController?.destroy();
+    previewController = null;
+    outputFramePort?.close();
+    outputFrame?.remove();
+    outputFrame = outputFramePort = outputFrameReady = null;
+    outputFrameRequested = true;
+    delete preview.dataset.previewRuntime;
+    delete preview.dataset.previewViolations;
+    delete preview.dataset.projectMachineId;
+    delete preview.dataset.canvasCommands;
+  }
+
+  async function mountEditorMachine(reason = "project-open") {
+    const generation = ++editorGeneration;
+    ready = false;
+    editorController?.destroy();
+    editorController = null;
+    delete root.dataset.editorMachineId;
+    root.dataset.editorMachineState = "starting";
+    root.dataset.editorMachineReason = reason;
+    try {
+      const controller = await mountResourcesProjectEditor({
+        root: editorMount,
+        limits: false,
+        onChange: receiveEditorChange,
+        onViolation(error) {
+          setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor }, "editor");
+        },
+      });
+      if (generation !== editorGeneration) {
+        controller.destroy();
+        return;
+      }
+      editorController = controller;
+      root.dataset.editorMachineStage = "theme";
+      syncOutputTheme();
+      root.dataset.editorMachineStage = "snapshot";
+      editorController.setSnapshot(state);
+      root.dataset.editorMachineId = controller.inspect()?.machine?.machineId || "quickjs-editor";
+      root.dataset.editorMachineState = "ready";
+      root.dataset.editorMachineStage = "history";
+      if (localHistory && historyInEditorMachine) localHistory = editorController.history.initialize(localHistory);
+      ready = true;
+      root.dataset.editorMachineStage = "content";
+      sendContent();
+      root.dataset.editorMachineStage = "ready";
+      if (!previewController) renderPreview();
+    } catch (error) {
+      if (generation !== editorGeneration) return;
+      root.dataset.editorMachineState = "failed";
+      root.dataset.editorMachineError = error.stack || error.message;
+      setStatus(`Editor failed to start: ${error.message}`, true, null, "editor");
+    }
+  }
+
+  function rotateContainerMachines(reason = "container-change") {
+    disposeProjectMachine();
+    mountEditorMachine(reason);
+  }
+
+  function renderTabs() {
+    const menu = root.querySelector("[data-project-file-options]");
+    const tabs = root.querySelector("[data-project-tabs]");
+    const available = new Set([...state.files.map((file) => file.path), "config"]);
+    const selectedAvailable = typeof selected === "string" && available.has(selected);
+    openTabs = openTabs.filter((path, index) => available.has(path) && openTabs.indexOf(path) === index);
+    if (!openTabs.length) openTabs.push(selectedAvailable ? selected : state.files[0]?.path || "config");
+    if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
+    sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
+    menu.replaceChildren();
+    for (const button of tabs.querySelectorAll("[data-instant-tooltip-attached='true']")) {
+      button._hideInstantTooltip?.();
+    }
+    tabs.replaceChildren();
+    const availableChoices = document.createElement("div");
+    availableChoices.className = "project-editor__file-choices";
+    availableChoices.dataset.projectFileAvailable = "";
+    availableChoices.setAttribute("role", "group");
+    const openSection = document.createElement("section");
+    openSection.className = "project-editor__open-files";
+    openSection.dataset.projectOpenFiles = "";
+    const openHeading = document.createElement("p");
+    openHeading.textContent = menu.dataset.openFilesLabel || "Open files";
+    const openChoices = document.createElement("div");
+    openChoices.className = "project-editor__open-file-choices";
+    openChoices.setAttribute("role", "group");
+    openChoices.setAttribute("aria-label", openHeading.textContent);
+    openSection.append(openHeading, openChoices);
+    menu.append(availableChoices, openSection);
+    function addChoice({ path, label, config = false, open = false }) {
+      const tabPath = config ? "config" : path;
+      const row = document.createElement("div");
+      row.className = "project-editor__file-option-row";
+      row.dataset.projectFileChoice = open ? "open" : "available";
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "project-editor__tab";
+      if (config) button.dataset.projectConfig = "";
+      else button.dataset.projectFile = path;
+      button.setAttribute("aria-selected", (config ? selected === "config" : path === selected) ? "true" : "false");
+      button.textContent = label;
+      const option = button;
+      option.className = "project-editor__file-option";
+      option.setAttribute("role", "menuitemradio");
+      option.setAttribute("aria-checked", button.getAttribute("aria-selected"));
+      option.removeAttribute("aria-selected");
+      row.append(option);
+      if (open && openTabs.length > 1) {
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "project-editor__file-option-close";
+        close.dataset.closeMenuTab = tabPath;
+        close.setAttribute("aria-label", `Close ${label}`);
+        close.textContent = "×";
+        row.append(close);
+      }
+      (open ? openChoices : availableChoices).append(row);
+    }
+    for (const file of state.files) {
+      if (!openTabs.includes(file.path)) addChoice({ path: file.path, label: file.path });
+    }
+    if (!openTabs.includes("config")) addChoice({ label: root.dataset.configLabel || "Configuration", config: true });
+    for (const path of openTabs) {
+      const file = state.files.find((candidate) => candidate.path === path);
+      addChoice({ path: file?.path, label: path === "config" ? root.dataset.configLabel || "Configuration" : file?.path || path, config: path === "config", open: true });
+    }
+    for (const path of openTabs) {
+      const tab = document.createElement("div");
+      tab.className = "project-editor__open-tab";
+      tab.dataset.tabPath = path;
+      tab.setAttribute("draggable", "true");
+      const select = document.createElement("button");
+      select.type = "button";
+      select.dataset.openTab = path;
+      select.setAttribute("role", "tab");
+      select.setAttribute("aria-selected", String(path === selected));
+      const tabLabel = path === "config" ? root.dataset.configLabel || "Configuration" : path.split("/").at(-1);
+      select.textContent = tabLabel;
+      const nestedPath = path !== "config" && path.includes("/");
+      attachInstantTooltip(select, path === "config" ? tabLabel : path, (button) => nestedPath || button.scrollWidth > button.clientWidth);
+      tab.append(select);
+      if (openTabs.length > 1 && path === selected) {
+        const close = document.createElement("button");
+        close.type = "button";
+        close.className = "project-editor__tab-close";
+        close.dataset.closeTab = path;
+        close.setAttribute("aria-label", `Close ${tabLabel}`);
+        close.textContent = "×";
+        tab.append(close);
+      }
+      tabs.append(tab);
+    }
+    root.querySelector("[data-project-file-current]").textContent = selected === "config"
+      ? root.dataset.configLabel || "Configuration"
+      : selected;
+  }
+
+  function renderStatusState() {
+    status.dataset.state = activeError ? "error" : activeNotice ? "warning" : persistenceState;
+    const persistenceWarning = !activeError && !activeNotice && persistenceState === "warning";
+    const workspaceView = root.querySelector(".project-editor__workspace")?.dataset.view;
+    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor"
+      ? editorMount.closest(".project-editor__source")
+      : preview.closest(".project-editor__preview");
+    if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
+    status.hidden = !(activeError || activeNotice || persistenceWarning);
+    statusNotice.hidden = !activeNotice || Boolean(activeError);
+    statusError.hidden = !activeError;
+    statusSave.hidden = !persistenceWarning;
+    statusError.replaceChildren();
+    if (activeError) statusError.append(document.createTextNode(activeError));
+    if (activeErrorAction) {
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "project-editor__status-action";
+      action.textContent = activeErrorAction.label;
+      action.addEventListener("click", activeErrorAction.run);
+      statusError.append(document.createTextNode(" "), action);
+    }
+  }
+
+  function clearNotice() {
+    activeNotice = false;
+    statusNotice.replaceChildren();
+    renderStatusState();
+  }
+
+  function showTemplateNotice(previousSnapshot) {
+    activeNotice = true;
+    activeStatusSurface = "editor";
+    statusNotice.replaceChildren(document.createTextNode(`${root.dataset.templateReplacedLabel || "Template replaced the project."} `));
+    const undo = document.createElement("button");
+    undo.type = "button";
+    undo.textContent = root.dataset.undoLabel || "Undo";
+    undo.addEventListener("click", () => {
+      applyTemplateSnapshot(previousSnapshot, { notice: false });
+      clearNotice();
+    }, { once: true });
+    statusNotice.append(undo);
+    renderStatusState();
+  }
+
+  function setStatus(text, severity = "normal", action = null, surface = "editor") {
+    const nextState = severity === true ? "error" : severity;
+    if (nextState === "error") {
+      activeError = text;
+      activeErrorAction = action;
+      activeStatusSurface = surface;
+    }
+    else {
+      persistenceState = nextState;
+      statusSave.textContent = text;
+    }
+    renderStatusState();
+  }
+
+  function resetStoppedEditor() {
+    activeError = "";
+    activeErrorAction = null;
+    renderStatusState();
+    mountEditorMachine("manual-reset");
+  }
+
+  function updateSnapshot(next, { destructive = false } = {}) {
+    const normalized = normalizeProjectSnapshot(next);
+    if (projectPatchIsEmpty(diffProjectSnapshots(state, normalized))) return false;
+    const branchedFromHistory = viewingHistorical;
+    showCurrentVersion();
+    viewingHistorical = false;
+    state = normalized;
+    editorController?.setSnapshot(state);
+    currentUpdatedAt = Date.now();
+    currentSnapshot = state;
+    snapshotField.value = JSON.stringify(state);
+    pending = true;
+    if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, JSON.stringify(state));
+    root.dataset.draftDirty = "true";
+    root.dataset.draftState = "dirty";
+    unsavedChangeCount += 1;
+    if (workspacePayload) workspacePayload.hasUnpublishedChanges = true;
+    refreshSubmitLabel();
+    if (draft) root.closest("form")?.querySelector("[data-draft-actions]")?.removeAttribute("hidden");
+    changeGeneration += 1;
+    pendingDestructive ||= destructive || branchedFromHistory;
+    if (draft || memoryOnly) {
+      localHistory.snapshot = state;
+      if (editorController && historyInEditorMachine) localHistory = editorController.history.setCurrent(state);
+      if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+    }
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 1_500);
+    return true;
+  }
+
+  function checkpointDraft({ destructive = false } = {}) {
+    const now = Date.now();
+    if (editorController && historyInEditorMachine) {
+      localHistory = editorController.history.checkpoint(state, {
+        now,
+        destructive,
+        checkpointIntervalMs: CHECKPOINT_MS,
+      });
+    } else {
+      if (!destructive && now - localHistory.lastVersionAt < CHECKPOINT_MS) return;
+      const patch = diffProjectSnapshots(localHistory.snapshots.at(-1), state);
+      if (projectPatchIsEmpty(patch)) return;
+      localHistory.patches.push(patch);
+      localHistory.snapshots.push(state);
+      localHistory.versionTimes.push(now);
+      localHistory.checkpoint = state;
+      localHistory.lastVersionAt = now;
+      localHistory.snapshot = state;
+    }
+    versionCount.textContent = String(localHistory.patches.length);
+    if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+  }
+
+  async function save() {
+    if (!pending || saving) return;
+    if (draft || memoryOnly) {
+      if (!templateOnlyPending) checkpointDraft({ destructive: pendingDestructive || selected === "config" });
+      pending = false;
+      pendingDestructive = false;
+      templateOnlyPending = false;
+      delete root.dataset.draftDirty;
+      root.dataset.draftState = "saved";
+      setStatus(memoryOnly ? "" : "Draft saved in this session");
+      return;
+    }
+    const savingGeneration = changeGeneration;
+    const savingSnapshot = state;
+    const savingDestructive = pendingDestructive && !templateOnlyPending;
+    saving = true;
+    setStatus("Saving…");
+    try {
+      const requestSave = () => fetch(`/api/projects/${encodeURIComponent(projectId)}/snapshot`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-resources-csrf": root.dataset.csrf },
+        body: JSON.stringify({ snapshot: savingSnapshot, destructive: savingDestructive }),
+      });
+      let response = await requestSave();
+      if (response.status === 403) {
+        const failure = await response.clone().json().catch(() => null);
+        if (failure?.error === "request_token") {
+          // Refresh only the action-bound token, without reloading the editor
+          // and losing its in-memory state, then retry this exact snapshot.
+          const page = await fetch(location.href, { cache: "no-store" });
+          const documentCopy = new DOMParser().parseFromString(await page.text(), "text/html");
+          const fresh = [...documentCopy.querySelectorAll("[data-project-editor]")]
+            .find((editor) => editor.dataset.projectId === projectId)?.dataset.csrf;
+          if (fresh) {
+            root.dataset.csrf = fresh;
+            response = await requestSave();
+          }
+        }
+      }
+      if (!response.ok) {
+        const failure = await response.json().catch(() => null);
+        throw new Error(failure?.message || `Save failed (${response.status})`);
+      }
+      const result = await response.json();
+      versionCount.textContent = String(result.versionCount);
+      if (changeGeneration === savingGeneration) {
+        pending = false;
+        pendingDestructive = false;
+        templateOnlyPending = false;
+        delete root.dataset.draftDirty;
+        root.dataset.draftState = "saved";
+        if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
+        setStatus("Saved");
+      } else {
+        setStatus("Saving…");
+      }
+    } catch (error) {
+      setStatus(error.message, true);
+    } finally {
+      saving = false;
+      if (pending && changeGeneration !== savingGeneration) {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(save, 250);
+      }
+    }
+  }
+
+  function renderDraftVersions() {
+    versionList.replaceChildren();
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
+    current.addEventListener("click", () => {
+      clearNotice();
+      if (!viewingHistorical) return;
+      state = currentSnapshot;
+      viewingHistorical = false;
+      snapshotField.value = JSON.stringify(state);
+      historyPanel.hidden = true;
+      versionButton.setAttribute("aria-expanded", "false");
+      renderTabs();
+      sendContent();
+      renderPreview();
+      showCurrentVersion();
+      setStatus("Current version");
+    });
+    versionList.append(current);
+    [...localHistory.patches].reverse().forEach((_, reverseIndex) => {
+      const sequence = localHistory.patches.length - reverseIndex;
+      const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], { sequence });
+      button.addEventListener("click", () => {
+        clearNotice();
+        if (pending) checkpointDraft({ destructive: pendingDestructive });
+        pending = false;
+        pendingDestructive = false;
+        currentSnapshot = localHistory.snapshot;
+        const target = normalizeProjectSnapshot(localHistory.snapshots[sequence - 1] || rebuildDraft(localHistory.patches, sequence));
+        state = target;
+        viewingHistorical = true;
+        snapshotField.value = JSON.stringify(state);
+        renderTabs();
+        historyPanel.hidden = true;
+        versionButton.setAttribute("aria-expanded", "false");
+        sendContent();
+        renderPreview();
+        setStatus(`Viewing version ${sequence}`);
+        showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
+      });
+      versionList.append(button);
+    });
+  }
+
+  async function renderStoredVersions() {
+    versionList.textContent = "Loading…";
+    const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/versions`);
+    if (!response.ok) { versionList.textContent = "Version history unavailable."; return; }
+    const { versions } = await response.json();
+    versionList.replaceChildren();
+    showCurrentVersion();
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
+    current.addEventListener("click", () => {
+      clearNotice();
+      if (!viewingHistorical) return;
+      state = currentSnapshot;
+      viewingHistorical = false;
+      snapshotField.value = JSON.stringify(state);
+      historyPanel.hidden = true;
+      versionButton.setAttribute("aria-expanded", "false");
+      renderTabs();
+      sendContent();
+      renderPreview();
+      showCurrentVersion();
+      setStatus("Current version");
+    });
+    versionList.append(current);
+    for (const version of versions) {
+      const timestamp = version.savedAt || version.createdAt;
+      const button = versionChoice(relativeVersionTime(timestamp), timestamp, { sequence: version.sequence, title: version.title, latest: version.latest });
+      button.addEventListener("click", async () => {
+        clearNotice();
+        await save();
+        currentSnapshot = state;
+        const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/versions/${version.sequence}`);
+        if (!response.ok) { setStatus("Version unavailable", true); return; }
+        const result = await response.json();
+        state = normalizeProjectSnapshot(result.snapshot);
+        viewingHistorical = true;
+        snapshotField.value = JSON.stringify(state);
+        historyPanel.hidden = true;
+        versionButton.setAttribute("aria-expanded", "false");
+        renderTabs();
+        sendContent();
+        renderPreview();
+        showSelectedVersion(relativeVersionTime(timestamp), timestamp);
+        setStatus(`Viewing ${button.textContent}`);
+      });
+      versionList.append(button);
+    }
+  }
+
+  function receiveEditorChange(content, { syntaxErrors = false } = {}) {
+    if (typeof content !== "string") return;
+    if (readOnly || selected === "config" || content === selectedContent()) return;
+    try {
+      clearNotice();
+      if (updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config })) templateOnlyPending = false;
+      clearTimeout(editorPreviewTimer);
+      if (syntaxErrors) {
+        // Briefly invalid source is normal while typing. Keep the last good
+        // output visible and only surface the warning if it remains invalid.
+        editorPreviewTimer = setTimeout(() => {
+          setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
+        }, 5_000);
+      } else {
+        outputFrameRequested = true;
+        // Keep the current output alive while the user is typing. Rebuilding
+        // its DOM and QuickJS machine is intentionally a trailing-edge task.
+        const debounceMs = Math.min(5_000, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
+        editorPreviewTimer = setTimeout(root.dataset.outputOwner === "editor"
+          ? () => editorController?.renderSnapshot()
+          : renderPreview, debounceMs);
+      }
+    } catch {}
+  }
+  function selectProjectFile(event) {
+    let target = event.target;
+    let next = "";
+    while (target && target !== fileMenu) {
+      const path = target.getAttribute?.("data-project-file");
+      if (path !== null && path !== undefined) {
+        next = path;
+        break;
+      }
+      if (target.hasAttribute?.("data-project-config")) {
+        next = "config";
+        break;
+      }
+      target = target.parentElement;
+    }
+    if (!next) return;
+    selected = next;
+    if (!openTabs.includes(selected)) openTabs.push(selected);
+    renderTabs();
+    sendContent();
+  }
+  const openTabList = root.querySelector("[data-project-tabs]");
+  const tabScrollBack = document.createElement("button");
+  const tabScrollForward = document.createElement("button");
+  for (const [button, label, text] of [[tabScrollBack, "Scroll tabs left", "‹"], [tabScrollForward, "Scroll tabs right", "›"]]) {
+    button.type = "button";
+    button.className = "project-editor__tab-scroll";
+    button.setAttribute("aria-label", label);
+    button.textContent = text;
+    button.hidden = true;
+  }
+  openTabList.before(tabScrollBack);
+  openTabList.after(tabScrollForward);
+  function syncTabOverflow() {
+    const overflowed = openTabList.scrollWidth > openTabList.clientWidth + 2;
+    tabScrollBack.hidden = !overflowed;
+    tabScrollForward.hidden = !overflowed;
+    tabScrollBack.disabled = openTabList.scrollLeft <= 1;
+    tabScrollForward.disabled = openTabList.scrollLeft + openTabList.clientWidth >= openTabList.scrollWidth - 1;
+  }
+  tabScrollBack.addEventListener("click", () => openTabList.scrollBy({ left: -Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
+  tabScrollForward.addEventListener("click", () => openTabList.scrollBy({ left: Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
+  openTabList.addEventListener("scroll", syncTabOverflow);
+  new ResizeObserver(syncTabOverflow).observe(openTabList);
+  function closeOpenTab(path) {
+    if (openTabs.length <= 1) return;
+    const index = openTabs.indexOf(path);
+    if (index < 0) return;
+    openTabs.splice(index, 1);
+    if (selected === path) selected = openTabs[Math.min(index, openTabs.length - 1)];
+    renderTabs();
+    requestAnimationFrame(syncTabOverflow);
+    sendContent();
+  }
+  openTabList.addEventListener("click", (event) => {
+    const close = event.target.closest("[data-close-tab]");
+    if (close && openTabs.length > 1) {
+      closeOpenTab(close.dataset.closeTab);
+      return;
+    }
+    const tab = event.target.closest("[data-open-tab]");
+    if (!tab) return;
+    selected = tab.dataset.openTab;
+    renderTabs();
+    requestAnimationFrame(syncTabOverflow);
+    sendContent();
+  });
+  let draggedTab = "";
+  openTabList.addEventListener("dragstart", (event) => {
+    draggedTab = event.target.closest("[data-tab-path]")?.dataset.tabPath || "";
+    if (draggedTab) {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", draggedTab);
+    }
+  });
+  openTabList.addEventListener("dragover", (event) => { if (draggedTab) event.preventDefault(); });
+  openTabList.addEventListener("drop", (event) => {
+    event.preventDefault();
+    const target = event.target.closest("[data-tab-path]")?.dataset.tabPath;
+    if (!draggedTab || !target || draggedTab === target) return;
+    const sourceIndex = openTabs.indexOf(draggedTab);
+    const targetIndex = openTabs.indexOf(target);
+    openTabs.splice(sourceIndex, 1);
+    openTabs.splice(targetIndex, 0, draggedTab);
+    draggedTab = "";
+    renderTabs();
+    requestAnimationFrame(syncTabOverflow);
+  });
+  openTabList.addEventListener("dragend", () => { draggedTab = ""; });
+  const fileTrigger = root.querySelector("[data-project-file-trigger]");
+  const fileTriggerIcon = fileTrigger.querySelector("svg");
+  fileTriggerIcon.replaceChildren();
+  for (const d of ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    fileTriggerIcon.append(path);
+  }
+  const fileTriggerArrow = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  fileTriggerArrow.classList.add("project-editor__file-arrow");
+  fileTriggerArrow.setAttribute("viewBox", "0 0 12 12");
+  fileTriggerArrow.setAttribute("fill", "none");
+  fileTriggerArrow.setAttribute("stroke", "currentColor");
+  fileTriggerArrow.setAttribute("stroke-width", "1.5");
+  fileTriggerArrow.setAttribute("aria-hidden", "true");
+  const fileTriggerArrowPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  fileTriggerArrowPath.setAttribute("d", "m2 4 4 4 4-4");
+  fileTriggerArrow.append(fileTriggerArrowPath);
+  fileTrigger.append(fileTriggerArrow);
+  const fileMenu = root.querySelector("[data-project-file-menu]");
+  const fileFilter = root.querySelector("[data-project-file-filter]");
+  fileFilter.previousElementSibling?.remove();
+  fileFilter.setAttribute("aria-label", "Filter files");
+  const fileEmpty = root.querySelector("[data-project-file-empty]");
+  function filterProjectFiles() {
+    const query = fileFilter.value.trim().toLowerCase();
+    let visible = 0;
+    for (const option of fileMenu.querySelectorAll('[role="menuitemradio"]')) {
+      const row = option.closest(".project-editor__file-option-row");
+      row.hidden = Boolean(query && !option.textContent.toLowerCase().includes(query));
+      if (!row.hidden) visible += 1;
+    }
+    for (const group of fileMenu.querySelectorAll("[data-project-file-available], [data-project-open-files]")) {
+      group.hidden = !group.querySelector(".project-editor__file-option-row:not([hidden])");
+    }
+    fileEmpty.hidden = visible !== 0;
+  }
+  function closeFileMenu({ focus = false } = {}) {
+    fileMenu.hidden = true;
+    fileTrigger.setAttribute("aria-expanded", "false");
+    if (focus) fileTrigger.focus();
+  }
+  fileTrigger.addEventListener("click", () => {
+    const opening = fileMenu.hidden;
+    fileMenu.hidden = !opening;
+    fileTrigger.setAttribute("aria-expanded", String(opening));
+    if (opening) {
+      fileFilter.value = "";
+      filterProjectFiles();
+      fileFilter.focus();
+    }
+  });
+  fileFilter.addEventListener("input", filterProjectFiles);
+  fileMenu.addEventListener("click", (event) => {
+    const close = event.target.closest("[data-close-menu-tab]");
+    if (close) {
+      closeOpenTab(close.dataset.closeMenuTab);
+      filterProjectFiles();
+      return;
+    }
+    selectProjectFile(event);
+    closeFileMenu({ focus: true });
+  });
+  fileMenu.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeFileMenu({ focus: true });
+      return;
+    }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const options = [...fileMenu.querySelectorAll('[role="menuitemradio"]')].filter((option) => !option.closest(".project-editor__file-option-row").hidden);
+    const current = Math.max(0, options.indexOf(document.activeElement));
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? options.length - 1
+        : (current + (event.key === "ArrowDown" ? 1 : -1) + options.length) % options.length;
+    options[next]?.focus();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!root.querySelector("[data-project-file-picker]").contains(event.target)) closeFileMenu();
+  });
+  const editorOverflow = root.querySelector("[data-editor-overflow]");
+  const editorOverflowTrigger = root.querySelector("[data-editor-overflow-trigger]");
+  const editorOverflowMenu = root.querySelector("[data-editor-overflow-menu]");
+  function closeEditorOverflow({ focus = false } = {}) {
+    editorOverflowMenu.hidden = true;
+    editorOverflowTrigger.setAttribute("aria-expanded", "false");
+    if (focus) editorOverflowTrigger.focus();
+  }
+  editorOverflowTrigger.addEventListener("click", () => {
+    const opening = editorOverflowMenu.hidden;
+    editorOverflowMenu.hidden = !opening;
+    editorOverflowTrigger.setAttribute("aria-expanded", String(opening));
+    if (opening) editorOverflowMenu.querySelector('[role="menuitem"]')?.focus();
+  });
+  editorOverflowMenu.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeEditorOverflow({ focus: true });
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!editorOverflow.contains(event.target)) closeEditorOverflow();
+  });
+  root.querySelector("[data-save-tab-configuration]").addEventListener("click", () => {
+    closeEditorOverflow();
+    updateSnapshot({ files: state.files, config: { ...state.config, editorTabs: [...openTabs] } });
+    setStatus("Tab configuration saved");
+  });
+  const archiveInput = root.querySelector("[data-project-archive-file]");
+  root.querySelector("[data-project-import]").addEventListener("click", () => { closeEditorOverflow(); archiveInput.click(); });
+  root.querySelector("[data-project-export]").addEventListener("click", () => {
+    closeEditorOverflow();
+    try {
+      const projectName = String(root.closest("form")?.elements?.namedItem("slug")?.value || root.dataset.projectSlug || "").trim();
+      downloadProjectArchive(state, projectName);
+    } catch (error) { setStatus(error.message, "error"); }
+  });
+  archiveInput.addEventListener("change", async () => {
+    try {
+      const imported = normalizeProjectSnapshot(await importProjectArchive());
+      selected = imported.config.entry && imported.files.some((item) => item.path === imported.config.entry) ? imported.config.entry : imported.files[0].path;
+      updateSnapshot(imported, { destructive: true });
+      if (template) template.value = imported.config.template || "blank";
+      if (linkPatterns) {
+        linkPatterns.value = (imported.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
+        growTextarea(linkPatterns);
+      }
+      renderTabs();
+      sendContent();
+      renderPreview();
+      setStatus("ZIP imported");
+    } catch (error) { setStatus(error.message, "error"); }
+    finally { archiveInput.value = ""; }
+  });
+  const workspace = root.querySelector(".project-editor__workspace");
+  const presentButton = root.querySelector("[data-project-present]");
+  const presentClose = root.querySelector("[data-project-present-close]");
+  const previewSection = root.querySelector(".project-editor__preview");
+  const outputOverflow = root.querySelector("[data-output-overflow]");
+  const outputOverflowTrigger = root.querySelector("[data-output-overflow-trigger]");
+  const outputOverflowMenu = root.querySelector("[data-output-overflow-menu]");
+  const fullscreenButton = root.querySelector("[data-project-fullscreen]");
+  const projectContentBlock = root.closest(".content-block");
+  function closeOutputOverflow({ focus = false } = {}) {
+    outputOverflowMenu.hidden = true;
+    outputOverflowTrigger.setAttribute("aria-expanded", "false");
+    if (focus) outputOverflowTrigger.focus();
+  }
+  outputOverflowTrigger.addEventListener("click", () => {
+    const opening = outputOverflowMenu.hidden;
+    outputOverflowMenu.hidden = !opening;
+    outputOverflowTrigger.setAttribute("aria-expanded", String(opening));
+    if (opening) fullscreenButton.focus();
+  });
+  fullscreenButton.addEventListener("click", async () => {
+    closeOutputOverflow();
+    const frame = root.querySelector(".project-editor__output-frame");
+    if (!frame) return setStatus("Output is not ready", "error");
+    try { await frame.requestFullscreen(); }
+    catch (error) { setStatus(`Full screen failed: ${error?.message || String(error)}`, "error"); }
+  });
+  outputOverflowMenu.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closeOutputOverflow({ focus: true });
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!outputOverflow.contains(event.target)) closeOutputOverflow();
+  });
+  function closePresentation() {
+    delete root.dataset.presenting;
+    document.body.classList.remove("project-presenting");
+    previewSection.classList.remove("project-editor__preview--presenting");
+    projectContentBlock?.style.removeProperty("animation");
+    projectContentBlock?.style.removeProperty("backdrop-filter");
+    projectContentBlock?.style.removeProperty("transform");
+    presentButton.setAttribute("aria-pressed", "false");
+  }
+  function openPresentation({ keyboard = false } = {}) {
+    root.dataset.presenting = "true";
+    document.body.classList.add("project-presenting");
+    previewSection.classList.add("project-editor__preview--presenting");
+    projectContentBlock?.style.setProperty("animation", "none");
+    projectContentBlock?.style.setProperty("backdrop-filter", "none");
+    projectContentBlock?.style.setProperty("transform", "none");
+    presentButton.setAttribute("aria-pressed", "true");
+    presentClose.blur();
+    requestAnimationFrame(() => previewController?.focus?.());
+  }
+  presentButton.addEventListener("click", (event) => openPresentation({ keyboard: event.detail === 0 }));
+  presentClose.addEventListener("click", (event) => {
+    closePresentation();
+    if (event.detail === 0) presentButton.focus();
+    else presentButton.blur();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && root.dataset.presenting === "true") {
+      event.preventDefault();
+      closePresentation();
+      presentButton.focus();
+    } else if (event.key === "Escape" && parent !== window) {
+      parent.postMessage({ protocol: "resources-project-presentation-v1", type: "escape" }, "*");
+    }
+  });
+  addEventListener("message", (event) => {
+    if (event.source !== parent || event.data?.protocol !== "resources-project-presentation-v1" || event.data.type !== "focus") return;
+    previewController?.focus?.();
+  });
+  const splitter = root.querySelector(".project-editor__splitter");
+  const projectLayout = root.closest(".project-create__layout");
+  const projectClose = projectLayout.querySelector(".project-fields__toolbar .project-close");
+  const projectCloseHome = projectClose?.parentElement;
+  const projectViewControls = root.querySelector(".project-editor__view-controls");
+  const projectDetails = root.querySelector('[data-project-view="details"]');
+  function placeProjectClose(detailsVisible) {
+    if (!projectClose) return;
+    if (detailsVisible) {
+      projectCloseHome.insertBefore(projectDetails, projectClose);
+      projectCloseHome.append(projectClose);
+    } else {
+      projectViewControls.append(projectDetails);
+      projectViewControls.append(projectClose);
+    }
+  }
+  function setSplit(clientX) {
+    const rect = workspace.getBoundingClientRect();
+    const percent = Math.max(20, Math.min(80, ((clientX - rect.left) / rect.width) * 100));
+    root.style.setProperty("--source-width", `${percent}%`);
+    splitter.setAttribute("aria-valuenow", String(Math.round(percent)));
+  }
+  splitter.addEventListener("pointerdown", (event) => { splitter.setPointerCapture(event.pointerId); setSplit(event.clientX); });
+  splitter.addEventListener("pointermove", (event) => { if (splitter.hasPointerCapture(event.pointerId)) setSplit(event.clientX); });
+  splitter.addEventListener("keydown", (event) => {
+    if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+    event.preventDefault();
+    const next = Math.max(20, Math.min(80, Number(splitter.getAttribute("aria-valuenow")) + (event.key === "ArrowRight" ? 5 : -5)));
+    root.style.setProperty("--source-width", `${next}%`);
+    splitter.setAttribute("aria-valuenow", String(next));
+  });
+  for (const button of root.querySelectorAll("[data-project-view]")) button.addEventListener("click", () => {
+    const detailsButton = projectDetails;
+    if (button.dataset.projectView === "details") {
+      if (narrowWorkspace.matches) {
+        const showing = projectLayout.dataset.mobileView === "details";
+        if (showing) delete projectLayout.dataset.mobileView;
+        else projectLayout.dataset.mobileView = "details";
+        detailsButton.setAttribute("aria-pressed", String(!showing));
+        placeProjectClose(!showing);
+      } else {
+        const showing = projectLayout.dataset.detailsVisible !== "false";
+        projectLayout.dataset.detailsVisible = String(!showing);
+        detailsButton.setAttribute("aria-pressed", String(!showing));
+        placeProjectClose(!showing);
+      }
+    } else {
+      delete projectLayout.dataset.mobileView;
+      workspace.dataset.view = button.dataset.projectView;
+      for (const item of root.querySelectorAll('.project-view-segments [data-project-view]')) item.setAttribute("aria-pressed", item === button ? "true" : "false");
+      if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
+    }
+    renderStatusState();
+    if (button.dataset.projectView === "editor") editorController?.focus();
+  });
+  const narrowWorkspace = matchMedia("(max-width: 760px)");
+  function syncResponsiveWorkspace() {
+    const view = narrowWorkspace.matches ? "preview" : "split";
+    const selectedButton = root.querySelector(`[data-project-view="${view}"]`);
+    const detailsButton = projectDetails;
+    if (narrowWorkspace.matches) {
+      projectLayout.dataset.detailsVisible = "false";
+      delete projectLayout.dataset.mobileView;
+      detailsButton.setAttribute("aria-pressed", "false");
+      placeProjectClose(false);
+    } else {
+      delete projectLayout.dataset.mobileView;
+      projectLayout.dataset.detailsVisible = "true";
+      detailsButton.setAttribute("aria-pressed", "true");
+      placeProjectClose(true);
+    }
+    workspace.dataset.view = view;
+    for (const item of root.querySelectorAll('.project-view-segments [data-project-view]')) item.setAttribute("aria-pressed", item === selectedButton ? "true" : "false");
+    renderStatusState();
+  }
+  syncResponsiveWorkspace();
+  narrowWorkspace.addEventListener?.("change", syncResponsiveWorkspace);
+  // Read-only public projects use the same Details fields without wrapping
+  // them in a form. Keep their container description synchronized with the
+  // asynchronously loaded project snapshot too.
+  const form = root.closest("form") || document.querySelector("[data-project-fields]");
+  const template = form?.querySelector("[data-project-template]");
+  const linkPatterns = form?.querySelector("#project-link-patterns");
+  if (template && !template.querySelector('option[value="slides"]')) {
+    const option = document.createElement("option");
+    option.setAttribute("value", "slides");
+    option.textContent = "Presentation";
+    template.append(option);
+  }
+  function growTextarea(textarea) {
+    if (!textarea) return;
+    const replica = textarea.closest("[data-autogrow-replica]");
+    if (replica) {
+      const measure = replica.querySelector("[data-autogrow-measure]");
+      if (measure) measure.textContent = `${textarea.value} `;
+      textarea.style.removeProperty("height");
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight + 2}px`;
+  }
+  if (template && state.config?.template) template.value = state.config.template;
+  if (linkPatterns) linkPatterns.value = (state.config?.containerOptions?.allowedLinkPatterns || []).join("\n");
+  growTextarea(linkPatterns);
+  function updateContainer() {
+    const allowedLinkPatterns = String(linkPatterns?.value || "").split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+    try {
+      validateAllowedUrlPatterns(allowedLinkPatterns);
+      linkPatterns?.setCustomValidity("");
+      linkPatterns?.setAttribute("aria-invalid", "false");
+    } catch (error) {
+      linkPatterns?.setCustomValidity(error.message);
+      linkPatterns?.setAttribute("aria-invalid", "true");
+      return;
+    }
+    clearNotice();
+    templateOnlyPending = false;
+    updateSnapshot({ files: state.files, config: { ...state.config, containerOptions: { ...state.config.containerOptions, allowedLinkPatterns } } }, { destructive: true });
+    sendContent();
+    renderPreview();
+  }
+
+  function applyTemplateSnapshot(next, { notice = true, previousSnapshot = state } = {}) {
+    if (linkPatterns) linkPatterns.value = (next.config.containerOptions?.allowedLinkPatterns || []).join("\n");
+    if (template) template.value = next.config.template || "blank";
+    growTextarea(linkPatterns);
+    selected = next.files[0].path;
+    openTabs = Array.isArray(next.config?.editorTabs) ? [...next.config.editorTabs] : next.files.map((file) => file.path);
+    updateSnapshot(next, { destructive: true });
+    templateOnlyPending = true;
+    renderTabs();
+    sendContent();
+    renderPreview();
+    if (notice) showTemplateNotice(previousSnapshot);
+  }
+
+  template?.addEventListener("change", async () => {
+    const next = STARTING_POINTS[template.value];
+    if (!next) return;
+    if (memoryOnly && (location.pathname === "/try" || location.pathname.startsWith("/try/"))) {
+      replaceFrontendPath(`/try/${encodeURIComponent(template.value)}`);
+    }
+    if (pending) {
+      if (templateOnlyPending) {
+        clearTimeout(saveTimer);
+        pending = false;
+        pendingDestructive = false;
+      } else if (draft || memoryOnly) checkpointDraft({ destructive: true });
+      else await save();
+    }
+    const previousSnapshot = state;
+    applyTemplateSnapshot(next, { previousSnapshot });
+  });
+  for (const textarea of form?.querySelectorAll("textarea[data-autogrow]") || []) {
+    textarea.addEventListener("input", () => growTextarea(textarea));
+    growTextarea(textarea);
+  }
+  linkPatterns?.addEventListener("input", updateContainer);
+  for (const field of form?.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select") || []) {
+    if (field.matches("[data-project-template], #project-link-patterns, [data-version-title-input]")) continue;
+    field.addEventListener("input", () => { unsavedChangeCount += 1; refreshSubmitLabel(); }, { once: true });
+    field.addEventListener("change", () => { if (!unsavedChangeCount) { unsavedChangeCount = 1; refreshSubmitLabel(); } });
+  }
+  function closeHistory({ restoreFocus = false } = {}) {
+    historyPanel.hidden = true;
+    versionButton.setAttribute("aria-expanded", "false");
+    if (restoreFocus) versionButton.focus();
+  }
+  function positionHistory() {
+    const gap = 5;
+    const edge = 8;
+    const buttonRect = versionButton.getBoundingClientRect();
+    const panelRect = historyPanel.getBoundingClientRect();
+    const containingRect = historyPanel.parentElement?.getBoundingClientRect() || { left: 0, top: 0 };
+    historyPanel.style.left = `${Math.max(edge, Math.min(buttonRect.left, innerWidth - panelRect.width - edge)) - containingRect.left}px`;
+    historyPanel.style.top = `${buttonRect.bottom + gap - containingRect.top}px`;
+    historyPanel.style.maxHeight = `${Math.max(120, innerHeight - buttonRect.bottom - gap - edge)}px`;
+  }
+  const openVersionHistory = () => {
+    if (!historyPanel.hidden) {
+      closeHistory();
+      return;
+    }
+    versionButton._hideInstantTooltip?.();
+    historyPanel.hidden = false;
+    versionButton.setAttribute("aria-expanded", "true");
+    positionHistory();
+    if (readOnly) {
+      versionList.replaceChildren(versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true }));
+      positionHistory();
+    } else if (draft || memoryOnly) {
+      renderDraftVersions();
+      positionHistory();
+    } else {
+      renderStoredVersions().then(positionHistory).catch((error) => {
+        versionList.textContent = `Version history unavailable: ${error.message}`;
+        positionHistory();
+      });
+    }
+  };
+  versionButton.addEventListener("click", openVersionHistory);
+  // This listener is registered after asynchronous project initialization.
+  // A synchronous read provides the bridge boundary that publishes it before
+  // control returns to the browser.
+  versionButton.getBoundingClientRect();
+  document.addEventListener("pointerdown", (event) => {
+    if (historyPanel.hidden || historyPanel.contains(event.target) || versionButton.contains(event.target)) return;
+    closeHistory();
+  });
+  setInterval(() => { if (readOnly) return; if (draft || memoryOnly) checkpointDraft(); else if (pending) save(); }, CHECKPOINT_MS);
+  setInterval(() => {
+    for (const label of root.closest(".project-create__layout")?.querySelectorAll("[data-version-time]") || []) {
+      label.textContent = relativeVersionTime(label.dataset.versionTime);
+    }
+  }, 30_000);
+  if (!readOnly && !draft && !memoryOnly) renderStoredVersions();
+  renderTabs();
+  mountEditorMachine();
+  if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);
+  addEventListener("pagehide", () => {
+    historyPanel.remove();
+    editorGeneration += 1;
+    editorController?.destroy();
+    disposeProjectMachine();
+  }, { once: true });
+}
+
+for (const root of document.querySelectorAll("[data-project-editor]")) {
+  mountProjectRoot(root).catch((error) => globalThis.__wwcReportError?.(
+    error?.stack || error?.message || String(error)));
+}
+
+for (const figure of document.querySelectorAll(".blog-example-block")) {
+  const button = figure.querySelector(".blog-example-fullscreen");
+  const frame = figure.querySelector(".blog-example");
+  const error = figure.querySelector(".blog-example-error");
+  let presentationReady = false;
+  function focusBlogPresentation() {
+    if (!presentationReady) return;
+    frame?.focus({ preventScroll: true });
+    frame?.contentWindow?.postMessage({ protocol: "resources-project-presentation-v1", type: "focus" }, "*");
+  }
+  if (!button) continue;
+  const blogContentBlock = figure.closest(".content-block");
+  function closeBlogPresentation({ focus = true } = {}) {
+    if (!figure.classList.contains("blog-example-block--fullscreen")) return;
+    figure.classList.remove("blog-example-block--fullscreen");
+    blogContentBlock?.style.removeProperty("animation");
+    blogContentBlock?.style.removeProperty("backdrop-filter");
+    blogContentBlock?.style.removeProperty("transform");
+    document.body.classList.remove("blog-example-presenting");
+    button.textContent = "View full screen ↗";
+    button.setAttribute("aria-label", "View full screen");
+    if (focus) button.focus();
+  }
+  button.addEventListener("click", (event) => {
+    if (figure.classList.contains("blog-example-block--fullscreen")) {
+      closeBlogPresentation({ focus: event.detail === 0 });
+      return;
+    }
+    figure.classList.add("blog-example-block--fullscreen");
+    blogContentBlock?.style.setProperty("animation", "none");
+    blogContentBlock?.style.setProperty("backdrop-filter", "none");
+    blogContentBlock?.style.setProperty("transform", "none");
+    document.body.classList.add("blog-example-presenting");
+    button.textContent = "×";
+    button.setAttribute("aria-label", "Close full screen");
+    button.blur();
+    requestAnimationFrame(focusBlogPresentation);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !figure.classList.contains("blog-example-block--fullscreen")) return;
+    event.preventDefault();
+    closeBlogPresentation();
+  });
+  addEventListener("message", (event) => {
+    if (event.source !== frame?.contentWindow || event.data?.protocol !== "resources-project-presentation-v1") return;
+    if (event.data.type === "ready") {
+      presentationReady = true;
+      if (figure.classList.contains("blog-example-block--fullscreen")) focusBlogPresentation();
+    }
+    if (event.data.type === "escape") closeBlogPresentation();
+    if (event.data.type === "status") {
+      error.hidden = event.data.status !== "blocked";
+      error.textContent = event.data.status === "blocked" ? `Blocked: ${event.data.message}` : "";
+    }
+  });
+  addEventListener("pagehide", () => closeBlogPresentation({ focus: false }), { once: true });
+}
+
+/* packages/app/src/code-annotator.js */
+import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { extname, join, relative, resolve, sep } from "node:path";
+import { promisify } from "node:util";
+import { quickJsEmscriptenSandboxBrowserAssets } from "@macchiato-dev/quickjs-emscripten-sandbox/browser-assets";
+
+const execFileAsync = promisify(execFile);
+const BROWSER_ASSET_SETS = [quickJsEmscriptenSandboxBrowserAssets];
+const MAX_FILE_BYTES = 240_000;
+
+function contentType(pathname) {
+  if (pathname.endsWith(".mjs") || pathname.endsWith(".js")) return "application/javascript; charset=utf-8";
+  if (pathname.endsWith(".json") || pathname.endsWith(".map")) return "application/json; charset=utf-8";
+  return "application/octet-stream";
+}
+
+function assetUrl(set, publicPath) {
+  return `/-/${set.namespace}/${publicPath}`;
+}
+
+function importMap() {
+  const imports = {};
+  for (const set of BROWSER_ASSET_SETS) {
+    for (const [specifier, publicPath] of Object.entries(set.imports || {})) {
+      imports[specifier] = assetUrl(set, publicPath);
+    }
+  }
+  return JSON.stringify({ imports }, null, 2);
+}
+
+function providerAsset(pathname) {
+  if (!pathname.startsWith("/-/")) return null;
+  const assetPath = pathname.slice("/-/".length);
+  if (assetPath.includes("..") || assetPath.includes("\\")) return null;
+  for (const set of BROWSER_ASSET_SETS) {
+    if (!assetPath.startsWith(`${set.namespace}/`)) continue;
+    const publicPath = assetPath.slice(set.namespace.length + 1);
+    for (const asset of set.files || []) {
+      if (publicPath === asset.publicPath) return { asset };
+      if (asset.sourceMapPath && publicPath === `${asset.publicPath}.map`) {
+        return { asset: { ...asset, filePath: asset.sourceMapPath, rewrites: null, sourceMapPath: null } };
+      }
+    }
+  }
+  return null;
+}
+
+function rewriteAsset(content, asset) {
+  let rewritten = content;
+  for (const [from, to] of Object.entries(asset.rewrites || {})) {
+    rewritten = rewritten.replaceAll(from, to);
+  }
+  if (asset.sourceMapPath) {
+    rewritten = rewritten.replace(/\/\/# sourceMappingURL=.*$/m, `//# sourceMappingURL=${asset.publicPath}.map`);
+  }
+  return rewritten;
+}
+
+async function serveProviderAsset(pathname) {
+  const match = providerAsset(pathname);
+  if (!match) return null;
+  try {
+    const content = await readFile(match.asset.filePath, "utf8");
+    const body = pathname.endsWith(".js") ? rewriteAsset(content, match.asset) : content;
+    return new Response(body, { headers: { "content-type": contentType(pathname) } });
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
+}
+
+function normalizeGrant(grant) {
+  if (!grant || grant.type !== "git") throw new Error("Code annotator requires git file access.");
+  const gitRoot = resolve(grant.gitRoot);
+  const root = grant.root.replace(/^\/+|\/+$/g, "");
+  if (!root || root.includes("..") || root.includes("\\") || resolve(gitRoot, root) === gitRoot) {
+    throw new Error("Invalid git file access root.");
+  }
+  return { gitRoot, root };
+}
+
+function assertInside(base, target) {
+  const rel = relative(base, target);
+  return rel && !rel.startsWith("..") && !rel.split(sep).includes("..");
+}
+
+async function gitVisibleFiles(grant) {
+  const { gitRoot, root } = normalizeGrant(grant);
+  const rootPath = resolve(gitRoot, root);
+  if (!assertInside(gitRoot, rootPath)) throw new Error("Configured file access is outside git root.");
+  const { stdout } = await execFileAsync(
+    "git",
+    ["-C", gitRoot, "ls-files", "-c", "-o", "--exclude-standard", "--", root],
+    { maxBuffer: 8 * 1024 * 1024 },
+  );
+  return stdout
+    .split("\n")
+    .map((file) => file.trim())
+    .filter(Boolean)
+    .filter((file) => file === root || file.startsWith(`${root}/`))
+    .filter((file) => !file.includes("/.git/") && !file.endsWith("/.git"));
+}
+
+function languageFor(file) {
+  const ext = extname(file).slice(1).toLowerCase();
+  if (ext === "mjs" || ext === "cjs") return "js";
+  if (ext === "md") return "markdown";
+  if (ext === "yml") return "yaml";
+  return ext || "plain";
+}
+
+async function readPackageName(gitRoot, packageDir, files) {
+  const packageJson = `${packageDir}/package.json`;
+  if (!files.includes(packageJson)) return packageDir.split("/").at(-1);
+  try {
+    const body = await readFile(join(gitRoot, packageJson), "utf8");
+    const parsed = JSON.parse(body);
+    return typeof parsed.name === "string" ? parsed.name : packageDir.split("/").at(-1);
+  } catch {
+    return packageDir.split("/").at(-1);
+  }
+}
+
+async function moduleManifest(grant) {
+  const { gitRoot, root } = normalizeGrant(grant);
+  const files = await gitVisibleFiles(grant);
+  const moduleDirs = new Map();
+  for (const file of files) {
+    const parts = file.split("/");
+    if (parts.length < 2 || parts[0] !== root) continue;
+    const moduleDir = `${parts[0]}/${parts[1]}`;
+    if (!moduleDirs.has(moduleDir)) moduleDirs.set(moduleDir, []);
+    moduleDirs.get(moduleDir).push(file);
+  }
+  const modules = await Promise.all([...moduleDirs.entries()].map(async ([dir, moduleFiles]) => ({
+    dir,
+    name: await readPackageName(gitRoot, dir, moduleFiles),
+    fileCount: moduleFiles.length,
+    files: moduleFiles
+      .filter((file) => /\.(?:js|mjs|json|md|css|html|ts|tsx|jsx|yml|yaml)$/i.test(file))
+      .map((file) => ({ path: file, language: languageFor(file) }))
+      .sort((a, b) => a.path.localeCompare(b.path)),
+  })));
+  return {
+    type: "git-visible-code-modules",
+    root,
+    generatedAt: new Date().toISOString(),
+    modules: modules.filter((mod) => mod.files.length).sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+async function readGrantedFile(grant, path) {
+  const { gitRoot, root } = normalizeGrant(grant);
+  const files = await gitVisibleFiles(grant);
+  const requested = String(path || "");
+  if (!files.includes(requested) || !requested.startsWith(`${root}/`)) {
+    return { status: 404, body: { error: "File is not granted to this app." } };
+  }
+  const absolute = resolve(gitRoot, requested);
+  if (!assertInside(gitRoot, absolute)) return { status: 404, body: { error: "Invalid file path." } };
+  const content = await readFile(absolute, "utf8");
+  if (content.length > MAX_FILE_BYTES) {
+    return { status: 413, body: { error: "File is too large for the browser annotator." } };
+  }
+  return {
+    status: 200,
+    body: {
+      path: requested,
+      language: languageFor(requested),
+      content,
+      lines: content.split(/\r?\n/).length,
+    },
+  };
+}
+
+function page() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Notes</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0f1a;
+    --panel: #101522;
+    --panel-2: #151b2b;
+    --ink: #edf4ff;
+    --muted: #a8b4ca;
+    --line: #293145;
+    --accent: #64d8cb;
+    --accent-2: #f2c14e;
+    --danger: #ff7d7d;
+    --code: #090e1d;
+  }
+  * { box-sizing: border-box; }
+  html { height: 100%; }
+  body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    color: var(--ink);
+    background: var(--bg);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  #app { height: 100vh; }
+  #app[data-status="loading"] {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+  }
+  .shell {
+    width: min(1680px, calc(100vw - 24px));
+    height: 100vh;
+    margin: 0 auto;
+    padding: 12px 0;
+    display: grid;
+  }
+  .workspace {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr) 320px;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .panel {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+  }
+  .file-list-panel, .notes-panel {
+    min-height: 0;
+    overflow: auto;
+  }
+  .file-list-panel {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .package-picker {
+    position: relative;
+    border-bottom: 1px solid var(--line);
+    padding: 10px;
+  }
+  .package-trigger {
+    display: grid;
+    width: 100%;
+    gap: 3px;
+    padding: 8px 10px;
+    text-align: left;
+    background: #131a2a;
+    border-color: var(--line);
+  }
+  .package-menu {
+    position: absolute;
+    z-index: 6;
+    left: 10px;
+    right: 10px;
+    top: calc(100% + 6px);
+    max-height: min(520px, calc(100vh - 120px));
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #0e1422;
+  }
+  .module-button, .file-button {
+    display: grid;
+    width: 100%;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    color: inherit;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+  }
+  .file-button {
+    border-radius: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+  }
+  .module-button[aria-current="true"], .file-button[aria-current="true"] {
+    background: #182133;
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+  .file-button[aria-current="true"] {
+    box-shadow: none;
+    border-left: 3px solid var(--accent);
+    padding-left: 9px;
+  }
+  .name { font-weight: 760; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .file-list {
+    min-height: 0;
+    overflow: auto;
+  }
+  .viewer { min-height: 0; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+  .viewer-head, .notes-head {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+  .file-title {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .file-title h1 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-dir {
+    color: var(--muted);
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .head-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+  }
+  .toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  h1, h2 { margin: 0; letter-spacing: 0; }
+  h1 { font-size: 15px; }
+  h2 { font-size: 16px; }
+  .mode-bar,
+  .search-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    background: #172033;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .search-bar {
+    grid-template-columns: minmax(220px, 1fr) 72px 72px auto auto auto auto;
+  }
+  .range-form {
+    display: grid;
+    grid-template-columns: 62px 62px minmax(180px, 1fr) auto auto auto;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(9, 14, 29, 0.5);
+  }
+  input, textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    color: var(--ink);
+    background: rgba(7, 11, 24, 0.78);
+    font: inherit;
+  }
+  input { height: 36px; padding: 0 9px; }
+  .toggle input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    margin: 0;
+    flex: 0 0 auto;
+    accent-color: var(--accent);
+  }
+  textarea { min-height: 86px; padding: 9px; resize: vertical; }
+  .note-input { min-height: 36px; resize: vertical; }
+  button {
+    border: 1px solid rgba(100, 216, 203, 0.46);
+    border-radius: 3px;
+    color: var(--ink);
+    background: rgba(100, 216, 203, 0.14);
+    font-weight: 760;
+    cursor: pointer;
+  }
+  .code-scroll { min-height: 0; overflow: auto; background: var(--code); }
+  .code-table { width: 100%; border-collapse: collapse; font: 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .line-button {
+    width: 100%;
+    min-width: 48px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 0;
+    color: #7f8aa3;
+    background: #0d1326;
+    text-align: right;
+    font: inherit;
+    user-select: none;
+  }
+  .code-line.is-selected .line-button { color: var(--code); background: var(--accent-2); }
+  .code-line.is-annotated .line-button { color: var(--ink); background: rgba(100, 216, 203, 0.28); }
+  .code-line.is-search .line-button { color: var(--code); background: #89a7ff; }
+  .source { padding: 0 14px; white-space: pre; }
+  .inline-note td {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: #11192a;
+  }
+  .inline-box {
+    margin: 8px 14px;
+    padding: 9px 10px;
+    border-left: 3px solid var(--accent);
+    color: var(--muted);
+    background: #0d1322;
+  }
+  .inline-box strong {
+    color: var(--ink);
+  }
+  .tok-key { color: #ffb86c; }
+  .tok-str { color: #7ee787; }
+  .tok-com { color: #8b9bb8; }
+  .tok-num { color: #bd93f9; }
+  .notes-body { display: grid; gap: 12px; padding: 14px; }
+  .annotation { border: 1px solid var(--line); border-radius: 4px; padding: 10px; background: #0d1322; }
+  .annotation[aria-current="true"] {
+    border-color: var(--accent);
+    background: #121d30;
+  }
+  .annotation-button {
+    display: grid;
+    width: 100%;
+    gap: 6px;
+    padding: 0;
+    border: 0;
+    color: inherit;
+    background: transparent;
+    text-align: left;
+  }
+  .annotation code { color: var(--accent); overflow-wrap: anywhere; }
+  .annotation p { margin: 7px 0 0; color: var(--muted); }
+  .range-list {
+    display: grid;
+    gap: 3px;
+  }
+  .range-line {
+    color: var(--accent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .secondary { border-color: var(--line); background: rgba(255, 255, 255, 0.06); }
+  .danger { border-color: rgba(255, 125, 125, 0.5); color: var(--danger); background: rgba(255, 125, 125, 0.1); }
+  .empty { padding: 28px; color: var(--muted); }
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(4, 8, 18, 0.68);
+  }
+  .markdown-dialog {
+    width: min(720px, calc(100vw - 48px));
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--panel);
+  }
+  .dialog-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .dialog-body {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+  }
+  #markdown-import {
+    min-height: 220px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  @media (max-width: 1100px) {
+    body { overflow: auto; }
+    #app, .shell { height: auto; min-height: 100vh; }
+    .workspace { grid-template-columns: 1fr; }
+    .file-list-panel, .notes-panel { max-height: 42vh; }
+    .code-scroll { max-height: 62vh; }
+  }
+</style>
+<script type="importmap">
+${importMap()}
+</script>
+</head>
+<body>
+<main id="app" data-status="loading">Loading code annotator...</main>
+<script type="module" src="/client.js"></script>
+</body>
+</html>`;
+}
+
+const clientJs = `import { createSandbox } from "@macchiato-dev/quickjs-emscripten-sandbox";
+
+const app = document.querySelector("#app");
+const storageKey = "code-annotator-markdown";
+let dragStartLine = null;
+let dragEndLine = null;
+
+function showError(error) {
+  app.dataset.status = "error";
+  app.textContent = error?.message || String(error);
+}
+
+function render(result) {
+  app.dataset.status = "ready";
+  app.innerHTML = result.html;
+  if (result.markdown !== undefined) localStorage.setItem(storageKey, result.markdown);
+}
+
+async function openFile(sandbox, path) {
+  const response = await fetch("/api/file?path=" + encodeURIComponent(path));
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || "Could not load file.");
+  render(sandbox.callJsonFunction("__annotatorOpenFile", payload));
+}
+
+async function openSelectedFile(sandbox) {
+  const selected = app.querySelector("[data-file-path][aria-current='true']") || app.querySelector("[data-file-path]");
+  if (selected?.dataset.filePath) await openFile(sandbox, selected.dataset.filePath);
+}
+
+function formPayload() {
+  return {
+    start: app.querySelector("#range-start")?.value || "",
+    end: app.querySelector("#range-end")?.value || "",
+    note: app.querySelector("#annotation-note")?.value || "",
+    multi: Boolean(app.querySelector("#multi-range")?.checked),
+  };
+}
+
+function searchPayload() {
+  return {
+    query: app.querySelector("#search-query")?.value || "",
+    regex: Boolean(app.querySelector("#search-regex")?.checked),
+    before: app.querySelector("#search-before")?.value || "",
+    after: app.querySelector("#search-after")?.value || "",
+  };
+}
+
+function lineAtPoint(x, y) {
+  for (const button of app.querySelectorAll("[data-line]")) {
+    const rect = button.getBoundingClientRect();
+    if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) return Number(button.dataset.line);
+  }
+  return null;
+}
+
+function previewRange(start, end) {
+  const first = Math.min(start, end);
+  const last = Math.max(start, end);
+  const startInput = app.querySelector("#range-start");
+  const endInput = app.querySelector("#range-end");
+  if (startInput) startInput.value = String(first);
+  if (endInput) endInput.value = String(last);
+  for (const row of app.querySelectorAll(".code-line")) {
+    const line = Number(row.querySelector("[data-line]")?.dataset.line);
+    row.classList.toggle("is-selected", line >= first && line <= last);
+  }
+}
+
+function startLineDrag(event, line, extend = false) {
+  dragStartLine = Number(line);
+  dragEndLine = dragStartLine;
+  event.preventDefault();
+  if (extend) {
+    const existingStart = Number(app.querySelector("#range-start")?.value || dragStartLine);
+    dragStartLine = existingStart;
+  }
+  previewRange(dragStartLine, dragEndLine);
+}
+
+function updateLineDrag(x, y) {
+  if (dragStartLine === null) return;
+  const line = lineAtPoint(x, y);
+  if (line === null) return;
+  dragEndLine = line;
+  previewRange(dragStartLine, dragEndLine);
+}
+
+try {
+  const [manifestResponse, sandboxResponse] = await Promise.all([
+    fetch("/api/manifest"),
+    fetch("/sandbox.js"),
+  ]);
+  if (!manifestResponse.ok) throw new Error("Could not load module manifest.");
+  if (!sandboxResponse.ok) throw new Error("Could not load sandbox code.");
+  const manifest = await manifestResponse.json();
+  const sandboxCode = await sandboxResponse.text();
+  const sandbox = await createSandbox();
+  sandbox.evalGlobal(sandboxCode, "code-annotator-sandbox.js");
+  render(sandbox.callJsonFunction("__annotatorBoot", { manifest, markdown: localStorage.getItem(storageKey) || "" }));
+  await openSelectedFile(sandbox);
+
+  app.addEventListener("click", async (event) => {
+    if (event.target.closest("#package-picker")) {
+      render(sandbox.callJsonFunction("__annotatorPackagePicker", { open: true }));
+      return;
+    }
+    const moduleButton = event.target.closest("[data-module-dir]");
+    if (moduleButton) {
+      render(sandbox.callJsonFunction("__annotatorSelectModule", { dir: moduleButton.dataset.moduleDir }));
+      await openSelectedFile(sandbox);
+      return;
+    }
+    const fileButton = event.target.closest("[data-file-path]");
+    if (fileButton) {
+      await openFile(sandbox, fileButton.dataset.filePath);
+      return;
+    }
+    const removeButton = event.target.closest("[data-remove-annotation]");
+    if (removeButton) {
+      render(sandbox.callJsonFunction("__annotatorRemove", { id: removeButton.dataset.removeAnnotation }));
+      return;
+    }
+    const annotationButton = event.target.closest("[data-select-annotation]");
+    if (annotationButton) {
+      render(sandbox.callJsonFunction("__annotatorSelectAnnotation", { id: annotationButton.dataset.selectAnnotation }));
+      return;
+    }
+    if (event.target.closest("#edit-ranges")) {
+      render(sandbox.callJsonFunction("__annotatorRangeEdit", { active: true }));
+      return;
+    }
+    if (event.target.closest("#cancel-range-edit")) {
+      render(sandbox.callJsonFunction("__annotatorRangeEdit", { active: false }));
+      return;
+    }
+    if (event.target.closest("#search-toggle")) {
+      render(sandbox.callJsonFunction("__annotatorSearchOpen", { open: true }));
+      return;
+    }
+    if (event.target.closest("#search-close")) {
+      render(sandbox.callJsonFunction("__annotatorSearchOpen", { open: false }));
+      return;
+    }
+    if (event.target.closest("#search-run")) {
+      render(sandbox.callJsonFunction("__annotatorSearch", searchPayload()));
+      return;
+    }
+    if (event.target.closest("#add-annotation")) {
+      render(sandbox.callJsonFunction("__annotatorAdd", formPayload()));
+      return;
+    }
+    if (event.target.closest("#markdown-tools")) {
+      render(sandbox.callJsonFunction("__annotatorMarkdownTools", { open: true }));
+      return;
+    }
+    if (event.target.closest("#close-markdown-tools")) {
+      render(sandbox.callJsonFunction("__annotatorMarkdownTools", { open: false }));
+      return;
+    }
+    if (event.target.closest("#download-markdown")) {
+      const markdown = sandbox.callJsonFunction("__annotatorMarkdown", {}).markdown;
+      const blob = new Blob([markdown], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "code-annotations.md";
+      link.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    if (event.target.closest("#import-markdown")) {
+      render(sandbox.callJsonFunction("__annotatorImport", { markdown: app.querySelector("#markdown-import")?.value || "" }));
+    }
+  });
+  app.addEventListener("pointerdown", (event) => {
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    startLineDrag(event, lineButton.dataset.line, event.shiftKey);
+  });
+  app.addEventListener("pointerover", (event) => {
+    if (dragStartLine === null) return;
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    dragEndLine = Number(lineButton.dataset.line);
+    previewRange(dragStartLine, dragEndLine);
+  });
+  document.addEventListener("pointermove", (event) => {
+    updateLineDrag(event.clientX, event.clientY);
+  });
+  document.addEventListener("pointerup", () => {
+    if (dragStartLine !== null) {
+      render(sandbox.callJsonFunction("__annotatorDragRange", {
+        start: dragStartLine,
+        end: dragEndLine ?? dragStartLine,
+      }));
+    }
+    dragStartLine = null;
+    dragEndLine = null;
+  });
+  document.addEventListener("pointercancel", () => {
+    dragStartLine = null;
+    dragEndLine = null;
+  });
+  app.addEventListener("mousedown", (event) => {
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    startLineDrag(event, lineButton.dataset.line, event.shiftKey);
+  });
+  app.addEventListener("mouseover", (event) => {
+    if (dragStartLine === null) return;
+    const lineButton = event.target.closest("[data-line]");
+    if (!lineButton) return;
+    dragEndLine = Number(lineButton.dataset.line);
+    previewRange(dragStartLine, dragEndLine);
+  });
+  document.addEventListener("mousemove", (event) => {
+    updateLineDrag(event.clientX, event.clientY);
+  });
+  document.addEventListener("mouseup", () => {
+    if (dragStartLine !== null) {
+      render(sandbox.callJsonFunction("__annotatorDragRange", {
+        start: dragStartLine,
+        end: dragEndLine ?? dragStartLine,
+      }));
+    }
+    dragStartLine = null;
+    dragEndLine = null;
+  });
+  app.addEventListener("change", (event) => {
+    if (event.target.closest("#show-inline")) {
+      render(sandbox.callJsonFunction("__annotatorShowInline", { checked: event.target.checked }));
+      return;
+    }
+    if (event.target.closest("#multi-range")) {
+      render(sandbox.callJsonFunction("__annotatorMultiRange", { checked: event.target.checked }));
+      return;
+    }
+  });
+} catch (error) {
+  showError(error);
+}
+`;
+
+const sandboxJs = `let manifest = null;
+let selectedModule = "";
+let selectedFile = "";
+let filePayload = null;
+let range = { start: 1, end: 1 };
+let rangeAnchor = 1;
+let annotations = [];
+let markdownToolsOpen = false;
+let packagePickerOpen = false;
+let selectedAnnotationId = "";
+let showInline = true;
+let multiRange = false;
+let rangeEditMode = false;
+let searchOpen = false;
+let searchState = { query: "", regex: false, before: 2, after: 2, matches: [], error: "" };
+
+function esc(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function moduleByDir(dir) {
+  return manifest.modules.find((mod) => mod.dir === dir) || manifest.modules[0] || null;
+}
+
+function currentModule() {
+  return moduleByDir(selectedModule);
+}
+
+function currentFile() {
+  const mod = currentModule();
+  return mod?.files.find((file) => file.path === selectedFile) || mod?.files[0] || null;
+}
+
+function annotationId() {
+  return String(Date.now()) + "-" + String(Math.random()).slice(2);
+}
+
+function parseMarkdown(markdown) {
+  const text = String(markdown || "");
+  const parsed = [];
+  const blockRe = /^### Annotation\\n\\n((?:- .+#L\\d+(?:-L\\d+)?\\n)+)\\n([\\s\\S]*?)(?=\\n\\n### |$)/gm;
+  let block;
+  while ((block = blockRe.exec(text))) {
+    const ranges = block[1].trim().split("\\n").map((line) => {
+      const match = line.match(/^- (.+)#L(\\d+)(?:-L(\\d+))?$/);
+      if (!match) return null;
+      return {
+        file: match[1],
+        start: Number(match[2]),
+        end: Number(match[3] || match[2]),
+      };
+    }).filter(Boolean);
+    if (ranges.length) parsed.push({ id: annotationId(), ranges, note: block[2].trim() });
+  }
+  if (parsed.length) return parsed;
+  const re = /^### (.+)#L(\\d+)(?:-L(\\d+))?\\n\\n([\\s\\S]*?)(?=\\n\\n### |$)/gm;
+  let match;
+  while ((match = re.exec(text))) {
+    parsed.push({
+      id: annotationId(),
+      ranges: [{
+        file: match[1],
+        start: Number(match[2]),
+        end: Number(match[3] || match[2]),
+      }],
+      note: match[4].trim(),
+    });
+  }
+  return parsed;
+}
+
+function markdown() {
+  if (!annotations.length) return "# Code annotations\\n";
+  return "# Code annotations\\n\\n" + annotations.map((item) => {
+    const ranges = item.ranges.map((range) => {
+      const suffix = range.start === range.end ? "#L" + range.start : "#L" + range.start + "-L" + range.end;
+      return "- " + range.file + suffix;
+    }).join("\\n");
+    return "### Annotation\\n\\n" + ranges + "\\n\\n" + item.note.trim();
+  }).join("\\n\\n");
+}
+
+function highlight(line, language) {
+  function emit(cls, text) {
+    return '<span class="' + cls + '">' + esc(text) + '</span>';
+  }
+  if (language === "js" || language === "ts" || language === "jsx" || language === "tsx") {
+    const commentAt = line.indexOf("//");
+    const code = commentAt >= 0 ? line.slice(0, commentAt) : line;
+    const comment = commentAt >= 0 ? line.slice(commentAt) : "";
+    const tokenRe = /("(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])*')|\\b(const|let|var|function|return|import|export|from|if|else|for|while|class|new|await|async|try|catch)\\b|\\b(\\d+(?:\\.\\d+)?)\\b/g;
+    let out = "";
+    let index = 0;
+    let match;
+    while ((match = tokenRe.exec(code))) {
+      out += esc(code.slice(index, match.index));
+      out += emit(match[1] ? "tok-str" : match[2] ? "tok-key" : "tok-num", match[0]);
+      index = match.index + match[0].length;
+    }
+    out += esc(code.slice(index));
+    if (comment) out += emit("tok-com", comment);
+    return out || " ";
+  }
+  if (language === "json") {
+    const tokenRe = /("(?:\\\\.|[^"\\\\])*")(\\s*:)?|\\b(true|false|null|\\d+(?:\\.\\d+)?)\\b/g;
+    let out = "";
+    let index = 0;
+    let match;
+    while ((match = tokenRe.exec(line))) {
+      out += esc(line.slice(index, match.index));
+      if (match[1]) out += emit("tok-str", match[1]) + esc(match[2] || "");
+      else out += emit("tok-num", match[0]);
+      index = match.index + match[0].length;
+    }
+    out += esc(line.slice(index));
+    return out || " ";
+  }
+  return esc(line) || " ";
+}
+
+function moduleButtons(active) {
+  return manifest.modules.map((mod) => {
+    const current = mod.dir === active.dir ? ' aria-current="true"' : "";
+    return '<button class="module-button" type="button" data-module-dir="' + esc(mod.dir) + '"' + current + '>' +
+      '<span class="name">' + esc(mod.name) + '</span>' +
+      '<span class="meta">' + esc(mod.dir) + ' / ' + mod.files.length + ' code files</span>' +
+      '</button>';
+  }).join("");
+}
+
+function fileButtons(mod, activePath) {
+  return mod.files.map((file) => {
+    const current = file.path === activePath ? ' aria-current="true"' : "";
+    return '<button class="file-button" type="button" data-file-path="' + esc(file.path) + '"' + current + '>' +
+      esc(file.path.slice(mod.dir.length + 1)) +
+      '<span class="meta">' + esc(file.language) + '</span>' +
+      '</button>';
+  }).join("");
+}
+
+function packagePicker(active) {
+  return '<div class="package-picker">' +
+    '<button id="package-picker" class="package-trigger" type="button" aria-label="Choose package">' +
+      '<span class="name">' + esc(active.name) + '</span>' +
+      '<span class="meta">' + esc(active.dir) + ' / ' + active.files.length + ' code files</span>' +
+    '</button>' +
+    (packagePickerOpen ? '<div class="package-menu" role="menu">' + moduleButtons(active) + '</div>' : "") +
+  '</div>';
+}
+
+function lineClass(number) {
+  const selected = number >= range.start && number <= range.end;
+  const annotated = annotations.some((item) => item.ranges.some((itemRange) => itemRange.file === selectedFile && number >= itemRange.start && number <= itemRange.end));
+  const searched = searchState.matches.some((match) => number >= match.start && number <= match.end);
+  return ' class="code-line' + (selected ? " is-selected" : "") + (annotated ? " is-annotated" : "") + (searched ? " is-search" : "") + '"';
+}
+
+function rangeText(range) {
+  return range.file + "#L" + range.start + (range.end === range.start ? "" : "-L" + range.end);
+}
+
+function selectedAnnotation() {
+  return annotations.find((item) => item.id === selectedAnnotationId) || annotations[0] || null;
+}
+
+function inlineNoteAfter(number) {
+  const item = selectedAnnotation();
+  if (!showInline || !item) return "";
+  const ranges = item.ranges.filter((itemRange) => itemRange.file === selectedFile && itemRange.end === number);
+  if (!ranges.length) return "";
+  return '<tr class="inline-note"><td></td><td><div class="inline-box"><strong>Annotation</strong><br>' + esc(item.note) + '</div></td></tr>';
+}
+
+function codeRows() {
+  if (!filePayload) return '<div class="empty">Select a file to load its code.</div>';
+  return '<div class="code-scroll"><table class="code-table"><tbody>' + filePayload.content.split(/\\r?\\n/).map((line, index) => {
+    const number = index + 1;
+    return '<tr' + lineClass(number) + '>' +
+      '<td><button class="line-button" type="button" data-line="' + number + '">' + number + '</button></td>' +
+      '<td class="source">' + highlight(line, filePayload.language) + '</td>' +
+      '</tr>' + inlineNoteAfter(number);
+  }).join("") + '</tbody></table></div>';
+}
+
+function annotationsHtml() {
+  if (!annotations.length) return '<p class="empty">No annotations yet.</p>';
+  return annotations.map((item) => '<article class="annotation" aria-current="' + (item.id === selectedAnnotationId ? "true" : "false") + '">' +
+    '<button class="annotation-button" type="button" data-select-annotation="' + esc(item.id) + '">' +
+      '<span class="range-list">' + item.ranges.map((itemRange) => '<span class="range-line">' + esc(rangeText(itemRange)) + '</span>').join("") + '</span>' +
+      '<span>' + esc(item.note) + '</span>' +
+    '</button>' +
+    '<button class="danger" type="button" data-remove-annotation="' + esc(item.id) + '">Remove</button>' +
+  '</article>').join("");
+}
+
+function markdownDialog() {
+  if (!markdownToolsOpen) return "";
+  return '<div class="overlay" role="dialog" aria-modal="true" aria-label="Markdown tools">' +
+    '<section class="markdown-dialog">' +
+      '<div class="dialog-head"><h2>Markdown</h2><button id="close-markdown-tools" class="secondary" type="button">Close</button></div>' +
+      '<div class="dialog-body">' +
+        '<div class="actions"><button id="download-markdown" type="button">Download markdown</button></div>' +
+        '<textarea id="markdown-import" aria-label="Import markdown" placeholder="Paste saved markdown">' + esc(markdown()) + '</textarea>' +
+        '<button id="import-markdown" class="secondary" type="button">Import markdown</button>' +
+      '</div>' +
+    '</section>' +
+  '</div>';
+}
+
+function fileParts(path) {
+  const parts = String(path || "").split("/");
+  return {
+    name: parts.pop() || "No file selected",
+    dir: parts.join("/"),
+  };
+}
+
+function searchBar() {
+  if (!searchOpen) return "";
+  return '<div class="search-bar">' +
+    '<input id="search-query" aria-label="Search query" placeholder="Search current file" value="' + esc(searchState.query) + '">' +
+    '<input id="search-before" aria-label="Before context" value="' + esc(searchState.before) + '">' +
+    '<input id="search-after" aria-label="After context" value="' + esc(searchState.after) + '">' +
+    '<label class="toggle"><input id="search-regex" type="checkbox"' + (searchState.regex ? " checked" : "") + '>Regex</label>' +
+    '<button id="search-run" type="button">Find</button>' +
+    '<button id="search-close" class="secondary" type="button">Close</button>' +
+    '<span class="meta">' + (searchState.error ? esc(searchState.error) : searchState.matches.length + " matches") + '</span>' +
+  '</div>';
+}
+
+function rangeEditBar() {
+  if (!rangeEditMode) return "";
+  return '<div class="mode-bar"><span>Drag line numbers to select a new range for the selected annotation.</span><button id="cancel-range-edit" class="secondary" type="button">Cancel</button></div>';
+}
+
+function render() {
+  const mod = currentModule();
+  if (!mod) return { html: '<section class="shell"><p class="empty">No modules are available.</p></section>', markdown: markdown() };
+  const file = currentFile();
+  const fileTitle = selectedFile || file?.path || "No file selected";
+  const parts = fileParts(fileTitle);
+  return {
+    markdown: markdown(),
+    html: '<section class="shell">' +
+      '<div class="workspace">' +
+        '<nav class="panel file-list-panel" aria-label="Files">' + packagePicker(mod) + '<div class="file-list">' + fileButtons(mod, selectedFile) + '</div></nav>' +
+        '<section class="panel viewer">' +
+          '<div class="viewer-head"><div class="file-title"><h1>' + esc(parts.name) + '</h1><span class="file-dir">' + esc(parts.dir) + '</span></div><div class="head-tools"><label class="toggle"><input id="show-inline" type="checkbox"' + (showInline ? " checked" : "") + '>Show inline</label><button id="search-toggle" class="secondary" type="button">Search</button></div></div>' +
+          searchBar() +
+          rangeEditBar() +
+          '<div class="range-form">' +
+            '<input id="range-start" aria-label="Start line" value="' + range.start + '" readonly>' +
+            '<input id="range-end" aria-label="End line" value="' + range.end + '" readonly>' +
+            '<textarea id="annotation-note" class="note-input" aria-label="Annotation note" placeholder="Annotation"></textarea>' +
+            '<label class="toggle"><input id="multi-range" type="checkbox"' + (multiRange ? " checked" : "") + '>Select multiple ranges</label>' +
+            '<button id="edit-ranges" class="secondary" type="button">Pencil</button>' +
+            '<button id="add-annotation" type="button">Add</button>' +
+          '</div>' +
+          codeRows() +
+        '</section>' +
+        '<aside class="panel notes-panel">' +
+          '<div class="notes-head"><h2>Annotations</h2><button id="markdown-tools" class="secondary" type="button">Markdown</button></div>' +
+          '<div class="notes-body">' + annotationsHtml() + '</div>' +
+        '</aside>' +
+      '</div>' +
+      markdownDialog() +
+    '</section>',
+  };
+}
+
+globalThis.__annotatorBoot = (payload) => {
+  const data = JSON.parse(payload);
+  manifest = data.manifest;
+  annotations = parseMarkdown(data.markdown);
+  selectedAnnotationId = annotations[0]?.id || "";
+  selectedModule = manifest.modules[0]?.dir || "";
+  selectedFile = currentModule()?.files[0]?.path || "";
+  rangeAnchor = 1;
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorSelectModule = (payload) => {
+  const data = JSON.parse(payload);
+  if (manifest.modules.some((mod) => mod.dir === data.dir)) {
+    selectedModule = data.dir;
+    selectedFile = currentModule()?.files[0]?.path || "";
+    filePayload = null;
+    range = { start: 1, end: 1 };
+    rangeAnchor = 1;
+    packagePickerOpen = false;
+  }
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorOpenFile = (payload) => {
+  filePayload = JSON.parse(payload);
+  selectedFile = filePayload.path;
+  selectedModule = manifest.modules.find((mod) => mod.files.some((file) => file.path === selectedFile))?.dir || selectedModule;
+  range = { start: 1, end: 1 };
+  rangeAnchor = 1;
+  searchState.matches = [];
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorPickLine = (payload) => {
+  const message = JSON.parse(payload);
+  const line = Number(message.line);
+  if (!Number.isFinite(line)) return JSON.stringify(render());
+  if (message.extend) {
+    range = { start: Math.min(rangeAnchor, line), end: Math.max(rangeAnchor, line) };
+  } else {
+    rangeAnchor = line;
+    range = { start: line, end: line };
+  }
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorDragRange = (payload) => {
+  const message = JSON.parse(payload);
+  const start = Number(message.start);
+  const end = Number(message.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return JSON.stringify(render());
+  rangeAnchor = start;
+  range = { start: Math.min(start, end), end: Math.max(start, end) };
+  if (rangeEditMode) {
+    const selected = selectedAnnotation();
+    if (selected) {
+      const replacement = { file: selectedFile, start: range.start, end: range.end };
+      const index = selected.ranges.findIndex((itemRange) => itemRange.file === selectedFile);
+      if (index >= 0) selected.ranges[index] = replacement;
+      else selected.ranges[0] = replacement;
+      rangeEditMode = false;
+    }
+  }
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorAdd = (payload) => {
+  const data = JSON.parse(payload);
+  const start = Math.max(1, Number(data.start || range.start));
+  const end = Math.max(start, Number(data.end || range.end));
+  const note = String(data.note || "").trim();
+  const selected = selectedAnnotation();
+  if (selectedFile && data.multi && selected) {
+    selected.ranges.push({ file: selectedFile, start, end });
+    if (note) selected.note = note;
+    selectedAnnotationId = selected.id;
+  } else if (selectedFile && note) {
+    const item = { id: annotationId(), ranges: [{ file: selectedFile, start, end }], note };
+    annotations.push(item);
+    selectedAnnotationId = item.id;
+  }
+  rangeEditMode = false;
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorRemove = (payload) => {
+  const id = JSON.parse(payload).id;
+  annotations = annotations.filter((item) => item.id !== id);
+  if (selectedAnnotationId === id) selectedAnnotationId = annotations[0]?.id || "";
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorSelectAnnotation = (payload) => {
+  const id = JSON.parse(payload).id;
+  if (annotations.some((item) => item.id === id)) selectedAnnotationId = id;
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorShowInline = (payload) => {
+  showInline = Boolean(JSON.parse(payload).checked);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorMultiRange = (payload) => {
+  multiRange = Boolean(JSON.parse(payload).checked);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorRangeEdit = (payload) => {
+  rangeEditMode = Boolean(JSON.parse(payload).active);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorMarkdownTools = (payload) => {
+  markdownToolsOpen = Boolean(JSON.parse(payload).open);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorPackagePicker = (payload) => {
+  packagePickerOpen = Boolean(JSON.parse(payload).open);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorSearchOpen = (payload) => {
+  searchOpen = Boolean(JSON.parse(payload).open);
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorSearch = (payload) => {
+  const data = JSON.parse(payload);
+  searchState = {
+    query: String(data.query || ""),
+    regex: Boolean(data.regex),
+    before: Math.max(0, Number(data.before || 0)),
+    after: Math.max(0, Number(data.after || 0)),
+    matches: [],
+    error: "",
+  };
+  if (!filePayload || !searchState.query) return JSON.stringify(render());
+  try {
+    const pattern = searchState.regex ? new RegExp(searchState.query, "i") : null;
+    const lines = filePayload.content.split(/\\r?\\n/);
+    searchState.matches = lines.flatMap((line, index) => {
+      const ok = pattern ? pattern.test(line) : line.toLowerCase().includes(searchState.query.toLowerCase());
+      if (!ok) return [];
+      const lineNumber = index + 1;
+      return [{ start: Math.max(1, lineNumber - searchState.before), end: Math.min(lines.length, lineNumber + searchState.after), line: lineNumber }];
+    });
+  } catch (err) {
+    searchState.error = err.message || String(err);
+  }
+  return JSON.stringify(render());
+};
+
+globalThis.__annotatorMarkdown = () => JSON.stringify({ markdown: markdown() });
+
+globalThis.__annotatorImport = (payload) => {
+  annotations = parseMarkdown(JSON.parse(payload).markdown);
+  selectedAnnotationId = annotations[0]?.id || "";
+  markdownToolsOpen = false;
+  return JSON.stringify(render());
+};
+`;
+
+export async function codeAnnotatorHandler(request, app) {
+  const url = new URL(request.url);
+  const asset = await serveProviderAsset(url.pathname);
+  if (asset) return asset;
+  if (url.pathname === "/" || url.pathname === "/index.html") {
+    return new Response(page(), { headers: { "content-type": "text/html; charset=utf-8" } });
+  }
+  if (url.pathname === "/client.js") {
+    return new Response(clientJs, { headers: { "content-type": "application/javascript; charset=utf-8" } });
+  }
+  if (url.pathname === "/sandbox.js") {
+    return new Response(sandboxJs, { headers: { "content-type": "application/javascript; charset=utf-8" } });
+  }
+  if (url.pathname === "/api/manifest") {
+    try {
+      return Response.json(await moduleManifest(app.fileAccess));
+    } catch (err) {
+      return Response.json({ error: err.message }, { status: 500 });
+    }
+  }
+  if (url.pathname === "/api/file") {
+    try {
+      const result = await readGrantedFile(app.fileAccess, url.searchParams.get("path"));
+      return Response.json(result.body, { status: result.status });
+    } catch (err) {
+      return Response.json({ error: err.message }, { status: 500 });
+    }
+  }
+  return new Response("Not found", { status: 404 });
+}
+
+export const codeAnnotatorFileAccess = {
+  type: "git",
+  root: "packages",
+};
+
+/* viewport-state probe begins above the final viewport
+   viewport state continuation 1
+   viewport state continuation 2
+   viewport state continuation 3
+   viewport state continuation 4
+   viewport state continuation 5
+   viewport state continuation 6
+   viewport state continuation 7
+   viewport state continuation 8
+   viewport state continuation 9
+   viewport state continuation 10
+   viewport state continuation 11
+   viewport state continuation 12
+   viewport state continuation 13
+   viewport state continuation 14
+   viewport state continuation 15
+   viewport state continuation 16
+   viewport state continuation 17
+   viewport state continuation 18
+   viewport state continuation 19
+   viewport state continuation 20
+   viewport state continuation 21
+   viewport state continuation 22
+   viewport state continuation 23
+   viewport state continuation 24
+   viewport state continuation 25
+   viewport state continuation 26
+   viewport state continuation 27
+   viewport state continuation 28
+   viewport state continuation 29
+   viewport state continuation 30
+   viewport state continuation 31
+   viewport state continuation 32
+   viewport state continuation 33
+   viewport state continuation 34
+   viewport state continuation 35
+   viewport state continuation 36
+   viewport state continuation 37
+   viewport state continuation 38
+   viewport state continuation 39
+   viewport state continuation 40
+   viewport state continuation 41
+   viewport state continuation 42
+   viewport state continuation 43
+   viewport state continuation 44
+   viewport state continuation 45
+   viewport state continuation 46
+   viewport state continuation 47
+   viewport state continuation 48
+   viewport state continuation 49
+   viewport state continuation 50
+   viewport state continuation 51
+   viewport state continuation 52
+   viewport state continuation 53
+   viewport state continuation 54
+   viewport state continuation 55
+   viewport state continuation 56
+   viewport state continuation 57
+   viewport state continuation 58
+   viewport state continuation 59
+   viewport state continuation 60
+   viewport state continuation 61
+   viewport state continuation 62
+   viewport state continuation 63
+   viewport state continuation 64
+   viewport state continuation 65
+   viewport state continuation 66
+   viewport state continuation 67
+   viewport state continuation 68
+   viewport state continuation 69
+   viewport state continuation 70
+   viewport state continuation 71
+   viewport state continuation 72
+   viewport state continuation 73
+   viewport state continuation 74
+   viewport state continuation 75
+   viewport state continuation 76
+   viewport state continuation 77
+   viewport state continuation 78
+   viewport state continuation 79
+   viewport state continuation 80
+   viewport state continuation 81
+   viewport state continuation 82
+   viewport state continuation 83
+   viewport state continuation 84
+   viewport state continuation 85
+   viewport state continuation 86
+   viewport state continuation 87
+   viewport state continuation 88
+   viewport state continuation 89
+   viewport state continuation 90
+   viewport state continuation 91
+   viewport state continuation 92
+   viewport state continuation 93
+   viewport state continuation 94
+   viewport state continuation 95
+   viewport state continuation 96
+*/
+const viewportTemplate = `a template
+that crosses a line`;
+const viewportNumber = 2048;

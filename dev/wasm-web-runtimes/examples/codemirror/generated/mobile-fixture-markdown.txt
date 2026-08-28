@@ -1,0 +1,3413 @@
+
+
+<!-- AGENTS.md -->
+
+# AGENTS.md
+
+## Runtime
+
+Prefer Deno for new JavaScript and TypeScript tooling, build scripts, and
+services. Do not introduce Node-only dependencies or npm-driven tooling when a
+straightforward Deno implementation is available.
+
+Some existing packages still use Node APIs such as `node:sqlite`. Treat Node as
+a compatibility runtime for those packages while they are being migrated, not
+as the repository's preferred runtime. When touching one, use a current Node
+release and avoid expanding its Node-specific surface.
+
+Check the preferred runtime with:
+
+```bash
+deno --version
+```
+
+When an existing Node-only package must be run, also check `node -v` first.
+
+## Containers
+
+Use Fedora-based images for development and build containers. Podman is the
+primary container engine. Containerfiles must work with Podman and use the
+Docker-compatible subset needed for GitHub Actions, where Docker is the
+explicit compatibility exception. Do not introduce Debian- or Ubuntu-specific
+package management unless a narrowly scoped upstream build requires it and the
+exception is documented.
+
+Keep the Bunny deployment container separate and deliberately narrow. Its
+reason to exist is to receive the Bunny API key temporarily and perform the
+deployment. It should contain only the deployment client and the minimum
+artifacts and instructions needed for that operation. Building, packaging,
+serving, development authentication, and unrelated tooling stay outside this
+key-bearing container and must not receive the key.
+
+Do not depend on base images or build images available only from Docker Hub.
+Prefer fully qualified OCI image references from Fedora's registries, GHCR, or
+another registry that works directly and predictably with Podman. Docker Hub
+may be an additional mirror, but it must not be the sole source.
+
+## JavaScript Modules and Working Files
+
+Use JavaScript modules throughout this repository. Use the `.js` extension,
+not `.mjs`; place standalone scripts beneath a directory whose `package.json`
+sets `"type": "module"`.
+
+Avoid using `/tmp` for working files and reusable diagnostics. Prefer a clearly
+named sibling directory beside the repository, such as `/root/macchiato-work`,
+with its own `package.json` when it contains standalone module scripts.
+
+## Development History
+
+Commit at useful, coherent checkpoints often enough that meaningful
+work-in-progress remains visible. There is no need to commit every tiny edit.
+Experimental commits are welcome: it is fine to backtrack when an approach does
+not work, and seeing that evolution is useful when reviewing the project.
+If substantial work has accumulated without a checkpoint, commit a coherent
+portion with `WIP` in the message even when it is not fully verified. Follow it
+with a correcting or completing commit after testing rather than hiding the
+intermediate state in a long-running worktree.
+
+## Running the Server
+
+For local development, pick a port that is free on your machine. The examples
+below use `8765`, which is the app package default and is usually available for
+local self-hosting.
+
+```bash
+cd /path/to/macchiato
+node packages/app/src/index.js --host 127.0.0.1 --port 8765
+```
+
+A fresh database initializes only the `core` app-directory preset. For the full
+repository demo set, use `--app-plugin development`. See
+`docs/declarative-apps.md` for persistent installation and subdomain mapping.
+
+If running inside a container or VM and exposing the port to the host, bind to
+all interfaces inside the container:
+
+```bash
+node packages/app/src/index.js --host 0.0.0.0 --port 8765
+```
+
+Useful local URLs after installing the relevant apps:
+
+```text
+http://macchiato.localhost:8765
+http://dom-use.localhost:8765
+http://dom-use-todos.localhost:8765
+http://todo.localhost:8765
+```
+
+## Site Configuration
+
+List configured SQLite-backed sites with:
+
+```bash
+node packages/macchiato/src/macchiato.js site list
+```
+
+Use `--data-dir <dir>` before the command when you want an explicit SQLite
+directory, for example:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./macchiato-dev-data site list
+node packages/app/src/index.js --data-dir ./macchiato-dev-data --host 127.0.0.1 --port 8765
+```
+
+Add a site with:
+
+```bash
+node packages/macchiato/src/macchiato.js schema add \
+  @macchiato-dev/dom-use@0.0.1/article.json \
+  examples/dom-use-demo/dom.schema.json
+
+node packages/macchiato/src/macchiato.js schema add \
+  @macchiato-dev/style-use@0.0.1/basic.json \
+  examples/dom-use-demo/css.schema.json
+
+node packages/macchiato/src/macchiato.js site add-page \
+  dom-use \
+  examples/dom-use-demo/page.html \
+  examples/dom-use-demo/style.css \
+  @macchiato-dev/dom-use@0.0.1/article.json \
+  @macchiato-dev/style-use@0.0.1/basic.json \
+  --title "Neighborhood Library"
+```
+
+The app server routes by subdomain, so a `dom-use` row is served at
+`http://dom-use.localhost:<port>`.
+
+## Copying Container Files to the macOS Clipboard
+
+The repository normally runs in the `macchiato-vibe` Podman container inside
+Lima, while `pbcopy` belongs to the macOS host. To copy a generated or source
+file out of the container, stream it through `podman exec` and pipe it to the
+host clipboard. In an environment that uses `!` for host shell commands, copy
+the Bunny nested-worker probe with:
+
+```bash
+!lima podman exec macchiato-vibe cat /root/macchiato/examples/bunny-edge-worker-probe/worker-probe.js | pbcopy
+```
+
+Use the same form for other files, changing only the absolute container path.
+Do not run `pbcopy` inside the container.
+
+
+<!-- README.md -->
+
+# macchiato
+
+A self-hosted app platform.
+
+## Components
+
+Macchiato is split into small packages with explicit boundaries. The runtime
+server composes them, but the policy and validation pieces are reusable on
+their own.
+
+| Component | Description |
+|-----------|-------------|
+| [`@macchiato-dev/app`](packages/app/) | Cross-runtime HTTP server. Routes only declaratively registered apps by subdomain and serves their handlers or SQLite-backed content. |
+| [`@macchiato-dev/macchiato`](packages/macchiato/) | CLI and interactive shell for managing the local Macchiato database: sites, schemas, routes, fonts, and server lifecycle helpers. |
+| [`@macchiato-dev/app-db-sqlite`](packages/app-db-sqlite/) | SQLite storage layer for app configuration. Owns schema creation, migrations, query helpers, and prepared-statement-backed access for the app database without becoming a full ORM. |
+| [`@macchiato-dev/site`](packages/site/) | SSR site framework for full HTML documents, route rows, transition policy, trusted pre-sanitized page swaps, and fallback navigation. |
+| [`@macchiato-dev/dom-use`](packages/dom-use/) | Top-level schema-bound DOM capability. Guest code creates and mutates DOM through this package, which enforces allowed nodes, attributes, parent/child relationships, URL rules, content limits, and DOM gas budgets. |
+| [`@macchiato-dev/html-use`](packages/html-use/) | Lower-level HTML parser, serializer, and sanitizer used by `dom-use`. It receives the caller's element factory and schema instead of importing `dom-use` directly. |
+| [`@macchiato-dev/style-use`](packages/style-use/) | CSS policy engine for inline styles and stylesheets. Schemas declare allowed properties, value patterns, selectors, at-rules, URL loading, imports, and stylesheet limits. |
+| [`@macchiato-dev/theme-use`](packages/theme-use/) | Validates named, allowlisted CSS custom-property themes and renders customizable theme declarations without permitting active CSS values. |
+| [`@macchiato-dev/menu-use`](packages/menu-use/) | Defines one immutable primary-navigation model and renders matching desktop, mobile, and document-runtime menus. |
+| [`@macchiato-dev/user-menu-use`](packages/user-menu-use/) | Compiles declarative user-menu definitions into markup, colocated `dom-use` schema capability, and an exclusive open/close state machine suitable for a sandbox. |
+| [`@macchiato-dev/font-use`](packages/font-use/) | Font asset cache helpers. Validates font names and paths, stores known font bytes in SQLite, emits stable `/-/fonts/...` URLs, and builds `@font-face` declarations. |
+| [`@macchiato-dev/quickjs-emscripten-sandbox`](packages/quickjs-emscripten-sandbox/) | QuickJS-backed JavaScript sandbox. Runs guest JavaScript with explicit host capabilities and provides browser assets used by the DOM sandbox examples. |
+| [`@macchiato-dev/dashboard`](packages/dashboard/) | Small management UI for local site mappings. It is a development convenience, not the core storage or policy layer. |
+
+The core capability stack is:
+
+```text
+dom-use
+  |-- html-use
+  `-- style-use
+```
+
+`dom-use` is what guest contexts interact with. `html-use` and `style-use` are
+implementation capabilities that can also be used directly where lower-level
+HTML or CSS validation is needed.
+
+## Examples
+
+App installation, dependency mapping, and the minimal default are described in
+[Declarative apps](docs/declarative-apps.md).
+
+| Example | Description |
+|---------|-------------|
+| `examples/dom-use-demo` | SQLite-backed page example. Imports an HTML fragment, stylesheet, DOM schema, and CSS schema into the app database and serves the result at `dom-use.localhost`. |
+| `examples/dom-use-todos` | QuickJS-backed todo app. Passes `examples/todo/index.html` into the guest runtime and applies `dom-use` validation to every guest DOM operation. |
+| `packages/website` | Private `@macchiato-dev/website` workspace containing the Resources.co content, skin, publication build, and Bunny Edge deployment entrypoint. |
+| `examples/resources-website` | Multi-page Resources.co website example used for schema-bound page, style, navigation, prefetch, and transition work. |
+| `examples/todo` | Standalone prototype of a guest-side DOM simulation with host-side rendering. |
+| `examples/todo-matrix` | QuickJS/schema-constrained todo matrix app with local storage and grid interaction. |
+
+## Dependency Policy
+
+Packages in this monorepo specify **exact versions** for all dependencies.
+Nested dependencies may technically be pulled in by npm during installation,
+but the project does not serve files from nested `node_modules` packages.
+Each package is responsible for its own runtime surface and should not
+expose its transitive dependency tree over the network.
+
+This policy is pragmatic, not dogmatic — exceptions may exist where
+strict exact-version pinning would create unnecessary friction.
+
+The proposed npm release groups, dependency order, and release gates are in
+[docs/npm-publishing.md](docs/npm-publishing.md). Public publishing is blocked
+until the repository has an explicit license.
+
+## Running with Deno
+
+`deno install` grants permissions — it cannot preset environment variables.
+Use CLI flags or the SQLite database for runtime configuration.
+
+### Install the server directly (tightest permissions)
+
+Best for running just the HTTP server without the interactive shell:
+
+```bash
+deno install \
+  --allow-net=[::]:3030 \
+  --allow-read=$HOME/.macchiato/default \
+  --allow-write=$HOME/.macchiato/default \
+  --allow-env=HOME,USERPROFILE \
+  ./packages/app/src/index.js
+```
+
+Then run it on port 3030:
+
+```bash
+macchiato-app --port 3030
+```
+
+### Install the full CLI (includes interactive shell)
+
+The `macchiato` CLI can start and stop the server from an interactive shell.
+In Deno this requires `--allow-run` to spawn the server process:
+
+```bash
+deno install \
+  --allow-net=[::]:3030 \
+  --allow-read=$HOME/.macchiato/default \
+  --allow-write=$HOME/.macchiato/default \
+  --allow-env=HOME,USERPROFILE \
+  --allow-run=deno \
+  ./packages/macchiato/src/macchiato.js
+```
+
+Then:
+
+```bash
+macchiato                          # enter interactive shell
+macchiato> server start --port 3030
+macchiato> site add todo ../../examples/todo
+```
+
+## dom-use SQLite page example
+
+The `examples/dom-use-demo` example is configured as a SQLite-backed page. Its
+HTML fragment, CSS, DOM schema, CSS schema, and sandbox flag are stored in the
+database. The browser receives only the rendered HTML and CSS.
+
+```bash
+node packages/macchiato/src/macchiato.js schema add \
+  @macchiato-dev/dom-use@0.0.1/article.json \
+  examples/dom-use-demo/dom.schema.json
+
+node packages/macchiato/src/macchiato.js schema add \
+  @macchiato-dev/style-use@0.0.1/basic.json \
+  examples/dom-use-demo/css.schema.json
+
+node packages/macchiato/src/macchiato.js site add-page \
+  dom-use \
+  examples/dom-use-demo/page.html \
+  examples/dom-use-demo/style.css \
+  @macchiato-dev/dom-use@0.0.1/article.json \
+  @macchiato-dev/style-use@0.0.1/basic.json \
+  --title "Neighborhood Library"
+
+node packages/app/src/index.js --app-plugin dom-use-todos
+```
+
+Then open:
+
+```text
+http://dom-use.localhost:8765
+```
+
+## dom-use QuickJS todo example
+
+The `examples/dom-use-todos` example passes `examples/todo/index.html`
+unchanged into QuickJS. A guest-side parser and DOM wrapper run the inline
+module there while host-owned `dom-use` validates each DOM operation.
+
+```bash
+node packages/app/src/index.js
+```
+
+Then open:
+
+```text
+http://dom-use-todos.localhost:8765
+```
+
+To use a specific SQLite directory instead of the default
+`~/.macchiato/default`, pass the same data directory to both commands:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./macchiato-dev-data site list
+node packages/app/src/index.js --data-dir ./macchiato-dev-data
+```
+
+### Permission notes
+
+| Flag | What it allows |
+|------|---------------|
+| `--allow-net=[::]:3030` | Bind the server to port 3030 on all interfaces (IPv6 dual-stack) |
+| `--allow-read=$HOME/.macchiato/default` | Read the SQLite database |
+| `--allow-write=$HOME/.macchiato/default` | Write the SQLite database (WAL creates `-wal` and `-shm` siblings) |
+| `--allow-env=HOME,USERPROFILE` | Resolve the `~/.macchiato/default` data directory |
+| `--allow-run=deno` | *(CLI only)* Spawn the server as a subprocess |
+
+If you only need localhost (not `0.0.0.0`), replace `[::]:3030` with `127.0.0.1:3030`.
+
+
+<!-- dev/README.md -->
+
+# Development projects
+
+`dev/` is the workspace incubation area for substantial experiments and new
+components that will probably move into their own repositories. Keeping them
+here initially makes cross-project changes and integration tests practical;
+their location does not imply that they will become packages in the macchiato
+repository.
+
+Current projects include:
+
+- `wasm-web-container/` — the nested repository for the container ABI and its
+  canonical MicroQuickJS examples.
+- `quickjs-guest-runtime/` — the Bellard QuickJS WebAssembly runtime port.
+- `quickjs-ng-guest-runtime/` — the independent QuickJS-NG runtime port.
+- `codemirror-runtime-example/` — the shared CodeMirror application and
+  Babel/MicroQuickJS compatibility work.
+
+## Changelog 2.0
+
+Development here favors small, executable commits that preserve discoveries,
+including corrected assumptions and the tests that exposed them. A later
+constructed history can turn those commits into a readable derivation of a
+release: each step introduces one concept, demonstrates it, and leaves the
+repository working. This is closer to a versioned technical narrative than a
+traditional list of completed features.
+
+
+<!-- dev/microesnext/README.md -->
+
+# MicroESNext
+
+Design notes include the [ponyfill source survey](docs/ponyfill-sources.md) and
+the implementation-independent [testing strategy](docs/testing.md).
+
+MicroESNext is a new, single-crate experiment in progressively rewriting
+MicroQuickJS in Rust. It starts from a compact C baseline rather than from the
+earlier Rust-native object and memory model.
+
+The baseline was copied without modification from a fresh checkout of
+[`bellard/mquickjs`](https://github.com/bellard/mquickjs) at
+`203d5bb79789bc47b74855d9207415dab71661a0`.
+
+## Layout
+
+- `src/` is the Rust crate. Rust replacements will enter here a bounded piece
+  at a time.
+- `c/` is the retained MicroQuickJS implementation. Its `generator/` subdirectory
+  contains only the source generator needed to create the atom header.
+- `docs/` contains source maps and design notes.
+
+There is deliberately no `crates/` directory. A capability may become a Rust
+module or Cargo feature, but it does not become a separate crate merely to
+create an architectural boundary.
+
+The C baseline includes the engine, bytecode definitions, UTF-8 and numeric
+support, and soft-float templates. The build-only C helper generates the atom
+header and is never linked into the library. The baseline excludes the `mqjs`
+command-line shell, readline and terminal code, examples, executable test
+programs, and the previous experiment's local `microesnext.c` companion.
+
+`build.rs` uses the `cc` crate for both host and target C compilation. It builds
+and runs the upstream ROM helper only long enough to generate
+`mquickjs_atom.h`, then compiles the engine as a static library. It does not
+compile the shell-owned default environment, whose generated table refers to
+shell services such as printing, clocks, timers, and file loading. The crate
+does not define or ship an executable.
+
+The imported C sources retain their upstream copyright and license notices.
+See [LICENSE](LICENSE).
+
+
+<!-- dev/microesnext/docs/microquickjs-source-outline.md -->
+
+# MicroQuickJS source outline
+
+This is a qualitative map of the MicroQuickJS source set represented in
+`dev/microquickjs-experiment/src`. It excludes locally added companion files,
+such as `microesnext.c`, that are not MicroQuickJS source. The ranges are
+one-based and inclusive. At each level they proceed from top to bottom without
+gaps, so every included source line has a place in the outline. Filenames are
+intentionally repeated to make sections convenient to copy, paste, and
+rearrange.
+
+The outline covers implementation files, headers, templates, the build file,
+examples, and executable tests. It leaves out `LICENSE`, `Changelog`, and
+`README.md`, which are legal or prose documents rather than program source.
+
+- `cutils.h[1:355]` - Portable low-level utilities shared by the runtime and its build tools.
+  - `cutils.h[1:62]` - Establishes compiler attributes, endianness, common macros, booleans, and small integer helpers without depending heavily on a platform runtime.
+  - `cutils.h[63:132]` - Defines unaligned reads and writes, byte swapping, and host-endian conversion for serialized numeric values.
+  - `cutils.h[133:267]` - Supplies bit counting, rotation, sign extension, and fixed-width load/store helpers used by compact values and bytecode.
+  - `cutils.h[268:319]` - Declares the deliberately small UTF-8 encoder, decoder, scanner, and hexadecimal-character support.
+  - `cutils.h[320:355]` - Provides representation-preserving conversions between floating-point values and their integer bit patterns.
+
+- `cutils.c[1:178]` - Implements the utility operations that are too substantial for the header.
+  - `cutils.c[1:48]` - Licensing, includes, and compilation setup.
+  - `cutils.c[49:87]` - Bounded string copying, concatenation, prefix checking, and suffix checking.
+  - `cutils.c[88:178]` - Unicode code-point encoding and defensive UTF-8 decoding, including malformed and truncated sequences.
+
+- `list.h[1:99]` - A small Linux-style intrusive circular-list implementation.
+  - `list.h[1:46]` - Declares the link node, containing-record conversion, and empty-list initialization.
+  - `list.h[47:78]` - Implements insertion at either end, deletion, and the empty test with no allocation or ownership policy.
+  - `list.h[79:99]` - Adds forward and safe iteration macros, including iteration that permits removal of the current entry.
+
+- `dtoa.h[1:83]` - The public contract for converting between JavaScript numbers and text.
+  - `dtoa.h[1:47]` - Defines output modes: shortest round-trippable text, fixed significant digits, fixed fractional digits, and exponential selection.
+  - `dtoa.h[48:64]` - Defines accepted input syntax, including radix prefixes, legacy octal, and numeric separators.
+  - `dtoa.h[65:83]` - Declares sizing, formatting, parsing, and optional diagnostic entry points.
+
+- `dtoa.c[1:1618]` - Implements correctly rounded number formatting and parsing without a large general-purpose bignum library.
+  - `dtoa.c[1:309]` - Builds a compact multi-precision limb toolkit for addition, multiplication, division, shifts, normalization, and powers.
+  - `dtoa.c[310:719]` - Adds rounding, comparison, radix-logarithm estimates, and fast paths for formatting ordinary integers.
+  - `dtoa.c[720:1028]` - Defines exponent bounds and cached powers, then scales binary significands into a chosen output radix.
+  - `dtoa.c[1029:1329]` - Chooses notation and emits the shortest or requested decimal representation while preserving round-trip behavior.
+  - `dtoa.c[1330:1618]` - Accumulates input digits, applies radix and exponent scaling, rounds to binary64, and handles overflow and underflow.
+
+- `libm.h[1:46]` - Declares the compact mathematical surface used by the JavaScript standard library.
+  - `libm.h[1:40]` - Exposes rounding, scaling, trigonometric, exponential, logarithmic, and power operations under runtime-specific names.
+  - `libm.h[41:46]` - Exposes a small number of internal kernels for focused tests.
+
+- `libm.c[1:2260]` - Provides a self-contained mathematical implementation that can use either native floating point or soft float.
+  - `libm.c[1:349]` - Adapts soft-float arithmetic and comparisons when requested, then implements JavaScript rounding semantics and basic bit-level helpers.
+  - `libm.c[350:647]` - Establishes scaling, square root, and polynomial evaluation primitives used throughout the transcendental functions.
+  - `libm.c[648:1057]` - Implements sine and cosine kernels plus careful reduction of large arguments by multiples of π/2.
+  - `libm.c[1058:1362]` - Builds public sine, cosine, and tangent on those kernels, including reciprocal handling near tangent poles.
+  - `libm.c[1363:1762]` - Implements asin, acos, atan, and atan2 with range-specific approximations and quadrant reconstruction.
+  - `libm.c[1763:2260]` - Implements exponential, logarithmic, and power functions by reducing inputs, evaluating kernels, and reconstructing scale.
+
+- `softfp_template.h[1:970]` - A macro-parameterized IEEE-754 implementation instantiated at several floating-point widths.
+  - `softfp_template.h[1:115]` - Selects word sizes and names, defines the unpacked representation, and handles NaNs, infinities, and flags.
+  - `softfp_template.h[116:222]` - Normalizes subnormals and centralizes shifted rounding so later operations share the same exception behavior.
+  - `softfp_template.h[223:625]` - Implements addition, multiplication, division, and square root using integer mantissas and explicit rounding.
+  - `softfp_template.h[626:721]` - Implements ordered and unordered comparisons, including signaling-NaN behavior.
+  - `softfp_template.h[722:878]` - Converts between supported floating-point widths while preserving exceptional values and rounding rules.
+  - `softfp_template.h[879:970]` - Adds exact remainder and removes the temporary macro vocabulary used by an instantiation.
+
+- `softfp_template_icvt.h[1:172]` - Parameterizes conversion between floating-point values and signed or unsigned integers.
+  - `softfp_template_icvt.h[1:36]` - Selects integer width, signedness, and generated symbol names.
+  - `softfp_template_icvt.h[37:125]` - Converts floating point to integers with explicit rounding, saturation boundaries, and invalid-operation flags.
+  - `softfp_template_icvt.h[126:172]` - Converts integers back to floating point through the shared normalization and rounding machinery.
+
+- `mquickjs_opcode.h[1:265]` - Defines both JavaScript bytecode and regular-expression bytecode as reusable macro tables.
+  - `mquickjs_opcode.h[1:50]` - Describes operand encodings so the compiler, interpreter, dumper, and serializer agree on instruction sizes.
+  - `mquickjs_opcode.h[51:59]` - Sets up the table-expansion convention used to generate enums and metadata from one list.
+  - `mquickjs_opcode.h[60:135]` - Defines stack manipulation, local/global access, calls, branches, property access, closures, exceptions, and iteration.
+  - `mquickjs_opcode.h[136:169]` - Defines arithmetic, comparison, bitwise, and unary operations.
+  - `mquickjs_opcode.h[170:222]` - Marks the stable opcode boundary, then defines compact and temporary forms used during compilation or execution.
+  - `mquickjs_opcode.h[223:265]` - Reuses the same pattern for the smaller RegExp virtual machine.
+
+- `mquickjs.h[1:466]` - The embedding API and the public representation of MicroQuickJS values.
+  - `mquickjs.h[1:133]` - Defines 32/64-bit value encoding, tags, predefined constants, classes, property flags, and opaque public types.
+  - `mquickjs.h[134:227]` - Exposes explicit GC roots, constructors, type predicates, strings, objects, arrays, and opaque host data.
+  - `mquickjs.h[228:289]` - Adds the experiment's native collection, promise, iterator, and object-operation surface.
+  - `mquickjs.h[290:398]` - Defines finalizers, context lifecycle, host hooks, property operations, native functions, evaluation, argument pushing, and calls.
+  - `mquickjs.h[399:449]` - Exposes async resumption and the host-side compile, compact, relocate, and load pipeline for bytecode images.
+  - `mquickjs.h[450:466]` - Provides logging and deliberately low-level value and heap diagnostics.
+
+- `mquickjs_priv.h[1:268]` - Internal structures and cross-module declarations intentionally hidden from embedders.
+  - `mquickjs_priv.h[1:58]` - Controls diagnostic builds and defines memory-block tags, alignment, and the tagged block header.
+  - `mquickjs_priv.h[59:180]` - Declares runtime helpers for errors, constructors, arrays, strings, numbers, globals, classes, and typed arrays.
+  - `mquickjs_priv.h[181:268]` - Declares the fork's native iterators, collections, weak collections, promises, async handlers, and additional built-ins.
+
+- `mquickjs.c[1:19439]` - The compact JavaScript engine: representation, compiler, interpreter, heap, built-ins, and RegExp implementation.
+  - `mquickjs.c[1:469]` - Establishes the machine's physical model.
+    - `mquickjs.c[1:146]` - Defines limits, frame flags, stack records, and the compact layouts used for strings, arrays, properties, and bytecode.
+    - `mquickjs.c[147:280]` - Adds collection, promise, iterator, class, and context structures while preserving the shared tagged-memory scheme.
+    - `mquickjs.c[281:469]` - Declares cross-cutting helpers and creates the root-stack operations used to survive allocation and compaction.
+  - `mquickjs.c[470:983]` - Implements allocation, exceptions, and diagnostics close to the raw heap.
+    - `mquickjs.c[470:651]` - Maintains removable GC roots, checks collision between heap and stack, allocates upward, and shrinks or frees only where the compact heap permits.
+    - `mquickjs.c[652:983]` - Represents thrown values and implements a tiny formatter able to print tagged JavaScript values without relying on the JS standard library.
+  - `mquickjs.c[984:2245]` - Implements primitive numbers and the engine's WTF-8 string model.
+    - `mquickjs.c[984:1262]` - Chooses immediate versus allocated numeric forms, classifies values, and exposes object/class/opaque queries.
+    - `mquickjs.c[1263:1634]` - Allocates strings, validates UTF-8/WTF-8, and maintains a cache translating UTF-16 positions to byte positions.
+    - `mquickjs.c[1635:2031]` - Builds, concatenates, compares, indexes, and slices strings while reconciling JavaScript UTF-16 semantics with UTF-8 storage.
+    - `mquickjs.c[2032:2245]` - Interns strings, converts values to booleans and C strings, tracks exceptions, and recognizes numeric property keys.
+  - `mquickjs.c[2246:3849]` - Implements compound heap values and JavaScript's property model.
+    - `mquickjs.c[2246:2434]` - Allocates and resizes tagged value arrays and byte arrays, then lays the common foundation for object allocation.
+    - `mquickjs.c[2435:2776]` - Implements strong/weak collection tables, collection iterators, promise job queues, and promise storage.
+    - `mquickjs.c[2777:3224]` - Constructs objects and arrays, hashes properties, handles special properties, and grows or compacts property tables.
+    - `mquickjs.c[3225:3471]` - Defines, replaces, deletes, and looks up ordinary, accessor, array, string, and typed-array properties.
+    - `mquickjs.c[3472:3849]` - Resolves lexical/global variables and assembles class descriptors and standard-library objects.
+  - `mquickjs.c[3850:5588]` - Creates contexts and prepares values and frames for execution.
+    - `mquickjs.c[3850:4144]` - Materializes the ROM standard library, partitions the supplied memory into heap and stack, and initializes or tears down a context.
+    - `mquickjs.c[4145:4452]` - Relocates closure references and decodes compressed source-position tables for stack traces and errors.
+    - `mquickjs.c[4453:4830]` - Implements ToPrimitive, string/number/property-key conversion, decimal formatting, and integer coercion.
+    - `mquickjs.c[4831:5291]` - Implements slow paths for arithmetic, equality, relational tests, `in`, `instanceof`, and `typeof`.
+    - `mquickjs.c[5292:5588]` - Creates closures and iterators, checks interruptions and stack capacity, and saves async frames before suspension.
+  - `mquickjs.c[5589:7280]` - Runs JavaScript bytecode in one large, stack-oriented dispatch loop.
+    - `mquickjs.c[5589:6188]` - Enters functions and constructors; handles constants, stack permutations, calls, returns, throws, catch targets, and `await` suspension.
+    - `mquickjs.c[6189:6667]` - Resumes control flow and implements local/global access, conditional branches, and property reads.
+    - `mquickjs.c[6668:7193]` - Implements property writes, definitions, prototype changes, arithmetic, comparisons, and bitwise operations.
+    - `mquickjs.c[7194:7280]` - Completes membership, deletion, and iterator opcodes, then leaves the dispatch loop with identifier helpers.
+  - `mquickjs.c[7281:9832]` - Provides diagnostics and the front half of the compiler.
+    - `mquickjs.c[7281:7782]` - Dumps values, objects, bytecode, and heap state, with alternate stub behavior when diagnostics are disabled.
+    - `mquickjs.c[7783:8227]` - Defines parser state, token values, bytecode-function state, and optional bytecode dumping.
+    - `mquickjs.c[8228:9066]` - Tracks source locations and lexes identifiers, strings, templates, numbers, comments, and RegExp literals.
+    - `mquickjs.c[9067:9832]` - Emits instructions and source maps, manages labels and constant pools, and resolves locals, arguments, and captured variables.
+  - `mquickjs.c[9833:12787]` - Compiles JavaScript with an explicitly resumable, recursion-free parser.
+    - `mquickjs.c[9833:11230]` - Stores parser continuations as compact frames and compiles expressions, calls, literals, assignments, operators, and destructuring.
+    - `mquickjs.c[11231:12179]` - Compiles statements, loops, switches, exceptions, declarations, functions, and classes while preserving completion values.
+    - `mquickjs.c[12180:12509]` - Resolves closure variables, analyzes generated code, patches labels, and finalizes function bytecode.
+    - `mquickjs.c[12510:12787]` - Parses JSON and exposes source compilation/evaluation entry points over zero-terminated input.
+  - `mquickjs.c[12788:14084]` - Collects and serializes the compact heap.
+    - `mquickjs.c[12788:13137]` - Computes object sizes, marks roots and reachable blocks, and performs ephemeron-style propagation for weak collection values.
+    - `mquickjs.c[13138:13546]` - Sweeps unreachable blocks, updates pointers, and compacts live blocks in place with Jonkers' algorithm.
+    - `mquickjs.c[13547:13852]` - Saves bytecode, converts pointer widths, and adjusts serialized offsets while preserving overlapping moves.
+    - `mquickjs.c[13853:14084]` - Expands optional short floats, relocates a loaded image, and validates or installs precompiled bytecode.
+  - `mquickjs.c[14085:16783]` - Implements the JavaScript standard runtime in native C.
+    - `mquickjs.c[14085:14680]` - Implements Object operations, descriptors, prototypes, constructors, calls, and primitive wrappers.
+    - `mquickjs.c[14681:15389]` - Implements String construction, indexing, searching, slicing, case conversion, and iterator behavior.
+    - `mquickjs.c[15390:16175]` - Implements Array construction and methods, sorting, Number and Math behavior, and numeric helpers.
+    - `mquickjs.c[16176:16490]` - Implements ArrayBuffer and typed-array construction, indexed access, bounds, and storage conversion.
+    - `mquickjs.c[16491:16549]` - Supplies the deliberately small Date surface.
+    - `mquickjs.c[16550:16783]` - Implements global numeric functions and recursive JSON parsing/stringification support.
+  - `mquickjs.c[16784:19439]` - Contains an independent RegExp compiler and virtual machine plus its JavaScript-facing wrapper.
+    - `mquickjs.c[16784:17403]` - Defines RegExp parser state, emits compact instructions, decodes escapes, and builds Unicode and character classes.
+    - `mquickjs.c[17404:18006]` - Combines class ranges, parses groups and quantifiers, computes register and stack needs, and produces RegExp bytecode.
+    - `mquickjs.c[18007:18629]` - Interprets RegExp bytecode with explicit backtracking, captures, assertions, case folding, and UTF-8 traversal.
+    - `mquickjs.c[18630:19439]` - Implements RegExp construction, execution, replacement, matching, searching, splitting, and string integration.
+
+- `mquickjs_build.h[1:97]` - Declarative input types for constructing the ROM standard library.
+  - `mquickjs_build.h[1:44]` - Defines property entries and macros for constants, functions, accessors, classes, and sentinels.
+  - `mquickjs_build.h[45:80]` - Defines class records, inheritance, finalizers, and native C function signatures.
+  - `mquickjs_build.h[81:97]` - Defines the complete standard-library descriptor consumed by the builder and runtime.
+
+- `mquickjs_build.c[1:936]` - A host utility that turns declarative built-ins into compact C/ROM tables.
+  - `mquickjs_build.c[1:166]` - Defines builder-side atoms, C functions, class records, build state, and the fixed atom vocabulary shared with the parser.
+  - `mquickjs_build.c[167:286]` - Interns atoms and native functions and emits stable predefined-atom constants.
+  - `mquickjs_build.c[287:419]` - Serializes atom strings, sorted lookup tables, native-function tables, and finalizer tables with runtime-compatible alignment.
+  - `mquickjs_build.c[420:602]` - Converts declarative properties into hashed ROM property arrays and encodes immediate, string, accessor, class, and function values.
+  - `mquickjs_build.c[603:775]` - Resolves class inheritance, emits class/prototype objects, and recursively converts individual declarative values.
+  - `mquickjs_build.c[776:823]` - Walks the library definitions once to discover every atom needed by the eventual image.
+  - `mquickjs_build.c[824:936]` - Parses builder options and emits either atom definitions or the complete aligned standard-library C source.
+
+- `mqjs_stdlib.c[1:505]` - Declares which native objects and functions make up the default MicroQuickJS environment.
+  - `mqjs_stdlib.c[1:113]` - Defines global constants and functions plus Object and Function classes and prototypes.
+  - `mqjs_stdlib.c[114:243]` - Defines Array, String, Boolean, Number, Error families, Math, JSON, Date, and their properties.
+  - `mqjs_stdlib.c[244:289]` - Generates the ArrayBuffer and typed-array families from a shared description.
+  - `mqjs_stdlib.c[290:303]` - Defines RegExp construction and prototype behavior.
+  - `mqjs_stdlib.c[304:480]` - Adds iterators, collections, promises, optional example classes, and assembles the final class/global table.
+  - `mqjs_stdlib.c[481:505]` - In builder mode, emits the generated standard-library source from that declarative table.
+
+- `mqjs.c[1:799]` - The native command-line shell and REPL around the engine.
+  - `mqjs.c[1:141]` - Provides logging, explicit GC, clocks, and a host `load()` operation.
+  - `mqjs.c[142:258]` - Implements timeout registration and cancellation with a small sorted timer queue and event-loop polling.
+  - `mqjs.c[259:453]` - Loads source or bytecode, evaluates it, reports exceptions, initializes host functions, and runs pending timers and jobs.
+  - `mqjs.c[454:591]` - Adds REPL completion and syntax coloring by consulting the engine's keyword and identifier rules.
+  - `mqjs.c[592:799]` - Parses command-line modes, configures memory and compilation, and coordinates scripts, interactive input, and bytecode output.
+
+- `readline.h[1:98]` - The interface and state object for the dependency-free line editor.
+  - `readline.h[1:88]` - Defines editable buffers, cursor/display state, history, completion, prompts, and callbacks.
+  - `readline.h[89:98]` - Declares byte handling and the terminal operations the platform backend must provide.
+
+- `readline.c[1:742]` - Terminal-independent interactive line editing.
+  - `readline.c[1:230]` - Measures characters and redraws only the changed display while accounting for prompts, wrapping, colors, and cursor position.
+  - `readline.c[231:386]` - Implements insertion, deletion, movement, word movement, kill/yank operations, and beginning/end navigation over UTF-8 input.
+  - `readline.c[387:475]` - Navigates and stores history without losing the user's partially entered current line.
+  - `readline.c[476:562]` - Collects completions, finds their common prefix, inserts it, or prints choices before restoring the prompt.
+  - `readline.c[563:710]` - Maps control and escape sequences to editing actions and recognizes a completed or cancelled line.
+  - `readline.c[711:742]` - Decodes incoming UTF-8 bytes and initializes a fresh editing session.
+
+- `readline_tty.h[1:29]` - The operating-system terminal adapter contract.
+  - `readline_tty.h[1:29]` - Declares terminal initialization and asynchronous interruption reporting.
+
+- `readline_tty.c[1:246]` - Windows and POSIX implementations of raw interactive terminal input.
+  - `readline_tty.c[1:109]` - Uses Windows console modes, VT processing, and control handlers to obtain byte-oriented input.
+  - `readline_tty.c[110:169]` - Uses termios and signal handlers to enter raw mode on POSIX and restore the terminal on exit.
+  - `readline_tty.c[170:246]` - Shares formatted output, flushing, byte reading, and interruption state across both backends.
+
+- `example_stdlib.c[1:36]` - A compact declarative standard library used by the embedding example.
+  - `example_stdlib.c[1:28]` - Describes a native Rectangle constructor, accessors, methods, and class identity.
+  - `example_stdlib.c[29:36]` - Derives FilledRectangle from Rectangle and combines both with the normal standard library.
+
+- `example.c[1:308]` - Demonstrates embedding MicroQuickJS into a native program.
+  - `example.c[1:76]` - Defines the native Rectangle data model and method declarations.
+  - `example.c[77:170]` - Implements Rectangle and FilledRectangle finalization, construction, accessors, area computation, and a captured-value closure.
+  - `example.c[171:244]` - Adds printing and clock functions that make the embedded environment useful to ordinary scripts.
+  - `example.c[245:272]` - Implements logging and file loading for source or bytecode input.
+  - `example.c[273:308]` - Allocates a fixed machine buffer, creates a context, runs a program, reports errors, and frees the host allocation.
+
+- `Makefile[1:152]` - Builds the native shell, examples, generated standard library, tests, and installable artifacts.
+  - `Makefile[1:56]` - Selects compiler and platform flags, feature switches, generated files, and object sets.
+  - `Makefile[57:116]` - Defines compilation and generation dependencies, including rebuilding the ROM library before linking consumers.
+  - `Makefile[117:140]` - Runs language tests, examples, benchmarks, and bytecode round trips.
+  - `Makefile[141:152]` - Installs binaries, headers, and libraries or removes all generated output.
+
+- `tests/mandelbrot.js[1:39]` - A small deterministic numerical and string-building workload.
+  - `tests/mandelbrot.js[1:26]` - Iterates the Mandelbrot recurrence across a character grid and returns its text rendering.
+  - `tests/mandelbrot.js[27:39]` - Times several runs and prints both the image and elapsed duration.
+
+- `tests/microbench.js[1:1137]` - A broad performance probe for operations important to a compact interpreter.
+  - `tests/microbench.js[1:157]` - Formats benchmark output, calibrates loop counts, subtracts empty-loop cost, and reports normalized timings.
+  - `tests/microbench.js[158:251]` - Measures clocks and ordinary object-property reads, writes, updates, creation, and deletion.
+  - `tests/microbench.js[252:405]` - Measures dense arrays, holes, length changes, push, and pop.
+  - `tests/microbench.js[406:554]` - Measures typed arrays, closure/global access, calls, and captured variables.
+  - `tests/microbench.js[555:648]` - Measures integer, float, optional big-number arithmetic, and collection insertion.
+  - `tests/microbench.js[649:815]` - Measures iteration forms, Math calls, RegExp operations, and several string-building strategies.
+  - `tests/microbench.js[816:952]` - Measures sorting with a deterministic pseudo-random data generator and reference checksum.
+  - `tests/microbench.js[953:1023]` - Measures number/string conversion and reads or writes benchmark result files.
+  - `tests/microbench.js[1024:1137]` - Selects benchmark groups, scales workloads, compares saved baselines, and drives command-line execution.
+
+- `tests/test_builtin.js[1:875]` - Conformance tests for built-in objects and native standard-library behavior.
+  - `tests/test_builtin.js[1:107]` - Defines assertions and verifies Function construction, calls, binding, metadata, and prototypes.
+  - `tests/test_builtin.js[108:182]` - Exercises Object properties, descriptors, inheritance, keys, and enumeration.
+  - `tests/test_builtin.js[183:334]` - Exercises arrays, sparse behavior, methods, sorting, iteration, and extension rules.
+  - `tests/test_builtin.js[335:490]` - Exercises string, Math, Number, parsing, formatting, and conversion behavior.
+  - `tests/test_builtin.js[491:637]` - Exercises global eval, typed arrays, UTF-16 position accounting, and structured error checks.
+  - `tests/test_builtin.js[638:776]` - Exercises JSON syntax and depth, large recursion-free parsing, and RegExp matching and replacement.
+  - `tests/test_builtin.js[777:875]` - Verifies line and column reporting through nested eval and syntax/runtime errors.
+
+- `tests/test_closure.js[1:106]` - Focused tests for lexical environments and captured variables.
+  - `tests/test_closure.js[1:38]` - Defines assertions and a nested closure with several parameters and local bindings.
+  - `tests/test_closure.js[39:76]` - Verifies returned closures and independent captured state across factory calls.
+  - `tests/test_closure.js[77:106]` - Verifies mutation and lookup across deeper nested closure chains.
+
+- `tests/test_language.js[1:355]` - Core JavaScript expression and semantic tests.
+  - `tests/test_language.js[1:64]` - Defines equality and exception assertions used by the suite.
+  - `tests/test_language.js[65:154]` - Exercises unary, arithmetic, bitwise, logical, comparison, membership, deletion, and conditional operators.
+  - `tests/test_language.js[155:235]` - Exercises coercion, equality families, and prefix/postfix updates across value categories.
+  - `tests/test_language.js[236:291]` - Exercises binary operators, assignments, short-circuiting, and object/function cases.
+  - `tests/test_language.js[292:355]` - Exercises prototypes, `arguments`, primitive conversion hooks, and labeled control flow.
+
+- `tests/test_loop.js[1:395]` - Control-flow tests for loops, switches, and exception regions.
+  - `tests/test_loop.js[1:73]` - Exercises while, do/while, for, break, and continue behavior.
+  - `tests/test_loop.js[74:195]` - Exercises for/in enumeration over arrays, objects, prototypes, mutation, and proxies.
+  - `tests/test_loop.js[196:256]` - Exercises nested breaks and switch selection and fallthrough.
+  - `tests/test_loop.js[257:358]` - Exercises return, throw, catch, and finally interactions in nested control flow.
+  - `tests/test_loop.js[359:395]` - Finishes exception edge cases and invokes the complete control-flow suite.
+
+- `tests/test_rect.js[1:68]` - End-to-end use of the native Rectangle example classes.
+  - `tests/test_rect.js[1:41]` - Checks construction, accessors, methods, inheritance, class identity, and invalid calls.
+  - `tests/test_rect.js[42:68]` - Checks the native captured-value callback and runs the example test.
+
+
+<!-- dev/microesnext/docs/ponyfill-sources.md -->
+
+# Ponyfill source survey
+
+Source revisions inspected for the first Rust memory functions:
+
+- wasi-libc `e1655e8857fc007512004414016e2dbf65bb8a21`
+  - `libc-top-half/musl/src/string/memcmp.c`
+  - `libc-top-half/musl/src/string/strlen.c`
+- LLVM libc `533fa84a18f6bf722c3a756d4154a3dd1a4497bd`
+  - `libc/src/string/memcmp.cpp`
+  - `libc/src/string/strlen.cpp`
+- Rust compiler-builtins `5c5f07851b1878013ac81e129b0517feaaf8661d`
+  - `compiler-builtins/src/mem/mod.rs`
+  - `compiler-builtins/src/mem/impls.rs`
+
+wasi-libc uses a byte loop for scalar `memcmp` and an aligned word-at-a-time
+`strlen`, with optional wasm SIMD paths. LLVM libc routes both through reusable
+memory primitives intended for target specialization. Rust compiler-builtins
+uses small pointer loops for these two operations and reserves word-wise paths
+for copying and filling.
+
+The initial Rust implementations follow compiler-builtins' pointer arithmetic,
+copy direction, and byte loops. They preserve wasi-libc's exact `memcmp`
+result: the unsigned-byte difference at the first mismatch. Rust
+compiler-builtins adds aligned word paths above a small-copy threshold, while
+wasi-libc adds optional wasm SIMD paths. The initial implementation stays
+scalar and allocation-free; either optimization should be justified by wasm
+measurements before it replaces the readable baseline.
+
+MicroQuickJS's `js_malloc(ctx, size, mtag)` remains the engine allocator. It is
+context-bound, tags every object, cooperates with collection and compaction,
+and is not replaced by a general Rust global allocator.
+
+
+<!-- dev/microesnext/docs/rust-rewrite-order.md -->
+
+# Incremental Rust rewrite order
+
+This is a working order for replacing MicroQuickJS with Rust. The beginning is
+specific enough to implement. Later phases are intentionally rough: findings
+from the mixed C/Rust engine should determine their exact boundaries.
+
+The rewrite keeps a runnable engine at every step. A replacement first matches
+the C behavior suite, then becomes the implementation used by the mixed build.
+Deleting the corresponding C comes last. Rust ownership is not imposed on C
+memory before the surrounding lifetime rules are understood.
+
+## Memory picture
+
+MicroQuickJS receives one contiguous region. A context and heap grow upward
+from its low address while the interpreter stack grows downward from its high
+address. Heap blocks carry tags and sizes. JavaScript values contain immediate
+data or pointers into that region. Explicit root records protect live values
+across allocation, and garbage collection marks, sweeps, compacts, and rewrites
+pointers. Compilation and bytecode relocation use the same physical model.
+
+The rewrite should move through three memory arrangements:
+
+1. **C-owned memory, Rust leaf functions.** Rust receives pointers and lengths,
+   performs an operation, and neither retains nor allocates references. The C
+   allocator, roots, collector, stack, and context remain authoritative.
+2. **C-owned memory, Rust structure views.** Rust uses small unsafe types for
+   tagged values, block headers, slices, and context fields. These are borrowed
+   views into the existing region. Mutations still obey C allocation and root
+   rules, and tests compare mixed-engine traces with the C baseline.
+3. **Rust-owned arena and lifetimes.** Rust owns allocation metadata, roots,
+   handles, collection, and compaction. JavaScript references should be typed
+   handles or offsets rather than ordinary Rust references: compaction can move
+   objects, and the guest stack and heap share one bounded Wasm memory.
+
+Safe Rust can surround the engine, but the compact core will necessarily have
+small, reviewed unsafe sections. Pointer arithmetic should be concentrated in
+arena and representation modules rather than repeated throughout semantics.
+
+## Phase 1: establish substitution tests
+
+1. Keep the existing C engine as the semantic and performance baseline.
+2. Expand the direct lifecycle test to cover compile, relocate, load, run,
+   exception, and context destruction as data-driven operations.
+3. Add mixed-build selection at a single function boundary at a time.
+4. Record deterministic results rather than internal addresses or formatted
+   diagnostics. Add structural assertions only after Rust owns a subsystem.
+
+This phase has begun: the engine test already compiles source to bytecode,
+destroys the compiler context, loads it into a fresh context, and runs it.
+
+## Phase 2: finish allocation-free libc ponyfills
+
+Implement the simplest C-compatible operations first:
+
+1. Complete and exercise byte and string primitives. `memcpy`, `memmove`,
+   `memset`, `memcmp`, and `strlen` are already implemented.
+2. Add small character classification and conversion functions only when the
+   C sources require them.
+3. Replace straightforward formatted-output helpers with bounded Rust writers
+   where doing so does not change formatting semantics.
+4. Keep `setjmp`, floating-point environment details, and allocation out of
+   this phase; they affect control flow or the engine's physical memory model.
+
+Each ponyfill should have a table of inputs, mutations, return values, and edge
+conditions, plus a Wasm inspection proving that it did not introduce imports.
+
+## Phase 3: port independent utility algorithms
+
+These functions operate on caller-owned bytes and have little engine state:
+
+1. UTF-8/WTF-8 encoding, decoding, scanning, and hexadecimal conversion from
+   `cutils.c` and `cutils.h`.
+2. Endian, unaligned-load, bit-counting, rotation, and sign-extension helpers.
+3. Bounded string helpers and representation-preserving float bit conversions.
+4. Intrusive-list operations, represented initially as pointer operations over
+   the existing C nodes rather than a new Rust collection.
+
+The public C symbols remain thin entry points so C callers do not change yet.
+
+## Phase 4: port self-contained numeric subsystems
+
+1. Port number parsing and formatting from `dtoa.c` behind its existing API.
+2. Compare every formatting mode, radix, rounding boundary, NaN, infinity,
+   overflow, and underflow case against C.
+3. Port the compact `libm` functions in groups of shared reduction kernels.
+4. Leave soft float as a separate optional milestone; do not mix its template
+   translation into the first native-float replacement.
+
+These ports may allocate temporary Rust values outside the JavaScript arena
+only when that cannot become hidden persistent guest memory. A no-allocation
+implementation remains preferable for predictable Wasm limits.
+
+## Phase 5: define Rust representations without changing ownership
+
+Introduce one internal Rust module for the physical engine model:
+
+- tagged `Value` encoding and immediate-value operations;
+- block tags, sizes, alignment, and checked offset arithmetic;
+- borrowed `ContextView`, `HeapView`, and `StackView` types;
+- temporary rooted-value guards that map directly to the C root chain;
+- explicit conversion at every C ABI boundary.
+
+Mirror stable C structures directly where that makes shared-memory operation
+simpler. Ordinary records can use `#[repr(C)]`; tagged unions can use a
+`#[repr(C)]` union behind a small unsafe accessor; and trailing variable-size
+data should be represented as a fixed header plus an explicitly bounded slice.
+Do not hand-copy layout assumptions without checking them. A small C layout
+probe and Rust tests should compare, for every mirrored type:
+
+- total size and alignment;
+- each shared field's byte offset and size;
+- pointer width and the selected 32- or 64-bit value representation;
+- constants for tags, classes, flags, and discriminants.
+
+Compile-time C assertions should catch drift when possible. Generated layout
+facts are acceptable as test/build input, but the maintained Rust structures
+should remain readable rather than becoming a large generated binding file.
+
+Some structures should initially remain opaque. C bitfields, flexible array
+members, conditionally compiled fields, and unions whose active member is
+implied by a separate tag are the likely trouble spots. Mirror these only after
+their invariants are documented. Prefer integer flag words with accessors over
+Rust bitfields, and prefer offsets into the supplied arena over native pointers
+in serialized forms.
+
+At this stage the mirrored types still view C-owned memory. They must not expose
+Rust references that outlive an allocation or collection point. C and Rust may
+also alias the same structure, so mutations cross the boundary through narrow
+functions or short-lived raw-pointer views—not simultaneous long-lived `&mut`
+references. Operations that can allocate should require handles or offsets and
+should make invalidation visible in their signatures.
+
+Mirroring first is valuable even where the final Rust representation changes:
+it lets individual functions move between languages without translating the
+whole object graph, and it gives the mixed engine one physical source of truth
+rather than synchronized duplicate structures.
+
+## Phase 6: move leaf heap values behind the views
+
+A tentative order is:
+
+1. Numeric boxing and unboxing.
+2. Byte arrays and tagged value arrays.
+3. String allocation, traversal, comparison, slicing, and the position cache.
+4. Atom lookup and interning.
+5. Basic object allocation without property mutation.
+
+The C allocator and collector still own all storage. This phase tests whether
+the views and root guards describe real lifetimes before they become ownership
+machinery.
+
+## Phase 7: rewrite arena allocation and roots
+
+First reproduce the existing upward heap and downward stack rather than
+designing a general allocator. Replace, in order:
+
+1. alignment, block-header access, and collision checks;
+2. upward allocation and the limited shrink/free operations;
+3. root-chain insertion and removal;
+4. context initialization and teardown around the bounded region;
+5. debug validation of every block, root, stack slot, and handle.
+
+The arena should be parameterized by a byte slice or Wasm linear-memory range.
+It should not call Rust's global allocator for guest objects. Generation-tagged
+handles may be useful for host/debug APIs, but the compact interpreter path may
+continue to use validated offsets where that is measurably smaller and faster.
+
+## Phase 8: rewrite garbage collection and compaction
+
+This is the first major ownership milestone and should remain separate from
+objects and interpreter semantics:
+
+1. object-size discovery and root marking;
+2. reachability through each existing block tag;
+3. weak/ephemeron propagation;
+4. finalization and sweeping;
+5. in-place compaction;
+6. rewriting every heap, stack, context, and bytecode pointer;
+7. adversarial collection at every allocation boundary in debug tests.
+
+Only after mixed runs produce the same observable finalizer and weak-reference
+traces should the C allocator and collector be removed.
+
+## Phase 9: objects, properties, and closures
+
+Rough order, to be refined after the arena work:
+
+1. ordinary objects and dense arrays;
+2. property hashing, lookup, definition, deletion, and enumeration;
+3. prototypes, accessors, strings, and typed-array special properties;
+4. global and lexical lookup;
+5. closure environments, captured variables, and callable objects;
+6. iterators, collections, weak collections, and promise storage.
+
+This phase should favor shared primitives over one translation per JavaScript
+built-in, while retaining the compact layouts until measurements justify a
+change.
+
+## Phase 10: bytecode loading and interpreter
+
+Tentative sequence:
+
+1. bytecode header validation, decoding, and relocation;
+2. stack frames, calls, returns, and exceptions;
+3. constants, locals, globals, and branches;
+4. property and iterator opcodes;
+5. arithmetic, comparison, and coercion slow paths;
+6. suspension, resumption, jobs, and later `await` support.
+
+The opcode table should remain the shared declarative source while C and Rust
+interpreters coexist. Differential tests should run identical bytecode images,
+not compile the source separately for each interpreter.
+
+## Phase 11: parser and compiler
+
+This order is provisional:
+
+1. source positions, diagnostics, and lexer;
+2. bytecode emitter, labels, constant pools, and source maps;
+3. expression parser and its explicit continuation frames;
+4. statements and control flow;
+5. functions, closures, classes, and destructuring;
+6. bytecode analysis, compaction, and serialization;
+7. JSON and RegExp literal entry points.
+
+The existing recursion-free parser is part of MicroQuickJS's bounded-memory
+design and should be preserved before considering more idiomatic Rust parser
+structures.
+
+## Phase 12: built-ins and regular expressions
+
+Still rough and subject to reordering:
+
+- Move native built-ins by dependency group, beginning with Object and basic
+  primitive wrappers, then Array/String, typed arrays, Math, JSON, and Date.
+- Translate the bundled RegExp compiler and VM as their own subsystem after
+  strings, bytecode conventions, and arena ownership are stable.
+- Keep the ROM standard-library builder usable throughout. A Rust replacement
+  for it is useful, but it is not on the runtime's critical path.
+
+## Completion criteria
+
+The rewrite is complete when the Rust engine can build and consume compatible
+bytecode, passes the C behavioral corpus and structural memory tests, stays
+inside its supplied Wasm memory, and meets agreed size and speed bounds. The C
+implementation may remain as a readable oracle and provenance source even
+after it is no longer linked into the product build.
+
+
+<!-- dev/microesnext/docs/testing.md -->
+
+# Testing strategy
+
+The tests preserve behavior at several boundaries so replacing C does not
+require preserving its internal structure.
+
+## Ponyfill contracts
+
+Table-driven native Rust tests exercise each C-compatible function directly.
+Cases are data—inputs, operation, and expected result—while a thin runner owns
+the unsafe calls. Tables cover return values, mutation, overlap rules, boundary
+lengths, and byte values outside ASCII. This makes individual Rust replacements
+cheap to review without growing a forest of one-off test functions.
+
+## Mixed-engine substitutions
+
+Wasm builds replace one C subsystem at a time. The same MicroQuickJS tests run
+against the unmodified C subsystem and its Rust replacement. This locates a
+regression without requiring the eventual Rust design to resemble the C code.
+
+## JavaScript behavior
+
+Prepared bytecode programs record observable results rather than heap layout:
+
+- values, exceptions, and coercions;
+- property order and descriptors;
+- calls, closures, and control flow;
+- garbage-collection and finalizer effects;
+- strings, regular expressions, and numeric edge cases.
+
+Programs and their expected observations live in versioned corpus files. A
+manifest selects required capabilities, entry bytecode, inputs, and expected
+trace. The runner contains little case-specific logic. Each case runs against
+the C baseline, mixed C/Rust builds, and eventually the Rust engine. Results use
+a small deterministic binary trace, not formatted diagnostic text. This suite
+is the bridge to Rust-owned arenas, lifetimes, and enums because those
+representations may change while the trace remains equal.
+
+## Structural Rust tests
+
+Once a subsystem is Rust-owned, additional tests may assert invariants the C
+implementation cannot express: generation validity, arena ownership, absence
+of dangling references, and deterministic reclamation. These complement the
+behavior suite; they do not replace it.
+
+The library has no product `main`. Native unit tests use Rust's generated test
+harness. Wasm integration tests will expose narrow test entry points and use a
+separate runner.
+
+
+<!-- dev/microesnext/libc-ponyfill/README.md -->
+
+# libc ponyfill headers
+
+This directory currently contains headers only. Implementations and a Wasm
+link step are deliberately left for later changes.
+
+The files under `include/ponyfill/` were copied from Fedora's
+`wasi-libc-devel-32-1.fc43` package. Their installed source paths begin at
+`/usr/wasm32-wasi/include/wasm32-wasi/`; the corresponding upstream project is
+[WebAssembly/wasi-libc](https://github.com/WebAssembly/wasi-libc). The original
+directory structure is retained below `ponyfill/`, and internal includes were
+changed to reference that explicit namespace.
+
+The direct headers initially selected for MicroQuickJS are:
+
+- `assert.h`
+- `inttypes.h`
+- `math.h`
+- `setjmp.h`
+- `stdint.h`
+- `stdio.h`
+- `stdlib.h`
+- `string.h`
+
+The remaining copied headers are the transitive declarations used by that
+set. Each header is being reduced to the declarations in [REQUIRED.md](REQUIRED.md).
+`stdarg.h` and `stddef.h` remain compiler-provided headers and therefore are
+not vendored here.
+
+The unmodified wasi-libc license texts are included alongside this file.
+
+
+<!-- dev/microesnext/libc-ponyfill/REQUIRED.md -->
+
+# Required C surface
+
+This is a positive inventory of the C declarations consumed by the
+MicroQuickJS engine. A declaration belongs in `include/ponyfill/` only when it
+appears here.
+
+Excerpted headers use `#pragma once`. Other conditional preprocessing from
+the general-purpose WASI-libc headers is omitted unless this build needs it.
+
+## Confirmed
+
+- `assert.h`
+  - `assert(expression)`
+  - `__assert_fail(expression, file, line, function)`
+- `string.h`
+  - `memcmp(left, right, count)`
+  - `memcpy(dest, src, count)`
+  - `memmove(dest, src, count)`
+  - `memset(dest, value, count)`
+  - `strlen(string)`
+  - Implemented in allocation-free Rust derived from Rust compiler-builtins'
+    loops and checked against wasi-libc behavior.
+- `cutils.h`
+  - `pstrcpy(dest, size, source)`
+  - `pstrcat(dest, size, source)`
+  - `strstart(string, prefix, remainder)`
+  - `has_suffix(string, suffix)`
+  - `__unicode_to_utf8(dest, code_point)`
+  - `__unicode_from_utf8(source, max_length, length)`
+  - `__utf8_get(source, length)`
+  - Implemented in allocation-free Rust behind their original C ABI.
+- `stdint.h`
+  - Exact-width signed and unsigned 8-, 16-, 32-, and 64-bit types
+  - `intptr_t` and `uintptr_t`
+  - `INT32_MIN`, `INT32_MAX`, `INT64_MAX`, and `INTPTR_MAX`
+- `inttypes.h`
+  - `PRIo32`
+  - `PRIo64`
+  - `PRIu64`
+- `stdlib.h`
+  - `malloc(size)` and `free(pointer)`
+  - `abort()` and `exit(status)`
+  - `abs(value)`
+  - `abs` is implemented in allocation-free Rust behind its C ABI.
+- `stdio.h`
+  - `printf(format, ...)`
+- Compiler headers
+  - `stdarg.h`: variable-argument builtins
+  - `stddef.h`: `size_t`
+
+## Next to excerpt
+
+- Floating-point classifications and operations.
+- `jmp_buf`, `setjmp`, and `longjmp`.
+
+`ctype.h` was tested from the first independent translation unit and removed:
+the engine does not consume a character-classification declaration from it.
+
+
+<!-- dev/microquickjs-experiment/README.md -->
+
+# MicroQuickJS Experiment
+
+This directory preserves a runnable research prototype formerly called
+MicroESNext. It explores a Rust-native JavaScript engine inspired by
+[MicroQuickJS](https://github.com/bellard/mquickjs), including four-byte tagged
+values, relocatable word offsets, a bounded address space, stack bytecode, and
+guest calls that do not recurse through the native stack.
+
+This is not a complete or conforming JavaScript engine. It is kept because its
+tests and browser demos exercised useful ideas: removable language
+capabilities, a `no_std` interpreter, asynchronous suspension represented in
+VM frames, host references, and CodeMirror running through a sandboxed DOM
+bridge. The internal crate and API names remain `microesnext` so the research
+artifact stays runnable without a disruptive cosmetic rewrite.
+
+## Status and scope
+
+The prototype is wrapped up rather than developed toward production. Changes
+should be limited to keeping its existing tests and demonstrations runnable,
+fixing a regression that blocks a documented demonstration, or improving the
+accuracy of this record. Passing tests prove only the behavior they exercise.
+They do not establish ECMAScript conformance, memory safety for arbitrary
+programs, or suitability for hostile code.
+
+The wrap-up demonstration is the three-file tabbed CodeMirror example with
+search across files. It also runs on the repository's QuickJS and MicroQuickJS
+runtimes, making it a useful differential fixture. The larger `full` page is
+preserved as an incomplete stress fixture, not a wrap-up requirement: opening
+search after its completion and folding interactions can still expose a raw
+getter to numeric coercion and stop the guest. The prototype remains
+observably slower than MicroQuickJS in this workload, and interaction testing
+has uncovered semantic and lifetime bugs that unit tests did not predict.
+
+Run the focused regression suite used by the wrap-up with:
+
+```sh
+cd dev/microquickjs-experiment
+cargo test -p microesnext --features full --test host-define-property
+```
+
+The package-level preservation suite also builds the retained C reference and
+passes with:
+
+```sh
+npm test
+```
+
+Build the CodeMirror artifacts from the repository root with:
+
+```sh
+CODEMIRROR_TARGETS=multi \
+  node dev/wasm-web-runtimes/examples/codemirror/build-wasm.js
+```
+
+The browser regression tests are:
+
+```sh
+node --test \
+  dev/wasm-web-runtimes/examples/codemirror/test/multi-browser.test.js
+```
+
+A comprehensive `cargo test --workspace --all-features` is intentionally
+recorded as non-green: it reaches
+`computed_object_properties_use_object_keys_not_array_offsets` and exhausts
+that test's small fixed arena. Bare `cargo test --workspace` also attempts to
+compile feature-dependent integration tests against the empty default feature
+set because those tests do not declare Cargo `required-features`. These are
+preserved limitations, not wrap-up gates.
+
+## Memory-management limitation
+
+The Rust-native implementation does **not** reproduce MicroQuickJS's compact
+memory system. Similar vocabulary and four-byte values should not obscure the
+difference. In particular, this prototype does not exactly reproduce
+MicroQuickJS's:
+
+- single compact heap and opposing VM-stack layout;
+- internal pointer and offset representation;
+- complete root set and rooting lifetimes;
+- allocation and object lifetime rules;
+- mark traversal and garbage-collection behavior; or
+- pointer-threaded relocation and in-place heap compaction.
+
+The prototype instead composes Rust crates around its own arena, roots, block
+kinds, and feature boundaries. That made isolated ideas easy to test, but it
+also introduced abstraction boundaries and bookkeeping that differ from the
+engine used as inspiration. Correct behavior in a small test therefore does
+not prove that a reference remains valid through every allocation, callback,
+or collection point. This architectural mismatch is also a likely contributor
+to the CodeMirror performance gap; it should not be papered over with isolated
+micro-optimizations.
+
+## Correctness and performance record
+
+- The parser and compiler implement a deliberately incomplete subset of
+  JavaScript. Unsupported and untested syntax remains unsupported.
+- Host-object, event, accessor, selection, drag, timer, and garbage-collection
+  interactions have required fixes discovered through browser use.
+- The full CodeMirror fixture is preserved specifically because it exceeds the
+  supported demonstration and records remaining failures. It is not a claim
+  that arbitrary CodeMirror extensions or browser applications work.
+- The capability crate graph grew more elaborate than the corresponding
+  compact MicroQuickJS mechanisms. Feature isolation measurements are useful
+  research data, but the number of boundaries is not the desired final design.
+- Browser startup and editing are slower than the MicroQuickJS demonstration.
+  No stable performance guarantee is recorded for this prototype.
+- The old C sources under `src/` are reference material. The Rust engine does
+  not share a live MicroQuickJS context with them.
+
+## Next experiment: replace MicroQuickJS in place
+
+The follow-up should begin with an exact C build of MicroQuickJS, including its
+real allocator, heap, stack, roots, garbage collector, and compactor. Its build
+should follow the working MicroQuickJS runtime in
+`dev/wasm-web-runtimes/examples/microquickjs-suite/microquickjs-guest-runtime`:
+compile the vendored C engine and the small Rust/Wasm boundary into one module,
+then load ordinary MicroQuickJS bytecode. Rust code will share the live
+machine's `JSValue`s, pointers or offsets, heap, VM stack, and roots—not
+communicate with a second engine over RPC.
+
+The intended destination is a complete rewrite in Rust, reached incrementally
+rather than by constructing another engine beside MicroQuickJS. C remains the
+working migration substrate until each bounded replacement is proven. During
+that process MicroQuickJS's large C translation unit may be split into focused
+C files to improve navigation and auditing without changing its representation
+or behavior. Such moves need mechanical or differential verification so code
+organization is not confused with an engine rewrite.
+
+The first Rust crate should be a small, explicitly unsafe compatibility layer
+over the exact C layouts and operations. Persistent identities remain traced
+MicroQuickJS values or offsets. A raw pointer or Rust reference must never
+survive an operation that can allocate or collect; code must root the value and
+reacquire its address afterward.
+
+Groups of functionality may have parallel C and safe-Rust implementations in
+the same process. A build-time choice or narrow dispatch point can run either
+implementation against the same representation. Differential tests should
+compare results, exceptions, roots, and heap invariants before the C version is
+removed. Performance-critical loops may use narrowly scoped unsafe Rust when
+measurement justifies it, while the bulk of each replacement can use safe Rust
+above the compatibility layer.
+
+The allocator and collector should be among the last systems replaced. This
+keeps every earlier change grounded in MicroQuickJS's actual memory semantics
+and avoids constructing another engine that merely resembles it. ESNext
+features should begin only after the unchanged C baseline and each replacement
+stage pass the same bytecode, behavior, compaction, and browser-demo tests.
+
+## Implemented capability inventory
+
+The list below records experiments present in the prototype. It is an inventory
+of code and feature gates, not a completeness or conformance statement.
+
+## Crates and removable capabilities
+
+- `microesnext-types` defines the four-byte `Value` and `HeapRef` words.
+- `microesnext-arena` owns the fixed-capacity heap and VM stack and compacts
+  references without a forwarding-table allocation.
+- The bytecode `core` module defines the raw opcodes and readers used by the
+  invariant interpreter loop. It has no capability features; its immediate
+  opcode covers `undefined`, `null`, and booleans in every build.
+- `microesnext-bytecode` adds the typed instruction vocabulary used by tools
+  and the capability wrapper. Its optional opcode groups follow the runtime
+  capabilities, so an omitted feature does not enlarge its valid enum surface.
+- `microesnext-compiler` contains allocation-using source and bytecode tooling;
+  the runtime crates do not depend on it. Its syntax families are progressively
+  feature gated too: reduced builds leave omitted syntax to the ordinary parse
+  error at that character rather than retaining feature-specific diagnostics.
+  Source positions are a separate authoring feature. Zero-argument functions,
+  parameter/argument frames, captured-environment analysis, synchronous named
+  recursion, and asynchronous named recursion are independently selectable,
+  mirroring their runtime instruction groups. Quoted and no-substitution
+  template strings enter only with the string bytecode capability. The
+  compiler-only `literal-expressions` composition upgrades numeric-only array
+  and object values to arbitrary supported expressions while preserving the
+  smaller specialized literal loops when omitted.
+- The values `strings` feature supplies ordinary packed byte strings, strict
+  allocation-conscious concatenation, and an atom-table module. The VM retains
+  atom state only when its `atoms` feature is selected; ordinary string literals
+  neither allocate nor populate that table.
+- `microesnext-objects` supplies prototype and property-table storage. Its VM
+  feature composes strings for JavaScript property names, while the low-level
+  crate can also use already-interned or non-string keys. A separate
+  `property-assignment` bytecode/compiler gate adds source statement writes;
+  read-only object builds retain no write dispatch beyond literal assembly.
+- The objects `prototype_chain` module performs allocation-free traversal for
+  `instanceof` and `Object.prototype.isPrototypeOf`; the VM feature determines
+  whether any traversal call is retained.
+- The objects `instanceof` module composes callable validation, ordinary
+  `prototype` lookup, and traversal without allocation. Custom
+  `Symbol.hasInstance` dispatch remains a higher optional layer.
+- The arena's gated `closures` module stores closure entries and captures for
+  builds enabling the `functions` feature. Closure storage is not a separate
+  semantic library; direct calls still remain in the base VM for now.
+- The objects `callable` module optionally wraps a compact closure in an
+  ordinary property-bearing object. Calls unwrap it at a statically selected
+  boundary. Its constructor path creates the `.prototype` / `.constructor`
+  cycle in fixed arena records; closure-only and object-only machines retain
+  their specialized paths and layouts.
+- The objects `construction` module creates an ordinary receiver from a
+  constructor's current prototype and applies the object-return rule. The VM
+  composes it with receiver frames using two gated opcodes, without persistent
+  machine state or changes to the invariant call frame.
+- The objects `class_constructor` module gives classes a distinct object record.
+  A class can use the same removable construction path, but ordinary call
+  unwrapping does not accept it. The initial `classes` compiler slice supports
+  constructor-only declarations; methods and inheritance remain separate.
+- The objects `method_calls` module preserves a member receiver beneath its
+  resolved method and removes both before entering the call frame. The independent
+  `class-methods` composition stores receiver-aware, non-constructible callable
+  objects on a class prototype; constructor-only class builds retain neither
+  its stack operations nor its three opcodes.
+- The arena's `stack-operations` feature supplies removable operand duplication
+  and discard helpers. Class expressions duplicate their class record only
+  while installing properties. The separate compiler-only
+  `expression-statements` gate emits a generic discard for any supported
+  expression followed by `;`; it does not reuse exception unwinding or add a
+  statement-specific path to each expression capability.
+- `class-default-constructors` is compiler-only: it synthesizes the same compact
+  receiver-aware body and class-record opcode sequence when a base class omits
+  `constructor`. Explicit-constructor compiler builds do not retain that parser
+  branch or synthesis code, and the runtime has no corresponding feature.
+- `conditional-expressions` is likewise compiler-only. It emits the existing
+  typed truthiness and jump vocabulary for `condition ? consequent : alternate`,
+  so removing the parser branch changes no runtime dispatch path.
+- `nonterminal-conditionals` lets either side of `if`/`else` join later
+  statements, while omitting the join jump after an abrupt branch. It reuses
+  control-flow bytecode and relocates both targets inside function bodies;
+  reduced control-flow compilers retain their smaller terminal-only parser.
+- `nested-conditionals` replaces recursive descent through conditional blocks
+  with explicit consequent/alternate frames in the compiler's allocation-using
+  worklist. Thousands of nested source branches therefore do not consume the
+  Rust stack, while nonnested compiler builds omit the frame type and loop.
+- `nested-loops` generalizes that worklist with loop frames, so arbitrarily
+  interleaved `while` and `if` blocks compile without Rust recursion. It emits
+  the existing control-flow vocabulary; builds that stop at nested
+  conditionals retain the smaller, conditional-only implementation exactly.
+- `nested-exceptions` uses a separate explicit try/catch worklist and emits the
+  existing optional handler bytecode. Returns close every live handler, throws
+  retain the nearest handler, and omitting it preserves the smaller terminal
+  exception parser rather than retaining dormant frame machinery.
+- `nonterminal-exceptions` lets normally completed `try` and `catch` bodies
+  join later statements. Its handler cleanup and jump patches compose into the
+  nested worklist, while terminal-only exception builds retain neither control
+  flow nor join bookkeeping.
+- `implicit-completions` is compiler-only too. It lowers `return;` and a script
+  or function body reaching its end to the invariant `undefined` constant and
+  existing return instruction. Its omitted build retains the previous
+  completion parser byte-for-byte rather than relying on optimization to erase
+  a shared conditional branch.
+- `class-static-methods` is also compiler-only. It installs the same
+  non-constructible method wrapper directly on the class record instead of its
+  prototype, so static calls reuse receiver-preserving method bytecode and
+  observe the class as `this` without another runtime dispatch path.
+- `class-expressions` accepts anonymous class values with explicit or implicit
+  constructors and the same instance and static method compositions as class
+  declarations. Named class-expression identity remains a separate future
+  slice.
+- The objects `recursive_constructor` module allocation-freely rebinds a named
+  function expression's private self cell to its constructor wrapper. Ordinary
+  constructors and recursive closures do not retain this cross-composition.
+- `microesnext-bindings` groups feature-gated lexical and call-frame machinery
+  that shares the same arena representation. Its `parameters` feature composes
+  evaluated arguments with lexical slots; functions without arguments omit it.
+  Its `receivers` feature adds hidden `this` values to selected call frames.
+  Receiver slots live after ordinary locals, so existing local access remains
+  unchanged and builds without methods or thenables omit that module.
+- The bindings `environments` feature supplies traced one-value cells that
+  genuinely escape into closures. The compiler shares a cell across sibling
+  closures and outer writes; uncaptured locals remain direct stack words.
+- The environments `assignment-expressions` feature stores through a cell
+  while retaining the assigned value on the operand stack. The corresponding
+  objects feature performs a result-preserving property store. Their dedicated
+  inline operations leave ordinary assignment statements on smaller paths.
+- The bindings `recursive-functions` feature composes closures with cells
+  only for private self-bindings in named function expressions. Ordinary
+  function builds do not retain the module or decode its constructor opcode.
+- The execution `recursive-async-functions` feature performs the corresponding
+  composition for named async expressions. It reuses async closure storage and
+  an environment cell without entering ordinary recursive-function builds.
+- The bindings `locals` feature supplies validated lexical stack slots. Loads and
+  stores use bottom-relative positions, so temporary operands and suspension
+  cannot move them; literal-only machines omit the bindings crate. The facade's
+  `local-assignment-expressions` composition enables the arena's gated stack
+  helpers, allowing an assignment to store one copy while returning the other
+  without changing the local fast path.
+- The semantics `integer-operations` feature supplies checked i30 negation,
+  subtraction, multiplication, and relational comparisons. The bytecode and VM features
+  decide which operations are reachable, so a unary-only build does not retain
+  multiplication or comparison. `minimal-program` composes the same library
+  with locals and control flow without adding floating-point storage or
+  changing the invariant interpreter loop.
+- `microesnext-semantics` interprets tagged values without owning their
+  representations. Its independent `equality`, `truthiness`,
+  `logical-operations`, and `typeof` features retain only the selected paths.
+  Optional number, string, symbol, and callable-record features add the
+  corresponding JavaScript behavior without indirect dispatch.
+- The values `numbers` feature supplies heap-backed IEEE-754 representation together
+  with its small division, negation, and primitive-coercion helpers. VM opcode
+  selection and dead-code elimination remove unused operators; they do not need
+  separate package boundaries. String coercion remains gated because it
+  introduces the decimal parser. Integer-only builds do not link this module.
+- The values `decimal-to-f64` feature is the shared, `no_std` decimal conversion
+  boundary for source literals and string coercion. A small exact path handles
+  common inputs; a bounded correctly-rounded fallback handles IEEE-754 edges.
+  Builds omitting both consumers do not link the module.
+- Numeric helpers retain the existing i30 fast paths. Overflow falls through to
+  boxed values only when promoted operations are selected; decimal string
+  parsing remains separately removable with its dependency.
+- The values `symbols` feature supplies unique, relocatable property-key identities.
+  Optional descriptions are ordinary values, so the feature does not force the
+  string, atom, object, or collection capability into a symbol-only build.
+- The symbols `well_known` module retains realm-owned identities. A realm can
+  omit description strings or compose them without changing ordinary symbols.
+- The objects `iterators` feature stores a source, cursor, and adapter tag in a
+  relocatable guest object. Arrays and collections expose independently gated
+  iterator modules, so adding array iteration does not pull in Map/Set storage,
+  or the reverse.
+- The collections `entry-iterators` feature adds pair-array allocation only
+  for `Map.entries`; collection key/value and Set iteration do not link arrays.
+- The iterator `results` feature allocates ordinary `{ value, done }` objects
+  with cached property identities. Cursor-only builds do not acquire object,
+  atom, or string storage. Its source-neutral boundary converts an adapter's
+  `Option<Value>` into live or exhausted result objects.
+- The iterator `protocol` feature defines and resolves realm-local
+  `[Symbol.iterator]` bindings through object prototypes. Function validation
+  and invocation remain independently composable.
+- The semantics `equality` feature composes SameValueZero for enabled scalar
+  types.
+  Collections use raw compact identity in their standalone build; number and
+  string comparison enters only when those capabilities are selected too.
+- The objects `collections` feature contains ordered, geometrically grown Map and Set
+  storage with live cursor semantics.
+- The objects `arrays` feature contains dense and sparse indexed storage with geometric
+  growth, holes, and JavaScript length behavior.
+- The arrays `assignment-expressions` feature stores a computed index while
+  retaining the assigned value. The compiler's separate `array-indexing` gate
+  adds reads without runtime code; literal stores retain their smaller path.
+- The collections module contains Map and Set plus an independently gated
+  `weak` module. Ephemeron tracing is retained only by that feature.
+- The execution `promises` feature contains compact promise records and a
+  caller-owned, rooted FIFO job ring; it does not require a native allocator
+  or Rust futures.
+- The values `errors` feature supplies compact guest error identities without forcing
+  message strings, stacks, objects, or exception handlers into every build.
+- The Promise `resolution` feature optionally adopts native Promise results.
+  Plain Promise storage does not retain the resolver path.
+- The Promise `resolvers` feature adds compact guest-callable resolve/reject
+  records. Each pair shares one arena cell, so exactly one call can win without
+  allocating two independent closures.
+- The scheduler `thenables` feature composes ordinary object lookup,
+  receiver-aware calls, resolving functions, and deferred assimilation jobs. A controller
+  schedules guest `then` code instead of running it during property resolution;
+  resolving to another thenable produces another rooted job rather than native
+  recursion. Builds without `thenables` link none of this composition.
+- `microesnext-execution` contains the invariant interpreter core plus
+  independently gated Promise state, exception handlers, stack suspension,
+  async closure records, bounded caller frames, and recursive async
+  construction. Promise-only users do not pull in bytecode or the core;
+  ordinary synchronous machines retain none of the optional execution paths.
+- `microesnext-vm` is the synchronous interpreter and suspension boundary.
+- `microesnext-scheduler` contains independently gated async driving, Promise
+  jobs, object-thenable jobs, and async-thenable resolution policies.
+- The execution `async-functions` feature stores async closures and packages
+  evaluated calls for independent guest contexts. Its bounded, caller-supplied
+  frame stack connects nested calls to outer promises; caller suspension and
+  promise orchestration remain absent from ordinary function builds.
+- The scheduler `async-thenables` feature supplies a statically selected policy
+  for object assimilation at both async return and `await`. Object operands use a
+  small intermediate Promise and the bounded thenable-job queue; primitives
+  and native Promises retain the ordinary path. The ordinary async driver
+  remains monomorphized with its smaller native-Promise resolver when this
+  composition is omitted.
+- `microesnext` is a small facade; its `async` and `async-functions` features
+  are disabled by default.
+
+When source is compiled for a selected facade feature set, the source compiler
+must enable the matching syntax and bytecode features. The facade's test-only
+compiler dependency deliberately has no default features; each facade feature
+forwards only its corresponding compiler feature. Production runtime builds do
+not link the compiler, and reduced tests cannot accidentally emit bytecode for
+a capability absent from their runtime.
+
+The runtime is `no_std` and has no global-allocator or libc dependency. Its
+arena borrows a caller-supplied word slice; only compiler tooling uses `alloc`.
+
+These are static Rust feature and crate boundaries, not runtime plugins.
+Release builds use fat LTO and one code-generation unit, so hot functions can
+inline across them. Leaving out a capability removes its implementation without
+adding indirect dispatch to the base interpreter.
+
+`tools/measure-capabilities.ts` builds the isolated
+`microesnext-capability-size` package, instantiates its final Wasm, calls every
+claimed export, then reports raw and gzip sizes. The separate package has no
+compiler dev-dependency whose Cargo features could contaminate production
+measurements.
+
+`tools/measure-compiler.ts` performs the corresponding check for the source
+compiler. It links a real allocator-backed Wasm executable, instantiates it,
+and requires the selected compiler to produce bytecode before reporting its
+raw and gzip sizes. This avoids treating an archive or LLVM bitcode object as
+evidence that omitted parser paths disappeared from a final program.
+
+The isolated `microesnext-core-loop` package provides a repeatable native
+instruction-loop check without compiler dev-feature unification:
+
+```sh
+cargo run --release -p microesnext-core-loop --no-default-features
+cargo run --release -p microesnext-core-loop --no-default-features \
+  --features arrays,control-flow,functions,number-division,number-remainder,objects \
+  -- --machine
+cargo run --release -p microesnext-core-loop --no-default-features \
+  --features function-arguments -- --calls
+cargo run --release -p microesnext-core-loop --no-default-features \
+  --features environments,functions,locals -- --captures
+npm run check:features
+```
+
+It is a regression signal rather than a claim that noisy wall-clock timings can
+prove identical performance. The structural performance gate is stronger: the
+minimal feature graph excludes capability modules, and the hot loop reads
+raw opcode bytes from `microesnext-bytecode::core`. It uses a direct match with
+no feature-dependent enum, trait objects, registries, or dynamic callbacks.
+Only an extension byte crosses into the typed capability wrapper. Local and
+control-flow instructions use that same static boundary. This keeps the raw
+base loop byte-for-byte independent of those optional instruction families;
+there is no trait object, registry, or runtime feature lookup.
+`check:features` inspects Cargo's resolved graph and fails if representative
+minimal or narrowly composed builds acquire unrelated capability features.
+
+This is a new codebase. Existing MicroQuickJS runtimes elsewhere in the
+Macchiato repository are consumers and comparison points, not source
+dependencies. Integration happens only after the new runtime passes its own
+tests.
+
+## Development
+
+```sh
+cargo test --workspace
+npm test                 # temporary C behavioral oracle
+```
+
+Cargo writes generated artifacts under `target/`. The older C build writes
+generated executables under `build/`. Neither directory is committed.
+
+The precise implemented surface and its intentional boundaries are described
+in [Supported ES6 subset](docs/supported-es6.md).
+The [bytecode study](docs/bytecode.md) records how newer syntax maps onto the
+engine and why `await` is the one requested feature that needs an instruction.
+
+## Source provenance
+
+The legacy `src/` began as an unmodified copy of MicroQuickJS commit
+`203d5bb79789bc47b74855d9207415dab71661a0`. Its MIT license is retained in
+`src/LICENSE`. Subsequent changes belong to the MicroESNext history and are
+kept readable and independently testable here. The Rust engine is a new
+implementation and retains the repository's MIT license.
+
+
+<!-- dev/microquickjs-experiment/UPSTREAM.md -->
+
+# Upstream
+
+- Project: [MicroQuickJS](https://github.com/bellard/mquickjs)
+- Commit: `203d5bb79789bc47b74855d9207415dab71661a0`
+- License: MIT, retained as `src/LICENSE`
+- Imported: 2026-08-24
+
+The initial `src/` tree is a complete source snapshot rather than a build-time
+download. This makes the exact engine being extended reviewable and keeps the
+MicroESNext build reproducible without network access.
+
+
+
+<!-- dev/microquickjs-experiment/crates/microesnext-oniguruma/README.md -->
+
+# microesnext-oniguruma
+
+Optional Oniguruma regular-expression support for MicroESNext.
+
+This crate owns its C boundary. It builds a vendored, UTF-8-only subset of
+Oniguruma for `wasm32-unknown-unknown` and supplies every C-library-shaped
+operation through small repository-owned ponyfills. It does not link
+Emscripten, WASI libc, musl, a platform libc, or `onig_sys`.
+
+The narrow public Rust API keeps Oniguruma types and allocation details out of
+the JavaScript engine. MicroESNext can therefore omit this crate entirely or
+select another regular-expression backend.
+
+The vendored source retains its upstream license. `vendor/SOURCES.md` records
+the exact upstream revision and the deliberately limited source-file set.
+
+
+
+<!-- dev/microquickjs-experiment/crates/microesnext-regexp/PROVENANCE.md -->
+
+# Provenance
+
+This crate directly translates the regular-expression implementation embedded
+in Fabrice Bellard's MicroQuickJS (`mquickjs.c`, beginning at its `regexp`
+section), plus the corresponding regexp opcode definitions in
+`mquickjs_opcode.h`.
+
+- Repository: <https://github.com/bellard/mquickjs>
+- Revision: `203d5bb79789bc47b74855d9207415dab71661a0`
+- Local reference:
+  `dev/wasm-web-runtimes/examples/microquickjs-suite/vendor/microquickjs/`
+
+Copyright (c) 2017-2018 Fabrice Bellard
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+<!-- dev/microquickjs-experiment/crates/microesnext-regexp/README.md -->
+
+# microesnext-regexp
+
+A direct Rust translation of the compact regular-expression compiler and
+interpreter embedded in MicroQuickJS.
+
+The port preserves the source engine's bytecode model and ECMAScript behavior
+instead of translating patterns into another regular-expression dialect. It is
+`no_std`, uses only explicit caller-provided storage, and has no libc boundary.
+The compiler and executor are separate features so a bytecode-only runtime does
+not have to carry the parser.
+
+During the port, differential tests compile and execute the same patterns with
+the vendored C reference and this Rust implementation. The C reference is test
+and provenance material; it is not linked into MicroESNext artifacts.
+
+See [PROVENANCE.md](PROVENANCE.md) for the exact upstream source and license.
+
+
+
+<!-- dev/microquickjs-experiment/crates/microesnext-regexp/TRANSLATION.md -->
+
+# Translation workflow
+
+The maintained implementation is a direct Rust port, not generated Rust checked
+in without review. Mechanical drafts are useful for coverage and control-flow
+comparison, so the workflow keeps them reproducible and separate from `src/`.
+
+1. Run `tools/extract-reference.js` against the pinned `mquickjs.c`.
+2. Translate the resulting compiler and executor units independently.
+3. Use generated Rust only as a checklist and control-flow draft.
+4. Replace C pointers, macros, allocation, and VM stack coupling with explicit
+   Rust slices and caller-provided storage.
+5. Differentially test patterns, bytecode, captures, errors, and timeouts
+   against the pinned MicroQuickJS reference.
+
+A whole-file C2Rust experiment was rejected: it imported unrelated VM code and
+Clang 21's exporter could not represent parts of the translation unit. Isolating
+the two regexp regions gives the translator smaller inputs and makes accidental
+dependencies visible. Generated drafts belong in a sibling work directory, not
+in this repository.
+
+Oniguruma is intentionally out of scope until the MicroESNext runtime goal is
+complete. Its separate crate remains a future optional backend and must not be
+used to fill gaps in this port.
+
+
+
+<!-- dev/microquickjs-experiment/docs/benchmarks.md -->
+
+# Rust engine measurements
+
+Measurements are checkpoints, not timeless claims. Keep the benchmark source,
+command, host architecture, and feature set alongside results so later changes
+can be compared honestly.
+
+## Core opcode loop, 2026-08-25
+
+The `core-loop` example ran 20,020,000 instructions per sample on
+`aarch64-unknown-linux-gnu` with Rust 1.98.0, release fat LTO, and one codegen
+unit.
+
+| Build | Samples (ns/instruction) | Stripped executable |
+| --- | --- | ---: |
+| Minimal, no default features | 3.71, 3.81, 4.11 | 333,136 bytes |
+| `async,objects,functions` | 3.53, 3.53, 3.57 | 333,136 bytes |
+
+The timings are close enough that this run detects no feature-induced core-loop
+cost; it does not prove mathematical equality. The identical executable sizes
+occur because the example does not exercise capability code and fat LTO removes
+it. `cargo tree --no-default-features` separately confirms that capability
+crates do not enter the minimal dependency graph at all.
+
+Future checks must include representative object, closure, collection, parser,
+and suspension workloads and compare peak arena usage against upstream
+MicroQuickJS. A faster synthetic addition loop cannot excuse regressions in
+those workloads.
+
+## Minimal programmable runtime, 2026-08-25
+
+The smallest artifact remains a 1,984-byte (961 gzip) interpreter kernel. A
+more useful minimum composes lexical locals, boolean control flow, checked i30
+subtraction and multiplication, and relational comparison. Its live probe
+executes the bytecode for a factorial loop guarded by `n > 1` and verifies the
+result `720`.
+
+| Build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Interpreter kernel | 1,984 | 961 |
+| Minimal programmable runtime | 6,506 | 2,526 |
+
+The arithmetic implementation lives in `microesnext-integer-operations`; a
+build omitting `minimal-program` neither resolves that crate nor decodes its
+opcodes. This figure is a practical capability checkpoint, while the kernel
+figure remains useful for measuring the fixed interpreter mechanism itself.
+
+## Strict equality, 2026-08-25
+
+The identity-only strict-equality build is 2,890 bytes (1,337 gzip). Its live
+probe compares tagged booleans and its dependency graph omits string and number
+storage. A number-only build is 7,484 bytes (3,261 gzip); its graph contains no
+string, atom, or object crate and its live probe verifies that boxed NaNs remain
+unequal. Composing both scalar representations produces a 9,480-byte (3,948
+gzip) artifact whose additional probe verifies separately allocated equal
+strings.
+
+The semantics `equality` feature also retains SameValueZero for collection
+keys, but the
+VM's `===` and `!==` instructions call the strict operation. This avoids the
+subtle but observable mistake of treating `NaN === NaN` as true while still
+sharing the scalar decoding and string-content comparison machinery.
+
+## Short-circuit logical operations, 2026-08-25
+
+The immediate-only `&&`/`||`/`!` composition is 3,428 bytes (1,647 gzip). Its
+live probe short-circuits over a throwing right operand, verifies that the left
+operand is preserved, and then negates it. Optional scalar truthiness remains
+independent:
+
+| Build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Logical operations | 3,428 | 1,647 |
+| Bounded numeric negation | 2,587 | 1,279 |
+| Logical operations with numbers only | 7,502 | 3,268 |
+| Logical operations with strings only | 7,151 | 3,096 |
+
+The number-only dependency graph contains no string crate, and the string-only
+build contains no number crate. Macro-generated crate tests exercise each side
+alone and together. Adding the capability leaves both the 1,984-byte kernel and
+the 6,506-byte minimal programmable runtime byte-for-byte unchanged.
+
+## Primitive Number coercion, 2026-08-25
+
+The standalone primitive-coercion build is 6,371 bytes (2,823 gzip). Its live
+probe executes `+true` and verifies the immediate result `1`; runtime tests
+also cover false, null, undefined/NaN, i30 values, and existing boxed numbers.
+It contains number representation but neither integer operations nor either
+negation path. The compiler-only unary-plus build is 5,690 bytes (2,466 gzip).
+
+Number negation now composes the same coercion crate, making `-true`, `-null`,
+and `-undefined` follow primitive JavaScript semantics. Its linked artifact is
+6,898 bytes (3,040 gzip). The pre-existing i30 branch remains a direct fast
+path, and the interpreter kernel, bounded-negation, promoted-operations,
+and minimal-program artifacts are byte-for-byte unchanged.
+
+## String Number coercion, 2026-08-25
+
+The string composition is 14,599 bytes (6,608 gzip), while its compiler gate
+is 6,553 bytes (2,932 gzip). The runtime parses the complete decimal shape,
+signed `Infinity`, binary/octal/hex integer forms, negative zero, and the
+current ECMAScript whitespace set without a temporary allocation. Power-of-two
+radices retain guard and sticky bits for ties-to-even conversion rather than
+repeatedly rounding a growing float. Invalid strings produce NaN.
+
+`microesnext-decimal-to-f64` now supplies an allocation-free, `no_std`, compact
+correctly-rounded conversion shared by source literals and string coercion.
+It uses an exact common-input path and a 768-digit bounded fallback based on
+Nigel Tao's Simple Decimal Conversion. Differential tests cover 40,000 random
+decimal strings, 100,000 finite-float display round trips, long truncated
+inputs, subnormal boundaries, overflow, and ties. This replaced Rust core's
+larger generic parser: before the replacement the same string composition was
+29,262 bytes (20,113 gzip).
+
+Five native release runs put the common path at a median 7.5 ns per conversion,
+versus 6.6 ns for `str::parse::<f64>` on this machine. The deliberately compact
+fallback is much slower—about 4.04 us versus 21.5 ns—so ordinary literals avoid
+it when their mantissa is exactly representable and their decimal exponent is
+within ±22. Run `cargo run --release -p microesnext-decimal-speed` to reproduce
+the directional comparison; it is a microbenchmark, not a cross-machine claim.
+
+The cost remains confined to its static capability boundary. Primitive
+coercion is still exactly 6,371 bytes, Number negation is still exactly 6,912
+bytes, and builds without decimal literals or string coercion neither resolve
+the conversion crate nor execute a dispatch branch for it.
+
+## Division and remainder, 2026-08-25
+
+The division-only runtime is 6,494 bytes (2,878 gzip), compared with 5,311
+bytes (2,422 gzip) for number storage alone. Remainder is independently 9,311
+bytes (4,240 gzip). An initial combined implementation measured 9,786 bytes
+(4,363 gzip): linked measurement revealed that `%` retained a much larger
+floating helper and would make `/` pay for it. The final design therefore uses
+two leaf crates, two bytecode gates, and compile-time VM arms.
+
+Compiler probes are 9,478 bytes for each isolated token family (4,401 gzip for
+division and 4,402 for remainder); most of that build is their shared decimal
+literal parser. Feature-graph checks prove that either compiler gate includes
+`numbers` but neither integer operations nor the other quotient operation.
+The existing number-operations runtime remains exactly 9,382 bytes and the
+minimal runtime remains exactly 1,984 bytes.
+
+Four alternating native runs after the split measured the invariant `Core` at
+3.05–3.37 ns/instruction in the minimal build and 3.04–3.07 with division,
+remainder, arrays, control flow, functions, and objects enabled. The typed
+`Machine` path measured 3.05–3.22 minimal and 3.04–3.23 composed. The overlap
+does not prove identical timing, but it detects no regression; more
+importantly, the omitted build has neither crate nor typed match arm.
+
+## `typeof`, 2026-08-25
+
+The isolated runtime is 6,642 bytes (3,024 gzip), including ordinary string
+storage and a live probe that checks `typeof true === "boolean"` by content.
+The compiler is 6,554 bytes (2,940 gzip), only 201 raw bytes above its
+string-literal build. Its optimized keyword-only unary scanner remains
+separate from the mixed-operator scanner; builds omitting `typeof` preserve
+their pre-existing parser paths.
+
+The base classifier recognizes immediates, strings, ordinary objects, and
+closures. Cargo weak-feature forwarding adds boxed numbers, symbols, async
+closures, and Promise resolvers only when those representations coexist.
+Feature-graph checks show that `typeof` alone includes neither numbers,
+objects, arithmetic, atoms, nor string concatenation.
+
+Four alternating native runs measured minimal `Core` at 3.07–3.08
+ns/instruction and a broad build including `typeof` at 3.04–3.33 (one broad
+outlier; the other samples were 3.04–3.05). `Machine` measured 3.06–3.07
+minimal and 3.06–3.12 broad. As with the other timing gate, the structural
+evidence is definitive: omitted builds have no classifier crate or opcode arm.
+
+## Ordinary `instanceof`, 2026-08-25
+
+The checked editor bundles contain 30–136 `instanceof` occurrences each. Its
+semantic path is consequently composed from separately removable callable
+objects, property lookup, and prototype traversal rather than folded into the
+object representation. A callable-object artifact is 17,812 raw / 7,107 gzip
+bytes; adding the operator, its interned `prototype` key, and an executed probe
+is 20,311 / 7,791, an increment of 2,499 raw / 684 gzip bytes.
+
+The standalone compiler is 5,956 raw / 2,586 gzip bytes. Its keyword-only
+relational parser remains independent of numeric comparisons, while a build
+containing both preserves left-associative relational order. Builds omitting
+`instanceof` retain their prior specialized parser, and the objects-only Wasm
+remains exactly 14,473 / 5,775.
+
+Constructible function records are separately gated. Adding their opcode,
+interned `prototype` and `constructor` keys, fixed cyclic allocation, and live
+probe to callable objects produces 20,106 raw / 7,695 gzip bytes—2,294 raw /
+588 gzip incremental. The compiler's constructor form is 13,264 / 5,615.
+Source-to-VM tests verify the
+prototype cycle and that arrows do not acquire the constructor opcode.
+
+Ordinary instance construction is another composition rather than constructor
+baseline code. Its live Wasm probe, receiver-aware call path, receiver creation,
+and return selection total 27,444 raw / 9,825 gzip bytes. Its refactored
+compiler slice is 15,459 / 6,311 and accepts direct calls with arguments while
+being 81 raw / 115 gzip bytes smaller than the initial direct-call parser. The
+source-to-VM tests exercise `this`, primitive fallback, explicit object returns,
+the resulting prototype chain, member constructor lookup, and postfix access to
+the selected result. Builds omitting `construction` do not decode its two
+opcodes or retain the objects construction module; the constructor-only compiler stays
+exactly 13,264 / 5,615.
+
+The constructor-only `classes` composition uses a distinct class record while
+reusing receiver frames and ordinary construction. Its live runtime is 30,301
+raw / 10,377 gzip bytes and its compiler is 19,762 / 7,588. The object-only
+probe remains exactly 14,473 / 5,775 and ordinary construction remains exactly
+27,444 / 9,825 when class support is omitted.
+
+The independent `class-methods` composition is 32,689 raw / 10,891 gzip bytes;
+its compiler is 20,727 / 7,869. It covers method wrapping, receiver-preserving
+lookup and calls, method parameters, and non-constructibility. With that feature
+omitted, the constructor-only runtime remains 30,301 / 10,377 and its compiler
+remains 19,762 / 7,588.
+
+Implicit base constructors are compiler-only. Their focused build is 20,541
+raw / 8,091 gzip bytes. Omitting the feature leaves the explicit constructor
+compiler exactly 19,762 / 7,588 and changes no runtime artifact. The default
+compiler includes this syntax without adding a runtime feature.
+
+Static methods are another compiler-only selection over the existing method
+runtime. Their focused compiler is 20,844 raw / 7,916 gzip bytes. Omitting them
+leaves instance methods exactly 20,727 / 7,869. The default compiler including
+static methods reuses the same runtime operations.
+
+Anonymous class expressions add one removable operand-stack operation so the
+class record can remain as the expression result while methods are installed.
+The live runtime composition is 33,060 raw / 11,025 gzip bytes and its compiler
+is 23,379 / 8,866. Omitting it leaves the class-method runtime exactly 32,689 /
+10,891 and its compiler at 20,727 / 7,869. With expressions
+included, the default compiler is 48,615 / 17,302 and the all-capability runtime
+is 109,821 / 34,862.
+
+Private identity for named constructor expressions is separately removable.
+The `recursive-constructors` composition is 23,517 raw / 8,554 gzip bytes and
+its compiler is 18,137 / 7,564. Its allocation-free opcode changes capture zero
+from the compact recursive closure to the wrapper; declarations continue to use
+their existing captured destination cell. Builds selecting ordinary recursive
+functions or non-recursive constructors do not link this bridge crate.
+
+Property-assignment statements reuse the ordinary object store behind one
+independently decoded opcode. The live runtime composition is 16,352 raw /
+6,302 gzip bytes; its compiler is 11,317 / 4,571. The end-to-end constructor
+test passes an argument into `this.answer = value`, returns a primitive, and
+reads the initialized property from the preserved receiver. Object builds that
+omit this source operation do not decode its opcode.
+
+## Feature-independent core, 2026-08-25
+
+After Promise jobs were added, the facade benchmark began varying with enabled
+features even though it executed only integer opcodes. The hot interpreter was
+first extracted into `microesnext-vm-core` and now lives in the independently
+gated execution `core` module; its byte readers and raw base-opcode constants
+live in the bytecode `core` module. Neither core layer has capability features.
+Optional opcode bytes return to the typed VM wrapper;
+base bytecodes remain in a state type and dispatch loop whose compiled Rust
+surface does not vary with the selected capabilities.
+
+An isolated `microesnext-core-loop` package prevents the compiler dev
+dependency from unifying all facade features into the benchmark. That exposed
+a real 10–30% regression hidden by the earlier setup. Disassembly showed fat
+LTO declining to inline base call-frame setup in the larger build, which added
+register spills to unrelated arithmetic dispatch. Keeping that small base
+operation always-inline restored overlapping minimal and full measurements.
+
+Eight alternating samples in the latest run measured 3.30–3.47 ns/instruction
+for minimal `Core` and 3.47–3.51 for full `Core`; `Machine` measured 3.29–3.81
+for minimal and 3.29–3.53 for full. Process startup, frequency scaling, and
+separately linked layouts make these samples noisy. They detect no consistent
+capability penalty, but do not prove mathematical equality. The stronger gate
+is structural: optional crates and their typed opcodes cannot enter the raw
+base loop.
+
+## Final Wasm capability sizes, 2026-08-26
+
+`tools/measure-capabilities.ts` builds an exported, allocator-free Wasm probe
+for each capability. Every row exercises the named implementation, preventing
+LTO from merely discarding an enabled but unused dependency.
+
+| Build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| Minimal | 1,984 | 961 |
+| Expression statements | 2,691 | 1,329 |
+| Arrays | 8,768 | 3,532 |
+| Array assignment expressions | 10,034 | 4,006 |
+| Array iterators | 10,756 | 4,205 |
+| Atoms | 11,903 | 5,005 |
+| Async suspension | 6,455 | 2,856 |
+| Async functions | 23,176 | 8,853 |
+| Collections | 3,285 | 1,507 |
+| Control flow | 3,486 | 1,657 |
+| Minimal programmable runtime | 6,506 | 2,526 |
+| Control flow with scalar truthiness | 8,708 | 3,738 |
+| Collection iterators | 10,170 | 4,092 |
+| Collection entry iterators | 13,542 | 4,980 |
+| Collection value equality | 14,617 | 5,654 |
+| Exceptions | 3,846 | 1,761 |
+| Shared environment cells | 6,285 | 2,729 |
+| Strict equality | 2,890 | 1,337 |
+| Strict equality with numbers | 7,484 | 3,262 |
+| Strict equality with scalar values | 9,480 | 3,949 |
+| Guest errors | 2,520 | 1,195 |
+| Closures with shared environments | 11,158 | 4,441 |
+| Functions | 6,962 | 3,034 |
+| Recursive functions | 10,395 | 4,058 |
+| Recursive async functions | 25,797 | 9,527 |
+| Functions with local parameters | 10,897 | 4,357 |
+| Receiver-aware calls | 13,122 | 5,103 |
+| Iterator cursor | 3,599 | 1,629 |
+| Lexical locals | 4,012 | 1,798 |
+| Logical operations | 3,428 | 1,647 |
+| Bounded numeric negation | 2,587 | 1,279 |
+| Logical operations with numbers | 7,502 | 3,271 |
+| Logical operations with strings | 7,151 | 3,096 |
+| Iterator result objects | 13,793 | 5,361 |
+| Iterable protocol binding | 10,288 | 4,205 |
+| Number representation | 5,311 | 2,422 |
+| Primitive Number coercion | 6,371 | 2,826 |
+| String Number coercion | 14,599 | 6,609 |
+| Promoted number operations | 9,382 | 3,310 |
+| Number division | 6,494 | 2,880 |
+| Number remainder | 9,311 | 4,242 |
+| JavaScript Number negation | 6,898 | 3,042 |
+| Objects with atoms and strings | 14,641 | 5,784 |
+| Property assignment | 16,531 | 6,312 |
+| Functions and objects | 17,085 | 6,727 |
+| Callable objects | 17,994 | 7,132 |
+| Constructible function objects | 19,999 | 7,712 |
+| Constructor receivers | 26,920 | 9,873 |
+| Ordinary construction | 27,539 | 9,855 |
+| Constructor-only classes | 30,285 | 10,411 |
+| Classes with instance methods | 32,687 | 10,947 |
+| Anonymous class expressions | 33,158 | 11,116 |
+| Local assignment expressions | 4,881 | 2,093 |
+| Captured assignment expressions | 7,186 | 3,052 |
+| Property assignment expressions | 15,892 | 6,251 |
+| Recursive constructors | 23,329 | 8,534 |
+| Ordinary `instanceof` | 20,567 | 7,856 |
+| Prototype chain | 15,381 | 6,029 |
+| Strings only | 4,903 | 2,270 |
+| `typeof` | 6,642 | 3,024 |
+| Symbols | 4,995 | 2,254 |
+| Well-known symbols | 5,525 | 2,448 |
+| Promises | 4,840 | 2,237 |
+| Native Promise resolution | 12,664 | 5,242 |
+| One-shot Promise resolvers | 20,479 | 7,911 |
+| Object thenable assimilation | 34,297 | 12,623 |
+| Async return thenable assimilation | 46,364 | 16,342 |
+| Weak collections | 2,051 | 1,002 |
+| All capabilities | 110,463 | 35,120 |
+
+Moving Promise state, resolution, and one-shot resolvers into independently
+gated `microesnext-execution` modules initially preserved their raw Wasm sizes
+exactly. After the invariant core joined the same crate, the final Promise and
+native-resolution rows remain 4,840 and 12,664 bytes, while one-shot resolvers
+decreased from 20,494 to 20,479 bytes. Async suspension remains 6,455 bytes and
+async functions decreased from 23,191 to 23,176 bytes. The shared crate removes
+package boundaries without forcing Promise code into smaller execution builds
+or adding runtime dispatch.
+
+Folding exception-handler state into its own `microesnext-execution` feature
+also preserved the exception probe at 3,846 raw Wasm bytes.
+
+Moving the invariant VM core into the execution crate preserved the minimal
+artifact at 1,984 bytes, async suspension at 6,455 bytes, Promise storage at
+4,840 bytes, and exceptions at 3,846 bytes. The core remains a separately gated
+module with the same direct dispatch loop and no optional capability state.
+Five alternating native runs after the 12-crate consolidation measured the
+minimal core at 3.17–3.20 ns/instruction and a broad composition at
+3.17–3.19 ns/instruction. This run detects no feature-induced slowdown in the
+invariant loop; the feature graph and final Wasm probes separately establish
+that omitted implementations are absent.
+
+The all-capabilities row selects string concatenation, primitive and string
+Number coercion, Number negation, division, remainder, `typeof`, callable
+objects, and ordinary `instanceof`. The earlier 78,513-byte row was a broad
+composition but omitted independently gated paths; it was therefore mislabeled
+rather than a valid before/after size comparison.
+
+The negation rows are intentionally separate. Adding unary instructions to the
+existing integer and promoted-arithmetic paths initially grew the minimal
+programmable runtime from 6,506 to 6,967 bytes and promoted number operations
+from 9,382 to 10,413 bytes. Keeping separate bytecode and VM reachability gates
+restores both baselines without making negation a separate package. Bounded
+negation is 2,587 bytes in isolation; the negative-zero-preserving Number
+composition is 6,898 bytes. Neither path adds runtime dispatch to an arithmetic
+build that omits it.
+
+The harness now instantiates every built artifact and invokes the export for
+each claimed capability. This corrected an older exception row that enabled
+the Cargo feature but accidentally ran only `Core`, allowing LTO to discard
+the handler implementation, and an “all” row that omitted exceptions. The
+current exception and combined figures supersede those undercounts.
+
+The functions probe likewise executes closure creation and an indirect guest
+call through `Machine`, rather than merely returning a freshly allocated
+closure reference. That correction raised the honest live feature measurement
+from 1,916 to 6,869 bytes at that checkpoint; the smaller result was mostly an
+LTO artifact.
+The recursive-functions row executes its distinct closure constructor and
+verifies that the resulting private self cell resolves back to the closure.
+It statically composes functions and environments; the minimal,
+functions-only, and environment-only rows remain unchanged.
+The parameter composition additionally removes a callable from beneath its
+evaluated arguments, enters a guest frame, exposes the argument through local
+slot zero, and returns through that frame. Moving this path into
+`microesnext-parameters` restored the functions-only artifact from 8,018 to
+6,962 bytes and locals-only from 4,324 to 4,012 bytes. The 10,897-byte
+composition is the only row that pays for both operations.
+The 13,156-byte receiver row invokes a real closure with one argument and an
+explicit `this`, reads that receiver through optional frame bytecode, and
+returns through receiver-aware cleanup. It composes functions, parameters, and
+locals, while the minimal, functions-only, and parameter rows remain unchanged.
+The invariant `Core` has no receiver state or branch.
+The 6,285-byte environment-cell row allocates and reads a traced shared cell
+through live VM opcodes. Its arena block kind and decoder arms are feature
+gated. Adding it leaves the 1,984-byte minimal, 6,962-byte functions-only, and
+4,012-byte locals-only artifacts unchanged; only captured mutable bindings
+will need this storage.
+The 11,173-byte composed row mutates a cell through a captured reference and
+returns the new value through an indirect guest call. Ten million repeated
+calls that increment and read one shared capture took 1.234 seconds, or
+123.38 ns/call. This includes closure dispatch, three capture loads, two cell
+reads, and one cell write per call.
+
+Two alternating invariant-loop samples measured 3.20–3.23 ns/instruction for
+minimal `Core` and 3.22–3.26 with environments, functions, and locals enabled.
+`Machine` measured 3.20–3.67 and 3.21–3.26 respectively; 3.67 was an isolated
+minimal-process outlier. The overlapping ranges detect no unrelated hot-loop
+penalty, and the raw `Core` remains structurally feature independent.
+Array and object probes also execute create, set, and get instructions through
+`Machine`. Low-level storage-only probes remain appropriate for collections,
+promises, and weak collections because those capabilities do not yet expose VM
+opcodes.
+
+The number probe parses live `ConstF64` and `AddNumber` instructions and reads
+the resulting arena value. Its 6,029-byte artifact includes floating-point
+storage and promotion. With `numbers` omitted, the 1,984-byte minimal artifact
+contains no floating-point implementation.
+
+The symbol probe creates two undescribed symbols, verifies distinct identity,
+and reads a description. Its 5,043-byte artifact does not link strings, atoms,
+objects, or collections. Adding the feature leaves every previously measured
+isolated artifact byte-for-byte unchanged.
+
+The 5,573-byte well-known-symbol row retains a realm-local `Symbol.iterator`
+identity through the arena root table. Its production dependency graph adds
+neither strings nor atoms; callers that already have strings may provide the
+standard description. Adding this realm capability leaves the symbol-only and
+all other isolated artifacts byte-for-byte unchanged.
+
+The iterator probes keep the 3,647-byte cursor separate from their sources.
+The 10,804-byte array row executes a live value step; the 10,218-byte
+collection row executes a Set value step. Enabling either adapter leaves the
+other source crate out of its graph, and the original non-iterator array and
+collection artifacts remain byte-for-byte unchanged.
+
+The 13,590-byte collection-entry adapter executes a live `Map.entries()` step
+and allocates its two-element pair. Adapter tags share a small central numeric
+namespace, so a key/value adapter rejects an entry cursor before advancing it.
+The entry build includes arrays; the key/value build excludes them and becomes
+five raw bytes smaller after the tag validation was moved before mutation.
+
+The 13,992-byte result-object row constructs and reads both a live and an
+exhausted `{ value, done }` object through the source-neutral adapter boundary.
+It includes ordinary objects, cached atoms, and strings, but not an iterator
+cursor or either source adapter. Conversely, all three cursor rows remain
+byte-for-byte unchanged. This pays the object cost only at the
+ECMAScript-facing result boundary rather than in low-level iteration.
+
+Iterative prototype lookup and prototype validation add 194 raw bytes to the
+object probe. The result-object probe rises by 201 bytes because it uses the
+same ordinary-object path. All non-object rows remain byte-for-byte unchanged;
+this is the semantic cost required for inherited methods such as
+`[Symbol.iterator]`, not a cost paid by the invariant VM.
+
+The 10,323-byte iterable-protocol probe defines a realm-local
+`[Symbol.iterator]` method on a prototype and resolves it from a descendant.
+Its production graph includes objects, symbols, and realm identity, but no
+functions, atoms, or strings. Callable validation can therefore compose at the
+guest-call boundary without burdening data-only protocol users.
+
+The 15,186-byte composed equality probe performs lookups with independently
+boxed NaNs and independently allocated equal strings. Collection-only remains
+3,333 bytes and retains its direct identity comparison. Number-only remains
+6,029 bytes: the non-throwing inspection API used by equality is linked only
+when the composed probe calls it.
+
+The invariant immediate instruction adds `undefined`, `null`, and booleans to
+every machine. It deliberately raises the minimal artifact by 140 bytes. All
+other raw artifacts rise by 140 or 141 bytes except the atom composition,
+whose linker layout rises by 174; no optional dependency entered the minimal
+graph. Four alternating arithmetic-loop samples after the change measured
+3.30–3.59 ns/instruction for minimal `Core` and 3.30–3.75 for the composed
+`Core`; `Machine` measured 3.43–3.63 and 3.49–3.72 respectively. The ranges
+overlap and show no consistent optional-capability penalty.
+
+The probes now build in a dedicated package rather than as facade examples.
+That prevents the facade's compiler dev-dependency from enabling every opcode
+through Cargo feature unification. Optional opcodes are themselves gated, and
+the minimal decoder rejects their bytes. Together those changes keep the
+minimal artifact at 1,984 bytes while its instruction loop remains independent
+of the typed capability decoder.
+
+Lexical storage was first added directly to the invariant opcode match. That
+made the minimal Wasm grow from 2,032 to 3,553 bytes even when no local opcode
+was executed. Adding direct branch arms raised it again to 3,819 bytes. More
+importantly, five alternating native samples showed a consistent 15–25%
+slowdown in the unrelated integer loop. This failed both the size and
+performance gates.
+
+The replacement puts bottom-relative slot operations in
+`microesnext-locals`, gates their typed opcodes, and handles them through the
+same statically composed extension boundary as other optional capabilities.
+Control flow uses that boundary too, with the semantics `truthiness` feature
+composing
+boxed-number and string coercion only when those scalar features are enabled.
+The resulting live Wasm probes are 4,012 bytes for locals and 3,486 bytes for
+control flow, while the minimal artifact is 1,984 bytes. Five alternating
+native samples measured 3.22–3.31 ns/instruction for the minimal core and
+3.23–3.37 with locals and control flow enabled; the first composed warm-up was
+the sole 3.37 sample. The `Machine` ranges were 3.23–3.25 and 3.22–3.26. These
+overlap, and structurally both configurations execute exactly the same
+feature-free `Core` loop until an optional opcode is actually encountered.
+The 9,380-byte scalar-truthiness composition executes `ToBoolean` on a boxed
+NaN and an empty ordinary string. This ensures the measurement retains the
+optional false-value paths rather than reporting a control-flow build that
+only ever sees invariant immediates.
+
+Ten million one-argument guest calls through the composed function/parameter
+machine took 677.5 ms, or 67.75 ns/call, in the native release benchmark.
+Two alternating invariant-loop samples measured 3.24–3.26 ns/instruction for
+minimal `Core` and 3.22–3.28 with function arguments enabled; `Machine`
+measured 3.30–3.36 and 3.20–3.36 respectively. The ranges overlap, while the
+stronger structural result is that the functions-only, locals-only, and
+minimal artifacts do not contain the argument-frame capability.
+
+Ordinary `ConstString` now allocates an unrooted string and no longer creates
+or populates an atom table. The 5,008-byte string row therefore excludes both
+the atom module in `microesnext-strings` and `microesnext-objects`. The atom row adds retained
+interning; source-level objects compose both capabilities and use the distinct
+`ConstAtom` instruction for property names.
+
+Handler state belongs to the optional `Machine` wrapper; `Core` has one layout
+and one opcode loop in every feature configuration. `cargo tree -p
+microesnext --no-default-features` enables neither the exception nor
+suspension module. Adding the corresponding feature links the implementation
+through the VM wrapper.
+
+Five alternating direct-loop samples after the extraction measured
+3.35–3.49 ns/instruction for the minimal build and 3.36–3.45 ns/instruction
+with exceptions. The overlapping ranges detect no capability cost in the
+invariant arithmetic loop; they are a regression check rather than proof of
+identical timing.
+
+These are probes rather than estimates of a complete language build. They do
+prove the relevant artifact property: omitted capabilities are absent from the
+final Wasm, while enabled rows contain live exported calls into that crate.
+Keeping suspend/resume/restore outside the execution `core` module and in the optional
+execution `suspension` feature leaves the invariant core untouched. The
+isolated live async probe is 6,455 bytes (2,856 gzip). Enabling `async` adds the crate
+through the VM; disabling it also removes resume operations from the public
+surface. Five alternating direct-core runs measured 3.35–3.37 ns/instruction
+for the minimal build and 3.36–3.37 with `async`, detecting no dispatch-loop
+cost from the optional crate.
+
+The 23,191-byte (8,840 gzip) async-functions row executes async closure entry,
+returns a pending outer Promise, parks an `await`, runs its queued reaction,
+and verifies fulfillment. The dependency check also proves that selecting
+plain `async` does not retain async-closure operations, while selecting
+`async-functions` does not pull in environment cells, parameter frames, or
+recursive-function storage. The minimal artifact remains 1,984 bytes.
+
+The 25,797-byte (9,524 gzip) recursive-async row adds and exercises only the
+composition that initializes an async closure's private self cell. Its graph
+contains neither `microesnext-recursive-functions` nor parameter-frame
+storage; conversely, ordinary async and ordinary recursive rows exclude
+the recursive-async construction path.
+
+The 12,664-byte (5,239 gzip) native-resolution row creates two Promises,
+attaches an identity reaction, settles the source, forwards its queued result,
+verifies the destination, and rejects self-resolution with a guest TypeError.
+The isolated error value is 2,520 bytes (1,195 gzip). The 4,840-byte
+Promise-storage row remains unchanged; its final Wasm excludes native
+resolution even though both capabilities now share one package.
+
+The 20,494-byte (7,884 gzip) resolver row invokes a compact resolving function
+through guest call bytecode, handles its payload outside the invariant core,
+resumes the caller with `undefined`, and verifies that the destination settles.
+The 34,387-byte (12,615 gzip) thenable row additionally performs ordinary
+property lookup, invokes a real guest closure with its receiver, and fulfills
+through the one-shot pair. Unit tests cover deferred execution, receiver
+identity, rejection before resolution, ignored throws after resolution, and a
+thenable resolving to another separately scheduled thenable. Minimal,
+Promise-storage, native-resolution, and receiver-only artifacts remain
+byte-for-byte unchanged.
+
+The 45,893-byte (16,224 gzip) async-thenable composition runs async closures
+that return and await ordinary object thenables. Each outer Promise remains
+pending until the separately queued assimilation job runs; an awaited object
+settles an intermediate Promise whose reaction restores the guest
+continuation. Refactoring async resolution behind its generic static policy
+reduced the isolated async-functions artifact by 72 raw bytes rather than
+adding dispatch overhead. The facade dependency check proves that ordinary
+`async-functions` retains neither object-thenable jobs nor the
+async-thenable policy.
+Re-run them with:
+
+```sh
+deno run --allow-run=cargo --allow-read=target \
+  tools/measure-capabilities.ts
+```
+
+## Prototype-chain isolation
+
+Editor bundles make heavy use of `instanceof`: the checked generated bundles
+contain 30–136 occurrences each. Its allocation-free traversal is isolated in
+the objects `prototype_chain` module before callable and constructor semantics are
+added. On the current size profile, an objects probe is 14,473 raw / 5,775
+gzip bytes; composing prototype traversal is 15,213 / 6,012. The incremental
+cost is therefore 740 raw / 237 gzip bytes, and builds selecting only objects
+do not retain the traversal.
+
+Callable objects remain separate from both pieces. A final Wasm containing
+functions and objects is 16,905 raw / 6,713 gzip bytes. Adding the wrapper
+record, ordinary-property integration, call unwrapping, and its exercised
+probe produces 17,812 / 7,107—an increment of 907 raw / 394 gzip bytes. The
+objects-only probe remains exactly 14,473 / 5,775 after this addition; its
+kind checks and two-field layout are compile-time-specialized rather than
+paying a generalized branch for a feature it omitted.
+
+## Progressive compiler artifacts
+
+The compiler has its own final-linked Wasm probe because `.rlib` archives and
+LLVM bitcode contain code that link-time optimization may discard. Each row
+below instantiates the artifact and compiles a source string that exercises its
+selected syntax. The shared probe includes a fixed 32 KiB bump arena in linear
+memory; zero-filled linear memory does not occupy 32 KiB in the Wasm file.
+
+| Compiler build | Wasm bytes | Gzip bytes |
+| --- | ---: | ---: |
+| minimal | 5,471 | 2,378 |
+| control flow | 7,460 | 2,965 |
+| conditional expressions | 8,014 | 3,194 |
+| nonterminal conditionals | 8,207 | 3,100 |
+| nonterminal exceptions | 9,713 | 3,503 |
+| nested conditionals | 8,588 | 3,494 |
+| nested loops | 8,410 | 3,546 |
+| nested exceptions | 11,449 | 4,515 |
+| structured statements | 11,643 | 4,852 |
+| array literals | 6,224 | 2,677 |
+| array indexing | 6,460 | 2,814 |
+| array assignment expressions | 11,176 | 4,590 |
+| array expression values | 8,786 | 3,705 |
+| object literals | 7,779 | 3,363 |
+| object expression values | 10,244 | 4,301 |
+| collection literal expressions | 10,611 | 4,419 |
+| constructors | 13,264 | 5,615 |
+| construction | 15,459 | 6,311 |
+| classes | 19,762 | 7,588 |
+| class methods | 20,727 | 7,869 |
+| implicit class constructors | 20,541 | 8,022 |
+| static class methods | 20,844 | 7,916 |
+| anonymous class expressions | 23,379 | 8,866 |
+| exceptions | 7,121 | 3,030 |
+| expression statements | 6,175 | 2,607 |
+| logical operations | 7,293 | 3,256 |
+| bounded integer operations | 6,632 | 2,728 |
+| bounded numeric negation | 5,791 | 2,503 |
+| decimal number literals | 9,088 | 4,254 |
+| number division | 9,478 | 4,401 |
+| number remainder | 9,478 | 4,402 |
+| primitive Number coercion | 5,690 | 2,466 |
+| string Number coercion | 6,553 | 2,932 |
+| JavaScript Number negation | 6,072 | 2,597 |
+| strings | 6,353 | 2,859 |
+| strict string concatenation | 6,528 | 2,936 |
+| `typeof` | 6,554 | 2,940 |
+| `instanceof` | 5,956 | 2,586 |
+| property assignment | 11,317 | 4,571 |
+| locals | 8,346 | 3,519 |
+| local assignment expressions | 8,823 | 3,652 |
+| captured assignment expressions | 18,773 | 7,524 |
+| property assignment expressions | 11,619 | 4,787 |
+| basic functions | 13,184 | 5,564 |
+| function arguments | 14,148 | 5,953 |
+| implicit completions | 5,772 | 2,441 |
+| captured environments | 17,884 | 7,449 |
+| recursive named functions | 17,998 | 7,497 |
+| recursive constructors | 18,137 | 7,564 |
+| async functions | 14,224 | 5,936 |
+| recursive async functions | 18,970 | 7,858 |
+| default language slice | 52,591 | 18,833 |
+
+Expression statements add one generic stack discard to the invariant source
+compiler vocabulary. The focused runtime is 2,691 / 1,329 versus the 1,984 /
+961 core, and its compiler is 6,175 / 2,607 versus 5,471 / 2,378. The runtime
+dependency graph enables only the arena's `stack-operations` module; it includes
+no exceptions, functions, objects, or locals. Reduced compilers leave the first
+ordinary expression statement unconsumed, while existing specialized
+assignment statements continue to compile without this gate.
+
+Implicit completions are compiler-only and therefore have no runtime row. The
+focused compiler is 5,772 / 2,441 versus the 5,471 / 2,378 minimal compiler,
+an increment of 301 raw / 63 gzip bytes. A separate `#[cfg]` implementation
+keeps the omitted completion function structurally identical to its earlier
+form: the independently measured expression-statements compiler remains
+exactly 6,175 / 2,607 after this addition.
+
+Nonterminal conditionals are also compiler-only. Their 8,207 / 3,100 artifact
+adds 747 raw / 135 gzip bytes to the 7,460 / 2,965 control-flow compiler. The
+focused feature graph adds no bytecode capability beyond `control-flow`, while
+the omitted build retains the terminal conditional implementation.
+
+Nested conditionals extend that compiler to 8,588 / 3,494, an increment of
+381 raw / 394 gzip bytes over nonterminal conditionals. The larger gzip delta
+reflects the explicit frame-state loop rather than another repeated recursive
+parser path. A 2,048-level source and runtime probe completes without native
+parser or VM call frames. Omitting the feature preserves the nonterminal
+artifact exactly at 8,207 / 3,100 and adds no runtime capability.
+
+Nested loops generalize the conditional worklist rather than wrapping the old
+parser in another layer. The focused compiler is 8,410 / 3,546: consolidating
+the two frame paths makes it 178 raw bytes smaller and 52 gzip bytes larger
+than the conditional-only implementation. A mixed loop/conditional program and
+a 2,048-level loop source both compile and execute, including relocated targets
+inside functions. `nested-loops` adds only `control-flow` to the runtime graph.
+Omitting it preserves the nested-conditional artifact exactly at 8,588 / 3,494.
+
+Nonterminal exceptions compose handler cleanup with control-flow joins. Their
+focused compiler is 9,713 / 3,503 versus 7,121 / 3,030 for terminal exceptions,
+an increment of 2,592 raw / 473 gzip bytes. Normal try completion removes its
+handler and jumps over the catch; catch fallthrough discards its pending reason.
+Both targets relocate inside function bodies. Omitting the feature preserves
+the terminal exception artifact exactly at 7,121 / 3,030.
+
+Nested exceptions extend that join-aware parser with explicit worklist frames.
+Their focused compiler is 11,449 / 4,515 and their runtime graph remains exactly
+`control-flow` plus `exceptions`; the VM gains no nesting feature or depth
+counter. Live tests cover nested fallthrough, returns across multiple handlers,
+rethrows to an outer handler, nesting from a catch, and 2,048 active guest
+handler records. Omitting nesting preserves the nonterminal exception compiler
+at 9,713 / 3,503.
+
+Local assignment expressions compose the 4,012 / 1,798 locals runtime with
+the removable stack operation for a 4,786 / 2,066 live artifact. Their compiler
+is 8,823 / 3,652, an increment of 477 raw / 133 gzip bytes over locals alone.
+Omitting the feature retains the former locals artifacts exactly and leaves
+plain assignment unconsumed in expression position.
+
+Captured assignment expressions compose the 6,285 / 2,728 environment-cell
+runtime with a result-preserving store for a 7,186 / 3,047 live artifact. Their
+compiler is 18,773 / 7,524 versus 17,884 / 7,449 for captured environments.
+Omitting the feature removes its crate and opcode; it does not acquire the
+stack-operations crate used by uncaptured assignment.
+
+Property assignment expressions compose the 14,473 / 5,775 object runtime
+with a result-preserving object store for a 15,713 / 6,242 live artifact. Their
+compiler is 11,619 / 4,787. The compiler recognizes local, captured, receiver,
+and nested dot targets, while the focused runtime links neither environments
+nor stack operations. Omitting the feature removes its crate and opcode and
+leaves ordinary object reads and literal stores unchanged.
+
+Array indexing is compiler-only and raises the 6,224 / 2,677 literal compiler
+to 6,460 / 2,814 while reusing the existing array read instruction. Result-
+preserving indexed assignment composes the 8,768 / 3,532 array runtime into a
+10,034 / 4,006 artifact; its compiler is 11,176 / 4,590. Omission removes the
+dedicated crate and opcode and does not link objects, environments, locals, or
+stack operations into the focused runtime.
+
+Conditional expressions add 554 raw / 224 gzip bytes to the compiler over the
+7,460 / 2,965 control-flow baseline, producing an 8,014 / 3,194 focused
+artifact. The runtime is byte-for-byte the same control-flow machine: the
+syntax reuses boolean conversion and existing conditional and unconditional
+jumps. Omission leaves the token unconsumed and removes the parser and
+backpatching branch.
+
+The `literal-expressions` rows compose the ordinary expression parser with
+literal storage without changing either runtime. Numeric-only array and object
+compilers remain 6,224 / 2,677 and 7,779 / 3,363 respectively. Enclosing local
+values cost 8,786 / 3,705 for arrays or 10,244 / 4,301 for objects; selecting
+both shares enough parser code to total 10,611 / 4,419 rather than their sum.
+
+Strict string concatenation adds 175 raw bytes and 77 gzip bytes over literal
+strings. It is its own opcode and capability crate, and does not link numeric
+promotion or general JavaScript coercion.
+
+The 6,072-byte Number-negation compiler can target boxed results without the
+decimal/exponent literal parser. Before that parser boundary was separated,
+the same probe was 24,258 bytes (17,770 gzip). This is a compiler-only removal;
+the runtime Number-negation composition still includes the representation it
+needs to preserve negative zero.
+
+The minimal row links neither lexical binding nor function/capture parsing.
+The locals row adds stable slots without closures. Basic functions use
+zero-argument `CallValue` and ordinary local frames; parameter parsing,
+evaluated argument lists, `CallValueArguments`, and `InitFrame` are a separate
+compiler capability. Neither build acquires captured environments or a
+recursive constructor. Captures add environment-cell analysis; named function
+expressions add only their matching synchronous or asynchronous recursive
+constructor. The default row additionally retains all currently supported
+structural and scalar syntax. Re-run it with:
+
+```sh
+npm run measure:compiler
+```
+
+The lexical binding implementation now lives in one feature-gated
+`microesnext-bindings` crate instead of five packages with the same arena and
+frame representation. Exact pre/post builds kept environment cells at 6,285 /
+2,728 bytes, closures with shared environments at 11,173 / 4,434, recursive
+functions at 10,414 / 4,048, and functions with parameters at 10,897 / 4,357.
+Receiver-aware calls decreased from 13,156 / 5,109 to 13,122 / 5,103. The
+feature graph checker separately verifies that `locals`, `parameters`,
+`receivers`, `environments`, and `recursive-functions` remain removable; the
+package consolidation therefore adds neither code nor runtime dispatch.
+
+Scalar representations are likewise modules of one feature-gated
+`microesnext-values` package. Consolidating strings and atoms, symbols,
+numbers, decimal conversion, and guest Error values leaves the focused live
+artifacts unchanged: errors are 2,520 / 1,195 bytes, numbers 5,311 / 2,422,
+strings 4,903 / 2,270, symbols 4,995 / 2,254, and string Number coercion
+14,599 / 6,608. The compiler selects only `decimal-to-f64`, whose feature does
+not enable the optional arena dependency. Package-level composition therefore
+does not turn build-time numeric parsing into a runtime value dependency.
+
+Arrays, iterator cursors, and Map/Set storage are feature-gated modules of
+`microesnext-objects`. Their shared arena/table domain no longer requires four
+published packages. Raw focused Wasm remains exactly 8,768 bytes for arrays,
+3,599 for iterators, 3,285 for collections, 10,756 for array iteration, and
+13,542 for collection entry iteration. Weak collections remain a 2,051-byte
+composition. The object-package feature audit checks these modules separately,
+so package unification does not make one representation imply another.
+
+
+<!-- dev/microquickjs-experiment/docs/bytecode.md -->
+
+# Bytecode study
+
+MicroESNext inherits MicroQuickJS's compact stack bytecode. Instructions have a
+one-byte opcode followed by zero, one, two, or four bytes of immediate data.
+`mquickjs_opcode.h` is the authoritative instruction list: it declares each
+instruction's encoded size, stack inputs and outputs, and operand format. The
+same table drives interpretation, stack-depth analysis, relocation, dumping,
+and 64-to-32-bit bytecode conversion.
+
+Function bytecode carries a constant pool, argument and local-variable names,
+captured-variable descriptors, a maximum operand-stack depth, source mapping,
+and nested function bytecode. `fclosure` instantiates a nested function and
+connects its captured variables to the enclosing frame. Calls, returns,
+exceptions, and `finally` already have direct instructions.
+
+## Arrow functions
+
+Arrow functions do not require a new instruction. Their parameters and body
+use ordinary function bytecode, and `fclosure` creates the function. A function
+metadata bit distinguishes arrows so closure creation captures the enclosing
+`this`, calls restore that captured value, and construction can be rejected.
+Expression bodies compile as an expression followed by `return`.
+
+## Named function expressions
+
+A named expression has a lexical self-binding that is not visible in its
+enclosing scope. The optional `recursive_closure` instruction composes the
+ordinary closure and environment-cell capabilities: it creates one cell,
+places it first in the capture list, constructs the closure, and initializes
+the cell with that closure. Unnamed expressions, arrows, and declarations do
+not pay for this constructor, and builds omitting `recursive-functions` reject
+its opcode.
+
+## Class constructors
+
+`to_class_constructor` wraps a compact closure in a distinct property-bearing
+record and creates its `.prototype.constructor` cycle. The ordinary call path
+does not unwrap this record; the independently gated construction path does.
+Constructor-only class declarations otherwise reuse receiver frames, argument
+calls, property stores, and return selection rather than adding a parallel
+execution model.
+
+The compiler emits `construct_value_arguments` and
+`select_constructed_result` before compiling any later property or call
+suffixes. Constructor-member lookup uses ordinary `get_property`, because
+`new namespace.Type()` constructs the resolved value rather than calling it as
+a method of `namespace`. The selected instance or explicit object result then
+enters the unchanged postfix path, allowing forms such as `new Type().read()`.
+
+An omitted base constructor needs no bytecode extension. When enabled, the
+compiler synthesizes an ordinary zero-parameter receiver frame ending in
+`load_this` and `return_receiver_locals`, then applies `to_class_constructor`.
+This keeps implicit construction entirely out of runtimes that only consume
+explicitly authored bytecode.
+
+The separate method composition uses `to_method`, `get_method`, and
+`call_method_arguments`. `get_method` preserves the base immediately below the
+resolved value; evaluated arguments follow it. The call instruction removes the
+method and base, appends the base as the hidden receiver only for a callable
+object, and enters the otherwise ordinary argument frame. Omitting method calls
+leaves `get_property` and ordinary call bytecode unchanged.
+
+Static methods require no fourth method opcode. The compiler selects the class
+record rather than its `prototype`, applies `to_method`, and stores the result;
+subsequent member calls use the same `get_method` and `call_method_arguments`
+sequence as instance methods.
+
+Anonymous class expressions use the independently gated `duplicate_top`
+instruction while installing methods. The original class record stays beneath
+the duplicate, decoration consumes the duplicate, and the original becomes the
+expression result. A class with no methods needs no duplication. This avoids a
+persistent temporary local and leaves declaration-only class bytecode and its
+runtime unchanged.
+
+Uncaptured local assignment expressions reuse that same `duplicate_top`
+instruction. The right-hand value is duplicated, `store_local` consumes one
+copy, and the other remains as the expression result. Statement assignment
+continues to emit only `store_local`; builds omitting assignment expressions do
+not decode stack duplication merely because they support mutable locals.
+
+Captured assignment uses `store_environment_cell_result` instead. Its input is
+`[cell, value]` and its output is `[value]`; the operation updates the traced
+cell between those states. This is deliberately distinct from
+`store_environment_cell`, which consumes both inputs for statement assignment,
+and from `duplicate_top`, which cannot preserve a value around a cell without
+extra stack movement.
+
+Property assignment expressions use `set_property_result`. Its input is
+`[object, key, value]` and its output is `[value]`; the object store occurs
+between those states. Intermediate dot segments use ordinary `get_property`,
+so a nested target adds no specialized traversal instruction. The opcode is
+separate from `set_property`, which returns the object for literal assembly,
+and `set_property_statement`, which leaves no result.
+
+Computed array reads use the existing `get_index` instruction already required
+by array storage. The compiler-only `array-indexing` gate therefore changes no
+runtime. Array assignment expressions use `set_index_result`; its input is
+`[array, index, value]` and its output is `[value]`. This is distinct from
+`set_index`, whose object result lets literal construction append another
+element. Intermediate mixed suffixes continue to use ordinary `get_property`
+or `get_index` instructions.
+
+## Receivers
+
+Receiver-aware functions use `init_receiver_frame`, `load_this`, and
+`return_receiver_locals`. The caller appends one hidden receiver after the
+evaluated arguments. Frame initialization leaves the ordinary count and local
+slots in their existing positions and keeps the receiver immediately after the
+fixed local region. Temporary operands can therefore grow above it without
+changing its address.
+
+These instructions are optional rather than a new field in the invariant VM.
+Ordinary closures and bytecode remain unchanged. The optional thenable driver
+uses these instructions to invoke a guest `then` function with the source
+object as its receiver; it schedules chained thenables as separate jobs.
+
+## Strict equality
+
+The optional `strict_equal` and `strict_not_equal` instructions each consume
+two values and produce a tagged boolean. Their implementation is statically
+composed with the enabled value representations: the identity-only build does
+not link number or string storage, while scalar builds compare numbers and
+string contents according to JavaScript strict-equality semantics. Collection
+SameValueZero remains a distinct operation because its treatment of `NaN`
+differs.
+
+## Short-circuit logical operations
+
+`jump_if_falsy_or_pop` implements `&&`; `jump_if_truthy_or_pop` implements
+`||`. Each reads the top operand without copying it. When the operand selects
+the expression result, the instruction jumps and leaves it in place. Otherwise
+it pops that operand and falls through to the right expression. Forward targets
+are ordinary relocation entries, so the same representation works inside
+nested function bodies without native callbacks or an AST at runtime.
+
+These instructions belong to `logical-operations`, not basic `control-flow`.
+Consequently a machine needing loops and `if` but no logical expressions does
+not decode them or link their truthiness composition.
+
+Conditional source expressions need no additional instruction. The compiler
+emits `to_boolean`, `jump_if_false_boolean`, the consequent, an unconditional
+`jump`, and the alternate. Both targets use ordinary relocation records when
+the expression is inside an appended function body. Thus a runtime capable of
+`if` already has the complete execution vocabulary, while a reduced compiler
+can omit the `?:` parser branch independently.
+
+## Numeric targets
+
+`const_f64` belongs to number representation; `add_number`,
+`subtract_number`, `multiply_number`, and promoted relational operations
+belong to the separate number-operations capability. Numeric equality and
+storage can therefore omit all arithmetic decoder arms.
+
+The compiler target is explicit. A JavaScript-number target emits an invariant
+i30 opcode only when its result is statically known to fit, and otherwise emits
+the promoted operation. A bounded-i30 target emits only the smaller integer
+instruction family and reports overflow at execution. This is a build target,
+not a language-visible claim that JavaScript integers stop at 30 bits.
+
+Collection-literal expression support is entirely a compiler composition.
+Both the reduced numeric loop and the general-expression loop emit the same
+`new_array`/`set_index` and `new_object`/`set_property` instructions. Therefore
+enabling richer literal source syntax adds no decoder branch or runtime
+dispatch, and omitting it can discard parser code without changing bytecode
+semantics.
+
+## Untagged template literals
+
+Bare template literals do not require a new instruction. Cooked literal pieces
+enter the existing constant pool. Each substitution uses the ordinary
+expression compiler, and the pieces are combined with the existing `add`
+instruction, whose string coercion supplies template interpolation semantics.
+Tagged templates are intentionally not part of this milestone.
+
+The Rust engine currently keeps `ConcatenateStrings` removable and strict: it
+accepts only two existing strings. This gives statically proven concatenation
+a small implementation without pretending to provide the general coercion
+required by template substitutions.
+
+## Async functions and await
+
+An async function body reuses ordinary frame, local, capture, and return
+instructions. The optional `async_closure` constructor distinguishes its call
+boundary from an ordinary closure: a call returns a pending Promise to the
+caller while its body runs in an independent guest context. Builds omitting
+`async-functions` neither decode that constructor nor link its closure and
+invocation storage.
+
+Declarations, anonymous function expressions, and arrows emit that same
+constructor. A named recursive async expression emits
+`recursive_async_closure`, whose separate composition crate adds a private
+self cell to async closure storage. Builds needing async functions but not
+recursive self identity do not decode or link that constructor.
+
+`await` suspends after evaluating one operand. It retains the function's
+arguments, locals, operand stack, program counter, exception state, and live
+captured-variable references, then resumes with either a fulfilled value or a
+thrown rejection.
+
+The runtime stores suspended contexts in GC-visible engine objects and
+schedules their continuation through the same bounded FIFO Promise job queue
+used by `then`. A caller-supplied async frame array tracks only currently
+running nested bodies; once a body reaches `await`, its heap continuation and
+Promise reaction replace that scheduler frame. This preserves ordinary
+bytecode on either side of an await while making suspension explicit.
+
+The saved context contains the active stack range, frame and handler depths,
+and program counter. The scheduler frame separately roots the caller context
+and outer Promise. Captured mutable variables remain traced environment cells,
+so compaction can relocate the entire graph without exposing raw offsets.
+
+MicroESNext executes a resumed function on its ordinary compact VM stack. It
+does not leave every async invocation permanently resident there: while the
+function is suspended, its snapshot is an ordinary GC-visible value graph.
+Fulfillment restores the awaited operand and continues after `await`;
+rejection restores the same frame and enters its existing exception machinery
+as though the await expression had thrown.
+
+`try` records a catch target together with the current operand, call-frame, and
+outer-handler depths. `end_try` removes that record on normal completion while
+preserving the expression result. `throw`, including the abrupt completion
+created by a rejected `await`, truncates the guest stack to the nearest record
+and resumes at its catch target. None of these operations uses native Rust or
+WebAssembly stack unwinding.
+
+The bytecode format version is `2`. Version `1` readers cannot safely infer the
+new function metadata or opcode numbering and must reject these artifacts.
+
+Whenever the instruction table changes, tests must cover source execution,
+bytecode compilation/loading, stack-size analysis, dumping, relocation, and
+the 64-to-32-bit conversion path. An opcode working only in the interpreter is
+not considered implemented.
+
+
+<!-- dev/microquickjs-experiment/docs/rust-engine.md -->
+
+# Rust engine invariants
+
+MicroESNext is not an ordinary Rust object graph wrapped around a bytecode
+loop. Its guest machine is a relocatable address space with explicit bounds.
+The following rules preserve the properties for which MicroQuickJS is useful.
+
+- Every guest `Value` and heap reference is exactly four bytes on Wasm32 and
+  native targets.
+- Runtime crates are `no_std`, receive their memory from the caller, and do not
+  require libc or a global allocator. Compiler tooling may use `alloc` in a
+  separate crate.
+- Capacity is not permanently fixed. A caller can move a machine into a larger
+  word slice. Heap offsets remain unchanged and the stack is copied against the
+  new upper boundary. A Wasm controller can grow linear memory and rebind the
+  same offset-based machine state.
+- Durable relationships use word offsets. A Rust reference into the arena may
+  not survive a call that can allocate or collect.
+- The guest heap grows upward and its operand/frame stack grows downward in one
+  fixed-capacity buffer.
+- Guest calls, parsing, tracing, and suspension must not recurse on the native
+  stack.
+- Guest allocations do not become individual `Box`, `Vec`, `String`, `Rc`, or
+  host allocator entries.
+- Collection traces and compacts the arena. Debug tests must relocate live
+  graphs frequently enough to expose stale offsets.
+- Bytecode and immutable built-ins may be shared outside the mutable arena.
+- Capabilities are independent Cargo features within a small set of coherent
+  crates linked statically. The base opcode loop does not use trait objects,
+  dynamic registries, or callbacks for omitted features.
+- Capability bytecodes are feature-gated at decoding as well as execution.
+  Bytes assigned to an omitted capability are invalid rather than accepted by
+  a larger universal enum and rejected later by the VM wrapper.
+- The execution crate's `core` module reads raw bytes and depends only on the
+  invariant `microesnext-bytecode::core` vocabulary. It returns any non-core
+  byte to the feature-gated typed decoder in `microesnext-vm`; the raw core is
+  deliberately not an independent validator for extension opcodes.
+- An awaited computation is a heap-resident VM frame. Rust `async fn` and its
+  compiler-generated future are host integration options, not its guest
+  representation.
+- The optional execution `suspension` feature owns conversion between a live
+  VM stack and a rooted continuation. The arena supplies generic stack-snapshot
+  storage, but the execution `core` module contains no suspend, resume, or restore
+  algorithm. Builds without `async` do not expose those machine operations.
+- An async JavaScript call cannot suspend its ordinary caller at the first
+  `await`. The optional execution `async-functions` layer therefore packages
+  the closure and evaluated arguments, snapshots the caller, and starts the
+  body in an independent guest context over the same arena. The scheduler can
+  restore the caller with the outer promise while the body continuation enters
+  that promise's reaction path. A bounded caller-owned frame array permits
+  nested async entry without a native recursive call or hidden allocation.
+- Guest exception handlers are explicit records in the guest stack. The
+  optional execution `exceptions` module owns the handler-chain pointer and
+  stack operations; `microesnext-vm` composes it only behind the `exceptions`
+  feature, and the invariant opcode core has no exception state. A throw
+  restores the recorded operand and call-frame depths without unwinding the
+  native Rust stack. Suspension snapshots the active handler depth, so a
+  rejected `await` follows exactly the same handler chain as a synchronous
+  throw.
+- Wasm exception references are an optional foreign-call optimization, not the
+  representation of a JavaScript exception. A baseline artifact must remain
+  usable by engines that cannot validate `exnref`; a separately selected build
+  may catch and rethrow opaque host or foreign-Wasm exceptions unchanged.
+- Scheduler and host references use O(1), generation-checked root slots. Raw
+  moving heap offsets are not exposed as durable asynchronous handles.
+- Native Promise adoption is an optional composition over compact Promise
+  storage. It registers an identity reaction in the caller-owned queue rather
+  than recursively following a chain on the Rust or WebAssembly stack. Its
+  compact error dependency turns self-resolution into a guest TypeError
+  rejection rather than an engine-control error.
+- Receiver-aware invocation is an optional frame composition. It reuses the
+  existing argument entry path with one hidden value after fixed locals; the
+  invariant `Core`, ordinary frames, and builds omitting `receivers` are
+  unchanged. Object thenable assimilation uses this boundary rather than a
+  host callback or proxy.
+- Promise resolving functions are compact callable records rather than guest
+  closures. A resolve/reject pair shares one traced `alreadyResolved` cell and
+  yields a payload-free VM outcome; optional machine state carries the call to
+  its controller without changing the invariant core or the public outcome
+  layout under Cargo feature unification.
+- Thenable resolution is split into synchronous inspection and rooted jobs.
+  Guest `then` code is never invoked inline while resolving a value. If its
+  resolving function receives another thenable, execution returns a new job to
+  the controller, preserving ECMAScript deferral without native recursion.
+- Async completion is generic over a statically dispatched resolution policy.
+  Its ordinary public entry points monomorphize with native Promise resolution;
+  The scheduler `async-thenables` feature supplies a separate policy holding a
+  bounded,
+  caller-owned thenable-job queue. The same policy can park an `await` on an
+  intermediate Promise before resolving an object operand, while native
+  Promises and primitives retain the direct path. This adds no trait object,
+  callback, or branch to a build that omits the composition.
+- Packed byte strings, atom tables, objects, and closures remain arena blocks;
+  they do not become Rust allocations merely because their implementations are
+  split across crates.
+- Small integers remain immediate i30 values in the invariant core. Optional
+  IEEE-754 numbers use opaque two-word payloads from the values `numbers` feature, so
+  arbitrary floating-point bits are never traced as guest references. Builds
+  without `numbers` omit the arena block kind, typed opcodes, and implementation.
+- Unary integer and JavaScript Number negation are separate capability modules
+  from binary arithmetic. The promoted path preserves negative zero, while a
+  build needing only multiplication or comparison retains neither negation
+  implementation nor either negation opcode.
+- Division and remainder are separate from each other and from ordinary
+  arithmetic. This is not only taxonomy: linked Wasm showed that floating `%`
+  retains a substantially larger helper than `/`. A division-only machine has
+  no remainder opcode, implementation, or dispatch branch.
+- Primitive Number coercion is a further capability boundary. Its typed result
+  lets promoted negation consume a coercion result once, while its pre-existing
+  i30 branch remains ahead of coercion. Unary plus materializes a boxed value
+  only for NaN. String parsing and object coercion are deliberately absent
+  rather than host-defined.
+- String Number coercion is layered above that primitive module. It borrows the
+  packed arena payload directly, validates the whole grammar, and allocates
+  only the resulting boxed number when an immediate i30 cannot represent it.
+  Power-of-two integer parsing keeps explicit guard/sticky bits; no temporary
+  guest string participates in those paths.
+- Decimal conversion is a separate leaf module shared by compiler literals and
+  string coercion. Its exact fast path and bounded correctly-rounded fallback
+  contain no allocator or runtime policy. Static Cargo composition removes the
+  code and its call sites when neither consumer is selected.
+- `typeof` is another leaf policy rather than a method on the VM. Its base
+  build recognizes immediates, strings, ordinary objects, and closures;
+  optional arena kinds extend the same direct match through Cargo feature
+  unification. It allocates an ordinary string and requires no atom table.
+- Ordinary strings, atom interning, and objects form three boundaries. A string
+  value is not automatically retained or interned. Atoms add a rooted table;
+  objects compose atoms for source-level property names. A string-only machine
+  links neither atom nor property-table operations.
+- Symbols are individually allocated identities whose optional descriptions do
+  not participate in equality. Object and collection tables already compare
+  compact `Value` identities, so symbols compose as keys without either table
+  depending on the values `symbols` module. The arena symbol kind is feature-gated.
+- Iterator positions are guest-arena state rather than native Rust cursors.
+  The source-agnostic objects `iterators` module retains the iterable and
+  current index across collection. Array and Map/Set traversal live in separate
+  adapter modules, preserving both dependency and code-size isolation.
+- SameValueZero is capability-aware without runtime registration. A standalone
+  collection build compares compact identities directly. Cargo weak-feature
+  forwarding statically adds string-content and boxed-number equality only
+  when collections are composed with those scalar features.
+
+The first Rust vertical slice deliberately supports only i30 constants,
+addition, `await`, and return. It proves that the interpreter can suspend after
+its Rust call stack has unwound, retain its operand stack through a compact
+handle, and resume without a native continuation. Language coverage comes
+after this representation is measured and hardened.
+
+
+<!-- dev/microquickjs-experiment/docs/supported-es6.md -->
+
+# Supported modern JavaScript subset
+
+MicroESNext implements a focused set of newer primitives and syntax. This is
+not a general claim of ECMAScript conformance.
+
+## Syntax and async execution
+
+`undefined`, `null`, `false`, and `true` compile to tagged values in the
+invariant VM. They require no heap allocation and no optional capability.
+
+Decimal and exponent literals compile to the optional `numbers` capability.
+It preserves IEEE-754 values, including negative zero and NaN, while keeping
+small integers as immediate i30 words. Addition of statically small integer
+terms stays on the invariant opcode path; expressions requiring promotion use
+the removable numeric path.
+
+The i30 range is an internal immediate-value optimization, not a visible
+JavaScript integer limit. With `numbers` enabled, the IEEE-754 precision
+boundary is `2^53`: that value itself is representable, but `2^53 + 1` is not
+distinct from it. Consequently `Number.MAX_SAFE_INTEGER` is `2^53 - 1`.
+Integer-only compositions intentionally expose a smaller bounded subset;
+full numeric compositions promote results that no longer fit an i30.
+
+Compiler callers select that distinction through `CompileOptions`: the
+default JavaScript target promotes, while `NumberMode::BoundedI30` produces
+bytecode for a runtime that intentionally omits number storage and promoted
+operations. The compiler retains direct i30 instructions for statically proven
+small results in either target.
+
+The bytecode generator is progressive as well as the runtime. Its current
+Cargo gates independently remove number representation, promoted and bounded
+number operators, strict equality, and logical operators. When a gate is
+absent the parser does not consume that syntax, so callers receive the same
+ordinary grammar error they would get for another unexpected token. The
+`source-positions` feature controls whether `CompileError` retains the source
+offset; compact build-time uses can omit that field. Array literals are an
+independent parser feature. Object literals and property access compose the
+object, atom, and string bytecode vocabulary, without adding those paths to an
+array-only or scalar-only generator.
+
+Conditional expressions are a compiler-only composition over control flow.
+They evaluate the condition once, apply the runtime's selected truthiness
+policy, execute exactly one branch, and associate from the right. Their branch
+targets use the same relocation path inside nested functions as loops and
+logical operators. Omitting `conditional-expressions` leaves `?` unconsumed and
+adds no opcode or runtime feature.
+
+The separate `nonterminal-conditionals` compiler gate lets either `if` branch
+fall through to later statements. A branch ending in `return` or `throw` is
+recognized as abrupt and receives no redundant join jump. Both alternate and
+join targets use function relocation when needed. The further
+`nested-conditionals` gate tracks consequent/alternate state, abruptness, and
+patch positions in an explicit allocation-using worklist. It accepts nested
+`if`/`else` without Rust recursion; a test compiles and executes 2,048 levels.
+The further `nested-loops` gate adds loop start and exit frames to that same
+worklist. Loops and conditionals may be interleaved to arbitrary source depth;
+back edges, exits, joins, and function-body relocations remain direct bytecode
+patches. Its own 2,048-level compile-and-run test consumes no Rust parser
+frames. Exception regions use the independently removable worklist below.
+
+Exception regions now have their own independently removable
+`nested-exceptions` worklist. It tracks whether each source region is compiling
+its `try` or `catch` side, patches catch targets directly, and emits one
+`end_try` for every live handler crossed by a return. Throws continue through
+the runtime's existing nearest-handler chain. The prerequisite
+`nonterminal-exceptions` feature gives normally completed try and catch sides a
+direct join over the catch body, releasing the handler record or caught value
+before later statements. A test compiles and executes 2,048 nested regions
+without Rust parser frames; the VM still has no source nesting counter or fixed
+depth.
+
+Expression statements are independently selectable. Any expression accepted
+by the chosen compiler composition may be followed by `;` before a terminal
+completion, including calls and result-preserving property or array
+assignments. The compiler emits one generic `DropTop` operation, so adding a
+new expression family does not require another statement opcode. This works at
+top level and in function, method, constructor, loop, conditional, `try`, and
+`catch` bodies. Omitting `expression-statements` removes its parser loop and
+the stack-operation dispatch; specialized local and property assignment
+statements retain their smaller direct paths.
+
+The compiler-only `implicit-completions` feature accepts explicit `return;`
+and bodies that reach their closing brace or the end of a script. Both produce
+the invariant `undefined` value through existing return bytecode. Fall-through
+from a terminal `try` closes its handler before returning; a fall-through catch
+discards the pending exception first. Constructors retain their existing
+receiver-return rule. Omitting the feature restores the original parser
+implementation, requires a value-bearing `return` or `throw`, and changes no
+runtime dependency or dispatch path.
+
+Property-assignment statements are separately gated from object literals and
+reads. The current source form accepts `local.name = value;` and constructor
+receiver initialization such as `this.name = value;`. Its opcode consumes the
+object, interned key, and value without leaving an unused expression result, so
+it needs no general stack-cleanup feature. The independent
+`local-assignment-expressions` composition adds plain `=` for uncaptured lexical
+locals. It is right-associative, so `left = right = value` stores and evaluates
+in JavaScript order, and the expression returns the stored value. The separate
+`captured-assignment-expressions` composition extends the same grammar to an
+outer capture or a locally held environment cell. It updates the shared value
+seen by sibling closures and still returns the assignment result. Property
+targets are another independent composition. It accepts local, captured, and
+receiver bases with one or more dot-separated names, so `object.value = rhs`,
+`outer.inner.value = rhs`, and `this.value = rhs` all return and store `rhs`.
+Computed object keys, arbitrary expression bases, and compound assignment
+remain separate compositions because they need different storage and stack
+mechanics.
+
+Array indexing is independently selectable from array literals. It accepts an
+ordinary supported expression between brackets and composes through chained
+index, named-property, call, and construction suffixes. The separate
+`array-assignment-expressions` composition accepts local, captured, and
+receiver bases ending in an index, including mixed forms such as
+`holder.items[index] = value`. Indices in this initial array-specific layer must
+be nonnegative i30 values; general computed property keys require a later
+`ToPropertyKey` composition.
+
+Array and object literals keep a compact numeric-value parser when
+`literal-expressions` is omitted. Enabling that compiler-only composition lets
+each value use the ordinary supported expression grammar, including enclosing
+bindings, nested literals, and guest calls. It adds no opcode or runtime crate:
+the resulting values still use `set_index` and `set_property`. Computed keys,
+spread properties/elements, elisions, and shorthand properties remain separate
+syntax work.
+
+The removable integer-operations slice adds subtraction, multiplication, and
+`<`/`>` comparisons with ordinary multiplicative, additive, then relational
+precedence. Together with local assignment and `while`, it can run a
+source-compiled factorial loop with `n > 1` as its stopping condition without
+linking boxed IEEE-754 numbers. Results outside the i30 range currently fail
+rather than promote, so this is a deliberately bounded programming subset, not
+yet full JavaScript numeric semantics.
+
+JavaScript Number division and remainder are independent product-level
+features. `/` produces IEEE-754 semantics, including infinities and NaN. `%`
+preserves immediate integer results where possible and boxes cases such as
+negative zero or non-integer operands. They have separate modules, bytecodes,
+compiler gates, and VM match arms because the linked floating remainder helper
+is much larger than division. Omitting either token family leaves it unconsumed
+as ordinary unexpected syntax.
+
+Unary numeric negation is independently removable from those binary
+operations. Its bounded build accepts i30 operands and reports overflow; the
+JavaScript Number composition keeps nonzero i30 results immediate, promotes
+the asymmetric minimum, boxes `-0` so its sign remains observable, and applies
+primitive Number coercion. Unary `+` is its own removable bytecode/compiler
+gate: booleans and null become immediate i30 values, undefined becomes boxed
+NaN, and existing i30 and boxed numbers are retained. Strings and objects are
+rejected until separately removable string parsing and `ToPrimitive`
+compositions exist. Prefix operators are collected iteratively before
+emission, so mixed chains do not recurse on the native stack. Compiler builds
+with only one unary family retain a smaller specialized scanner. A compiler
+selecting only `number-negation` can emit the promoted instruction without
+also retaining decimal and exponent literal parsing; selecting `numbers` adds
+those literal forms.
+
+The independent `string-number-coercion` composition extends those same unary
+instructions to string operands. It trims the ECMAScript whitespace and line
+terminator set, accepts decimal `StringNumericLiteral`, signed `Infinity`, and
+unsigned binary/octal/hex integer forms, preserves negative zero, and returns
+NaN for invalid input. It does not add object conversion or make every
+string-enabled runtime retain numeric parsing. Decimal source literals and
+this coercion share `microesnext-decimal-to-f64`; omitting both removes its
+exact fast path and bounded correctly-rounded fallback from the linked build.
+
+Strict equality and inequality (`===` and `!==`) are a separate removable
+capability. Immediate values, objects, and symbols compare by identity. When
+composed with strings, independently allocated equal strings compare by
+content; when composed with numbers, `+0` equals `-0` and `NaN` remains unequal
+to itself. This is deliberately separate from the SameValueZero operation used
+by Map and Set, where `NaN` keys compare equal. Coercive `==` and `!=` are not
+yet included.
+
+These scalar features are independent. In particular, `equality,numbers`
+contains no string constructor, string bytecode, atom table, or string-aware
+equality path. Guest code in that build has no operation that can create a
+string value or place one in a variable; adding numeric equality does not imply
+a general dynamically typed scalar bundle.
+
+`typeof` is independently removable and returns the standard strings for
+undefined, booleans, numbers, strings, symbols, functions, and objects,
+including JavaScript's `typeof null === "object"` rule. Boxed numbers, symbols,
+async closures, and Promise resolver functions participate only when their
+separate representation features are composed. Repeated and mixed unary forms
+such as `typeof typeof value` and `typeof +value` preserve right-to-left unary
+evaluation. A build without `typeof` does not consume the keyword.
+
+Ordinary `instanceof` is split across callable-object records, property
+lookup, and allocation-free prototype traversal. The operator has its own
+bytecode, compiler, VM, and facade gates; omitting it leaves the keyword
+unconsumed and preserves the pre-existing relational parser. Its current
+runtime accepts callable objects with an ordinary object-valued `prototype`
+property. With the independent `constructors` gate, synchronous `function`
+declarations and expressions are wrapped in ordinary callable objects with a
+cyclic `.prototype.constructor`; arrows and async functions remain compact,
+non-constructible closure records. The separately removable `construction`
+gate compiles direct `new Constructor(arguments)` expressions, creates a
+receiver whose prototype is the constructor's current object-valued
+`prototype`, exposes it as `this`, and implements the ordinary primitive- versus
+object-return rule. The preserved receiver stays below the ordinary call frame,
+so construction adds no persistent VM field. A direct identifier or member
+constructor may omit parentheses and then uses the same zero-argument opcode.
+Parenthesized constructor expressions, `Symbol.hasInstance`, bound functions,
+and host constructors are not implied by this initial path. The constructed
+result does support ordinary property and method suffixes, and a direct member
+constructor such as `new namespace.Type()` resolves without retaining the
+namespace as a method receiver. A named function's
+private self cell is rebound to the wrapper by the independent
+`recursive-constructors` composition, so calls and construction observe the
+same function identity. Function declarations already reuse their ordinary
+captured declaration cell and do not need that opcode.
+
+The `classes` slice accepts a named declaration containing a constructor. It
+emits a distinct class-constructor record rather than
+lowering the declaration to an ordinary function, so calling it without `new`
+is a type error. Constructor parameters, `this` property initialization,
+explicit returns, and the implicit `this` result compose with existing receiver
+and construction rules. The separate `class-methods` gate adds synchronous
+instance methods with ordered parameters and receiver-preserving member calls.
+Those methods are callable objects without constructor prototypes, so extracting
+one loses its receiver and attempting to construct one fails. `extends`, fields,
+accessors, generators, async methods, computed names, and static initialization
+blocks are not included by these focused gates. The
+compiler-only `class-static-methods` feature does support synchronous named
+static methods. They live on the class record and receive that record as `this`.
+
+The `class-expressions` composition accepts anonymous classes in expression
+position. Explicit and default constructors, instance methods, and static
+methods behave as they do in declarations, while the expression evaluates to
+the decorated class record. Named class expressions and their private inner
+binding are not yet included.
+
+The compiler-only `class-default-constructors` feature also accepts empty and
+method-only base classes. It synthesizes a zero-argument receiver frame that
+returns `this`, then emits the same class-record operation as explicit source.
+There is deliberately no runtime feature or special default-constructor opcode.
+Derived default constructors await the separate `extends` composition because
+they must forward arguments through `super` rather than merely return `this`.
+
+Logical AND and OR (`&&` and `||`) are another removable composition. They
+short-circuit evaluation and return the selected operand rather than coercing
+it to a boolean. Unary `!` uses the same selected truthiness policy and returns
+a tagged boolean. The compiler counts repeated negations before parsing their
+operand, avoiding native recursion for inputs such as `!!!!!!!!value`. Their
+branch instructions retain the left operand when it
+wins and pop it before evaluating the right operand otherwise. `&&` binds more
+tightly than `||`, while strict equality and relational arithmetic bind above
+both. Number-only and string-only truthiness are tested as separate Cargo
+feature combinations.
+
+Arrow functions support expression and block bodies. Lexical `this` and
+`arguments`, and rejection as constructors, remain compiler work. Untagged
+template literals support cooked text, escapes, multiline text, and
+substitutions. Tagged templates are not included.
+
+The Rust compiler currently emits single-quoted, double-quoted, and
+no-substitution template strings directly into the removable string bytecode.
+It accepts the compact escape set used by the current examples and preserves
+UTF-8 source bytes. `${...}` substitution remains in the C behavioral oracle
+until general JavaScript addition/coercion is composed in Rust; a string-only
+compiler rejects it at the dollar sign rather than silently changing its
+meaning.
+
+Strict concatenation is a separate runtime and compiler capability. When both
+operands are proven string literals, it emits `ConcatenateStrings` and joins
+their arena bytes without a temporary Rust allocation. It deliberately does
+not stand in for dynamic JavaScript `+`, `ToPrimitive`, or `ToString`.
+
+The current compiler accepts `async function` declarations, anonymous async
+function expressions, and async arrows with expression or block bodies.
+Runtime async closures return their outer Promise before an awaited body
+finishes, and nested async calls restore each ordinary caller in order—even
+when the nested call begins after its caller has resumed. `await` on a value or
+engine Promise resumes through the Promise job queue; synchronous throws
+reject the outer Promise. Rejections after suspension propagate through nested
+awaits and enter restored guest `catch` handlers. Named async expressions
+retain a private self-binding through the removable recursive-async
+composition. An optional async resolution policy assimilates object thenables
+returned by an async function or used as the operand of `await` through the
+bounded thenable-job queue. Source-visible Promise APIs, async methods, and
+async generators remain compiler/runtime work rather than implied support.
+
+The current Rust compiler slice also emits function declarations, anonymous
+function expressions, single- or parenthesized-parameter arrows, postfix calls,
+and ordered parameter slots directly to bytecode. Arrow expression and block
+bodies share the ordinary closure compiler rather than adding an opcode. A
+function expression may be called immediately or retained in a local, and all
+three forms use the same capture analysis. Both declared parameters and call
+arguments have a `u16` count. Argument-to-local frame setup is a removable
+capability rather than a cost borne by functions without parameters. Named
+function expressions get a private self-binding backed by a removable
+recursive-function constructor, allowing recursion without leaking the name
+into the enclosing scope. The optional receiver runtime can enter a closure
+with an explicit receiver, expose it through receiver-specific frame bytecode,
+and leave the frame without changing ordinary parameter/local positions.
+Source compilation of `arguments` and full declaration hoisting remains
+compiler work. Receiver-preserving member calls are an independent composition:
+ordinary property reads still discard the base, while a property immediately
+followed by a call retains the base only until the method frame is entered.
+
+Mutable closure semantics use optional traced environment cells. Compiler
+capture analysis boxes only bindings that cross a function boundary; sibling
+closures and later writes by the outer frame share the same cell. This avoids
+turning every lexical local into a heap allocation merely because some builds
+support closures. A self-referential declaration initializes its closure into
+that same cell, providing the identity needed by recursive calls. Nested
+function declarations are appended with explicit bytecode relocation records;
+captures can be forwarded through intermediate functions without allocating a
+second cell for the same binding. Branch, loop, catch, and nested-function
+targets share that relocation path. Recursive source calls therefore stay on
+guest VM frames rather than consuming the native Rust stack.
+
+The Rust vertical slice directly emits bytecode for a deliberately narrow
+`try { return|throw expression } catch [(name)] { return|throw expression }`
+form, with fallthrough joins behind `nonterminal-exceptions` and nested regions
+behind `nested-exceptions`. Catch targets are backpatched without an AST.
+Handler records and caught values live on the guest stack, survive `await`, and
+are removed on normal and abrupt paths. Nested lexical environments, `finally`,
+and the complete ECMAScript grammar remain future compiler work.
+
+## Collections
+
+Unique symbols are available as a removable primitive and compose directly as
+object, Map, and Set keys. Descriptions may be absent or ordinary strings, but
+do not affect equality. The global symbol registry remains future work. The
+realm-owned `Symbol.iterator` identity is a separate capability rather than
+making every symbol build retain realm state or an atom table. Small realms can
+omit its description string, while string-capable realms can supply the
+standard `"Symbol.iterator"` description.
+
+`Map` and `Set` provide constructors from arrays, ordered storage,
+SameValueZero key comparison, `size`, `get`, `set`, `add`, `has`, `delete`,
+`clear`, `forEach`, and stateful `keys`, `values`, and `entries` iterators.
+Iterators remain live while entries are deleted or appended.
+SameValueZero is statically composed: boxed NaNs and signed zero work when the
+number capability is present, and independently allocated equal strings work
+when strings are present. Neither comparison path enters collection-only
+builds.
+
+The Rust engine keeps iterator cursors in the guest arena, so they relocate and
+retain their source without a native allocation. Array-value iteration and
+Map/Set key/value iteration are independent adapters. Map entry iteration is a
+third adapter because its pair results require array allocation. A separate
+result-object capability creates relocatable `{ value, done }` objects using
+cached atom identities. It accepts the same allocation-free `Option<Value>`
+returned by either source adapter. Cursor-only builds omit its object, atom, and string
+dependencies.
+Entry-pair allocation and guest calls remain above this layer. Binding and
+inherited lookup of the realm-local `Symbol.iterator` are available separately
+from function validation and invocation; this keeps the protocol identity
+useful without forcing closures into every iterable build.
+
+`WeakMap` and `WeakSet` provide constructors from arrays and their usual
+`get`, `set`, `add`, `has`, and `delete` operations. Keys must be objects. The
+collector treats their entries as ephemerons: a live key retains its value,
+while a collection alone does not retain its keys.
+
+## Promise
+
+The current runtime slice provides compact pending/fulfilled/rejected records,
+reaction lists, and a caller-owned FIFO job ring. Optional native resolution
+adopts another engine Promise, including its eventual rejection, without
+linking object property lookup. Async function return uses this path.
+
+Self-resolution rejects with a compact guest TypeError value. Optional
+one-shot resolving functions share an `alreadyResolved` cell. The thenable
+composition reads an ordinary object's data-property `then`, verifies that it
+is a guest closure, and schedules it with the object as `this`. A throw before
+resolution rejects; a throw or second resolver call afterward is ignored.
+Resolving with another thenable returns a separately rooted follow-up job, so
+chains remain deferred and never recurse on the Rust or WebAssembly stack.
+
+Accessors and proxies for `then`, async `then` closures, source-visible
+`Promise`, `then`, `catch`, `finally`, `resolve`, `reject`, `all`, and `race`,
+subclass constructors, species, and unhandled-rejection reporting remain work
+rather than claimed support.
+
+## Editor-driven scope
+
+The surface was checked against generated CodeMirror, ProseMirror, and
+WordGard bundles in `dev/wasm-web-runtimes/examples/browser-editors`. Notable
+requirements include WordGard's stateful `map.keys().next()` listener queue,
+ProseMirror's deferred `Promise.resolve().then(...)` observer flush, and the
+three editors' ordered maps, sets, weak caches, and `Promise.all` joins.
+
+`test/editor-primitives.test.js` keeps those observed patterns executable. It
+tests the primitives independently of each editor's DOM facade and of syntax
+features that MicroESNext has not added yet.
+
+Browser editors follow the same boundary as the QuickJS and MicroQuickJS
+examples. Guest JavaScript owns the browser-shaped DOM facade, event behavior,
+and application-specific overrides. The native runtime supplies opaque host
+references, their lifetime notifications, message transport, and small
+explicit primitives such as time. A future integration may forward an
+individual well-audited operation natively when measurement justifies it, but
+native forwarding is opt-in per operation rather than an all-or-nothing host
+object model. The compiler's caller-provided host-name list is a source probe;
+it is not the browser integration API.
+
+```javascript
+/* a multiline comment inside a fenced JavaScript block
+   viewport state continuation 1
+   viewport state continuation 2
+   viewport state continuation 3
+   viewport state continuation 4
+   viewport state continuation 5
+   viewport state continuation 6
+   viewport state continuation 7
+   viewport state continuation 8
+   viewport state continuation 9
+   viewport state continuation 10
+   viewport state continuation 11
+   viewport state continuation 12
+   viewport state continuation 13
+   viewport state continuation 14
+   viewport state continuation 15
+   viewport state continuation 16
+   viewport state continuation 17
+   viewport state continuation 18
+   viewport state continuation 19
+   viewport state continuation 20
+   viewport state continuation 21
+   viewport state continuation 22
+   viewport state continuation 23
+   viewport state continuation 24
+   viewport state continuation 25
+   viewport state continuation 26
+   viewport state continuation 27
+   viewport state continuation 28
+   viewport state continuation 29
+   viewport state continuation 30
+   viewport state continuation 31
+   viewport state continuation 32
+   viewport state continuation 33
+   viewport state continuation 34
+   viewport state continuation 35
+   viewport state continuation 36
+   viewport state continuation 37
+   viewport state continuation 38
+   viewport state continuation 39
+   viewport state continuation 40
+   viewport state continuation 41
+   viewport state continuation 42
+   viewport state continuation 43
+   viewport state continuation 44
+   viewport state continuation 45
+   viewport state continuation 46
+   viewport state continuation 47
+   viewport state continuation 48
+   viewport state continuation 49
+   viewport state continuation 50
+   viewport state continuation 51
+   viewport state continuation 52
+   viewport state continuation 53
+   viewport state continuation 54
+   viewport state continuation 55
+   viewport state continuation 56
+   viewport state continuation 57
+   viewport state continuation 58
+   viewport state continuation 59
+   viewport state continuation 60
+   viewport state continuation 61
+   viewport state continuation 62
+   viewport state continuation 63
+   viewport state continuation 64
+   viewport state continuation 65
+   viewport state continuation 66
+   viewport state continuation 67
+   viewport state continuation 68
+   viewport state continuation 69
+   viewport state continuation 70
+   viewport state continuation 71
+   viewport state continuation 72
+   viewport state continuation 73
+   viewport state continuation 74
+   viewport state continuation 75
+   viewport state continuation 76
+   viewport state continuation 77
+   viewport state continuation 78
+   viewport state continuation 79
+   viewport state continuation 80
+   viewport state continuation 81
+   viewport state continuation 82
+   viewport state continuation 83
+   viewport state continuation 84
+   viewport state continuation 85
+   viewport state continuation 86
+   viewport state continuation 87
+   viewport state continuation 88
+   viewport state continuation 89
+   viewport state continuation 90
+   viewport state continuation 91
+   viewport state continuation 92
+   viewport state continuation 93
+   viewport state continuation 94
+   viewport state continuation 95
+   viewport state continuation 96
+*/
+const viewportFence = `mixed
+markdown and JavaScript`;
+```
+
+## Viewport fence probe
