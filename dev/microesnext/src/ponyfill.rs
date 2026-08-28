@@ -414,6 +414,74 @@ pub unsafe extern "C" fn u64toa_radix(dest: *mut c_char, value: u64, radix: u32)
     unsafe { write_unsigned(dest, value, radix) }
 }
 
+#[derive(Clone, Copy)]
+enum RoundingMode {
+    TowardZero,
+    Down,
+    Up,
+    NearestTiesUp,
+}
+
+fn round_f64(value: f64, mode: RoundingMode) -> f64 {
+    let mut bits = value.to_bits();
+    let exponent = ((bits >> 52) & 0x7ff) as i32 - 0x3ff;
+    let sign = bits >> 63;
+    if exponent < 0 {
+        let mantissa = bits & ((1_u64 << 52) - 1);
+        if exponent != -0x3ff || mantissa != 0 {
+            let one = 0x3ff_u64 << 52;
+            bits = match mode {
+                RoundingMode::Up if sign == 0 => one,
+                RoundingMode::Down if sign != 0 => one,
+                RoundingMode::NearestTiesUp if exponent == -1 && (mantissa != 0 || sign == 0) => {
+                    one
+                }
+                _ => 0,
+            } | sign << 63;
+        }
+    } else if exponent < 52 {
+        let one = 1_u64 << (52 - exponent);
+        let addend = match mode {
+            RoundingMode::NearestTiesUp => (one >> 1) - sign,
+            RoundingMode::Up if sign == 0 => one - 1,
+            RoundingMode::Down if sign != 0 => one - 1,
+            _ => 0,
+        };
+        bits = bits.wrapping_add(addend) & !(one - 1);
+    }
+    f64::from_bits(bits)
+}
+
+/// Rounds toward negative infinity while preserving IEEE-754 edge cases.
+#[unsafe(no_mangle)]
+pub extern "C" fn js_floor(value: f64) -> f64 {
+    round_f64(value, RoundingMode::Down)
+}
+
+/// Rounds toward positive infinity while preserving IEEE-754 edge cases.
+#[unsafe(no_mangle)]
+pub extern "C" fn js_ceil(value: f64) -> f64 {
+    round_f64(value, RoundingMode::Up)
+}
+
+/// Rounds toward zero while preserving IEEE-754 edge cases.
+#[unsafe(no_mangle)]
+pub extern "C" fn js_trunc(value: f64) -> f64 {
+    round_f64(value, RoundingMode::TowardZero)
+}
+
+/// Rounds to nearest, resolving half-way values toward positive infinity.
+#[unsafe(no_mangle)]
+pub extern "C" fn js_round_inf(value: f64) -> f64 {
+    round_f64(value, RoundingMode::NearestTiesUp)
+}
+
+/// Clears only the IEEE-754 sign bit, retaining NaN payloads.
+#[unsafe(no_mangle)]
+pub extern "C" fn js_fabs(value: f64) -> f64 {
+    f64::from_bits(value.to_bits() & 0x7fff_ffff_ffff_ffff)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{

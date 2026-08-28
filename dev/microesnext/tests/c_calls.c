@@ -1,5 +1,6 @@
 #include "cutils.h"
 #include "dtoa.h"
+#include "libm.h"
 #include "ponyfill/stdlib.h"
 
 void test_c_pstrcpy(char *dest, int size, const char *source)
@@ -73,3 +74,9 @@ size_t test_c_format_i64_radix(char *dest, int64_t value, unsigned int radix)
 {
     return i64toa_radix(dest, value, radix);
 }
+
+double test_c_floor(double value) { return js_floor(value); }
+double test_c_ceil(double value) { return js_ceil(value); }
+double test_c_trunc(double value) { return js_trunc(value); }
+double test_c_round_inf(double value) { return js_round_inf(value); }
+double test_c_fabs(double value) { return js_fabs(value); }

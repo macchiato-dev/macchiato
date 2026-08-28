@@ -257,95 +257,6 @@ double js_fmod(double a, double b)
     return uint64_as_float64(fmod_sf64(float64_as_uint64(a), float64_as_uint64(b)));
 }
 
-/* supported rounding modes: RM_UP, RM_DN, RM_RTZ, RM_RMMUP, RM_RMM */
-static double rint_sf64(double a, RoundingModeEnum rm)
-{
-    uint64_t u = float64_as_uint64(a);
-    uint64_t frac_mask, one, m, addend;
-    int e;
-    unsigned int s;
-
-    e = ((u >> 52) & 0x7ff) - 0x3ff;
-    s = u >> 63;
-    if (e < 0) {
-        m = u & (((uint64_t)1 << 52) - 1);
-        if (e == -0x3ff && m == 0) {
-            /* zero: nothing to do */
-        } else {
-            /* abs(a) < 1 */
-            s = u >> 63;
-            one = (uint64_t)0x3ff << 52;
-            u = 0;
-            switch(rm) {
-            case RM_RUP:
-            case RM_RDN:
-                if (s ^ (rm & 1))
-                    u = one;
-                break;
-            default:
-            case RM_RMM:
-            case RM_RMMUP:
-                if (e == -1 && (m != 0 || (m == 0 && (!s || rm == RM_RMM))))
-                    u = one;
-                break;
-            case RM_RTZ:
-                break;
-            }
-            u |= (uint64_t)s << 63;
-        }
-    } else if (e < 52) {
-        one = (uint64_t)1 << (52 - e);
-        frac_mask = one - 1;
-        addend = 0;
-        switch(rm) {
-        case RM_RMMUP:
-            addend = (one >> 1) - s;
-            break;
-        default:
-        case RM_RMM:
-            addend = (one >> 1);
-            break;
-        case RM_RTZ:
-            break;
-        case RM_RUP:
-        case RM_RDN:
-            if (s ^ (rm & 1))
-                addend = one - 1;
-            break;
-        }
-        u += addend;
-        u &= ~frac_mask; /* truncate to an integer */
-    }
-    /* otherwise: abs(a) >= 2^52, or NaN, +/-Infinity: no change */
-    return uint64_as_float64(u);
-}
-
-double js_floor(double x)
-{
-    return rint_sf64(x, RM_RDN);
-}
-
-double js_ceil(double x)
-{
-    return rint_sf64(x, RM_RUP);
-}
-
-double js_trunc(double x)
-{
-    return rint_sf64(x, RM_RTZ);
-}
-
-double js_round_inf(double x)
-{
-    return rint_sf64(x, RM_RMMUP);
-}
-
-double js_fabs(double x)
-{
-    uint64_t a = float64_as_uint64(x);
-    return uint64_as_float64(a & 0x7fffffffffffffff);
-}
-
 /************************************************************/
 /* libm */
 
@@ -2257,4 +2168,3 @@ double js_pow(double x, double y)
 	w = v-(z-u);
         return s * kernel_exp(z, w, 0, z, n);
 }
-

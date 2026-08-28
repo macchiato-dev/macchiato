@@ -88,6 +88,11 @@ unsafe extern "C" {
     fn test_c_format_i64(dest: *mut c_char, value: i64) -> usize;
     fn test_c_format_u64_radix(dest: *mut c_char, value: u64, radix: u32) -> usize;
     fn test_c_format_i64_radix(dest: *mut c_char, value: i64, radix: u32) -> usize;
+    fn test_c_floor(value: f64) -> f64;
+    fn test_c_ceil(value: f64) -> f64;
+    fn test_c_trunc(value: f64) -> f64;
+    fn test_c_round_inf(value: f64) -> f64;
+    fn test_c_fabs(value: f64) -> f64;
 }
 
 const JS_EXCEPTION: JsValue = 15;
@@ -329,4 +334,43 @@ fn c_calls_rust_integer_formatters() {
     // The remaining C signed-radix wrapper composes with Rust's unsigned port.
     let length = unsafe { test_c_format_i64_radix(output.as_mut_ptr().cast(), -255, 16) };
     assert_eq!(&output[..length], b"-ff");
+}
+
+#[test]
+fn c_calls_rust_rounding_functions() {
+    let cases: [(f64, f64, f64, f64, f64); 6] = [
+        (-2.75, -3.0, -2.0, -2.0, -3.0),
+        (-1.5, -2.0, -1.0, -1.0, -1.0),
+        (-0.5, -1.0, -0.0, -0.0, -0.0),
+        (0.5, 0.0, 1.0, 0.0, 1.0),
+        (1.5, 1.0, 2.0, 1.0, 2.0),
+        (2.75, 2.0, 3.0, 2.0, 3.0),
+    ];
+    for (value, floor, ceil, trunc, round) in cases {
+        assert_eq!(unsafe { test_c_floor(value) }.to_bits(), floor.to_bits());
+        assert_eq!(unsafe { test_c_ceil(value) }.to_bits(), ceil.to_bits());
+        assert_eq!(unsafe { test_c_trunc(value) }.to_bits(), trunc.to_bits());
+        assert_eq!(
+            unsafe { test_c_round_inf(value) }.to_bits(),
+            round.to_bits()
+        );
+    }
+
+    for value in [0.0, -0.0, f64::INFINITY, f64::NEG_INFINITY] {
+        assert_eq!(unsafe { test_c_floor(value) }.to_bits(), value.to_bits());
+        assert_eq!(unsafe { test_c_ceil(value) }.to_bits(), value.to_bits());
+        assert_eq!(unsafe { test_c_trunc(value) }.to_bits(), value.to_bits());
+    }
+    assert_eq!(unsafe { test_c_fabs(-0.0) }.to_bits(), 0.0_f64.to_bits());
+    assert_eq!(unsafe { test_c_fabs(-42.25) }, 42.25);
+
+    let negative_nan = f64::from_bits(0xfff8_0000_0000_0042);
+    assert_eq!(
+        unsafe { test_c_fabs(negative_nan) }.to_bits(),
+        0x7ff8_0000_0000_0042,
+    );
+    assert_eq!(
+        unsafe { test_c_round_inf(negative_nan) }.to_bits(),
+        negative_nan.to_bits(),
+    );
 }
