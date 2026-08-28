@@ -93,8 +93,8 @@ state across all three runtimes.
 
 ## Current result
 
-In the controlled first-page run, normal JavaScript parsing reached a 117 ms
-physical-keystroke p95 in the plain browser, versus 18 ms for the viewport
+In the final controlled first-page run, normal JavaScript parsing reached a
+42 ms physical-keystroke p95 in the plain browser, versus 16 ms for the viewport
 mode. Under QuickJS, direct JavaScript edit dispatch fell from a 44 ms p95 to
 25 ms; under MicroQuickJS it fell from 34 ms to 9 ms. CSS and HTML showed the
 same reduction in direct dispatch work. Physical-key timing has more runtime
