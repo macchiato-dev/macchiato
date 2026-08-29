@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { putFontAsset } from "@macchiato-dev/font-use";
 import { deleteSiteRoutes, putSiteRoute } from "@macchiato-dev/site";
 import { appPluginIds, installAppPlugins, resolveAppCommand } from "../../app/src/app-plugins.js";
+import { validateProxyOptions } from "../../app/src/proxy-app.js";
 import {
   addDirectorySite,
   addFileSite,
@@ -21,7 +22,7 @@ import {
   setAppEnvironmentValue,
 } from "@macchiato-dev/app-db-sqlite";
 
-function registerSiteApp(db, subdomain, handler, kind, { access = {} } = {}) {
+function registerSiteApp(db, subdomain, handler, kind, { access = {}, options = {} } = {}) {
   upsertAppConfig(db, {
     subdomain,
     name: subdomain,
@@ -30,7 +31,7 @@ function registerSiteApp(db, subdomain, handler, kind, { access = {} } = {}) {
     handler,
     permissions: {},
     access,
-    options: { plugin: "site-command", dependencies: {} },
+    options: { plugin: "site-command", dependencies: {}, ...options },
   });
 }
 
@@ -216,6 +217,7 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       console.log("  app env list <app>            List configured names (values are never shown)");
       console.log("  app env unset <app> <name>    Remove an app-scoped value");
       console.log("  site add <subdomain> <dir>    Add a site");
+      console.log("  site add-proxy <subdomain> <origin> [--allow-remote]  Add a reverse proxy");
       console.log("  site add-page <subdomain> <html> <css> <dom-schema> <css-schema> [--title <title>] [--unsandboxed]");
       console.log("  site add-file <subdomain> <file> [--title <title>] [--content-type <type>] [--csp <policy>]");
       console.log("  site add-route <subdomain> <route> <html> <css> [--title <title>] [--csp <policy>] [--head <file>]");
@@ -402,6 +404,24 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
         });
       }, dbOptions);
       console.log(`Added site: ${subdomain} -> ${directory}`);
+    },
+
+    "site add-proxy"(args) {
+      const [subdomain, origin, ...flags] = args;
+      if (!subdomain || !origin || flags.some((flag) => flag !== "--allow-remote")) {
+        console.log("Usage: site add-proxy <subdomain> <origin> [--allow-remote]");
+        return;
+      }
+      const normalizedOrigin = new URL(origin).origin;
+      const allowRemote = flags.includes("--allow-remote");
+      const access = allowRemote ? { networkOrigins: [normalizedOrigin] } : {};
+      const options = { proxy: { origin: normalizedOrigin } };
+      validateProxyOptions(options, access);
+      withDb((db) => registerSiteApp(db, subdomain, "proxy", "reverse proxy", {
+        access,
+        options,
+      }), dbOptions);
+      console.log(`Added proxy: ${subdomain} -> ${normalizedOrigin}`);
     },
 
     "site list"() {

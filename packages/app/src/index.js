@@ -23,6 +23,7 @@ import { fileAppHandler } from "./file-app.js";
 import { directoryWritableFileResponse } from "./directory-file-access.js";
 import { nodeResponseHeaders } from "./node-response.js";
 import { createDevelopmentAuth } from "./development-auth.js";
+import { proxyAppHandler } from "./proxy-app.js";
 import { createSqliteStore, initSqliteStore } from "@macchiato-dev/app-db-sqlite";
 
 const args = "Deno" in globalThis
@@ -459,6 +460,9 @@ async function route(request) {
   }
   if (app.handler) {
     return app.handler(request, app, { db, dataDir, dbPath });
+  }
+  if (app.handlerName === "proxy") {
+    return proxyAppHandler(request, app);
   }
 
   if (app.handlerName === "sqlite-routes" && hasSiteRoutes(db, subdomain)) {

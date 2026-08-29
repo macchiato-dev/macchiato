@@ -109,6 +109,35 @@ successful exchange, allowing authentication to recover after browser or
 cookie loss. Resetting a key invalidates existing links and cookies for only
 that subdomain.
 
+## Proxy apps
+
+A `proxy` declaration maps an app subdomain to one HTTP or HTTPS origin. The
+gateway preserves the request method, path, query, body, response status, and
+response stream; removes hop-by-hop headers; and rewrites redirects back into
+the public app when they point at the configured upstream. Authentication and
+other gateway options are applied before the request reaches the proxy.
+
+Add a proxy to a local development server with:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./data \
+  site add-proxy docs http://127.0.0.1:4173
+```
+
+Loopback origins require no additional network grant. A remote origin is
+rejected unless the operator makes it explicit:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./data \
+  site add-proxy docs https://docs-preview.example --allow-remote
+```
+
+The resulting declaration uses `options.proxy.origin`; `--allow-remote` also
+records that exact origin in `access.networkOrigins`. The proxy does not start,
+stop, or supervise its upstream. An app that owns a child process should keep
+that lifecycle in a controller and expose its stable local HTTP endpoint to
+this routing layer.
+
 `development` is the full repository demo set; `core` is the one-app default.
 Run `macchiato app plugins` to list individual plugin IDs.
 

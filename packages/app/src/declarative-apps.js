@@ -6,9 +6,10 @@ import {
   readAppEnvironment,
 } from "@macchiato-dev/app-db-sqlite";
 import { resolveAppHandler } from "./app-plugins.js";
+import { validateProxyOptions } from "./proxy-app.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
-const STORAGE_HANDLERS = new Set(["app-directory", "sqlite-routes", "sqlite-page", "raw-file", "directory"]);
+const STORAGE_HANDLERS = new Set(["app-directory", "sqlite-routes", "sqlite-page", "raw-file", "directory", "proxy"]);
 
 function parseJson(value, fallback = {}) {
   try {
@@ -37,6 +38,7 @@ function validateConfig(config) {
   assertObject(config.permissions, "permissions");
   assertObject(config.access, "access");
   assertObject(config.options, "options");
+  if (config.handler === "proxy") validateProxyOptions(config.options, config.access);
   if (config.options.sourceFiles !== undefined) {
     if (!Array.isArray(config.options.sourceFiles)) throw new Error("options.sourceFiles must be an array.");
     for (const file of config.options.sourceFiles) safeRelativePath(file, "source file");
