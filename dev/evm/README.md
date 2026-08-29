@@ -15,6 +15,9 @@ with an explicit status; they are never silently approximated.
 - Callers provide code, calldata, environment values, gas, and persistent
   storage. The machine owns bounded stack, memory, transient storage, logs,
   output, and trace buffers.
+- The optional `Host` trait supplies account balances and code, block hashes,
+  and blob hashes. It reports cold account accesses, leaving state layout and
+  database choice outside the VM while keeping EIP-2929 gas in the core.
 - A word is four little-endian `u64` limbs. Arithmetic wraps modulo `2^256`.
 - The Wasm ABI uses exported linear-memory buffers and integer lengths. JSON is
   a playground concern and does not cross the VM boundary.
@@ -39,10 +42,10 @@ memory; persistent and transient storage; control flow; logs; Cancun's
 the playground. Storage changes and logs roll back on `REVERT` and exceptional
 termination.
 
-Account lookup, external-code inspection, blob hashes, calls, contract
-creation, precompiles, access-list accounting, and exact `SSTORE` refund rules
-still require the account host boundary. They remain explicitly unsupported,
-not approximated.
+With a host, account balance and external-code inspection, block hashes, and
+blob hashes are available. Calls, contract creation, precompiles, host-backed
+storage, and exact `SSTORE` refund rules still require the mutating half of the
+host boundary. They remain explicitly unsupported, not approximated.
 
 ## Build
 

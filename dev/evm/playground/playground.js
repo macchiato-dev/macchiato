@@ -55,12 +55,14 @@ const opcodeNames = {
   0x14: "EQ", 0x15: "ISZERO", 0x16: "AND", 0x17: "OR", 0x18: "XOR",
   0x19: "NOT", 0x1a: "BYTE", 0x1b: "SHL", 0x1c: "SHR", 0x1d: "SAR",
   0x20: "SHA3", 0x30: "ADDRESS", 0x32: "ORIGIN", 0x33: "CALLER",
+  0x31: "BALANCE",
   0x34: "CALLVALUE", 0x35: "CALLDATALOAD", 0x36: "CALLDATASIZE",
   0x37: "CALLDATACOPY", 0x38: "CODESIZE", 0x39: "CODECOPY", 0x3a: "GASPRICE",
-  0x3d: "RETURNDATASIZE", 0x3e: "RETURNDATACOPY",
+  0x3b: "EXTCODESIZE", 0x3c: "EXTCODECOPY", 0x3d: "RETURNDATASIZE",
+  0x3e: "RETURNDATACOPY", 0x3f: "EXTCODEHASH", 0x40: "BLOCKHASH",
   0x41: "COINBASE", 0x42: "TIMESTAMP", 0x43: "NUMBER", 0x44: "PREVRANDAO",
   0x45: "GASLIMIT", 0x46: "CHAINID", 0x47: "SELFBALANCE",
-  0x48: "BASEFEE", 0x4a: "BLOBBASEFEE",
+  0x48: "BASEFEE", 0x49: "BLOBHASH", 0x4a: "BLOBBASEFEE",
   0x50: "POP", 0x51: "MLOAD", 0x52: "MSTORE", 0x53: "MSTORE8",
   0x54: "SLOAD", 0x55: "SSTORE", 0x56: "JUMP", 0x57: "JUMPI",
   0x58: "PC", 0x59: "MSIZE", 0x5a: "GAS", 0x5b: "JUMPDEST",
@@ -72,7 +74,7 @@ const opcodeNames = {
 const exits = ["Stopped", "Returned", "Reverted", "Out of gas", "Invalid opcode",
   "Stack underflow", "Stack overflow", "Bad jump", "Memory limit",
   "Storage limit", "Step limit", "Unsupported opcode", "Return data out of bounds",
-  "Log limit"];
+  "Log limit", "Host error"];
 const $ = selector => document.querySelector(selector);
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });

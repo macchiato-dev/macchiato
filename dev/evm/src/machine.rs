@@ -27,6 +27,7 @@ pub enum Exit {
     UnsupportedOpcode = 11,
     ReturnDataOutOfBounds = 12,
     LogLimit = 13,
+    HostError = 14,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -68,6 +69,29 @@ pub struct Log {
     pub topic_count: u8,
     pub data_offset: u32,
     pub data_length: u32,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct Access<T> {
+    pub value: T,
+    pub cold: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct HostError;
+
+/// Chain state supplied by an embedding application.
+///
+/// Methods return whether an account access was cold so the core can apply
+/// EIP-2929 gas without knowing how the host represents its access set.
+pub trait Host {
+    fn balance(&mut self, address: Word) -> Result<Access<Word>, HostError>;
+    fn code_size(&mut self, address: Word) -> Result<Access<usize>, HostError>;
+    fn code_hash(&mut self, address: Word) -> Result<Access<Word>, HostError>;
+    fn copy_code(&mut self, address: Word, offset: usize, output: &mut [u8])
+        -> Result<Access<usize>, HostError>;
+    fn block_hash(&mut self, number: Word) -> Result<Word, HostError>;
+    fn blob_hash(&mut self, index: usize) -> Result<Word, HostError>;
 }
 
 pub struct Workspace {
@@ -113,6 +137,7 @@ pub struct Machine<'a> {
     return_data_len: usize,
     log_len: usize,
     log_data_len: usize,
+    host: Option<&'a mut dyn Host>,
 }
 
 impl<'a> Machine<'a> {
@@ -122,7 +147,23 @@ impl<'a> Machine<'a> {
         workspace.transient.fill(Slot::default());
         Self { code, calldata, env, workspace, pc: 0, gas, stack_len: 0,
             memory_len: 0, trace_len: 0, output_len: 0, steps: 0,
-            return_data_len: 0, log_len: 0, log_data_len: 0 }
+            return_data_len: 0, log_len: 0, log_data_len: 0, host: None }
+    }
+
+    pub fn with_host(code: &'a [u8], calldata: &'a [u8], gas: u64,
+        env: Environment, workspace: &'a mut Workspace,
+        host: &'a mut dyn Host) -> Self {
+        let mut machine = Self::new(code, calldata, gas, env, workspace);
+        machine.host = Some(host);
+        machine
+    }
+
+    fn host(&mut self) -> Result<&mut (dyn Host + 'a), Exit> {
+        self.host.as_deref_mut().ok_or(Exit::UnsupportedOpcode)
+    }
+
+    fn charge_account_access(&mut self, cold: bool) -> Result<(), Exit> {
+        self.charge(if cold { 2_600 } else { 100 })
     }
 
     pub fn gas(&self) -> u64 { self.gas }
@@ -292,6 +333,7 @@ impl<'a> Machine<'a> {
             0x1d => { self.charge(3)?; let shift = self.pop()?.low_u64() as usize; let value = self.pop()?; self.push(value.sar(shift))?; }
             0x20 => { let offset = self.pop_usize()?; let length = self.pop_usize()?; self.expand_memory(offset, length)?; self.charge(30 + 6 * length.div_ceil(32) as u64)?; self.push(Word::from_be_slice(&keccak256(&self.workspace.memory[offset..offset + length])))?; }
             0x30 => { self.charge(2)?; self.push(self.env.address)?; }
+            0x31 => { let address = self.pop()?; let access = self.host()?.balance(address).map_err(|_| Exit::HostError)?; self.charge_account_access(access.cold)?; self.push(access.value)?; }
             0x32 => { self.charge(2)?; self.push(self.env.origin)?; }
             0x33 => { self.charge(2)?; self.push(self.env.caller)?; }
             0x34 => { self.charge(2)?; self.push(self.env.call_value)?; }
@@ -301,8 +343,28 @@ impl<'a> Machine<'a> {
             0x38 => { self.charge(2)?; self.push(Word::from_u64(self.code.len() as u64))?; }
             0x39 => { self.charge(3)?; let memory = self.pop_usize()?; let source = self.pop_usize()?; let length = self.pop_usize()?; let code = self.code; self.copy(memory, code, source, length)?; }
             0x3a => { self.charge(2)?; self.push(self.env.gas_price)?; }
+            0x3b => { let address = self.pop()?; let access = self.host()?.code_size(address).map_err(|_| Exit::HostError)?; self.charge_account_access(access.cold)?; self.push(Word::from_u64(access.value as u64))?; }
+            0x3c => {
+                let address = self.pop()?;
+                let memory = self.pop_usize()?;
+                let source = self.pop_usize()?;
+                let length = self.pop_usize()?;
+                self.expand_memory(memory, length)?;
+                self.workspace.memory[memory..memory + length].fill(0);
+                let access = {
+                    let host = self.host.as_deref_mut().ok_or(Exit::UnsupportedOpcode)?;
+                    host.copy_code(address, source,
+                        &mut self.workspace.memory[memory..memory + length])
+                        .map_err(|_| Exit::HostError)?
+                };
+                if access.value > length { return Err(Exit::HostError); }
+                self.charge_account_access(access.cold)?;
+                self.charge(3 * length.div_ceil(32) as u64)?;
+            }
             0x3d => { self.charge(2)?; self.push(Word::from_u64(self.return_data_len as u64))?; }
             0x3e => { self.charge(3)?; let memory = self.pop_usize()?; let source = self.pop_usize()?; let length = self.pop_usize()?; let end = source.checked_add(length).ok_or(Exit::ReturnDataOutOfBounds)?; if end > self.return_data_len { return Err(Exit::ReturnDataOutOfBounds); } self.expand_memory(memory, length)?; self.charge(3 * length.div_ceil(32) as u64)?; for index in 0..length { self.workspace.memory[memory + index] = self.workspace.return_data[source + index]; } }
+            0x3f => { let address = self.pop()?; let access = self.host()?.code_hash(address).map_err(|_| Exit::HostError)?; self.charge_account_access(access.cold)?; self.push(access.value)?; }
+            0x40 => { self.charge(20)?; let number = self.pop()?; let hash = self.host()?.block_hash(number).map_err(|_| Exit::HostError)?; self.push(hash)?; }
             0x41 => { self.charge(2)?; self.push(self.env.coinbase)?; }
             0x42 => { self.charge(2)?; self.push(self.env.timestamp)?; }
             0x43 => { self.charge(2)?; self.push(self.env.block_number)?; }
@@ -311,6 +373,7 @@ impl<'a> Machine<'a> {
             0x46 => { self.charge(2)?; self.push(self.env.chain_id)?; }
             0x47 => { self.charge(5)?; self.push(self.env.self_balance)?; }
             0x48 => { self.charge(2)?; self.push(self.env.base_fee)?; }
+            0x49 => { self.charge(3)?; let index_word = self.pop()?; let hash = if index_word.0[1..].iter().any(|&limb| limb != 0) { Word::ZERO } else { self.host()?.blob_hash(index_word.low_u64() as usize).map_err(|_| Exit::HostError)? }; self.push(hash)?; }
             0x4a => { self.charge(2)?; self.push(self.env.blob_base_fee)?; }
             0x50 => { self.charge(2)?; self.pop()?; }
             0x51 => { self.charge(3)?; let offset = self.pop_usize()?; self.expand_memory(offset, 32)?; self.push(Word::from_be_slice(&self.workspace.memory[offset..offset + 32]))?; }
@@ -361,8 +424,43 @@ impl<'a> Machine<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Environment, Exit, Machine, Workspace};
+    use super::{Access, Environment, Exit, Host, HostError, Machine, Workspace};
     use crate::Word;
+
+    struct TestHost { cold: bool }
+
+    impl TestHost {
+        fn access<T>(&mut self, value: T) -> Access<T> {
+            let cold = self.cold;
+            self.cold = false;
+            Access { value, cold }
+        }
+    }
+
+    impl Host for TestHost {
+        fn balance(&mut self, _: Word) -> Result<Access<Word>, HostError> {
+            Ok(self.access(Word::from_u64(99)))
+        }
+        fn code_size(&mut self, _: Word) -> Result<Access<usize>, HostError> {
+            Ok(self.access(4))
+        }
+        fn code_hash(&mut self, _: Word) -> Result<Access<Word>, HostError> {
+            Ok(self.access(Word::from_u64(0xc0de)))
+        }
+        fn copy_code(&mut self, _: Word, offset: usize, output: &mut [u8])
+            -> Result<Access<usize>, HostError> {
+            let code = [0xaa, 0xbb, 0xcc, 0xdd];
+            let available = code.len().saturating_sub(offset).min(output.len());
+            output[..available].copy_from_slice(&code[offset..offset + available]);
+            Ok(self.access(available))
+        }
+        fn block_hash(&mut self, number: Word) -> Result<Word, HostError> {
+            Ok(number.wrapping_add(Word::from_u64(1000)))
+        }
+        fn blob_hash(&mut self, index: usize) -> Result<Word, HostError> {
+            Ok(Word::from_u64(index as u64 + 2000))
+        }
+    }
 
     #[test]
     fn adds_and_returns_a_word() {
@@ -490,5 +588,36 @@ mod tests {
         assert_eq!(Machine::new(&code, &[], 1_000_000,
             Environment::default(), &mut workspace).run(100),
             Exit::ReturnDataOutOfBounds);
+    }
+
+    #[test]
+    fn host_supplies_account_code_and_chain_reads() {
+        let code = [
+            0x60, 7, 0x31,
+            0x60, 7, 0x3b,
+            0x60, 3, 0x60, 1, 0x60, 0, 0x60, 7, 0x3c,
+            0x60, 7, 0x3f,
+            0x60, 9, 0x40,
+            0x60, 2, 0x49,
+            0x00,
+        ];
+        let mut workspace = Workspace::new();
+        let mut host = TestHost { cold: true };
+        let mut machine = Machine::with_host(&code, &[], 1_000_000,
+            Environment::default(), &mut workspace, &mut host);
+        assert_eq!(machine.run(100), Exit::Stopped);
+        assert_eq!(machine.stack(), &[
+            Word::from_u64(99), Word::from_u64(4), Word::from_u64(0xc0de),
+            Word::from_u64(1009), Word::from_u64(2002),
+        ]);
+        assert_eq!(&machine.memory()[..3], &[0xbb, 0xcc, 0xdd]);
+    }
+
+    #[test]
+    fn account_reads_without_a_host_are_explicitly_unsupported() {
+        let code = [0x60, 7, 0x31];
+        let mut workspace = Workspace::new();
+        assert_eq!(Machine::new(&code, &[], 100_000, Environment::default(),
+            &mut workspace).run(10), Exit::UnsupportedOpcode);
     }
 }
