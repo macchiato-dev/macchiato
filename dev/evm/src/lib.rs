@@ -9,8 +9,9 @@ mod word;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
-pub use machine::{Access, Environment, Exit, Host, HostError, Log, Machine,
-    Trace, Workspace};
+pub use machine::{Access, CallCost, CallKind, CallOutcome, CallRequest,
+    CreateKind, CreateOutcome, CreateRequest, Environment, Exit, Host,
+    HostError, Log, Machine, SelfDestructCost, StorageAccess, Trace, Workspace};
 pub use word::Word;
 
 #[cfg(target_arch = "wasm32")]

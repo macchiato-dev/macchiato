@@ -38,6 +38,10 @@ impl Word {
     pub const fn low_u64(self) -> u64 { self.0[0] }
     pub const fn sign(self) -> bool { self.0[3] >> 63 != 0 }
 
+    pub const fn address(self) -> Self {
+        Self([self.0[0], self.0[1], self.0[2] & 0xffff_ffff, 0])
+    }
+
     pub fn overflowing_add(self, other: Self) -> (Self, bool) {
         let mut out = [0; 4];
         let mut carry = false;

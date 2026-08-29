@@ -68,13 +68,14 @@ const opcodeNames = {
   0x58: "PC", 0x59: "MSIZE", 0x5a: "GAS", 0x5b: "JUMPDEST",
   0x5c: "TLOAD", 0x5d: "TSTORE", 0x5e: "MCOPY", 0x5f: "PUSH0",
   0xa0: "LOG0", 0xa1: "LOG1", 0xa2: "LOG2", 0xa3: "LOG3", 0xa4: "LOG4",
-  0xf3: "RETURN",
-  0xfd: "REVERT", 0xfe: "INVALID",
+  0xf0: "CREATE", 0xf1: "CALL", 0xf2: "CALLCODE", 0xf3: "RETURN",
+  0xf4: "DELEGATECALL", 0xf5: "CREATE2", 0xfa: "STATICCALL",
+  0xfd: "REVERT", 0xfe: "INVALID", 0xff: "SELFDESTRUCT",
 };
 const exits = ["Stopped", "Returned", "Reverted", "Out of gas", "Invalid opcode",
   "Stack underflow", "Stack overflow", "Bad jump", "Memory limit",
   "Storage limit", "Step limit", "Unsupported opcode", "Return data out of bounds",
-  "Log limit", "Host error"];
+  "Log limit", "Host error", "Write protection", "Init code limit"];
 const $ = selector => document.querySelector(selector);
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });

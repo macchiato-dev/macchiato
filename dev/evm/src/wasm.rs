@@ -57,7 +57,7 @@ fn environment(bytes: &[u8; ENV_BYTES]) -> Environment {
         block_number: word(bytes, 7), prev_randao: word(bytes, 8),
         gas_limit: word(bytes, 9), chain_id: word(bytes, 10),
         base_fee: word(bytes, 11), blob_base_fee: word(bytes, 12),
-        self_balance: word(bytes, 13),
+        self_balance: word(bytes, 13), read_only: false,
     }
 }
 
