@@ -1153,6 +1153,44 @@ mod tests {
     }
 
     #[test]
+    fn passes_official_cancun_environment_vectors() {
+        const VECTORS: &str = include_str!("../test/official-environment-vectors.txt");
+        let mut cases = 0;
+        for line in VECTORS.lines().filter(|line| !line.starts_with('#')) {
+            let mut fields = line.split('|');
+            let name = fields.next().unwrap();
+            let code = hex_bytes(fields.next().unwrap());
+            let address = fixture_word(fields.next().unwrap());
+            let expected = fields.next().unwrap();
+            assert!(fields.next().is_none(), "invalid vector {name}");
+            let environment = Environment {
+                address,
+                origin: fixture_word("a94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+                caller: fixture_word("cccccccccccccccccccccccccccccccccccccccc"),
+                call_value: Word::from_u64(0x10),
+                gas_price: Word::from_u64(0x1234),
+                coinbase: fixture_word("2adc25665018aa1fe0e6bc666dac8fc2697ff9ba"),
+                timestamp: Word::from_u64(0x3e8),
+                block_number: Word::ONE,
+                prev_randao: Word::from_u64(0x20_000),
+                gas_limit: Word::from_u64(100_000_000),
+                ..Environment::default()
+            };
+            let mut workspace = Workspace::new();
+            let exit = Machine::new(&code, &[], 10_000_000, environment,
+                &mut workspace).run(1_000);
+            assert_eq!(exit, Exit::Stopped, "{name}");
+            assert_eq!(workspace.storage_len(), storage_pairs(expected).count(),
+                "{name}: storage length");
+            for (key, value) in storage_pairs(expected) {
+                assert_eq!(workspace.storage(key), value, "{name}: storage key");
+            }
+            cases += 1;
+        }
+        assert_eq!(cases, 15);
+    }
+
+    #[test]
     fn logs_capture_topics_and_memory() {
         let code = [
             0x60, 0xab, 0x60, 0, 0x53,
