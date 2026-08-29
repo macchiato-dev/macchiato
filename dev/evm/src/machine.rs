@@ -216,6 +216,14 @@ impl Workspace {
         self.storage.iter().find(|slot| slot.used && slot.key == key)
             .map(|slot| slot.value).unwrap_or(Word::ZERO)
     }
+
+    pub fn set_storage(&mut self, key: Word, value: Word) -> Result<(), Exit> {
+        Machine::slot(&mut self.storage, key, Some(value)).map(|_| ())
+    }
+
+    pub fn storage_len(&self) -> usize {
+        self.storage.iter().filter(|slot| slot.used).count()
+    }
 }
 
 pub struct Machine<'a> {
@@ -616,7 +624,7 @@ impl<'a> Machine<'a> {
             0x03 => { self.charge(3)?; let a = self.pop()?; let b = self.pop()?; self.push(a.wrapping_sub(b))?; }
             0x04 => { self.charge(5)?; let a = self.pop()?; let b = self.pop()?; self.push(a.div_mod(b).0)?; }
             0x05 => { self.charge(5)?; let a = self.pop()?; let b = self.pop()?; self.push(a.signed_div(b))?; }
-            0x06 => { self.charge(5)?; let a = self.pop()?; let b = self.pop()?; self.push(a.div_mod(b).1)?; }
+            0x06 => { self.charge(5)?; let a = self.pop()?; let b = self.pop()?; self.push(if b.is_zero() { Word::ZERO } else { a.div_mod(b).1 })?; }
             0x07 => { self.charge(5)?; let a = self.pop()?; let b = self.pop()?; self.push(a.signed_mod(b))?; }
             0x08 => { self.charge(8)?; let a = self.pop()?; let b = self.pop()?; let modulus = self.pop()?; self.push(a.add_mod(b, modulus))?; }
             0x09 => { self.charge(8)?; let a = self.pop()?; let b = self.pop()?; let modulus = self.pop()?; self.push(a.mul_mod(b, modulus))?; }
@@ -808,6 +816,13 @@ mod tests {
             cases += 1;
         }
         cases
+    }
+
+    fn storage_pairs(source: &str) -> impl Iterator<Item = (Word, Word)> + '_ {
+        source.split(',').filter(|pair| !pair.is_empty()).map(|pair| {
+            let (key, value) = pair.split_once('=').unwrap();
+            (fixture_word(key), fixture_word(value))
+        })
     }
 
     struct TestHost {
@@ -1008,6 +1023,39 @@ mod tests {
     fn passes_official_cancun_calldataload_vectors() {
         const VECTORS: &str = include_str!("../test/official-calldataload-vectors.txt");
         assert_eq!(run_storage_vectors(VECTORS), 3);
+    }
+
+    #[test]
+    fn passes_official_cancun_arithmetic_and_bitwise_vectors() {
+        const VECTORS: &str = include_str!("../test/official-arithmetic-vectors.txt");
+        let mut cases = 0;
+        for line in VECTORS.lines().filter(|line| !line.starts_with('#')) {
+            let mut fields = line.split('|');
+            let name = fields.next().unwrap();
+            let code = hex_bytes(fields.next().unwrap());
+            let initial = fields.next().unwrap();
+            let expected = fields.next().unwrap();
+            assert!(fields.next().is_none(), "invalid vector {name}");
+
+            let mut workspace = Workspace::new();
+            for (key, value) in storage_pairs(initial) {
+                workspace.set_storage(key, value).unwrap();
+            }
+            let mut machine = Machine::new(&code, &[], 10_000_000,
+                Environment::default(), &mut workspace);
+            let expected_exit = if name.ends_with("/stack_underflow") {
+                Exit::StackUnderflow
+            } else { Exit::Stopped };
+            assert_eq!(machine.run(100_000), expected_exit, "{name}");
+            drop(machine);
+            let expected_len = storage_pairs(expected).count();
+            assert_eq!(workspace.storage_len(), expected_len, "{name}: storage length");
+            for (key, value) in storage_pairs(expected) {
+                assert_eq!(workspace.storage(key), value, "{name}: storage key");
+            }
+            cases += 1;
+        }
+        assert_eq!(cases, 159);
     }
 
     #[test]
