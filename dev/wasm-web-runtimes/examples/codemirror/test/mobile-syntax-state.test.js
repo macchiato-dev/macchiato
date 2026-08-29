@@ -3,7 +3,7 @@ import test from "node:test";
 import { EditorState } from "@codemirror/state";
 import { recoverMobileSyntaxState } from "../src/mobile-syntax.js";
 
-test("state recovery walks from the document top without retaining checkpoints", () => {
+test("state recovery crosses the old 400-line boundary without retaining batches", () => {
   const source = [
     "const value = `opened;",
     ...Array.from({ length: 850 }, (_, index) => `  template line ${index}`),

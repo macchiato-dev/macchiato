@@ -8,21 +8,22 @@ the browser, in QuickJS, and in MicroQuickJS.
 
 Each mode is a CodeMirror `ViewPlugin`. On an update it:
 
-1. Walks quickly from the start of the document to the visible range. It keeps
-   only the small lexical state needed to interpret the next line, skips
-   grammar that would require a full parser, and may use conservative cues such
-   as indentation or a top-level declaration to recover around difficult
-   input. Work is bounded on each line; long tails receive only a cheap search
-   for state-changing delimiters. The pass retains no tokens, checkpoints, or
-   syntax tree after the visible range has been decorated.
+1. Walks quickly from the start of the document to the visible range to find
+   only the lexical state in which the visible text begins. The earlier
+   400-line number is neither a look-behind limit nor a reason to retain
+   400-line batches. This disposable pass skips grammar that would make the
+   walk expensive and may use conservative cues such as indentation or a
+   top-level declaration around difficult input. Work is bounded on each line;
+   long tails receive only a cheap search for state-changing delimiters. It
+   produces no tokens, checkpoints, or syntax tree.
 2. Reads `EditorView.visibleRanges`, expanded to complete visible lines.
 3. Parses and decorates at most 2,048 characters of each visible line. The
    unhighlighted tail of a longer, usually minified, line receives only cheap
    delimiter bookkeeping.
 4. Retains only the visible `RangeSet`. The top-to-bottom recovery state is
-   already gone when the refresh finishes. A keystroke or newly shown viewport
-   also discards the old marks immediately. Once activity pauses for 180 ms, it
-   walks from the top again and rebuilds only what is shown.
+   already gone when the refresh finishes. A keystroke immediately discards
+   the marks; a viewport shown after the 180 ms throttle is likewise rebuilt
+   from nothing. No result is reused by the next edit or reveal.
 
 This follows CodeMirror's documented large-document model: its
 [`visibleRanges`](https://codemirror.net/docs/ref/#view.EditorView.visibleRanges)
