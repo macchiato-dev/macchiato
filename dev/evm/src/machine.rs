@@ -139,7 +139,17 @@ pub struct SelfDestructCost { pub cold: bool, pub creates_account: bool }
 /// Chain state supplied by an embedding application.
 ///
 /// Methods return whether an account access was cold so the core can apply
-/// EIP-2929 gas without knowing how the host represents its access set.
+/// EIP-2929 gas without knowing how the host represents its access set. The
+/// access set is transaction-scoped and must not be reverted by `rollback`.
+/// Persistent writes, transient writes, balances, nonces, code, logs produced
+/// by child calls, creation, and self-destruction are revertible state and must
+/// be covered by the checkpoint.
+///
+/// `call` and `create` execute child frames or precompiles and return only
+/// after applying their own nested checkpoint rules. Their output buffers are
+/// valid only for the duration of the method. A false outcome represents an
+/// ordinary EVM call/create failure, while `HostError` means the embedding
+/// itself failed and makes the current frame exceptional.
 pub trait Host {
     fn balance(&mut self, _address: Word) -> Result<Access<Word>, HostError> {
         Err(HostError)
@@ -251,6 +261,7 @@ pub struct Machine<'a, const CAPACITY: usize = MEMORY_LIMIT> {
     host: Option<&'a mut dyn Host>,
     refund: i64,
     original_storage: [Slot; STORAGE_LIMIT],
+    original_transient: [Slot; STORAGE_LIMIT],
     warm_storage_len: usize,
 }
 
@@ -260,10 +271,12 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
         workspace.memory.fill(0);
         workspace.transient.fill(Slot::default());
         let original_storage = workspace.storage;
+        let original_transient = workspace.transient;
         Self { code, calldata, env, workspace, pc: 0, gas, stack_len: 0,
             memory_len: 0, trace_len: 0, output_len: 0, steps: 0,
             return_data_len: 0, log_len: 0, log_data_len: 0, host: None,
-            refund: 0, original_storage, warm_storage_len: 0 }
+            refund: 0, original_storage, original_transient,
+            warm_storage_len: 0 }
     }
 
     pub fn with_host(code: &'a [u8], calldata: &'a [u8], gas: u64,
@@ -609,6 +622,7 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
         };
         if !matches!(exit, Exit::Stopped | Exit::Returned) {
             self.workspace.storage = self.original_storage;
+            self.workspace.transient = self.original_transient;
             self.log_len = 0;
             self.log_data_len = 0;
             self.refund = 0;
@@ -772,7 +786,7 @@ mod tests {
     use core::cell::UnsafeCell;
     use super::{Access, CallCost, CallKind, CallOutcome, CallRequest,
         CreateKind, CreateOutcome, CreateRequest, Environment, Exit, Host,
-        HostError, Machine, SelfDestructCost, StorageAccess, Workspace,
+        HostError, Machine, SelfDestructCost, StorageAccess, Workspace, MEMORY_LIMIT,
         WorkspaceWithCapacity};
     use crate::{keccak::keccak256, Word};
     use self::std::vec::Vec;
@@ -960,6 +974,7 @@ mod tests {
         transient: Word,
         saved_transient: Word,
         rolled_back: bool,
+        committed: bool,
     }
 
     impl Host for StorageHost {
@@ -989,6 +1004,10 @@ mod tests {
             self.current = self.saved;
             self.transient = self.saved_transient;
             self.rolled_back = true;
+            Ok(())
+        }
+        fn commit(&mut self, _: u32) -> Result<(), HostError> {
+            self.committed = true;
             Ok(())
         }
     }
@@ -1181,7 +1200,7 @@ mod tests {
         let mut host = StorageHost { original: Word::from_u64(7),
             current: Word::from_u64(7), saved: Word::ZERO,
             transient: Word::ZERO, saved_transient: Word::ZERO,
-            rolled_back: false };
+            rolled_back: false, committed: false };
         let mut machine = Machine::with_host(&code, &[], 100_000,
             Environment::default(), &mut workspace, &mut host);
         assert_eq!(machine.run(100), Exit::Reverted);
@@ -1201,7 +1220,7 @@ mod tests {
         let mut workspace = Workspace::new();
         let mut host = StorageHost { original: Word::ZERO, current: Word::ZERO,
             saved: Word::ZERO, transient: Word::from_u64(3),
-            saved_transient: Word::ZERO, rolled_back: false };
+            saved_transient: Word::ZERO, rolled_back: false, committed: false };
         let mut machine = Machine::with_host(&code, &[], 100_000,
             Environment::default(), &mut workspace, &mut host);
         assert_eq!(machine.run(100), Exit::Reverted);
@@ -1209,6 +1228,34 @@ mod tests {
         drop(machine);
         assert_eq!(host.transient, Word::from_u64(3));
         assert!(host.rolled_back);
+    }
+
+    #[test]
+    fn local_transient_writes_revert_with_the_frame() {
+        let code = [
+            0x60, 9, 0x60, 1, 0x5d,
+            0x60, 0, 0x60, 0, 0xfd,
+        ];
+        let mut workspace = Workspace::new();
+        assert_eq!(Machine::new(&code, &[], 100_000, Environment::default(),
+            &mut workspace).run(100), Exit::Reverted);
+        assert_eq!(Machine::<{ MEMORY_LIMIT }>::slot(&mut workspace.transient,
+            Word::ONE, None).unwrap(), Word::ZERO);
+    }
+
+    #[test]
+    fn successful_host_frame_commits_its_checkpoint() {
+        let code = [0x60, 9, 0x60, 1, 0x55, 0x00];
+        let mut workspace = Workspace::new();
+        let mut host = StorageHost { original: Word::ZERO, current: Word::ZERO,
+            saved: Word::ZERO, transient: Word::ZERO,
+            saved_transient: Word::ZERO, rolled_back: false, committed: false };
+        assert_eq!(Machine::with_host(&code, &[], 100_000,
+            Environment::default(), &mut workspace, &mut host).run(100),
+            Exit::Stopped);
+        assert_eq!(host.current, Word::from_u64(9));
+        assert!(host.committed);
+        assert!(!host.rolled_back);
     }
 
     #[test]
