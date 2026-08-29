@@ -48,6 +48,13 @@ const examples = [
     code: "60 5b 60 01 56",
     calldata: "",
   },
+  {
+    name: "Static TSTORE",
+    description: "A state-changing opcode is rejected in a read-only frame",
+    code: "60 2a 60 01 5d 00",
+    calldata: "",
+    readOnly: true,
+  },
 ];
 
 const environmentFields = [
@@ -136,6 +143,7 @@ function selectExample() {
   $("#code").value = example.code;
   $("#calldata").value = example.calldata;
   for (const [name] of environmentFields) $(`#env-${name}`).value = example.environment?.[name] || "0";
+  $("#read-only").checked = example.readOnly === true;
 }
 $("#example").addEventListener("change", selectExample);
 selectExample();
@@ -179,6 +187,7 @@ function run() {
     linear.set(calldata, api.evm_calldata_ptr());
     const environment = api.evm_environment_ptr();
     for (const [index, [name]] of environmentFields.entries()) linear.set(word($(`#env-${name}`).value), environment + index * 32);
+    api.evm_set_read_only($("#read-only").checked ? 1 : 0);
     const exit = api.evm_run(code.length, calldata.length, BigInt($("#gas").value), 100000);
     const output = new Uint8Array(api.memory.buffer, api.evm_output_ptr(), api.evm_output_len());
     const stack = new Uint8Array(api.memory.buffer, api.evm_stack_ptr(), api.evm_stack_len() * 32);
@@ -186,6 +195,7 @@ function run() {
     $("#exit").style.color = exit <= 1 ? "var(--lime)" : exit === 2 ? "var(--amber)" : "var(--red)";
     $("#gas-left").textContent = api.evm_gas_left().toLocaleString();
     $("#steps").textContent = api.evm_trace_len().toLocaleString();
+    $("#refund").textContent = api.evm_refund().toLocaleString();
     $("#output").textContent = output.length ? hex(output) : "0x";
     try { $("#output-text").textContent = output.length ? `UTF-8: ${decoder.decode(output)}` : ""; }
     catch { $("#output-text").textContent = ""; }

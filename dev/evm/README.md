@@ -64,7 +64,41 @@ calculates frame-level Cancun `SSTORE` costs and refund deltas.
 
 ```sh
 PATH="$HOME/.cargo/bin:$PATH" cargo test --manifest-path dev/evm/Cargo.toml
-PATH="$HOME/.cargo/bin:$PATH" cargo build --release \
-  --target wasm32-unknown-unknown --manifest-path dev/evm/Cargo.toml
+deno run --allow-env=PATH,HOME --allow-read=. \
+  --allow-write=dev/evm/playground,dev/evm/target \
+  --allow-run="$HOME/.cargo/bin/cargo" dev/evm/build.js
 node --test dev/evm/test/playground.test.js
 ```
+
+The build copies a `wasm32-unknown-unknown` `cdylib` into
+`playground/evm.wasm`. At this revision it is 42,108 bytes, imports nothing,
+and has SHA-256
+`ee22ae1d5d33bde35b41f00bca3c78a111637025e1de256999ad68580af02458`.
+The browser test recompiles the module, checks that empty import list, checks
+the ABI bounds, and executes every example.
+
+With the repository's development app plugin installed, the same files are
+served at `http://evm.localhost:<port>`.
+
+## Browser ABI
+
+Instantiate `playground/evm.wasm`, copy bytecode and calldata into the buffers
+returned by `evm_code_ptr` and `evm_calldata_ptr`, and write fourteen 32-byte
+big-endian environment words at `evm_environment_ptr`. Then set whether the
+frame is static and run it:
+
+```js
+const { instance } = await WebAssembly.instantiateStreaming(fetch("./evm.wasm"));
+const evm = instance.exports;
+const memory = new Uint8Array(evm.memory.buffer);
+memory.set(code, evm.evm_code_ptr());
+memory.set(calldata, evm.evm_calldata_ptr());
+evm.evm_set_read_only(0);
+const exit = evm.evm_run(code.length, calldata.length, 1_000_000n, 100_000);
+```
+
+The stack, trace, and output each have pointer and length exports. The remaining
+scalar results are `evm_gas_left` and the signed `evm_refund` counter.
+`evm_reset_storage` clears the standalone playground's persistent storage.
+Lengths exceeding the two 65,536-byte input capacities return `InputLimit`
+without executing an instruction.

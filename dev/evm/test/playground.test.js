@@ -52,21 +52,24 @@ test("the no-import Wasm machine runs every playground example", async () => {
       const invalid = api.evm_run(65537, 0, 1000n, 100);
       return {
         capacities: [api.evm_code_capacity(), api.evm_calldata_capacity()],
+        controls: [typeof api.evm_set_read_only, typeof api.evm_refund],
         invalid: [invalid, api.evm_stack_len(), api.evm_trace_len(),
-          api.evm_output_len()],
+          api.evm_output_len(), api.evm_refund()],
       };
     });
     assert.deepEqual(abi.capacities, [65536, 65536]);
-    assert.deepEqual(abi.invalid, [17, 0, 0, 0]);
+    assert.deepEqual(abi.controls, ["function", "function"]);
+    assert.deepEqual(abi.invalid, [17, 0, 0, 0, 0n]);
 
     const expected = ["Returned", "Returned", "Returned", "Returned",
-      "Returned", "Returned", "Returned", "Bad jump"];
+      "Returned", "Returned", "Returned", "Bad jump", "Write protection"];
     for (let index = 0; index < expected.length; index++) {
       await page.locator("#example").selectOption(String(index));
       await page.locator("#run").click();
       assert.equal(await page.locator("#exit").textContent(), expected[index]);
       assert.ok(await page.locator("#trace tr").count() > 0);
     }
+    assert.equal(await page.locator("#refund").textContent(), "0");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
     assert.deepEqual(errors, []);
   } finally {

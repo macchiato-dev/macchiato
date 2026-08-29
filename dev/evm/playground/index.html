@@ -35,11 +35,13 @@
       <details>
         <summary>Environment</summary>
         <div id="environment" class="environment"></div>
+        <label class="readonly-field"><input id="read-only" type="checkbox">
+          Static, read-only frame</label>
       </details>
       <div class="actions">
         <button id="run" type="button">Run program</button>
         <button id="reset-storage" class="secondary" type="button">Reset storage</button>
-        <output id="runtime-status" aria-live="polite">Loading 29 KiB machine…</output>
+        <output id="runtime-status" aria-live="polite">Loading machine…</output>
       </div>
     </section>
 
@@ -52,6 +54,9 @@
       </article>
       <article class="result-card">
         <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Refund counter</span><strong id="refund">—</strong>
       </article>
       <article class="result-card output-card">
         <span>Output</span><code id="output">—</code>
