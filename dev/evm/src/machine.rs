@@ -1923,6 +1923,172 @@ mod tests {
         }
     }
 
+    #[derive(Clone, Copy)]
+    struct CallFixtureSnapshot {
+        storage: [[Word; 4]; 2],
+        transient: [Word; 2],
+    }
+
+    struct RecursiveCallHost {
+        outer: Word,
+        child: Word,
+        original: [[Word; 4]; 2],
+        current: [[Word; 4]; 2],
+        transient: [Word; 2],
+        snapshots: [CallFixtureSnapshot; 4],
+        depth: usize,
+    }
+
+    impl RecursiveCallHost {
+        fn new(outer: Word, child: Word) -> Self {
+            let mut storage = [[Word::ZERO; 4]; 2];
+            storage[0][0] = Word::from_u64(0xff);
+            storage[0][1] = Word::from_u64(0xff);
+            storage[1][2] = Word::from_u64(0xff);
+            storage[1][3] = Word::from_u64(0xff);
+            let snapshot = CallFixtureSnapshot {
+                storage,
+                transient: [Word::ZERO; 2],
+            };
+            Self {
+                outer,
+                child,
+                original: storage,
+                current: storage,
+                transient: [Word::ZERO; 2],
+                snapshots: [snapshot; 4],
+                depth: 0,
+            }
+        }
+
+        fn account(&self, address: Word) -> Result<usize, HostError> {
+            if address == self.outer {
+                Ok(0)
+            } else if address == self.child {
+                Ok(1)
+            } else {
+                Err(HostError)
+            }
+        }
+    }
+
+    impl Host for RecursiveCallHost {
+        fn storage(&mut self, address: Word, key: Word) -> Result<StorageAccess, HostError> {
+            let account = self.account(address)?;
+            let key = Machine::<1024>::word_usize(key)
+                .filter(|key| *key < 4)
+                .ok_or(HostError)?;
+            Ok(StorageAccess {
+                original: self.original[account][key],
+                current: self.current[account][key],
+                cold: false,
+            })
+        }
+
+        fn set_storage(&mut self, address: Word, key: Word, value: Word) -> Result<(), HostError> {
+            let account = self.account(address)?;
+            let key = Machine::<1024>::word_usize(key)
+                .filter(|key| *key < 4)
+                .ok_or(HostError)?;
+            self.current[account][key] = value;
+            Ok(())
+        }
+
+        fn transient_storage(&mut self, address: Word, key: Word) -> Result<Word, HostError> {
+            let account = self.account(address)?;
+            if key != Word::ZERO {
+                return Ok(Word::ZERO);
+            }
+            Ok(self.transient[account])
+        }
+
+        fn set_transient_storage(
+            &mut self,
+            address: Word,
+            key: Word,
+            value: Word,
+        ) -> Result<(), HostError> {
+            let account = self.account(address)?;
+            if key != Word::ZERO {
+                return Err(HostError);
+            }
+            self.transient[account] = value;
+            Ok(())
+        }
+
+        fn call_cost(&mut self, _: Word, _: Word) -> Result<CallCost, HostError> {
+            Ok(CallCost {
+                cold: false,
+                creates_account: false,
+            })
+        }
+
+        fn call(
+            &mut self,
+            request: CallRequest,
+            input: &[u8],
+            output: &mut [u8],
+        ) -> Result<CallOutcome, HostError> {
+            let code = hex_bytes("5b60005c600255601460005d60005c600355");
+            let address = if matches!(request.kind, CallKind::Call | CallKind::StaticCall) {
+                request.address
+            } else {
+                request.current_target
+            };
+            let environment = Environment {
+                address,
+                caller: request.caller,
+                call_value: request.value,
+                read_only: request.read_only,
+                ..Environment::default()
+            };
+            let mut workspace = WorkspaceWithCapacity::<1024>::new();
+            let mut child =
+                Machine::with_host(&code, input, request.gas, environment, &mut workspace, self);
+            let exit = child.run(100);
+            let gas_left = child.gas();
+            let refund = child.refund();
+            let output_length = child.output().len().min(output.len());
+            output[..output_length].copy_from_slice(&child.output()[..output_length]);
+            Ok(CallOutcome {
+                success: matches!(exit, Exit::Stopped | Exit::Returned),
+                gas_left,
+                output_length,
+                refund,
+            })
+        }
+
+        fn checkpoint(&mut self) -> Result<u32, HostError> {
+            if self.depth == self.snapshots.len() {
+                return Err(HostError);
+            }
+            self.snapshots[self.depth] = CallFixtureSnapshot {
+                storage: self.current,
+                transient: self.transient,
+            };
+            self.depth += 1;
+            Ok(self.depth as u32)
+        }
+
+        fn commit(&mut self, checkpoint: u32) -> Result<(), HostError> {
+            if checkpoint as usize != self.depth {
+                return Err(HostError);
+            }
+            self.depth -= 1;
+            Ok(())
+        }
+
+        fn rollback(&mut self, checkpoint: u32) -> Result<(), HostError> {
+            if checkpoint as usize != self.depth || self.depth == 0 {
+                return Err(HostError);
+            }
+            self.depth -= 1;
+            self.current = self.snapshots[self.depth].storage;
+            self.transient = self.snapshots[self.depth].transient;
+            Ok(())
+        }
+    }
+
     #[test]
     fn adds_and_returns_a_word() {
         // 2 + 3, store at memory[0], return 32 bytes.
@@ -2380,6 +2546,83 @@ mod tests {
             ]
         );
         assert_eq!(&machine.memory()[..3], &[0xbb, 0xcc, 0xdd]);
+    }
+
+    #[test]
+    fn passes_official_cancun_transient_storage_call_vectors() {
+        // execution-spec-tests v5.4.0:
+        // state_tests/cancun/eip1153_tstore/test_tload_calls.json
+        // SHA-256 d5cf5115aabc7014281cb1175b76f5ec31b99b103c3383419b768b99efa0105b.
+        let cases = [
+            (
+                "CALL",
+                "239e42cc563ed45788a74f0e39c926cae1c27b11",
+                "239e42cc563ed45788a74f0e39c926cae1c27a11",
+                "5b600a60005d6000600060206000600073239e42cc563ed45788a74f0e39c926cae1c27a115af160015560005c600055",
+                [Word::from_u64(10), Word::ONE, Word::ZERO, Word::ZERO],
+                [Word::ZERO, Word::ZERO, Word::ZERO, Word::from_u64(20)],
+            ),
+            (
+                "CALLCODE",
+                "93190db2d4e970fb6cbdbc169f43d631573b23b9",
+                "93190db2d4e970fb6cbdbc169f43d631573b22b9",
+                "5b600a60005d600060006020600060007393190db2d4e970fb6cbdbc169f43d631573b22b95af260015560005c600055",
+                [
+                    Word::from_u64(20),
+                    Word::ONE,
+                    Word::from_u64(10),
+                    Word::from_u64(20),
+                ],
+                [
+                    Word::ZERO,
+                    Word::ZERO,
+                    Word::from_u64(0xff),
+                    Word::from_u64(0xff),
+                ],
+            ),
+            (
+                "DELEGATECALL",
+                "51d5d77ca9140f6057d596d44ba933504e406402",
+                "51d5d77ca9140f6057d596d44ba933504e406302",
+                "5b600a60005d60006000602060007351d5d77ca9140f6057d596d44ba933504e4063025af460015560005c600055",
+                [
+                    Word::from_u64(20),
+                    Word::ONE,
+                    Word::from_u64(10),
+                    Word::from_u64(20),
+                ],
+                [
+                    Word::ZERO,
+                    Word::ZERO,
+                    Word::from_u64(0xff),
+                    Word::from_u64(0xff),
+                ],
+            ),
+        ];
+        for (name, outer, child, code, expected_outer, expected_child) in cases {
+            let outer = fixture_word(outer);
+            let child = fixture_word(child);
+            let code = hex_bytes(code);
+            let mut host = RecursiveCallHost::new(outer, child);
+            let mut workspace = WorkspaceWithCapacity::<1024>::new();
+            let environment = Environment {
+                address: outer,
+                ..Environment::default()
+            };
+            let mut machine = Machine::with_host(
+                &code,
+                &[],
+                5_000_000,
+                environment,
+                &mut workspace,
+                &mut host,
+            );
+            assert_eq!(machine.run(100), Exit::Stopped, "{name}");
+            drop(machine);
+            assert_eq!(host.current[0], expected_outer, "{name} outer storage");
+            assert_eq!(host.current[1], expected_child, "{name} child storage");
+            assert_eq!(host.depth, 0, "{name} committed checkpoints");
+        }
     }
 
     #[test]

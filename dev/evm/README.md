@@ -30,11 +30,13 @@ Ethereum's executable execution-layer specification is the semantic reference:
 <https://github.com/ethereum/execution-specs>. Tests should prefer official
 execution-spec vectors as coverage expands.
 
-The checked-in compact corpus currently runs 322 Cancun cases derived from
+The checked-in compact corpus currently runs 325 Cancun cases derived from
 `execution-spec-tests` v5.4.0: arithmetic and bitwise operations, direct
 calldata loads, `MCOPY`, memory and control flow, Keccak, and return data. Each
-corpus records its source or aggregate SHA-256. Cases that intentionally need
-more than the browser ABI's default 64 KiB memory bound run in explicitly
+corpus records its source or aggregate SHA-256. Three EIP-1153 cases execute
+recursive `CALL`, `CALLCODE`, and `DELEGATECALL` frames through a test host and
+check their distinct transient-storage ownership. Cases that intentionally
+need more than the browser ABI's default 64 KiB memory bound run in explicitly
 larger caller-selected profiles.
 
 ## Layout
