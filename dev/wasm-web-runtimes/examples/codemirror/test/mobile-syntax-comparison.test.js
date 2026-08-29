@@ -121,9 +121,13 @@ test("normal parsing and viewport parsing receive the same first-page edit workl
             if (strategy === "viewport") {
               assert.ok(current.syntaxStats.parsedChars < 20_000);
               if (mode === "css") {
-                await page.evaluate(async () => {
-                  await globalThis.benchmarkGuestCall("showMobileSyntaxBenchmark", "2194");
-                });
+                const longLineNumber = source.split("\n")
+                  .findIndex(line => line.length > 7_000) + 1;
+                assert.ok(longLineNumber > 0, "CSS benchmark contains a capped line");
+                await page.evaluate(async line => {
+                  await globalThis.benchmarkGuestCall("showMobileSyntaxBenchmark",
+                    String(line));
+                }, longLineNumber);
                 await page.waitForFunction(() => {
                   const text = document.getElementById("benchmark-status").textContent;
                   return text && JSON.parse(text).syntaxStats?.skippedHighlightChars > 7000;

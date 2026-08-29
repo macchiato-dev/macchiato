@@ -522,6 +522,8 @@ function tokensFor(view, mode) {
   for (const visible of view.visibleRanges) {
     const firstLine = doc.lineAt(visible.from);
     const lastLine = doc.lineAt(visible.to);
+    // This prefix is a disposable state-recovery input. It is rescanned from
+    // the top after the throttle and is never retained as tokens or a tree.
     const prefix = doc.sliceString(0, firstLine.from);
     const firstText = doc.sliceString(firstLine.from,
       Math.min(firstLine.to, firstLine.from + HIGHLIGHT_LINE_LIMIT));

@@ -9,17 +9,19 @@ the browser, in QuickJS, and in MicroQuickJS.
 Each mode is a CodeMirror `ViewPlugin`. On an update it:
 
 1. Walks quickly from the start of the document to the visible range to find
-   the lexical state at which the visible text begins. This is a top-to-bottom
-   pass, not a fixed look-behind window. It skips ordinary text and difficult
-   long-line tails, and retains no tokens or syntax tree from this pass.
+   the lexical state at which the visible text begins. The earlier 400-line
+   bound was not meant to become a fixed look-behind window. This pass skips
+   ordinary text and difficult long-line tails, uses a small amount of
+   indentation-based recovery, and retains no tokens, checkpoints, or syntax
+   tree.
 2. Reads `EditorView.visibleRanges`, expanded to complete visible lines.
 3. Parses and decorates at most 2,048 characters of each visible line. The
    unhighlighted tail of a longer, usually minified, line receives only cheap
    delimiter bookkeeping.
 4. Retains only the visible `RangeSet`. A keystroke discards those marks and
    all transient scan data immediately. Once activity pauses for 180 ms, it
-   walks from the top again and rebuilds only what is shown. Scrolling uses the
-   same disposable rebuild path.
+   walks from the top again and rebuilds only what is shown. Showing a new
+   viewport uses the same disposable rebuild path.
 
 This follows CodeMirror's documented large-document model: its
 [`visibleRanges`](https://codemirror.net/docs/ref/#view.EditorView.visibleRanges)
