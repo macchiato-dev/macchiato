@@ -765,6 +765,31 @@ mod tests {
         Word::from_be_slice(&hex_bytes(source))
     }
 
+    fn run_storage_vectors(vectors: &str) -> usize {
+        let mut cases = 0;
+        for line in vectors.lines().filter(|line| !line.starts_with('#')) {
+            let mut fields = line.split('|');
+            let name = fields.next().unwrap();
+            let code = hex_bytes(fields.next().unwrap());
+            let calldata = hex_bytes(fields.next().unwrap());
+            let expected = fields.next().unwrap();
+            assert!(fields.next().is_none(), "invalid vector {name}");
+
+            let mut workspace = Workspace::new();
+            let mut machine = Machine::new(&code, &calldata, 10_000_000,
+                Environment::default(), &mut workspace);
+            assert_eq!(machine.run(1_000), Exit::Stopped, "{name}");
+            drop(machine);
+            for pair in expected.split(',').filter(|pair| !pair.is_empty()) {
+                let (key, value) = pair.split_once('=').unwrap();
+                assert_eq!(workspace.storage(fixture_word(key)), fixture_word(value),
+                    "{name}: storage {key}");
+            }
+            cases += 1;
+        }
+        cases
+    }
+
     struct TestHost {
         cold: bool,
         last_call: Option<CallRequest>,
@@ -944,28 +969,13 @@ mod tests {
     #[test]
     fn passes_official_cancun_mcopy_vectors() {
         const VECTORS: &str = include_str!("../test/official-mcopy-vectors.txt");
-        let mut cases = 0;
-        for line in VECTORS.lines().filter(|line| !line.starts_with('#')) {
-            let mut fields = line.split('|');
-            let name = fields.next().unwrap();
-            let code = hex_bytes(fields.next().unwrap());
-            let calldata = hex_bytes(fields.next().unwrap());
-            let expected = fields.next().unwrap();
-            assert!(fields.next().is_none(), "invalid vector {name}");
+        assert_eq!(run_storage_vectors(VECTORS), 21);
+    }
 
-            let mut workspace = Workspace::new();
-            let mut machine = Machine::new(&code, &calldata, 10_000_000,
-                Environment::default(), &mut workspace);
-            assert_eq!(machine.run(1_000), Exit::Stopped, "{name}");
-            drop(machine);
-            for pair in expected.split(',').filter(|pair| !pair.is_empty()) {
-                let (key, value) = pair.split_once('=').unwrap();
-                assert_eq!(workspace.storage(fixture_word(key)), fixture_word(value),
-                    "{name}: storage {key}");
-            }
-            cases += 1;
-        }
-        assert_eq!(cases, 21);
+    #[test]
+    fn passes_official_cancun_calldataload_vectors() {
+        const VECTORS: &str = include_str!("../test/official-calldataload-vectors.txt");
+        assert_eq!(run_storage_vectors(VECTORS), 3);
     }
 
     #[test]
