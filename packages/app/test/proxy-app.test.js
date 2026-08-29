@@ -24,6 +24,8 @@ test("proxy declarations require explicit access to remote origins", () => {
   ), "https://example.com");
   assert.throws(() => validateProxyOptions({ proxy: { origin: "file:///etc/passwd" } }),
     /HTTP\(S\) origin/);
+  assert.throws(() => validateProxyOptions({ proxy: { origin: "http://localhost:8000/admin" } }),
+    /without credentials or a path/);
 });
 
 test("proxy apps preserve request semantics and stream the response", async (t) => {

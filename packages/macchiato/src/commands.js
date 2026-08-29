@@ -415,8 +415,8 @@ export function createCommands({ blocking = false, dataDir = "", dbPath = "" } =
       const normalizedOrigin = new URL(origin).origin;
       const allowRemote = flags.includes("--allow-remote");
       const access = allowRemote ? { networkOrigins: [normalizedOrigin] } : {};
+      validateProxyOptions({ proxy: { origin } }, access);
       const options = { proxy: { origin: normalizedOrigin } };
-      validateProxyOptions(options, access);
       withDb((db) => registerSiteApp(db, subdomain, "proxy", "reverse proxy", {
         access,
         options,
