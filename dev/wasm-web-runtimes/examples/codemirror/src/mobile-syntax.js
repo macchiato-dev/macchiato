@@ -3,6 +3,7 @@ import { Decoration, EditorView, ViewPlugin } from "@codemirror/view";
 
 const HIGHLIGHT_LINE_LIMIT = 2048;
 const STATE_LINE_LIMIT = 4096;
+const STATE_BATCH_LINES = 400;
 const REFRESH_DELAY = 180;
 const classes = {
   comment: "cm-mobile-comment", keyword: "cm-mobile-keyword",
@@ -491,6 +492,43 @@ function scanMode(mode, text, offset, state, emit = true) {
   return htmlScan(text, offset, state, emit);
 }
 
+function emptyState(mode) {
+  if (mode === "markdown") return null;
+  if (mode === "html") return { mode: "normal", inner: "normal" };
+  return "normal";
+}
+
+function stateBeforeLine(doc, mode, lineNumber) {
+  let state = emptyState(mode);
+  let scannedChars = 0;
+  let skippedChars = 0;
+
+  // Batches are deliberately not checkpoints. They only keep this one local
+  // state value while walking from the top and disappear when the call ends.
+  for (let batch = 1; batch < lineNumber; batch += STATE_BATCH_LINES) {
+    const end = Math.min(lineNumber, batch + STATE_BATCH_LINES);
+    for (let number = batch; number < end; number++) {
+      const line = doc.line(number);
+      const length = Math.min(line.length, STATE_LINE_LIMIT);
+      const text = doc.sliceString(line.from, line.from + length) + "\n";
+      state = scanMode(mode, text, 0, state, false).state;
+      scannedChars += text.length;
+      if (line.length > length) {
+        // The tail is searched only for delimiters that affect later lines.
+        // It is never tokenized or retained, which keeps minified input cheap.
+        state = skipLongTail(mode, state,
+          doc.sliceString(line.from + length, line.to));
+        skippedChars += line.length - length;
+      }
+    }
+  }
+  return { state, scannedChars, skippedChars };
+}
+
+export function recoverMobileSyntaxState(mode, doc, lineNumber) {
+  return stateBeforeLine(doc, mode, lineNumber);
+}
+
 function skipLongTail(mode, state, tail) {
   if (mode === "javascript") return skipJavascriptTail(state, tail);
   if (mode === "css") return skipCssTail(state, tail);
@@ -518,17 +556,15 @@ function tokensFor(view, mode) {
   const tokens = [];
   let parsedChars = 0;
   let stateChars = 0;
+  let skippedStateChars = 0;
   let skippedHighlightChars = 0;
   for (const visible of view.visibleRanges) {
     const firstLine = doc.lineAt(visible.from);
     const lastLine = doc.lineAt(visible.to);
-    // This prefix is a disposable state-recovery input. It is rescanned from
-    // the top after the throttle and is never retained as tokens or a tree.
-    const prefix = doc.sliceString(0, firstLine.from);
-    const firstText = doc.sliceString(firstLine.from,
-      Math.min(firstLine.to, firstLine.from + HIGHLIGHT_LINE_LIMIT));
-    let state = initialState(mode, prefix, firstText);
-    stateChars += prefix.length;
+    const recovered = stateBeforeLine(doc, mode, firstLine.number);
+    let state = recovered.state;
+    stateChars += recovered.scannedChars;
+    skippedStateChars += recovered.skippedChars;
     for (let number = firstLine.number; number <= lastLine.number; number++) {
       const line = doc.line(number);
       const length = Math.min(line.length, HIGHLIGHT_LINE_LIMIT);
@@ -545,7 +581,8 @@ function tokensFor(view, mode) {
     }
   }
   tokens.sort((left, right) => left.from - right.from || left.to - right.to);
-  return { tokens, parsedChars, stateChars, skippedHighlightChars };
+  return { tokens, parsedChars, stateChars, skippedStateChars,
+    skippedHighlightChars };
 }
 
 function decorationsFor(tokens) {
@@ -602,6 +639,7 @@ export function mobileSyntax(mode, report) {
       }
     }
     clearAndSchedule() {
+      this.decorations = Decoration.none;
       this.schedule();
     }
     schedule() {
@@ -625,6 +663,7 @@ export function mobileSyntax(mode, report) {
       report({ mode, documentLines: view.state.doc.lines,
         visibleRanges: view.visibleRanges.length, retainedTokens: result.tokens.length,
         parsedChars: result.parsedChars, stateChars: result.stateChars,
+        skippedStateChars: result.skippedStateChars,
         skippedHighlightChars: result.skippedHighlightChars,
         updateMilliseconds: performance.now() - start });
     }
