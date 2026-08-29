@@ -19,12 +19,35 @@ import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../exampl
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 import { exportFocusedApp } from "../../../examples/focused-app/export-static.js";
 import { machineControllerHandler } from "../../../dev/playground/src/handler.js";
+import { evmPlaygroundHandler } from "../../../dev/evm/handler.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
 const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
+  {
+    name: "Macchiato EVM Playground",
+    pluginId: "evm-playground",
+    subdomain: "evm",
+    kind: "no-std WebAssembly virtual machine",
+    description: "Edit EVM bytecode and inspect execution performed by the no-import Rust Wasm core.",
+    handler: evmPlaygroundHandler,
+    sourceFiles: [
+      "dev/evm/README.md",
+      "dev/evm/src/machine.rs",
+      "dev/evm/src/word.rs",
+      "dev/evm/src/keccak.rs",
+      "dev/evm/src/wasm.rs",
+      "dev/evm/playground/index.html",
+      "dev/evm/playground/playground.js",
+      "dev/evm/playground/style.css",
+    ],
+    sandbox: {
+      runtime: "allocator-free Rust compiled to WebAssembly",
+      hostCapabilities: ["fixed linear-memory ABI"],
+    },
+  },
   {
     name: "Macchiato Machine Controller",
     pluginId: "playground",
