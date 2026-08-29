@@ -1,8 +1,8 @@
 # execution-spec-tests v5.4.0, Cancun memory, flow, and SHA3 direct cases
 # input-manifest-sha256 c9b437792754645305bc1271bed1f62442264935a0954dd47cb2217c28af97c7
 # GAS cases are excluded because the fixture measures its parent call budget.
-# farChunk is excluded because it deliberately exceeds this profile's 64 KiB memory cap.
-# sha3_0xFFFFF_0s is excluded for the same configured-cap reason.
+# farChunk and sha3_0xFFFFF_0s use caller-selected profiles in
+# official-large-memory-vectors.txt instead of this default-profile corpus.
 # RETURN cases are checked separately because the fixture stores child returndata in its wrapper.
 # name|code|pre-storage|post-storage
 vmIOandFlowOperations/codecopy/codecopy|6040600060003960005160005560205160015500||00=6040600060003960005160005560205160015500000000000000000000000000

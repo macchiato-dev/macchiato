@@ -3,12 +3,11 @@ use core::cmp::Ordering;
 use crate::{keccak::keccak256, Word};
 
 pub const STACK_LIMIT: usize = 1024;
+/// Capacity used by [`Workspace`] when the caller does not select a profile.
 pub const MEMORY_LIMIT: usize = 64 * 1024;
 pub const STORAGE_LIMIT: usize = 128;
 pub const TRACE_LIMIT: usize = 4096;
-pub const OUTPUT_LIMIT: usize = 64 * 1024;
 pub const LOG_LIMIT: usize = 128;
-pub const LOG_DATA_LIMIT: usize = 64 * 1024;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -182,33 +181,38 @@ pub trait Host {
     fn rollback(&mut self, _checkpoint: u32) -> Result<(), HostError> { Ok(()) }
 }
 
-pub struct Workspace {
+/// Caller-owned execution buffers.
+///
+/// `CAPACITY` bounds memory, returned data, call input, and log data. This
+/// keeps the core allocator-free while allowing an embedding to choose a
+/// profile large enough for the transaction it intends to execute.
+pub struct WorkspaceWithCapacity<const CAPACITY: usize> {
     stack: [Word; STACK_LIMIT],
-    memory: [u8; MEMORY_LIMIT],
+    memory: [u8; CAPACITY],
     storage: [Slot; STORAGE_LIMIT],
     transient: [Slot; STORAGE_LIMIT],
     warm_storage: [Word; STORAGE_LIMIT],
     traces: [Trace; TRACE_LIMIT],
-    output: [u8; OUTPUT_LIMIT],
-    return_data: [u8; OUTPUT_LIMIT],
-    call_input: [u8; MEMORY_LIMIT],
+    output: [u8; CAPACITY],
+    return_data: [u8; CAPACITY],
+    call_input: [u8; CAPACITY],
     logs: [Log; LOG_LIMIT],
-    log_data: [u8; LOG_DATA_LIMIT],
+    log_data: [u8; CAPACITY],
 }
 
-impl Workspace {
+impl<const CAPACITY: usize> WorkspaceWithCapacity<CAPACITY> {
     pub const fn new() -> Self {
         Self {
-            stack: [Word::ZERO; STACK_LIMIT], memory: [0; MEMORY_LIMIT],
+            stack: [Word::ZERO; STACK_LIMIT], memory: [0; CAPACITY],
             storage: [Slot { key: Word::ZERO, value: Word::ZERO, used: false }; STORAGE_LIMIT],
             transient: [Slot { key: Word::ZERO, value: Word::ZERO, used: false }; STORAGE_LIMIT],
             warm_storage: [Word::ZERO; STORAGE_LIMIT],
             traces: [Trace { pc: 0, gas: 0, opcode: 0, stack_height: 0, top: Word::ZERO }; TRACE_LIMIT],
-            output: [0; OUTPUT_LIMIT],
-            return_data: [0; OUTPUT_LIMIT], call_input: [0; MEMORY_LIMIT], logs: [Log {
+            output: [0; CAPACITY],
+            return_data: [0; CAPACITY], call_input: [0; CAPACITY], logs: [Log {
                 topics: [Word::ZERO; 4], topic_count: 0,
                 data_offset: 0, data_length: 0,
-            }; LOG_LIMIT], log_data: [0; LOG_DATA_LIMIT],
+            }; LOG_LIMIT], log_data: [0; CAPACITY],
         }
     }
 
@@ -218,7 +222,7 @@ impl Workspace {
     }
 
     pub fn set_storage(&mut self, key: Word, value: Word) -> Result<(), Exit> {
-        Machine::slot(&mut self.storage, key, Some(value)).map(|_| ())
+        Machine::<CAPACITY>::slot(&mut self.storage, key, Some(value)).map(|_| ())
     }
 
     pub fn storage_len(&self) -> usize {
@@ -226,11 +230,14 @@ impl Workspace {
     }
 }
 
-pub struct Machine<'a> {
+/// The default 64 KiB execution profile used by the browser ABI.
+pub type Workspace = WorkspaceWithCapacity<MEMORY_LIMIT>;
+
+pub struct Machine<'a, const CAPACITY: usize = MEMORY_LIMIT> {
     code: &'a [u8],
     calldata: &'a [u8],
     env: Environment,
-    workspace: &'a mut Workspace,
+    workspace: &'a mut WorkspaceWithCapacity<CAPACITY>,
     pc: usize,
     gas: u64,
     stack_len: usize,
@@ -247,9 +254,9 @@ pub struct Machine<'a> {
     warm_storage_len: usize,
 }
 
-impl<'a> Machine<'a> {
+impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
     pub fn new(code: &'a [u8], calldata: &'a [u8], gas: u64,
-        env: Environment, workspace: &'a mut Workspace) -> Self {
+        env: Environment, workspace: &'a mut WorkspaceWithCapacity<CAPACITY>) -> Self {
         workspace.memory.fill(0);
         workspace.transient.fill(Slot::default());
         let original_storage = workspace.storage;
@@ -260,7 +267,7 @@ impl<'a> Machine<'a> {
     }
 
     pub fn with_host(code: &'a [u8], calldata: &'a [u8], gas: u64,
-        env: Environment, workspace: &'a mut Workspace,
+        env: Environment, workspace: &'a mut WorkspaceWithCapacity<CAPACITY>,
         host: &'a mut dyn Host) -> Self {
         let mut machine = Self::new(code, calldata, gas, env, workspace);
         machine.host = Some(host);
@@ -399,13 +406,15 @@ impl<'a> Machine<'a> {
     fn expand_memory(&mut self, offset: usize, length: usize) -> Result<(), Exit> {
         if length == 0 { return Ok(()); }
         let end = offset.checked_add(length).ok_or(Exit::MemoryLimit)?;
-        if end > MEMORY_LIMIT { return Err(Exit::MemoryLimit); }
+        if end > CAPACITY { return Err(Exit::MemoryLimit); }
         let old_words = self.memory_len.div_ceil(32) as u64;
         let new_words = end.div_ceil(32) as u64;
+        let new_length = new_words as usize * 32;
+        if new_length > CAPACITY { return Err(Exit::MemoryLimit); }
         if new_words > old_words {
             let cost = |words: u64| 3 * words + words * words / 512;
             self.charge(cost(new_words) - cost(old_words))?;
-            self.memory_len = new_words as usize * 32;
+            self.memory_len = new_length;
         }
         Ok(())
     }
@@ -463,7 +472,7 @@ impl<'a> Machine<'a> {
 
     fn finish(&mut self, exit: Exit, offset: usize, length: usize) -> Result<Exit, Exit> {
         self.expand_memory(offset, length)?;
-        self.output_len = length.min(OUTPUT_LIMIT);
+        self.output_len = length.min(CAPACITY);
         self.workspace.output[..self.output_len]
             .copy_from_slice(&self.workspace.memory[offset..offset + self.output_len]);
         Ok(exit)
@@ -521,7 +530,7 @@ impl<'a> Machine<'a> {
             host.call(request, &self.workspace.call_input[..input_length],
                 &mut self.workspace.return_data).map_err(|_| Exit::HostError)?
         };
-        if outcome.output_length > OUTPUT_LIMIT || outcome.gas_left > call_gas {
+        if outcome.output_length > CAPACITY || outcome.gas_left > call_gas {
             return Err(Exit::HostError);
         }
         self.gas = self.gas.checked_add(outcome.gas_left).ok_or(Exit::HostError)?;
@@ -558,7 +567,7 @@ impl<'a> Machine<'a> {
             host.create(request, &self.workspace.call_input[..length],
                 &mut self.workspace.return_data).map_err(|_| Exit::HostError)?
         };
-        if outcome.output_length > OUTPUT_LIMIT || outcome.gas_left > forwarded {
+        if outcome.output_length > CAPACITY || outcome.gas_left > forwarded {
             return Err(Exit::HostError);
         }
         self.gas = self.gas.checked_add(outcome.gas_left).ok_or(Exit::HostError)?;
@@ -729,7 +738,7 @@ impl<'a> Machine<'a> {
                 self.expand_memory(offset, length)?;
                 self.charge(375 + 375 * topics as u64 + 8 * length as u64)?;
                 if self.log_len == LOG_LIMIT ||
-                    self.log_data_len.checked_add(length).ok_or(Exit::LogLimit)? > LOG_DATA_LIMIT {
+                    self.log_data_len.checked_add(length).ok_or(Exit::LogLimit)? > CAPACITY {
                     return Err(Exit::LogLimit);
                 }
                 let mut log = Log { topics: [Word::ZERO; 4], topic_count: topics as u8,
@@ -760,11 +769,26 @@ impl<'a> Machine<'a> {
 mod tests {
     extern crate std;
 
+    use core::cell::UnsafeCell;
     use super::{Access, CallCost, CallKind, CallOutcome, CallRequest,
         CreateKind, CreateOutcome, CreateRequest, Environment, Exit, Host,
-        HostError, Machine, SelfDestructCost, StorageAccess, Workspace};
+        HostError, Machine, SelfDestructCost, StorageAccess, Workspace,
+        WorkspaceWithCapacity};
     use crate::{keccak::keccak256, Word};
     use self::std::vec::Vec;
+
+    const LARGE_OFFICIAL_CAPACITY: usize = 0xb0_0020;
+    struct LargeOfficialWorkspace(
+        UnsafeCell<WorkspaceWithCapacity<LARGE_OFFICIAL_CAPACITY>>);
+    unsafe impl Sync for LargeOfficialWorkspace {}
+    static LARGE_OFFICIAL_WORKSPACE: LargeOfficialWorkspace = LargeOfficialWorkspace(
+        UnsafeCell::new(WorkspaceWithCapacity::new()));
+    const SHA3_OFFICIAL_CAPACITY: usize = 2 * 1024 * 1024;
+    struct Sha3OfficialWorkspace(
+        UnsafeCell<WorkspaceWithCapacity<SHA3_OFFICIAL_CAPACITY>>);
+    unsafe impl Sync for Sha3OfficialWorkspace {}
+    static SHA3_OFFICIAL_WORKSPACE: Sha3OfficialWorkspace = Sha3OfficialWorkspace(
+        UnsafeCell::new(WorkspaceWithCapacity::new()));
 
     fn hex_bytes(source: &str) -> Vec<u8> {
         fn nibble(byte: u8) -> u8 {
@@ -1298,6 +1322,48 @@ mod tests {
             Environment::default(), &mut workspace);
         assert_eq!(machine.run(20), Exit::Stopped);
         assert_eq!(machine.stack()[0], Word::from_be_slice(&keccak256(&[])));
+    }
+
+    #[test]
+    fn caller_selected_profile_can_expand_beyond_the_browser_default() {
+        std::thread::Builder::new().stack_size(8 * 1024 * 1024).spawn(|| {
+            // Store 0xaa at memory offset 70,000, beyond the default 64 KiB
+            // ABI profile but within this embedding's caller-owned workspace.
+            let code = [0x60, 0xaa, 0x62, 0x01, 0x11, 0x70, 0x53, 0x00];
+            let mut small = Workspace::new();
+            assert_eq!(Machine::new(&code, &[], 1_000_000,
+                Environment::default(), &mut small).run(100), Exit::MemoryLimit);
+
+            let mut large = WorkspaceWithCapacity::<{ 128 * 1024 }>::new();
+            let mut machine = Machine::new(&code, &[], 1_000_000,
+                Environment::default(), &mut large);
+            assert_eq!(machine.run(100), Exit::Stopped);
+            assert_eq!(machine.memory()[70_000], 0xaa);
+            assert_eq!(machine.memory().len(), 70_016);
+        }).unwrap().join().unwrap();
+    }
+
+    #[test]
+    fn passes_official_large_memory_profile_vectors() {
+        // execution-spec-tests v5.4.0, Cancun:
+        // vmTests/sha3/sha3_0xFFFFF_0s and
+        // vmIOandFlowOperations/msize/farChunk (target 0x1005).
+        let sha3 = hex_bytes("620fffff6103e82060005500");
+        let sha_workspace = unsafe { &mut *SHA3_OFFICIAL_WORKSPACE.0.get() };
+        let mut machine = Machine::new(&sha3, &[], 20_000_000,
+            Environment::default(), sha_workspace);
+        assert_eq!(machine.run(100), Exit::Stopped);
+        assert_eq!(sha_workspace.storage(Word::ZERO), fixture_word(
+            "be6f1b42b34644f918560a07f959d23e532dea5338e4b9f63db0caeb608018fa"));
+
+        let far_chunk = hex_bytes("600162b00000535960005500");
+        // A static caller-owned workspace proves that a large profile does not
+        // require an allocator or a correspondingly large native stack.
+        let workspace = unsafe { &mut *LARGE_OFFICIAL_WORKSPACE.0.get() };
+        let mut machine = Machine::new(&far_chunk, &[], 300_000_000,
+            Environment::default(), workspace);
+        assert_eq!(machine.run(100), Exit::Stopped);
+        assert_eq!(workspace.storage(Word::ZERO), Word::from_u64(0xb0_0020));
     }
 
     #[test]

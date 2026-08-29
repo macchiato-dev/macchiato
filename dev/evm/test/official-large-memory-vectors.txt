@@ -1,0 +1,5 @@
+# execution-spec-tests v5.4.0 Cancun large-memory profile cases
+# sha3.json _info hash: ff26f7ab69e037a8ec72d71a6fb803a7513ce11cb7e14c8ead33fdaf68ea1400
+# msize.json _info hash: d26954110fe51b771eb56b30c2212655e0bfc534a1ca7ab6221cf2f123f71b05
+vmTests/sha3/sha3_0xFFFFF_0s|620fffff6103e82060005500|00=be6f1b42b34644f918560a07f959d23e532dea5338e4b9f63db0caeb608018fa
+vmIOandFlowOperations/msize/farChunk-1005|600162b00000535960005500|00=b00020

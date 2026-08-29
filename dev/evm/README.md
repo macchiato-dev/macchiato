@@ -13,8 +13,10 @@ with an explicit status; they are never silently approximated.
 - The core has no allocator, libc, WASI, filesystem, clock, network, or random
   source.
 - Callers provide code, calldata, environment values, gas, and persistent
-  storage. The machine owns bounded stack, memory, transient storage, logs,
-  output, and trace buffers.
+  storage. The machine uses caller-owned bounded stack, memory, transient
+  storage, logs, output, and trace buffers. `Workspace` is the browser's
+  64 KiB profile; `WorkspaceWithCapacity<N>` selects a larger allocation-free
+  profile when execution needs it.
 - The optional `Host` trait supplies account balances and code, block hashes,
   and blob hashes. It reports cold account accesses, leaving state layout and
   database choice outside the VM while keeping EIP-2929 gas in the core.
@@ -28,12 +30,12 @@ Ethereum's executable execution-layer specification is the semantic reference:
 <https://github.com/ethereum/execution-specs>. Tests should prefer official
 execution-spec vectors as coverage expands.
 
-The checked-in compact corpus currently runs 259 Cancun cases derived from
+The checked-in compact corpus currently runs 261 Cancun cases derived from
 `execution-spec-tests` v5.4.0: arithmetic and bitwise operations, direct
 calldata loads, `MCOPY`, memory and control flow, Keccak, and return data. Each
 corpus records its source or aggregate SHA-256. Cases that intentionally need
-more than this WebAssembly profile's 64 KiB memory bound are identified and
-excluded rather than silently treated as canonical successes.
+more than the browser ABI's default 64 KiB memory bound run in explicitly
+larger caller-selected profiles.
 
 ## Layout
 
