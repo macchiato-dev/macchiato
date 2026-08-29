@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macchiato EVM Playground</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div class="eyebrow">no_std Rust · WebAssembly</div>
+    <h1>Ethereum, one opcode at a time.</h1>
+    <p>Edit bytecode, supply calldata and block context, then inspect the stack,
+      output, gas, and complete instruction trace produced inside Wasm.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Program">
+      <div class="field example-field">
+        <label for="example">Example</label>
+        <select id="example"></select>
+      </div>
+      <div class="field gas-field">
+        <label for="gas">Gas</label>
+        <input id="gas" inputmode="numeric" value="100000">
+      </div>
+      <div class="field code-field">
+        <label for="code">Bytecode</label>
+        <textarea id="code" spellcheck="false" rows="5"></textarea>
+      </div>
+      <div class="field calldata-field">
+        <label for="calldata">Calldata <span>hex or <code>text:</code></span></label>
+        <textarea id="calldata" spellcheck="false" rows="3"></textarea>
+      </div>
+      <details>
+        <summary>Environment</summary>
+        <div id="environment" class="environment"></div>
+      </details>
+      <div class="actions">
+        <button id="run" type="button">Run program</button>
+        <button id="reset-storage" class="secondary" type="button">Reset storage</button>
+        <output id="runtime-status" aria-live="polite">Loading 29 KiB machine…</output>
+      </div>
+    </section>
+
+    <section class="results" aria-label="Execution result">
+      <article class="result-card exit-card">
+        <span>Exit</span><strong id="exit">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Gas left</span><strong id="gas-left">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card output-card">
+        <span>Output</span><code id="output">—</code>
+        <small id="output-text"></small>
+      </article>
+      <article class="result-card stack-card">
+        <span>Final stack</span><ol id="stack"></ol>
+      </article>
+    </section>
+
+    <section class="trace-section">
+      <div class="trace-heading">
+        <div><span class="eyebrow">Execution trace</span><h2>What the machine did</h2></div>
+        <span id="trace-note">Select an example and run it.</span>
+      </div>
+      <div class="trace-scroll" tabindex="0">
+        <table>
+          <thead><tr><th>#</th><th>PC</th><th>Opcode</th><th>Gas before</th><th>Stack</th><th>Top after</th></tr></thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Bounded by construction.</strong> No allocator, WASI, filesystem,
+    clock, random source, network, or JavaScript opcode implementation.
+  </footer>
+  <script type="module" src="./playground.js"></script>
+</body>
+</html>
