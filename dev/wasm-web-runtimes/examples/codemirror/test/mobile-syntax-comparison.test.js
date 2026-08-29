@@ -68,7 +68,7 @@ async function keyTrace(page) {
   let seed = 0x6d2b79f5;
   for (let index = 0; index < 24; index++) {
     seed = (seed * 1664525 + 1013904223) >>> 0;
-    const line = 1 + seed % 10;
+    const line = 1 + seed % 30;
     const column = 1 + (seed >>> 8) % 24;
     await page.evaluate(async value => {
       await globalThis.benchmarkGuestCall("selectMobileSyntaxBenchmark", value);
@@ -120,6 +120,13 @@ test("normal parsing and viewport parsing receive the same first-page edit workl
               dispatch: current.trace, syntax: current.syntaxStats });
             if (strategy === "viewport") {
               assert.ok(current.syntaxStats.parsedChars < 20_000);
+              assert.ok(keys.median < 150,
+                `${runtime} ${mode} median first-page key latency: ${keys.median} ms`);
+              assert.ok(keys.p95 < 300,
+                `${runtime} ${mode} p95 first-page key latency: ${keys.p95} ms`);
+              assert.ok(current.syntaxStats.updateMilliseconds < 100,
+                `${runtime} ${mode} syntax refresh: ` +
+                `${current.syntaxStats.updateMilliseconds} ms`);
               if (mode === "css") {
                 const longLineNumber = source.split("\n")
                   .findIndex(line => line.length > 7_000) + 1;
