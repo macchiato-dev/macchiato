@@ -1868,6 +1868,61 @@ mod tests {
         }
     }
 
+    struct FailedCallHost;
+
+    impl Host for FailedCallHost {
+        fn call_cost(&mut self, _: Word, _: Word) -> Result<CallCost, HostError> {
+            Ok(CallCost {
+                cold: false,
+                creates_account: false,
+            })
+        }
+
+        fn call(
+            &mut self,
+            request: CallRequest,
+            _: &[u8],
+            _: &mut [u8],
+        ) -> Result<CallOutcome, HostError> {
+            Ok(CallOutcome {
+                success: false,
+                gas_left: request.gas,
+                output_length: 0,
+                // A failed child may report its internal counter, but the
+                // parent must not incorporate it.
+                refund: 99,
+            })
+        }
+    }
+
+    struct CreateOutputHost;
+
+    impl Host for CreateOutputHost {
+        fn create(
+            &mut self,
+            request: CreateRequest,
+            _: &[u8],
+            output: &mut [u8],
+        ) -> Result<CreateOutcome, HostError> {
+            output[..3].copy_from_slice(&[0xde, 0xad, 0xbe]);
+            Ok(CreateOutcome {
+                success: true,
+                address: Word::from_u64(0x123),
+                gas_left: request.gas,
+                output_length: 3,
+                refund: 7,
+            })
+        }
+    }
+
+    struct CheckpointErrorHost;
+
+    impl Host for CheckpointErrorHost {
+        fn checkpoint(&mut self) -> Result<u32, HostError> {
+            Err(HostError)
+        }
+    }
+
     #[test]
     fn adds_and_returns_a_word() {
         // 2 + 3, store at memory[0], return 32 bytes.
@@ -2548,6 +2603,64 @@ mod tests {
         assert_eq!(request.kind, CallKind::Call);
         assert_eq!(request.address, Word::from_u64(7));
         assert!(!request.read_only);
+    }
+
+    #[test]
+    fn failed_child_refund_is_not_added_to_the_parent() {
+        // CALL(gas=10_000, address=7, value=0, empty input and output).
+        let code = [
+            0x60, 0, 0x60, 0, 0x60, 0, 0x60, 0, 0x60, 0, 0x60, 7, 0x61, 0x27, 0x10, 0xf1, 0x00,
+        ];
+        let mut workspace = Workspace::new();
+        let mut host = FailedCallHost;
+        let mut machine = Machine::with_host(
+            &code,
+            &[],
+            100_000,
+            Environment::default(),
+            &mut workspace,
+            &mut host,
+        );
+        assert_eq!(machine.run(100), Exit::Stopped);
+        assert_eq!(machine.stack(), &[Word::ZERO]);
+        assert_eq!(machine.refund(), 0);
+    }
+
+    #[test]
+    fn successful_create_does_not_expose_deployed_code_as_return_data() {
+        // CREATE(value=0, offset=0, length=0), then RETURNDATASIZE.
+        let code = [0x5f, 0x5f, 0x5f, 0xf0, 0x3d, 0x00];
+        let mut workspace = Workspace::new();
+        let mut host = CreateOutputHost;
+        let mut machine = Machine::with_host(
+            &code,
+            &[],
+            100_000,
+            Environment::default(),
+            &mut workspace,
+            &mut host,
+        );
+        assert_eq!(machine.run(100), Exit::Stopped);
+        assert_eq!(machine.stack(), &[Word::from_u64(0x123), Word::ZERO]);
+        assert!(machine.return_data().is_empty());
+        assert_eq!(machine.refund(), 7);
+    }
+
+    #[test]
+    fn checkpoint_failure_is_an_exceptional_host_halt() {
+        let mut workspace = Workspace::new();
+        let mut host = CheckpointErrorHost;
+        let mut machine = Machine::with_host(
+            &[0x00],
+            &[],
+            100_000,
+            Environment::default(),
+            &mut workspace,
+            &mut host,
+        );
+        assert_eq!(machine.run(1), Exit::HostError);
+        assert_eq!(machine.gas(), 0);
+        assert!(machine.traces().is_empty());
     }
 
     #[test]

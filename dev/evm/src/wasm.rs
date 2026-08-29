@@ -21,6 +21,8 @@ struct State {
     trace_len: u32,
     output_len: u32,
     gas_left: u64,
+    refund: i64,
+    read_only: bool,
 }
 
 impl State {
@@ -37,6 +39,8 @@ impl State {
             trace_len: 0,
             output_len: 0,
             gas_left: 0,
+            refund: 0,
+            read_only: false,
         }
     }
 }
@@ -55,7 +59,7 @@ fn word(bytes: &[u8], index: usize) -> Word {
     Word::from_be_slice(&bytes[index * 32..index * 32 + 32])
 }
 
-fn environment(bytes: &[u8; ENV_BYTES]) -> Environment {
+fn environment(bytes: &[u8; ENV_BYTES], read_only: bool) -> Environment {
     Environment {
         address: word(bytes, 0),
         origin: word(bytes, 1),
@@ -71,7 +75,7 @@ fn environment(bytes: &[u8; ENV_BYTES]) -> Environment {
         base_fee: word(bytes, 11),
         blob_base_fee: word(bytes, 12),
         self_balance: word(bytes, 13),
-        read_only: false,
+        read_only,
     }
 }
 
@@ -126,6 +130,16 @@ pub extern "C" fn evm_gas_left() -> u64 {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn evm_refund() -> i64 {
+    state().refund
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn evm_set_read_only(read_only: u32) {
+    state().read_only = read_only != 0;
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn evm_code_capacity() -> u32 {
     CODE_LIMIT as u32
 }
@@ -147,12 +161,13 @@ pub extern "C" fn evm_run(code_len: u32, calldata_len: u32, gas: u64, step_limit
     state.trace_len = 0;
     state.output_len = 0;
     state.gas_left = 0;
+    state.refund = 0;
     let code_len = code_len as usize;
     let calldata_len = calldata_len as usize;
     if code_len > CODE_LIMIT || calldata_len > CALLDATA_LIMIT {
         return crate::Exit::InputLimit as u32;
     }
-    let env = environment(&state.environment);
+    let env = environment(&state.environment, state.read_only);
     let mut machine = Machine::new(
         &state.code[..code_len],
         &state.calldata[..calldata_len],
@@ -162,6 +177,7 @@ pub extern "C" fn evm_run(code_len: u32, calldata_len: u32, gas: u64, step_limit
     );
     let exit = machine.run(step_limit as usize);
     state.gas_left = machine.gas();
+    state.refund = machine.refund();
     state.stack_len = machine.stack().len() as u32;
     for (index, value) in machine.stack().iter().enumerate() {
         value.write_be(
