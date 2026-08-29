@@ -2,6 +2,7 @@
   "type": "module",
   "scripts": {
     "build": "deno run --allow-env=PATH,HOME --allow-read=. --allow-write=playground,target --allow-run=cargo build.js",
+    "test": "npm run build && node --test test/*.test.js",
     "test:browser": "node --test test/playground.test.js"
   }
 }

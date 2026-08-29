@@ -69,7 +69,7 @@ PATH="$HOME/.cargo/bin:$PATH" cargo test --manifest-path dev/evm/Cargo.toml
 deno run --allow-env=PATH,HOME --allow-read=. \
   --allow-write=dev/evm/playground,dev/evm/target \
   --allow-run="$HOME/.cargo/bin/cargo" dev/evm/build.js
-node --test dev/evm/test/playground.test.js
+node --test dev/evm/test/*.test.js
 ```
 
 The build copies a `wasm32-unknown-unknown` `cdylib` into
