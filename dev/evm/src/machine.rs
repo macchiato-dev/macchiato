@@ -124,6 +124,8 @@ pub struct CallOutcome {
     pub success: bool,
     pub gas_left: u64,
     pub output_length: usize,
+    /// Refund accumulated by a successful child frame.
+    pub refund: i64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -147,6 +149,8 @@ pub struct CreateOutcome {
     pub address: Word,
     pub gas_left: u64,
     pub output_length: usize,
+    /// Refund accumulated by a successful child frame.
+    pub refund: i64,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -159,7 +163,8 @@ pub struct SelfDestructCost {
 ///
 /// Methods return whether an account access was cold so the core can apply
 /// EIP-2929 gas without knowing how the host represents its access set. The
-/// access set is transaction-scoped and must not be reverted by `rollback`.
+/// access set is transaction-scoped, but additions made inside a reverted
+/// frame must be reverted to the frame snapshot by `rollback`.
 /// Persistent writes, transient writes, balances, nonces, code, logs produced
 /// by child calls, creation, and self-destruction are revertible state and must
 /// be covered by the checkpoint.
@@ -768,6 +773,12 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
             .checked_add(outcome.gas_left)
             .ok_or(Exit::HostError)?;
         self.return_data_len = outcome.output_length;
+        if outcome.success {
+            self.refund = self
+                .refund
+                .checked_add(outcome.refund)
+                .ok_or(Exit::HostError)?;
+        }
         let copied = output_length.min(outcome.output_length);
         self.workspace.memory[output_offset..output_offset + copied]
             .copy_from_slice(&self.workspace.return_data[..copied]);
@@ -828,7 +839,19 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
             .gas
             .checked_add(outcome.gas_left)
             .ok_or(Exit::HostError)?;
-        self.return_data_len = outcome.output_length;
+        // Successful creation exposes the new address, not its deployed code
+        // as RETURNDATA. Failed creation may expose REVERT output.
+        self.return_data_len = if outcome.success {
+            0
+        } else {
+            outcome.output_length
+        };
+        if outcome.success {
+            self.refund = self
+                .refund
+                .checked_add(outcome.refund)
+                .ok_or(Exit::HostError)?;
+        }
         self.push(if outcome.success {
             outcome.address.address()
         } else {
@@ -866,7 +889,10 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
         let checkpoint = match self.host.as_deref_mut() {
             Some(host) => match host.checkpoint() {
                 Ok(value) => Some(value),
-                Err(_) => return Exit::HostError,
+                Err(_) => {
+                    self.gas = 0;
+                    return Exit::HostError;
+                }
             },
             None => None,
         };
@@ -903,6 +929,12 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
                 host.rollback(checkpoint)
             };
             if result.is_err() {
+                self.gas = 0;
+                self.workspace.storage = self.original_storage;
+                self.workspace.transient = self.original_transient;
+                self.log_len = 0;
+                self.log_data_len = 0;
+                self.refund = 0;
                 return Exit::HostError;
             }
         }
@@ -1368,6 +1400,9 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
                 self.push(value)?;
             }
             0x5d => {
+                if self.env.read_only {
+                    return Err(Exit::WriteProtection);
+                }
                 self.charge(100)?;
                 let key = self.pop()?;
                 let value = self.pop()?;
@@ -1751,6 +1786,7 @@ mod tests {
                 success: true,
                 gas_left: request.gas - 100,
                 output_length: 4,
+                refund: 17,
             })
         }
         fn create(
@@ -1766,6 +1802,7 @@ mod tests {
                 address: Word::from_u64(0x123),
                 gas_left: request.gas - 50,
                 output_length: 0,
+                refund: 19,
             })
         }
         fn selfdestruct_cost(&mut self, _: Word, _: Word) -> Result<SelfDestructCost, HostError> {
@@ -2192,6 +2229,19 @@ mod tests {
     }
 
     #[test]
+    fn tstore_is_forbidden_in_a_static_frame() {
+        let code = [0x60, 9, 0x60, 1, 0x5d, 0x00];
+        let mut workspace = Workspace::new();
+        let environment = Environment {
+            read_only: true,
+            ..Environment::default()
+        };
+        let mut machine = Machine::new(&code, &[], 100_000, environment, &mut workspace);
+        assert_eq!(machine.run(100), Exit::WriteProtection);
+        assert_eq!(machine.gas(), 0);
+    }
+
+    #[test]
     fn successful_host_frame_commits_its_checkpoint() {
         let code = [0x60, 9, 0x60, 1, 0x55, 0x00];
         let mut workspace = Workspace::new();
@@ -2490,6 +2540,7 @@ mod tests {
         );
         assert_eq!(machine.run(100), Exit::Stopped);
         assert_eq!(machine.stack(), &[Word::ONE, Word::from_u64(4)]);
+        assert_eq!(machine.refund(), 17);
         assert_eq!(&machine.memory()[16..20], &[0xde, 0xad, 0xbe, 0xef]);
         assert_eq!(machine.return_data(), &[0xde, 0xad, 0xbe, 0xef]);
         drop(machine);
@@ -2520,6 +2571,8 @@ mod tests {
             Machine::with_host(&code, &[], 100_000, environment, &mut workspace, &mut host);
         assert_eq!(machine.run(100), Exit::Stopped);
         assert_eq!(machine.stack(), &[Word::from_u64(0x123)]);
+        assert_eq!(machine.refund(), 19);
+        assert!(machine.return_data().is_empty());
         drop(machine);
         let create = host.last_create.unwrap();
         assert_eq!(create.kind, CreateKind::Create2);
