@@ -163,6 +163,10 @@ pub trait Host {
         -> Result<StorageAccess, HostError> { Err(HostError) }
     fn set_storage(&mut self, _address: Word, _key: Word, _value: Word)
         -> Result<(), HostError> { Err(HostError) }
+    fn transient_storage(&mut self, _address: Word, _key: Word)
+        -> Result<Word, HostError> { Err(HostError) }
+    fn set_transient_storage(&mut self, _address: Word, _key: Word, _value: Word)
+        -> Result<(), HostError> { Err(HostError) }
     fn call_cost(&mut self, _address: Word, _value: Word)
         -> Result<CallCost, HostError> { Err(HostError) }
     fn call(&mut self, _request: CallRequest, _input: &[u8], _output: &mut [u8])
@@ -288,6 +292,22 @@ impl<'a> Machine<'a> {
             host.set_storage(self.env.address, key, value).map_err(|_| Exit::HostError)
         } else {
             Self::slot(&mut self.workspace.storage, key, Some(value))?;
+            Ok(())
+        }
+    }
+
+    fn transient_storage(&mut self, key: Word) -> Result<Word, Exit> {
+        if let Some(host) = self.host.as_deref_mut() {
+            host.transient_storage(self.env.address, key).map_err(|_| Exit::HostError)
+        } else { Self::slot(&mut self.workspace.transient, key, None) }
+    }
+
+    fn set_transient_storage(&mut self, key: Word, value: Word) -> Result<(), Exit> {
+        if let Some(host) = self.host.as_deref_mut() {
+            host.set_transient_storage(self.env.address, key, value)
+                .map_err(|_| Exit::HostError)
+        } else {
+            Self::slot(&mut self.workspace.transient, key, Some(value))?;
             Ok(())
         }
     }
@@ -687,8 +707,8 @@ impl<'a> Machine<'a> {
             0x59 => { self.charge(2)?; self.push(Word::from_u64(self.memory_len as u64))?; }
             0x5a => { self.charge(2)?; self.push(Word::from_u64(self.gas))?; }
             0x5b => self.charge(1)?,
-            0x5c => { self.charge(100)?; let key = self.pop()?; let value = Self::slot(&mut self.workspace.transient, key, None)?; self.push(value)?; }
-            0x5d => { self.charge(100)?; let key = self.pop()?; let value = self.pop()?; Self::slot(&mut self.workspace.transient, key, Some(value))?; }
+            0x5c => { self.charge(100)?; let key = self.pop()?; let value = self.transient_storage(key)?; self.push(value)?; }
+            0x5d => { self.charge(100)?; let key = self.pop()?; let value = self.pop()?; self.set_transient_storage(key, value)?; }
             0x5e => { self.charge(3)?; let destination = self.pop()?; let source = self.pop()?; let length = self.pop()?; let length = Self::word_usize(length).ok_or(Exit::MemoryLimit)?; let (destination, source) = if length == 0 { (0, 0) } else { (Self::word_usize(destination).ok_or(Exit::MemoryLimit)?, Self::word_usize(source).ok_or(Exit::MemoryLimit)?) }; self.expand_memory(source, length)?; self.expand_memory(destination, length)?; self.charge(3 * length.div_ceil(32) as u64)?; self.workspace.memory.copy_within(source..source + length, destination); }
             0x5f => { self.charge(2)?; self.push(Word::ZERO)?; }
             0x60..=0x7f => { self.charge(3)?; let length = (opcode - 0x5f) as usize; let end = (self.pc + length).min(self.code.len()); let value = Word::from_be_slice(&self.code[self.pc..end]).shl((length - (end - self.pc)) * 8); self.pc += length; self.push(value)?; }
@@ -861,6 +881,8 @@ mod tests {
         original: Word,
         current: Word,
         saved: Word,
+        transient: Word,
+        saved_transient: Word,
         rolled_back: bool,
     }
 
@@ -874,12 +896,22 @@ mod tests {
             self.current = value;
             Ok(())
         }
+        fn transient_storage(&mut self, _: Word, _: Word) -> Result<Word, HostError> {
+            Ok(self.transient)
+        }
+        fn set_transient_storage(&mut self, _: Word, _: Word, value: Word)
+            -> Result<(), HostError> {
+            self.transient = value;
+            Ok(())
+        }
         fn checkpoint(&mut self) -> Result<u32, HostError> {
             self.saved = self.current;
+            self.saved_transient = self.transient;
             Ok(1)
         }
         fn rollback(&mut self, _: u32) -> Result<(), HostError> {
             self.current = self.saved;
+            self.transient = self.saved_transient;
             self.rolled_back = true;
             Ok(())
         }
@@ -1024,13 +1056,35 @@ mod tests {
         ];
         let mut workspace = Workspace::new();
         let mut host = StorageHost { original: Word::from_u64(7),
-            current: Word::from_u64(7), saved: Word::ZERO, rolled_back: false };
+            current: Word::from_u64(7), saved: Word::ZERO,
+            transient: Word::ZERO, saved_transient: Word::ZERO,
+            rolled_back: false };
         let mut machine = Machine::with_host(&code, &[], 100_000,
             Environment::default(), &mut workspace, &mut host);
         assert_eq!(machine.run(100), Exit::Reverted);
         assert_eq!(machine.refund(), 0);
         drop(machine);
         assert_eq!(host.current, Word::from_u64(7));
+        assert!(host.rolled_back);
+    }
+
+    #[test]
+    fn host_transient_storage_is_shared_and_rolled_back() {
+        let code = [
+            0x60, 9, 0x60, 1, 0x5d,
+            0x60, 1, 0x5c,
+            0x60, 0, 0x60, 0, 0xfd,
+        ];
+        let mut workspace = Workspace::new();
+        let mut host = StorageHost { original: Word::ZERO, current: Word::ZERO,
+            saved: Word::ZERO, transient: Word::from_u64(3),
+            saved_transient: Word::ZERO, rolled_back: false };
+        let mut machine = Machine::with_host(&code, &[], 100_000,
+            Environment::default(), &mut workspace, &mut host);
+        assert_eq!(machine.run(100), Exit::Reverted);
+        assert_eq!(machine.stack(), &[Word::from_u64(9)]);
+        drop(machine);
+        assert_eq!(host.transient, Word::from_u64(3));
         assert!(host.rolled_back);
     }
 

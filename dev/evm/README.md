@@ -43,10 +43,11 @@ the playground. Storage changes and logs roll back on `REVERT` and exceptional
 termination.
 
 With a host, account and external-code inspection, block and blob hashes,
-host-backed storage, calls, contract creation, and post-Cancun self-destruction
-are available. Calls and creation use typed requests plus bounded input and
-return buffers; a host may recursively invoke `Machine` for child frames.
-Checkpoints make host mutations commit only on successful frame termination.
+host-backed persistent and transaction-wide transient storage, calls, contract
+creation, and post-Cancun self-destruction are available. Calls and creation
+use typed requests plus bounded input and return buffers; a host may recursively
+invoke `Machine` for child frames. Checkpoints make host mutations, including
+transient writes, commit only on successful frame termination.
 Precompiles and transaction-level refund capping belong to the host. The core
 calculates frame-level Cancun `SSTORE` costs and refund deltas.
 
