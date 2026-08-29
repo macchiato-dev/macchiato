@@ -64,6 +64,17 @@ test("development authentication is a declarative gateway option", () => {
   assert.equal(getDeclarativeApp(db, "static-dev").options.developmentAuth, true);
 });
 
+test("the EVM playground is a declarative proxy rather than a code handler", () => {
+  const db = new DatabaseSync(":memory:");
+  initSqliteStore(db);
+  installAppPlugins(db, ["evm-playground"]);
+
+  const app = getDeclarativeApp(db, "evm");
+  assert.equal(app.handlerName, "proxy");
+  assert.equal(app.handler, undefined);
+  assert.deepEqual(app.options.proxy, { origin: "http://127.0.0.1:3042" });
+});
+
 test("the todo source hostname resolves through the declarative DOM Use Todos app", () => {
   const db = new DatabaseSync(":memory:");
   initSqliteStore(db);

@@ -20,13 +20,14 @@ for (const app of BUILTIN_APPS) {
 }
 
 function declarationForBuiltin(app) {
-  const handler = app.subdomain === "apps"
+  const handler = app.declarativeHandler || (app.subdomain === "apps"
     ? "app-directory"
     : app.subdomain === "resources-co"
       ? "sqlite-routes"
-      : handlerNames.get(app.subdomain);
+      : handlerNames.get(app.subdomain));
   const { aliases, pluginId, replaces, setup, seededRoute, fileAccess, writableFiles, sourceFiles,
-    schemas, sandbox, sharedAssets, developmentAuth, site, adapter, environment, commands, ...base } = app;
+    schemas, sandbox, sharedAssets, developmentAuth, site, adapter, environment, commands,
+    declarativeHandler, appOptions, ...base } = app;
   return {
     ...base,
     handler,
@@ -51,6 +52,7 @@ function declarationForBuiltin(app) {
       adapter,
       environment,
       commands: Object.fromEntries(Object.entries(commands || {}).map(([name, command]) => [name, { description: command.description || "" }])),
+      ...appOptions,
     },
   };
 }

@@ -79,8 +79,9 @@ and has SHA-256
 The browser test recompiles the module, checks that empty import list, checks
 the ABI bounds, and executes every example.
 
-With the repository's development app plugin installed, the same files are
-served at `http://evm.localhost:<port>`.
+`server.js` serves the playground on loopback. The development app plugin
+declares `evm` as a proxy to that server, so the app gateway exposes the same
+files at `http://evm.localhost:<port>` without an EVM-specific gateway handler.
 
 ## Browser ABI
 

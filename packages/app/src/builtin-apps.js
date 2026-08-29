@@ -19,7 +19,6 @@ import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../exampl
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 import { exportFocusedApp } from "../../../examples/focused-app/export-static.js";
 import { machineControllerHandler } from "../../../dev/playground/src/handler.js";
-import { evmPlaygroundHandler } from "../../../dev/evm/handler.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
@@ -32,9 +31,11 @@ export const BUILTIN_APPS = [
     subdomain: "evm",
     kind: "no-std WebAssembly virtual machine",
     description: "Edit EVM bytecode and inspect execution performed by the no-import Rust Wasm core.",
-    handler: evmPlaygroundHandler,
+    declarativeHandler: "proxy",
+    appOptions: { proxy: { origin: "http://127.0.0.1:3042" } },
     sourceFiles: [
       "dev/evm/README.md",
+      "dev/evm/server.js",
       "dev/evm/src/machine.rs",
       "dev/evm/src/word.rs",
       "dev/evm/src/keccak.rs",
