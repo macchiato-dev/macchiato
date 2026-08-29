@@ -1,0 +1,17 @@
+[package]
+name = "macchiato-evm"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "MIT"
+description = "An allocator-free no_std Ethereum Virtual Machine for WebAssembly"
+
+[lib]
+crate-type = ["rlib"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
