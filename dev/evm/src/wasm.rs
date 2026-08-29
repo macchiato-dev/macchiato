@@ -4,7 +4,7 @@ use crate::{Environment, Machine, Word, Workspace};
 
 const CODE_LIMIT: usize = 64 * 1024;
 const CALLDATA_LIMIT: usize = 64 * 1024;
-const ENV_BYTES: usize = 12 * 32;
+const ENV_BYTES: usize = 14 * 32;
 const STACK_BYTES: usize = 1024 * 32;
 const TRACE_BYTES: usize = 4096 * 48;
 const OUTPUT_BYTES: usize = 64 * 1024;
@@ -51,12 +51,13 @@ fn word(bytes: &[u8], index: usize) -> Word {
 
 fn environment(bytes: &[u8; ENV_BYTES]) -> Environment {
     Environment {
-        address: word(bytes, 0), caller: word(bytes, 1),
-        call_value: word(bytes, 2), gas_price: word(bytes, 3),
-        coinbase: word(bytes, 4), timestamp: word(bytes, 5),
-        block_number: word(bytes, 6), prev_randao: word(bytes, 7),
-        gas_limit: word(bytes, 8), chain_id: word(bytes, 9),
-        base_fee: word(bytes, 10), blob_base_fee: word(bytes, 11),
+        address: word(bytes, 0), origin: word(bytes, 1), caller: word(bytes, 2),
+        call_value: word(bytes, 3), gas_price: word(bytes, 4),
+        coinbase: word(bytes, 5), timestamp: word(bytes, 6),
+        block_number: word(bytes, 7), prev_randao: word(bytes, 8),
+        gas_limit: word(bytes, 9), chain_id: word(bytes, 10),
+        base_fee: word(bytes, 11), blob_base_fee: word(bytes, 12),
+        self_balance: word(bytes, 13),
     }
 }
 

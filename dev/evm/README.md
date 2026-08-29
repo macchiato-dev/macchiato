@@ -32,10 +32,23 @@ execution-spec vectors as coverage expands.
 - `src/wasm.rs` — a compact browser-facing ABI.
 - `playground/` — static browser UI, examples, and Playwright tests.
 
+The current standalone frame implements arithmetic, comparison and bitwise
+instructions; Keccak-256; calldata, code and return-data access; bounded
+memory; persistent and transient storage; control flow; logs; Cancun's
+`PUSH0`, `MCOPY`, `TLOAD`, and `TSTORE`; and the environment values exposed by
+the playground. Storage changes and logs roll back on `REVERT` and exceptional
+termination.
+
+Account lookup, external-code inspection, blob hashes, calls, contract
+creation, precompiles, access-list accounting, and exact `SSTORE` refund rules
+still require the account host boundary. They remain explicitly unsupported,
+not approximated.
+
 ## Build
 
 ```sh
 PATH="$HOME/.cargo/bin:$PATH" cargo test --manifest-path dev/evm/Cargo.toml
 PATH="$HOME/.cargo/bin:$PATH" cargo build --release \
   --target wasm32-unknown-unknown --manifest-path dev/evm/Cargo.toml
+node --test dev/evm/test/playground.test.js
 ```

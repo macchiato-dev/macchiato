@@ -9,7 +9,7 @@ mod word;
 #[cfg(target_arch = "wasm32")]
 mod wasm;
 
-pub use machine::{Environment, Exit, Machine, Trace, Workspace};
+pub use machine::{Environment, Exit, Log, Machine, Trace, Workspace};
 pub use word::Word;
 
 #[cfg(target_arch = "wasm32")]

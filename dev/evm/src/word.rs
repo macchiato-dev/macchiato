@@ -147,6 +147,77 @@ impl Word {
             _ => self.cmp(&other),
         }
     }
+
+    pub fn signed_div(self, divisor: Self) -> Self {
+        if divisor.is_zero() { return Self::ZERO; }
+        let negative = self.sign() != divisor.sign();
+        let dividend = if self.sign() { self.wrapping_neg() } else { self };
+        let divisor = if divisor.sign() { divisor.wrapping_neg() } else { divisor };
+        let quotient = dividend.div_mod(divisor).0;
+        if negative { quotient.wrapping_neg() } else { quotient }
+    }
+
+    pub fn signed_mod(self, divisor: Self) -> Self {
+        if divisor.is_zero() { return Self::ZERO; }
+        let negative = self.sign();
+        let dividend = if negative { self.wrapping_neg() } else { self };
+        let divisor = if divisor.sign() { divisor.wrapping_neg() } else { divisor };
+        let remainder = dividend.div_mod(divisor).1;
+        if negative { remainder.wrapping_neg() } else { remainder }
+    }
+
+    pub fn add_mod(self, other: Self, modulus: Self) -> Self {
+        if modulus.is_zero() { return Self::ZERO; }
+        let left = self.div_mod(modulus).1;
+        let right = other.div_mod(modulus).1;
+        let distance = modulus.wrapping_sub(right);
+        if left >= distance { left.wrapping_sub(distance) }
+        else { left.wrapping_add(right) }
+    }
+
+    pub fn mul_mod(self, other: Self, modulus: Self) -> Self {
+        if modulus.is_zero() { return Self::ZERO; }
+        let mut left = self.div_mod(modulus).1;
+        let mut right = other;
+        let mut result = Self::ZERO;
+        for _ in 0..256 {
+            if right.bit(0) { result = result.add_mod(left, modulus); }
+            right = right.shr(1);
+            if right.is_zero() { break; }
+            left = left.add_mod(left, modulus);
+        }
+        result
+    }
+
+    pub fn wrapping_pow(self, exponent: Self) -> Self {
+        let mut base = self;
+        let mut exponent = exponent;
+        let mut result = Self::ONE;
+        while !exponent.is_zero() {
+            if exponent.bit(0) { result = result.wrapping_mul(base); }
+            exponent = exponent.shr(1);
+            if !exponent.is_zero() { base = base.wrapping_mul(base); }
+        }
+        result
+    }
+
+    pub fn significant_bytes(self) -> u64 {
+        for index in (0..4).rev() {
+            if self.0[index] != 0 {
+                return (index as u64 * 8) +
+                    (8 - self.0[index].leading_zeros() as u64 / 8);
+            }
+        }
+        0
+    }
+
+    pub fn sign_extend(self, byte: usize) -> Self {
+        if byte >= 32 { return self; }
+        let sign_bit = byte * 8 + 7;
+        let low_mask = if sign_bit == 255 { Self::MAX }
+            else { Self::ONE.shl(sign_bit + 1).wrapping_sub(Self::ONE) };
+        if self.bit(sign_bit) { self | !low_mask } else { self & low_mask }
+    }
 }
 
 impl Ord for Word {
@@ -201,6 +272,30 @@ mod tests {
         assert_eq!(Word::ZERO.wrapping_sub(Word::ONE), Word::MAX);
         assert_eq!(Word::from_u64(9).div_mod(Word::from_u64(4)),
             (Word::from_u64(2), Word::from_u64(1)));
+    }
+
+    #[test]
+    fn signed_and_modular_arithmetic_cover_full_words() {
+        let minus_nine = Word::from_u64(9).wrapping_neg();
+        assert_eq!(minus_nine.signed_div(Word::from_u64(4)),
+            Word::from_u64(2).wrapping_neg());
+        assert_eq!(minus_nine.signed_mod(Word::from_u64(4)),
+            Word::from_u64(1).wrapping_neg());
+        assert_eq!(Word::MAX.add_mod(Word::MAX, Word::from_u64(7)),
+            Word::from_u64(2));
+        assert_eq!(Word::MAX.mul_mod(Word::MAX, Word::from_u64(7)),
+            Word::from_u64(1));
+        assert_eq!(Word::from_u64(3).wrapping_pow(Word::from_u64(5)),
+            Word::from_u64(243));
+    }
+
+    #[test]
+    fn sign_extension_uses_the_selected_byte() {
+        assert_eq!(Word::from_u64(0x80).sign_extend(0),
+            Word::from_u64(0x80) | !Word::from_u64(0xff));
+        assert_eq!(Word::from_u64(0x7f).sign_extend(0), Word::from_u64(0x7f));
+        assert_eq!(Word::from_u64(0x8000).sign_extend(1),
+            Word::from_u64(0x8000) | !Word::from_u64(0xffff));
     }
 
     #[test]
