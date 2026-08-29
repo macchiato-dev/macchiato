@@ -905,6 +905,12 @@ impl<'a, const CAPACITY: usize> Machine<'a, CAPACITY> {
             let opcode = self.code.get(self.pc).copied().unwrap_or(0);
             self.pc += 1;
             let result = self.step(opcode);
+            if result.is_err() {
+                // Every error returned by an opcode is an exceptional halt.
+                // Burn the frame gas before tracing so `Trace::gas` really is
+                // the remainder after that attempted instruction.
+                self.gas = 0;
+            }
             self.trace(at, opcode);
             match result {
                 Ok(None) => {}
@@ -2802,6 +2808,7 @@ mod tests {
         );
         assert_eq!(invalid.run(10), Exit::InvalidOpcode);
         assert_eq!(invalid.gas(), 0);
+        assert_eq!(invalid.traces()[0].gas, 0);
 
         let mut revert_workspace = Workspace::new();
         let mut revert = Machine::new(

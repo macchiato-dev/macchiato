@@ -73,9 +73,9 @@ node --test dev/evm/test/*.test.js
 ```
 
 The build copies a `wasm32-unknown-unknown` `cdylib` into
-`playground/evm.wasm`. At this revision it is 42,108 bytes, imports nothing,
+`playground/evm.wasm`. At this revision it is 42,122 bytes, imports nothing,
 and has SHA-256
-`ee22ae1d5d33bde35b41f00bca3c78a111637025e1de256999ad68580af02458`.
+`abc91e307392d51b90985758b375b5fa805e2f79489f7e6c123765e7ef45da69`.
 The browser test recompiles the module, checks that empty import list, checks
 the ABI bounds, and executes every example.
 
