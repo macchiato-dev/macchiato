@@ -863,6 +863,64 @@ mod tests {
         })
     }
 
+    fn rlp_length(mut length: usize) -> Vec<u8> {
+        let mut bytes = [0_u8; core::mem::size_of::<usize>()];
+        let mut at = bytes.len();
+        while length != 0 {
+            at -= 1;
+            bytes[at] = length as u8;
+            length >>= 8;
+        }
+        bytes[at..].to_vec()
+    }
+
+    fn rlp_bytes(value: &[u8]) -> Vec<u8> {
+        if value.len() == 1 && value[0] < 0x80 { return value.to_vec(); }
+        let mut output = Vec::new();
+        if value.len() <= 55 {
+            output.push(0x80 + value.len() as u8);
+        } else {
+            let length = rlp_length(value.len());
+            output.push(0xb7 + length.len() as u8);
+            output.extend_from_slice(&length);
+        }
+        output.extend_from_slice(value);
+        output
+    }
+
+    fn rlp_list(items: impl Iterator<Item = Vec<u8>>) -> Vec<u8> {
+        let payload: Vec<u8> = items.flatten().collect();
+        let mut output = Vec::new();
+        if payload.len() <= 55 {
+            output.push(0xc0 + payload.len() as u8);
+        } else {
+            let length = rlp_length(payload.len());
+            output.push(0xf7 + length.len() as u8);
+            output.extend_from_slice(&length);
+        }
+        output.extend_from_slice(&payload);
+        output
+    }
+
+    fn log_hash<const CAPACITY: usize>(machine: &Machine<'_, CAPACITY>,
+        address: Word) -> Word {
+        let mut address_bytes = [0; 32];
+        address.write_be(&mut address_bytes);
+        let logs = machine.logs().iter().map(|log| {
+            let topics = rlp_list(log.topics[..log.topic_count as usize].iter().map(|topic| {
+                let mut bytes = [0; 32];
+                topic.write_be(&mut bytes);
+                rlp_bytes(&bytes)
+            }));
+            rlp_list([
+                rlp_bytes(&address_bytes[12..]),
+                topics,
+                rlp_bytes(machine.log_data(log)),
+            ].into_iter())
+        });
+        Word::from_be_slice(&keccak256(&rlp_list(logs)))
+    }
+
 
     fn run_direct_vectors(vectors: &str) -> usize {
         let mut cases = 0;
@@ -1188,6 +1246,36 @@ mod tests {
             cases += 1;
         }
         assert_eq!(cases, 15);
+    }
+
+    #[test]
+    fn passes_official_cancun_log_vectors() {
+        const VECTORS: &str = include_str!("../test/official-log-vectors.txt");
+        let mut cases = 0;
+        for line in VECTORS.lines().filter(|line| !line.starts_with('#')) {
+            let mut fields = line.split('|');
+            let name = fields.next().unwrap();
+            let code = hex_bytes(fields.next().unwrap());
+            let _target = fixture_word(fields.next().unwrap());
+            let expected = fixture_word(fields.next().unwrap());
+            assert!(fields.next().is_none(), "invalid vector {name}");
+            // The official harness invokes each target with DELEGATECALL, so
+            // ADDRESS remains the wrapper and CALLER remains the transaction
+            // sender while the target code executes.
+            let address = fixture_word("cccccccccccccccccccccccccccccccccccccccc");
+            let environment = Environment { address,
+                caller: fixture_word("a94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+                ..Environment::default() };
+            let mut workspace = Workspace::new();
+            let mut machine = Machine::new(&code, &[], 10_000_000, environment,
+                &mut workspace);
+            let exit = machine.run(1_000);
+            assert!(!matches!(exit, Exit::HostError | Exit::UnsupportedOpcode |
+                Exit::StepLimit), "{name}: {exit:?}");
+            assert_eq!(log_hash(&machine, address), expected, "{name}");
+            cases += 1;
+        }
+        assert_eq!(cases, 46);
     }
 
     #[test]
