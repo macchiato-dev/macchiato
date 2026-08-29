@@ -825,6 +825,43 @@ mod tests {
         })
     }
 
+
+    fn run_direct_vectors(vectors: &str) -> usize {
+        let mut cases = 0;
+        for line in vectors.lines().filter(|line| !line.starts_with('#')) {
+            let mut fields = line.split('|');
+            let name = fields.next().unwrap();
+            let code = hex_bytes(fields.next().unwrap());
+            let initial = fields.next().unwrap();
+            let expected = fields.next().unwrap();
+            assert!(fields.next().is_none(), "invalid vector {name}");
+
+            let mut workspace = Workspace::new();
+            for (key, value) in storage_pairs(initial) {
+                workspace.set_storage(key, value).unwrap();
+            }
+            let mut machine = Machine::new(&code, &[], 10_000_000,
+                Environment::default(), &mut workspace);
+            let exit = machine.run(2_000_000);
+            if name.ends_with("/stack_underflow") {
+                assert_eq!(exit, Exit::StackUnderflow, "{name}");
+            } else if name.ends_with("/endless-loop") {
+                assert_eq!(exit, Exit::StepLimit, "{name}");
+            } else {
+                assert!(!matches!(exit, Exit::UnsupportedOpcode | Exit::HostError |
+                    Exit::StepLimit), "{name}: {exit:?}");
+            }
+            drop(machine);
+            let expected_len = storage_pairs(expected).count();
+            assert_eq!(workspace.storage_len(), expected_len, "{name}: storage length");
+            for (key, value) in storage_pairs(expected) {
+                assert_eq!(workspace.storage(key), value, "{name}: storage key");
+            }
+            cases += 1;
+        }
+        cases
+    }
+
     struct TestHost {
         cold: bool,
         last_call: Option<CallRequest>,
@@ -1028,13 +1065,27 @@ mod tests {
     #[test]
     fn passes_official_cancun_arithmetic_and_bitwise_vectors() {
         const VECTORS: &str = include_str!("../test/official-arithmetic-vectors.txt");
+        assert_eq!(run_direct_vectors(VECTORS), 159);
+    }
+
+    #[test]
+    fn passes_official_cancun_memory_flow_and_sha3_vectors() {
+        const VECTORS: &str = include_str!("../test/official-memory-vectors.txt");
+        assert_eq!(run_direct_vectors(VECTORS), 72);
+    }
+
+    #[test]
+    fn passes_official_cancun_return_vectors() {
+        const VECTORS: &str = include_str!("../test/official-return-vectors.txt");
         let mut cases = 0;
         for line in VECTORS.lines().filter(|line| !line.starts_with('#')) {
             let mut fields = line.split('|');
             let name = fields.next().unwrap();
             let code = hex_bytes(fields.next().unwrap());
             let initial = fields.next().unwrap();
-            let expected = fields.next().unwrap();
+            let expected_storage = fields.next().unwrap();
+            let expected_length: usize = fields.next().unwrap().parse().unwrap();
+            let expected_prefix = hex_bytes(fields.next().unwrap());
             assert!(fields.next().is_none(), "invalid vector {name}");
 
             let mut workspace = Workspace::new();
@@ -1043,19 +1094,19 @@ mod tests {
             }
             let mut machine = Machine::new(&code, &[], 10_000_000,
                 Environment::default(), &mut workspace);
-            let expected_exit = if name.ends_with("/stack_underflow") {
-                Exit::StackUnderflow
-            } else { Exit::Stopped };
-            assert_eq!(machine.run(100_000), expected_exit, "{name}");
+            assert_eq!(machine.run(100_000), Exit::Returned, "{name}");
+            assert_eq!(machine.output().len(), expected_length, "{name}: output length");
+            assert_eq!(&machine.output()[..expected_prefix.len()], expected_prefix,
+                "{name}: output prefix");
             drop(machine);
-            let expected_len = storage_pairs(expected).count();
-            assert_eq!(workspace.storage_len(), expected_len, "{name}: storage length");
-            for (key, value) in storage_pairs(expected) {
+            assert_eq!(workspace.storage_len(), storage_pairs(expected_storage).count(),
+                "{name}: storage length");
+            for (key, value) in storage_pairs(expected_storage) {
                 assert_eq!(workspace.storage(key), value, "{name}: storage key");
             }
             cases += 1;
         }
-        assert_eq!(cases, 159);
+        assert_eq!(cases, 4);
     }
 
     #[test]

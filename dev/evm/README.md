@@ -28,6 +28,13 @@ Ethereum's executable execution-layer specification is the semantic reference:
 <https://github.com/ethereum/execution-specs>. Tests should prefer official
 execution-spec vectors as coverage expands.
 
+The checked-in compact corpus currently runs 259 Cancun cases derived from
+`execution-spec-tests` v5.4.0: arithmetic and bitwise operations, direct
+calldata loads, `MCOPY`, memory and control flow, Keccak, and return data. Each
+corpus records its source or aggregate SHA-256. Cases that intentionally need
+more than this WebAssembly profile's 64 KiB memory bound are identified and
+excluded rather than silently treated as canonical successes.
+
 ## Layout
 
 - `src/word.rs` — dependency-free 256-bit integer operations.
