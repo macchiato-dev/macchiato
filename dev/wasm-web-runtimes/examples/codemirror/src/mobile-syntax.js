@@ -591,7 +591,11 @@ export function mobileSyntax(mode, report) {
         this.refreshPending = false;
         this.refresh(update.view);
       } else if (update.docChanged || update.viewportChanged) {
-        if (update.docChanged) this.decorations = this.decorations.map(update.changes);
+        // Decorations are a disposable observation of one viewport, not
+        // syntax state that follows the document. Drop them as soon as either
+        // the document or shown range changes, then rebuild after activity
+        // pauses.
+        this.decorations = Decoration.none;
         this.schedule();
       }
     }

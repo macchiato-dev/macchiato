@@ -146,6 +146,13 @@ test("viewport-local modes stay bounded on a mobile-sized browser", { timeout: 1
         assert.ok(initial.retainedTokens < 2500, `${runtime} ${name} tokens are bounded`);
 
         const activeEditor = page.locator(".cm-editor").last();
+        await activeEditor.locator(".cm-content").click({ position: { x: 12, y: 12 } });
+        await page.keyboard.type("x");
+        assert.equal(await activeEditor.locator("[class*='cm-mobile-']").count(), 0,
+          `${runtime} ${name} drops stale highlighting on a keystroke`);
+        await page.waitForTimeout(250);
+        assert.ok(await activeEditor.locator("[class*='cm-mobile-']").count() > 0,
+          `${runtime} ${name} rebuilds visible highlighting after the throttle`);
         const initialLines = await visibleLineNumbers(activeEditor);
         assert.ok(initialLines.length > 0, `${runtime} ${name} renders line numbers`);
         const scroller = activeEditor.locator(".cm-scroller");
