@@ -26,11 +26,17 @@ struct State {
 impl State {
     const fn new() -> Self {
         Self {
-            code: [0; CODE_LIMIT], calldata: [0; CALLDATA_LIMIT],
-            environment: [0; ENV_BYTES], workspace: Workspace::new(),
-            stack: [0; STACK_BYTES], traces: [0; TRACE_BYTES],
-            output: [0; OUTPUT_BYTES], stack_len: 0, trace_len: 0,
-            output_len: 0, gas_left: 0,
+            code: [0; CODE_LIMIT],
+            calldata: [0; CALLDATA_LIMIT],
+            environment: [0; ENV_BYTES],
+            workspace: Workspace::new(),
+            stack: [0; STACK_BYTES],
+            traces: [0; TRACE_BYTES],
+            output: [0; OUTPUT_BYTES],
+            stack_len: 0,
+            trace_len: 0,
+            output_len: 0,
+            gas_left: 0,
         }
     }
 }
@@ -51,51 +57,83 @@ fn word(bytes: &[u8], index: usize) -> Word {
 
 fn environment(bytes: &[u8; ENV_BYTES]) -> Environment {
     Environment {
-        address: word(bytes, 0), origin: word(bytes, 1), caller: word(bytes, 2),
-        call_value: word(bytes, 3), gas_price: word(bytes, 4),
-        coinbase: word(bytes, 5), timestamp: word(bytes, 6),
-        block_number: word(bytes, 7), prev_randao: word(bytes, 8),
-        gas_limit: word(bytes, 9), chain_id: word(bytes, 10),
-        base_fee: word(bytes, 11), blob_base_fee: word(bytes, 12),
-        self_balance: word(bytes, 13), read_only: false,
+        address: word(bytes, 0),
+        origin: word(bytes, 1),
+        caller: word(bytes, 2),
+        call_value: word(bytes, 3),
+        gas_price: word(bytes, 4),
+        coinbase: word(bytes, 5),
+        timestamp: word(bytes, 6),
+        block_number: word(bytes, 7),
+        prev_randao: word(bytes, 8),
+        gas_limit: word(bytes, 9),
+        chain_id: word(bytes, 10),
+        base_fee: word(bytes, 11),
+        blob_base_fee: word(bytes, 12),
+        self_balance: word(bytes, 13),
+        read_only: false,
     }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_code_ptr() -> *mut u8 { state().code.as_mut_ptr() }
+pub extern "C" fn evm_code_ptr() -> *mut u8 {
+    state().code.as_mut_ptr()
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_calldata_ptr() -> *mut u8 { state().calldata.as_mut_ptr() }
+pub extern "C" fn evm_calldata_ptr() -> *mut u8 {
+    state().calldata.as_mut_ptr()
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_environment_ptr() -> *mut u8 { state().environment.as_mut_ptr() }
+pub extern "C" fn evm_environment_ptr() -> *mut u8 {
+    state().environment.as_mut_ptr()
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_stack_ptr() -> *const u8 { state().stack.as_ptr() }
+pub extern "C" fn evm_stack_ptr() -> *const u8 {
+    state().stack.as_ptr()
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_trace_ptr() -> *const u8 { state().traces.as_ptr() }
+pub extern "C" fn evm_trace_ptr() -> *const u8 {
+    state().traces.as_ptr()
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_output_ptr() -> *const u8 { state().output.as_ptr() }
+pub extern "C" fn evm_output_ptr() -> *const u8 {
+    state().output.as_ptr()
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_stack_len() -> u32 { state().stack_len }
+pub extern "C" fn evm_stack_len() -> u32 {
+    state().stack_len
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_trace_len() -> u32 { state().trace_len }
+pub extern "C" fn evm_trace_len() -> u32 {
+    state().trace_len
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_output_len() -> u32 { state().output_len }
+pub extern "C" fn evm_output_len() -> u32 {
+    state().output_len
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_gas_left() -> u64 { state().gas_left }
+pub extern "C" fn evm_gas_left() -> u64 {
+    state().gas_left
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_code_capacity() -> u32 { CODE_LIMIT as u32 }
+pub extern "C" fn evm_code_capacity() -> u32 {
+    CODE_LIMIT as u32
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_calldata_capacity() -> u32 { CALLDATA_LIMIT as u32 }
+pub extern "C" fn evm_calldata_capacity() -> u32 {
+    CALLDATA_LIMIT as u32
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn evm_reset_storage() {
@@ -103,8 +141,7 @@ pub extern "C" fn evm_reset_storage() {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn evm_run(code_len: u32, calldata_len: u32, gas: u64,
-    step_limit: u32) -> u32 {
+pub extern "C" fn evm_run(code_len: u32, calldata_len: u32, gas: u64, step_limit: u32) -> u32 {
     let state = state();
     state.stack_len = 0;
     state.trace_len = 0;
@@ -116,14 +153,22 @@ pub extern "C" fn evm_run(code_len: u32, calldata_len: u32, gas: u64,
         return crate::Exit::InputLimit as u32;
     }
     let env = environment(&state.environment);
-    let mut machine = Machine::new(&state.code[..code_len],
-        &state.calldata[..calldata_len], gas, env, &mut state.workspace);
+    let mut machine = Machine::new(
+        &state.code[..code_len],
+        &state.calldata[..calldata_len],
+        gas,
+        env,
+        &mut state.workspace,
+    );
     let exit = machine.run(step_limit as usize);
     state.gas_left = machine.gas();
     state.stack_len = machine.stack().len() as u32;
     for (index, value) in machine.stack().iter().enumerate() {
-        value.write_be((&mut state.stack[index * 32..index * 32 + 32])
-            .try_into().unwrap());
+        value.write_be(
+            (&mut state.stack[index * 32..index * 32 + 32])
+                .try_into()
+                .unwrap(),
+        );
     }
     state.output_len = machine.output().len() as u32;
     state.output[..machine.output().len()].copy_from_slice(machine.output());
@@ -134,7 +179,9 @@ pub extern "C" fn evm_run(code_len: u32, calldata_len: u32, gas: u64,
         output[4..12].copy_from_slice(&trace.gas.to_le_bytes());
         output[12] = trace.opcode;
         output[14..16].copy_from_slice(&trace.stack_height.to_le_bytes());
-        trace.top.write_be((&mut output[16..48]).try_into().unwrap());
+        trace
+            .top
+            .write_be((&mut output[16..48]).try_into().unwrap());
     }
     exit as u32
 }
