@@ -92,6 +92,12 @@ pub extern "C" fn evm_output_len() -> u32 { state().output_len }
 pub extern "C" fn evm_gas_left() -> u64 { state().gas_left }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn evm_code_capacity() -> u32 { CODE_LIMIT as u32 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn evm_calldata_capacity() -> u32 { CALLDATA_LIMIT as u32 }
+
+#[unsafe(no_mangle)]
 pub extern "C" fn evm_reset_storage() {
     state().workspace = Workspace::new();
 }
@@ -100,8 +106,15 @@ pub extern "C" fn evm_reset_storage() {
 pub extern "C" fn evm_run(code_len: u32, calldata_len: u32, gas: u64,
     step_limit: u32) -> u32 {
     let state = state();
-    let code_len = (code_len as usize).min(CODE_LIMIT);
-    let calldata_len = (calldata_len as usize).min(CALLDATA_LIMIT);
+    state.stack_len = 0;
+    state.trace_len = 0;
+    state.output_len = 0;
+    state.gas_left = 0;
+    let code_len = code_len as usize;
+    let calldata_len = calldata_len as usize;
+    if code_len > CODE_LIMIT || calldata_len > CALLDATA_LIMIT {
+        return crate::Exit::InputLimit as u32;
+    }
     let env = environment(&state.environment);
     let mut machine = Machine::new(&state.code[..code_len],
         &state.calldata[..calldata_len], gas, env, &mut state.workspace);

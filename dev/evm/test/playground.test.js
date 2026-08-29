@@ -46,8 +46,21 @@ test("the no-import Wasm machine runs every playground example", async () => {
       await WebAssembly.compile(await (await fetch("./evm.wasm")).arrayBuffer())));
     assert.deepEqual(imports, []);
 
+    const abi = await page.evaluate(async () => {
+      const { instance } = await WebAssembly.instantiateStreaming(fetch("./evm.wasm"));
+      const api = instance.exports;
+      const invalid = api.evm_run(65537, 0, 1000n, 100);
+      return {
+        capacities: [api.evm_code_capacity(), api.evm_calldata_capacity()],
+        invalid: [invalid, api.evm_stack_len(), api.evm_trace_len(),
+          api.evm_output_len()],
+      };
+    });
+    assert.deepEqual(abi.capacities, [65536, 65536]);
+    assert.deepEqual(abi.invalid, [17, 0, 0, 0]);
+
     const expected = ["Returned", "Returned", "Returned", "Returned",
-      "Returned", "Bad jump"];
+      "Returned", "Returned", "Returned", "Bad jump"];
     for (let index = 0; index < expected.length; index++) {
       await page.locator("#example").selectOption(String(index));
       await page.locator("#run").click();

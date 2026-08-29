@@ -29,6 +29,7 @@ pub enum Exit {
     HostError = 14,
     WriteProtection = 15,
     InitCodeLimit = 16,
+    InputLimit = 17,
 }
 
 #[derive(Clone, Copy, Default)]

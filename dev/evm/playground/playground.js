@@ -31,6 +31,18 @@ const examples = [
     calldata: "",
   },
   {
+    name: "Persistent storage",
+    description: "SSTORE and SLOAD one transaction-state slot",
+    code: "60 2a 60 01 55 60 01 54 5f 52 60 20 5f f3",
+    calldata: "",
+  },
+  {
+    name: "Overlapping MCOPY",
+    description: "Cancun memory copying preserves overlapping input",
+    code: "61 01 02 5f 52 60 02 60 1e 60 1f 5e 5f 51 5f 52 60 20 5f f3",
+    calldata: "",
+  },
+  {
     name: "Bad jump",
     description: "A PUSH byte that looks like JUMPDEST is not a destination",
     code: "60 5b 60 01 56",
@@ -76,6 +88,7 @@ const exits = ["Stopped", "Returned", "Reverted", "Out of gas", "Invalid opcode"
   "Stack underflow", "Stack overflow", "Bad jump", "Memory limit",
   "Storage limit", "Step limit", "Unsupported opcode", "Return data out of bounds",
   "Log limit", "Host error", "Write protection", "Init code limit"];
+exits.push("Input limit");
 const $ = selector => document.querySelector(selector);
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -157,7 +170,10 @@ function run() {
   try {
     const code = bytes($("#code").value);
     const calldata = bytes($("#calldata").value);
-    if (code.length > 65536 || calldata.length > 65536) throw new RangeError("Code and calldata are capped at 64 KiB each.");
+    if (code.length > api.evm_code_capacity() ||
+        calldata.length > api.evm_calldata_capacity()) {
+      throw new RangeError("Code and calldata exceed this machine's input profile.");
+    }
     const linear = memory();
     linear.set(code, api.evm_code_ptr());
     linear.set(calldata, api.evm_calldata_ptr());
