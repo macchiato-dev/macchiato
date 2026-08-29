@@ -3,7 +3,6 @@ import { Decoration, EditorView, ViewPlugin } from "@codemirror/view";
 
 const HIGHLIGHT_LINE_LIMIT = 2048;
 const STATE_LINE_LIMIT = 4096;
-const STATE_BATCH_LINES = 400;
 const REFRESH_DELAY = 180;
 const classes = {
   comment: "cm-mobile-comment", keyword: "cm-mobile-keyword",
@@ -503,23 +502,21 @@ function stateBeforeLine(doc, mode, lineNumber) {
   let scannedChars = 0;
   let skippedChars = 0;
 
-  // Batches are deliberately not checkpoints. They only keep this one local
-  // state value while walking from the top and disappear when the call ends.
-  for (let batch = 1; batch < lineNumber; batch += STATE_BATCH_LINES) {
-    const end = Math.min(lineNumber, batch + STATE_BATCH_LINES);
-    for (let number = batch; number < end; number++) {
-      const line = doc.line(number);
-      const length = Math.min(line.length, STATE_LINE_LIMIT);
-      const text = doc.sliceString(line.from, line.from + length) + "\n";
-      state = scanMode(mode, text, 0, state, false).state;
-      scannedChars += text.length;
-      if (line.length > length) {
-        // The tail is searched only for delimiters that affect later lines.
-        // It is never tokenized or retained, which keeps minified input cheap.
-        state = skipLongTail(mode, state,
-          doc.sliceString(line.from + length, line.to));
-        skippedChars += line.length - length;
-      }
+  // This is one cheap, disposable top-to-bottom walk, not a checkpoint
+  // structure. Only the small lexical state survives from one line to the
+  // next, and even that disappears when this call returns.
+  for (let number = 1; number < lineNumber; number++) {
+    const line = doc.line(number);
+    const length = Math.min(line.length, STATE_LINE_LIMIT);
+    const text = doc.sliceString(line.from, line.from + length) + "\n";
+    state = scanMode(mode, text, 0, state, false).state;
+    scannedChars += text.length;
+    if (line.length > length) {
+      // Do not parse a pathological/minified tail. Search it only for the
+      // few delimiters which can change how a later line begins.
+      state = skipLongTail(mode, state,
+        doc.sliceString(line.from + length, line.to));
+      skippedChars += line.length - length;
     }
   }
   return { state, scannedChars, skippedChars };
