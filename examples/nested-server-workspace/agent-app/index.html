@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GH0ST // Kanban</title>
+  <link rel="stylesheet" href="/agent-app/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="identity"><span class="prompt">&gt;_</span><div><strong>GH0STBOARD</strong><small>private ops // sprint 07</small></div></div>
+      <div class="system-state"><span class="pulse"></span> ALL SYSTEMS NOMINAL <span class="clock" id="clock">00:00:00</span></div>
+    </header>
+
+    <section class="intro">
+      <div><p class="breadcrumb">/home/operator/projects/ghostboard</p><h1>MISSION CONTROL<span>_</span></h1><p class="subtitle">A tactical view of everything in flight.</p></div>
+      <button class="primary-button" id="add-task" type="button"><span>＋</span> NEW TASK</button>
+    </section>
+
+    <section class="toolbar" aria-label="Board controls">
+      <div class="board-meta"><span class="signal">●</span> SPRINT 07 <span class="divider">/</span> <span id="task-total">06</span> TASKS</div>
+      <label class="search"><span>~/search</span><input id="search" type="search" placeholder="filter tasks..." autocomplete="off"></label>
+      <div class="legend"><span><i class="dot dot-green"></i>ACTIVE</span><span><i class="dot dot-amber"></i>BLOCKED</span></div>
+    </section>
+
+    <section class="board" id="board" aria-label="Kanban board">
+      <article class="column" data-status="backlog"><header><div><span class="column-index">01</span><h2>BACKLOG</h2></div><span class="count" data-count="backlog">00</span></header><div class="task-list" data-list="backlog"></div></article>
+      <article class="column" data-status="progress"><header><div><span class="column-index">02</span><h2>IN PROGRESS</h2></div><span class="count" data-count="progress">00</span></header><div class="task-list" data-list="progress"></div></article>
+      <article class="column" data-status="review"><header><div><span class="column-index">03</span><h2>REVIEW</h2></div><span class="count" data-count="review">00</span></header><div class="task-list" data-list="review"></div></article>
+      <article class="column" data-status="done"><header><div><span class="column-index">04</span><h2>DEPLOYED</h2></div><span class="count" data-count="done">00</span></header><div class="task-list" data-list="done"></div></article>
+    </section>
+
+    <footer><span>STATUS: <b>ONLINE</b></span><span>DRAG TO REORDER // CLICK A CARD TO INSPECT</span><span>BUILD 0.7.3</span></footer>
+  </main>
+  <div class="modal-backdrop" id="modal" hidden><form class="task-form" id="task-form"><button class="close" id="close-modal" type="button" aria-label="Close">×</button><p class="eyebrow">// create new payload</p><h2>ADD TASK</h2><label>NAME<input name="title" required maxlength="80" placeholder="What needs doing?"></label><label>OWNER<input name="owner" maxlength="20" placeholder="operator"></label><label>PRIORITY<select name="priority"><option value="green">NORMAL</option><option value="amber">BLOCKED</option></select></label><button class="primary-button" type="submit">＋ INSERT TASK</button></form></div>
+  <script type="module" src="/agent-app/app.js"></script>
+</body>
+</html>

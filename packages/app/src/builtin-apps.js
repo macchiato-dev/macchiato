@@ -19,6 +19,7 @@ import { proseEditorUseHandler, wordgardEditorUseHandler } from "../../../exampl
 import { focusedAppHandler } from "../../../examples/focused-app/handler.js";
 import { exportFocusedApp } from "../../../examples/focused-app/export-static.js";
 import { machineControllerHandler } from "../../../dev/playground/src/handler.js";
+import { nestedServerWorkspaceHandler } from "../../../examples/nested-server-workspace/handler.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const examplesRoot = join(repoRoot, "examples");
@@ -47,6 +48,37 @@ export const BUILTIN_APPS = [
     sandbox: {
       runtime: "allocator-free Rust compiled to WebAssembly",
       hostCapabilities: ["fixed linear-memory ABI"],
+    },
+  },
+  {
+    name: "Nested Server Workspace",
+    pluginId: "nested-server-workspace",
+    subdomain: "workspace-dev",
+    kind: "development-authenticated declarative server",
+    description: "A nested-viewport workspace with a chat activity rail, content tabs, and a server-backed terminal.",
+    developmentAuth: true,
+    handler: nestedServerWorkspaceHandler,
+    sourceFiles: [
+      "examples/nested-server-workspace/index.html",
+      "examples/nested-server-workspace/client.js",
+      "examples/nested-server-workspace/terminal-workspace.js",
+      "examples/nested-server-workspace/style.css",
+      "examples/nested-server-workspace/workspace.css",
+      "examples/nested-server-workspace/handler.js",
+      "examples/nested-server-workspace/wrapper-server.js",
+      "examples/nested-server-workspace/app-server.js",
+      "examples/nested-server-workspace/pi-agent.js",
+      "examples/nested-server-workspace/agent-app/index.html",
+      "examples/nested-server-workspace/agent-app/style.css",
+      "examples/nested-server-workspace/agent-app/app.js",
+      "examples/nested-server-workspace/agent-app/AGENTS.md",
+      "examples/nested-server-workspace/terminal-sessions.js",
+      "examples/nested-server-workspace/pty-bridge.py",
+      "scripts/workspace-terminal.js",
+    ],
+    sandbox: {
+      runtime: "browser-native authenticated workspace",
+      hostCapabilities: ["SQLite activity and process metadata", "durable wrapper proxy", "authenticated host PTY shell"],
     },
   },
   {
