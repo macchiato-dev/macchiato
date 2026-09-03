@@ -129,6 +129,16 @@ export function createServerMachineBridge({ bytecodes = [], devices = {},
     pumping = true;
     try {
       while (deviceResults.length) send(deviceResults.shift());
+    } catch (error) {
+      const pending = requests.get(activeRequest);
+      if (pending) {
+        requests.delete(activeRequest);
+        pending.reject(error);
+      }
+      activeRequest = 0;
+      delivery = undefined;
+      deviceResults.length = 0;
+      deviceCalls.clear();
     } finally {
       pumping = false;
     }

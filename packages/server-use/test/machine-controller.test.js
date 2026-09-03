@@ -49,6 +49,23 @@ test("completes an asynchronous named device call before the response", async ()
   assert.deepEqual(await bridge.request({ route: "project" }), { status: 200, body: "Project" });
 });
 
+test("rejects the active request when a guest does not consume an asynchronous device result", async () => {
+  const bridge = createServerMachineBridge({ devices: { sql: async () => "done" } });
+  const memory = new WebAssembly.Memory({ initial: 2 });
+  let deliveries = 0;
+  bridge.connect({ exports: { memory, onmsg(length) {
+    if (!length || ++deliveries > 1) return;
+    const bytes = new Uint8Array(memory.buffer);
+    const actual = bridge.imports.host.msg(0, length);
+    const request = decodeMachineValue(bytes.slice(0, actual));
+    const output = encodeMachineValue([2, 1, "sql", "read", []]);
+    bytes.set(magic, 0); bytes.set(output, magic.length);
+    bridge.imports.host.msg(0, magic.length + output.length);
+    assert.equal(request[0], 0);
+  } } });
+  await assert.rejects(bridge.request("resource"), /guest did not receive its message/);
+});
+
 test("serializes requests through a single synchronous guest context", async () => {
   const bridge = createServerMachineBridge();
   const order = [];
