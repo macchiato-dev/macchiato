@@ -365,6 +365,117 @@ repository working. This is closer to a versioned technical narrative than a
 traditional list of completed features.
 
 
+<!-- dev/evm/README.md -->
+
+# Macchiato EVM
+
+An allocator-free `no_std` Ethereum Virtual Machine designed to run directly
+in WebAssembly and to remain understandable enough to inspect opcode by
+opcode.
+
+The implementation is under active construction. It currently targets Cancun
+execution semantics for its implemented opcode set. Unsupported opcodes stop
+with an explicit status; they are never silently approximated.
+
+## Design
+
+- The core has no allocator, libc, WASI, filesystem, clock, network, or random
+  source.
+- Callers provide code, calldata, environment values, gas, and persistent
+  storage. The machine uses caller-owned bounded stack, memory, transient
+  storage, logs, output, and trace buffers. `Workspace` is the browser's
+  64 KiB profile; `WorkspaceWithCapacity<N>` selects a larger allocation-free
+  profile when execution needs it.
+- The optional `Host` trait supplies account balances and code, block hashes,
+  and blob hashes. It reports cold account accesses, leaving state layout and
+  database choice outside the VM while keeping EIP-2929 gas in the core.
+- A word is four little-endian `u64` limbs. Arithmetic wraps modulo `2^256`.
+- The Wasm ABI uses exported linear-memory buffers and integer lengths. JSON is
+  a playground concern and does not cross the VM boundary.
+- Every executed instruction may produce a compact trace record containing the
+  program counter, opcode, remaining gas, stack height, and stack top.
+
+Ethereum's executable execution-layer specification is the semantic reference:
+<https://github.com/ethereum/execution-specs>. Tests should prefer official
+execution-spec vectors as coverage expands.
+
+The checked-in compact corpus currently runs 325 Cancun cases derived from
+`execution-spec-tests` v5.4.0: arithmetic and bitwise operations, direct
+calldata loads, `MCOPY`, memory and control flow, Keccak, and return data. Each
+corpus records its source or aggregate SHA-256. Three EIP-1153 cases execute
+recursive `CALL`, `CALLCODE`, and `DELEGATECALL` frames through a test host and
+check their distinct transient-storage ownership. Cases that intentionally
+need more than the browser ABI's default 64 KiB memory bound run in explicitly
+larger caller-selected profiles.
+
+## Layout
+
+- `src/word.rs` — dependency-free 256-bit integer operations.
+- `src/machine.rs` — execution state, gas, memory, storage, and opcodes.
+- `src/wasm.rs` — a compact browser-facing ABI.
+- `playground/` — static browser UI, examples, and Playwright tests.
+
+The current standalone frame implements arithmetic, comparison and bitwise
+instructions; Keccak-256; calldata, code and return-data access; bounded
+memory; persistent and transient storage; control flow; logs; Cancun's
+`PUSH0`, `MCOPY`, `TLOAD`, and `TSTORE`; and the environment values exposed by
+the playground. Storage changes and logs roll back on `REVERT` and exceptional
+termination.
+
+With a host, account and external-code inspection, block and blob hashes,
+host-backed persistent and transaction-wide transient storage, calls, contract
+creation, and post-Cancun self-destruction are available. Calls and creation
+use typed requests plus bounded input and return buffers; a host may recursively
+invoke `Machine` for child frames. Checkpoints make host mutations, including
+transient writes, commit only on successful frame termination.
+Precompiles and transaction-level refund capping belong to the host. The core
+calculates frame-level Cancun `SSTORE` costs and refund deltas.
+
+## Build
+
+```sh
+PATH="$HOME/.cargo/bin:$PATH" cargo test --manifest-path dev/evm/Cargo.toml
+deno run --allow-env=PATH,HOME --allow-read=. \
+  --allow-write=dev/evm/playground,dev/evm/target \
+  --allow-run="$HOME/.cargo/bin/cargo" dev/evm/build.js
+node --test dev/evm/test/*.test.js
+```
+
+The build copies a `wasm32-unknown-unknown` `cdylib` into
+`playground/evm.wasm`. At this revision it is 42,122 bytes, imports nothing,
+and has SHA-256
+`abc91e307392d51b90985758b375b5fa805e2f79489f7e6c123765e7ef45da69`.
+The browser test recompiles the module, checks that empty import list, checks
+the ABI bounds, and executes every example.
+
+`server.js` serves the playground on loopback. The development app plugin
+declares `evm` as a proxy to that server, so the app gateway exposes the same
+files at `http://evm.localhost:<port>` without an EVM-specific gateway handler.
+
+## Browser ABI
+
+Instantiate `playground/evm.wasm`, copy bytecode and calldata into the buffers
+returned by `evm_code_ptr` and `evm_calldata_ptr`, and write fourteen 32-byte
+big-endian environment words at `evm_environment_ptr`. Then set whether the
+frame is static and run it:
+
+```js
+const { instance } = await WebAssembly.instantiateStreaming(fetch("./evm.wasm"));
+const evm = instance.exports;
+const memory = new Uint8Array(evm.memory.buffer);
+memory.set(code, evm.evm_code_ptr());
+memory.set(calldata, evm.evm_calldata_ptr());
+evm.evm_set_read_only(0);
+const exit = evm.evm_run(code.length, calldata.length, 1_000_000n, 100_000);
+```
+
+The stack, trace, and output each have pointer and length exports. The remaining
+scalar results are `evm_gas_left` and the signed `evm_refund` counter.
+`evm_reset_storage` clears the standalone playground's persistent storage.
+Lengths exceeding the two 65,536-byte input capacities return `InputLimit`
+without executing an instruction.
+
+
 <!-- dev/microesnext/README.md -->
 
 # MicroESNext
@@ -4068,11 +4179,22 @@ the browser, in QuickJS, and in MicroQuickJS.
 
 Each mode is a CodeMirror `ViewPlugin`. On an update it:
 
-1. Reads only `EditorView.visibleRanges`, expanded to complete visible lines.
-2. Scans at most 400 preceding lines to recover bounded lexical state.
-3. Parses and decorates the visible text.
-4. Replaces its previous `RangeSet`, allowing syntax data for the old viewport
-   to be collected.
+1. Walks quickly from the start of the document to the visible range to find
+   only the lexical state in which the visible text begins. The earlier
+   400-line number is neither a look-behind limit nor a reason to retain
+   400-line batches. This disposable pass skips grammar that would make the
+   walk expensive and may use conservative cues such as indentation or a
+   top-level declaration around difficult input. Work is bounded on each line;
+   long tails receive only a cheap search for state-changing delimiters. It
+   produces no tokens, checkpoints, or syntax tree.
+2. Reads `EditorView.visibleRanges`, expanded to complete visible lines.
+3. Parses and decorates at most 2,048 characters of each visible line. The
+   unhighlighted tail of a longer, usually minified, line receives only cheap
+   delimiter bookkeeping.
+4. Retains only the visible `RangeSet`. The top-to-bottom recovery state is
+   already gone when the refresh finishes. A keystroke immediately discards
+   the marks; a viewport shown after the 180 ms throttle is likewise rebuilt
+   from nothing. No result is reused by the next edit or reveal.
 
 This follows CodeMirror's documented large-document model: its
 [`visibleRanges`](https://codemirror.net/docs/ref/#view.EditorView.visibleRanges)
@@ -4086,12 +4208,12 @@ comments plus `script` and `style` regions. Markdown fences delegate visible
 JavaScript, CSS, and HTML text to the corresponding scanner. HTML delegates
 visible `script` and `style` contents in the same way.
 
-This is intentionally lexical rather than grammatical. A small look-ahead in
-the visible text recovers a closing delimiter whose opening delimiter is older
-than the bounded lookback. JavaScript also treats a top-level declaration after
-a blank line as a synchronization point for an unterminated template state.
-Those heuristics keep work bounded, but cannot provide parser-level correctness
-for every deliberately pathological file.
+This is intentionally lexical rather than grammatical. JavaScript and CSS
+state passes jump between string and comment delimiters. HTML finds the latest
+unclosed comment, `script`, or `style` region and scans only that region's
+contents. Markdown follows fences line by line. These shortcuts make the pass
+fast and disposable, but cannot provide parser-level correctness for every
+deliberately pathological file.
 
 ## Real-file fixtures
 
@@ -4118,9 +4240,23 @@ node --test --test-reporter=spec test/mobile-syntax.test.js
 Playwright uses its iPhone 13 profile and launches Chromium with a 64 MiB V8
 old-space cap. For every language and runtime, it verifies the real line count,
 scrolls from the first viewport to the last, checks the expected mixed-language
-token classes, and asserts that visible characters, lookback characters,
+token classes, and asserts that visible characters, state-pass characters,
 retained tokens, and rendered marks remain bounded. It also records CDP heap
 and DOM counters.
+
+Run the controlled before/after typing comparison with:
+
+```sh
+node --test --test-reporter=spec test/mobile-syntax-comparison.test.js
+```
+
+That test uses real tracked 9,000–10,000-line files, an iPhone 13 viewport,
+4× CPU throttling, and the same first-page edit trace. It measures CodeMirror's
+normal parser first and the disposable viewport lexer second. It also scrolls
+to a 9,900-character CSS line and verifies that highlighting stops after the
+2,048-character cap. The normal MicroQuickJS Markdown comparison is omitted
+because its DOM device does not yet implement CodeMirror's `EmphasisMark` node;
+viewport Markdown remains in the correctness matrix.
 
 Set `MOBILE_SYNTAX_SCREENSHOTS` to a directory to retain one screenshot for
 every runtime and language. `MOBILE_SYNTAX_RUNTIMES` and
@@ -4134,12 +4270,18 @@ state across all three runtimes.
 
 ## Current result
 
-At the final viewport, the complete test retains 4–70 syntax tokens and scans
-about 1,400–2,300 visible characters plus 15,600–28,400 lookback characters,
-depending on the fixture and runtime. Host JavaScript heap use remained below
-10 MiB in the measured run. The plain browser generally updated in under a
-millisecond; QuickJS took about 1–7 ms; MicroQuickJS took about 2–30 ms, with
-mixed HTML as the slowest case.
+In the final controlled first-page run, normal JavaScript parsing reached a
+42 ms physical-keystroke p95 in the plain browser, versus 16 ms for the viewport
+mode. Under QuickJS, direct JavaScript edit dispatch fell from a 44 ms p95 to
+25 ms; under MicroQuickJS it fell from 34 ms to 9 ms. CSS and HTML showed the
+same reduction in direct dispatch work. Physical-key timing has more runtime
+and browser-layout noise, but its medians generally improved as well.
+
+At the final viewport, the correctness matrix scans the full preceding text for
+scalar state but retains only the visible tokens. After removing accidental
+token construction from state recovery, a 123,836-character mixed-HTML state
+pass and visible recolor took about 13 ms in MicroQuickJS. Host JavaScript heap
+use remained below 10 MiB in the measured run.
 
 The result supports using viewport-local lexical modes as a mobile or large-file
 fallback. It does not replace a full parser when exact syntax trees, structural
@@ -4586,6 +4728,35 @@ The fragment key is exchanged for an HttpOnly cookie and then removed with
 successful exchange, allowing authentication to recover after browser or
 cookie loss. Resetting a key invalidates existing links and cookies for only
 that subdomain.
+
+## Proxy apps
+
+A `proxy` declaration maps an app subdomain to one HTTP or HTTPS origin. The
+gateway preserves the request method, path, query, body, response status, and
+response stream; removes hop-by-hop headers; and rewrites redirects back into
+the public app when they point at the configured upstream. Authentication and
+other gateway options are applied before the request reaches the proxy.
+
+Add a proxy to a local development server with:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./data \
+  site add-proxy docs http://127.0.0.1:4173
+```
+
+Loopback origins require no additional network grant. A remote origin is
+rejected unless the operator makes it explicit:
+
+```bash
+node packages/macchiato/src/macchiato.js --data-dir ./data \
+  site add-proxy docs https://docs-preview.example --allow-remote
+```
+
+The resulting declaration uses `options.proxy.origin`; `--allow-remote` also
+records that exact origin in `access.networkOrigins`. The proxy does not start,
+stop, or supervise its upstream. An app that owns a child process should keep
+that lifecycle in a controller and expose its stable local HTTP endpoint to
+this routing layer.
 
 `development` is the full repository demo set; `core` is the one-app default.
 Run `macchiato app plugins` to list individual plugin IDs.
@@ -8267,6 +8438,70 @@ revamp.
 
 The example is suitable for architecture review and CRUD experiments, not yet as
 a claim of production isolation.
+
+
+<!-- examples/nested-server-workspace/README.md -->
+
+# Nested Server Workspace
+
+A development-authenticated declarative server app with a compact application
+frame, activity/chat rail, content view, and a real PTY-backed Bash terminal.
+
+Install it with `--app-plugin nested-server-workspace`; it is also included in
+the `development` preset. The gateway protects every page and API route with the
+app's independent development key.
+
+## Process layout
+
+The existing declarative-app gateway remains the public authentication and
+routing boundary. This app's handler is a second, deliberately separate proxy:
+
+```text
+declarative-app gateway -> workspace wrapper -> restartable app child
+                                      |-------> PTY terminal children
+                                      `-------> workspace.sqlite
+```
+
+The detached workspace wrapper owns the terminals and SQLite database. It
+survives gateway restarts, automatically reloads the app child when app source
+files change, and keeps terminal sessions intact during those reloads. Activity
+entries and terminal run metadata use WAL-backed SQLite in the Macchiato data
+directory.
+
+Useful local control commands are:
+
+```bash
+node scripts/workspace-terminal.js status
+node scripts/workspace-terminal.js restart-app
+node scripts/workspace-terminal.js active
+node scripts/workspace-terminal.js activity
+```
+
+## Credits
+
+Icons are copied inline so the workspace remains self-contained and does not
+acquire an icon-font or runtime network dependency.
+
+| Source | Icon | Interface use |
+| --- | --- | --- |
+| [Lucide](https://lucide.dev/) (ISC) | [`refresh-cw`](https://lucide.dev/icons/refresh-cw) | Content preview reload control |
+
+
+<!-- examples/nested-server-workspace/agent-app/AGENTS.md -->
+
+# Frontend app
+
+This directory is the live preview application controlled by the Pi agent. Its
+`index.html` runs inside a same-origin iframe in the workspace Content tab at
+`/agent-app/index.html`. Every completed change is reloaded in that iframe, so
+write code intended to execute visibly inside this bounded frame rather than as
+a standalone server or full browser shell. Make layouts responsive to the
+iframe's dimensions and use root-relative `/agent-app/` asset URLs.
+
+Keep it frontend-only: use HTML, CSS, browser-native ES modules in `.js` files,
+and static assets. Do not add a backend, CommonJS, `.mjs` files, build step,
+package manager, or external network dependency. Update the visible app
+directly and finish by briefly stating what the user should now see in Content.
 
 
 <!-- examples/prose-editor-use/README.md -->

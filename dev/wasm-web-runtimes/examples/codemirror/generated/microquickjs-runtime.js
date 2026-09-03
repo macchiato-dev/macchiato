@@ -1790,6 +1790,7 @@ function dispatch(message) {
   callback(eventReference < 0 ? undefined : eventForDelivery(eventReference));
   flush();
 }
+globalThis.__wwcDispatch = dispatch;
 globalThis.document = document;
 globalThis.window = globalThis.self = globalThis.parent = globalThis;
 if (typeof globalThis.URL !== "function") {
@@ -1905,8 +1906,14 @@ function GuestCustomEvent(type, options) {
 GuestCustomEvent.prototype.preventDefault = function () {
   this.defaultPrevented = true;
 };
+GuestCustomEvent.prototype.initEvent = function (type) {
+  this.type = String(type);
+};
 globalThis.CustomEvent = GuestCustomEvent;
 globalThis.Event = GuestCustomEvent;
+GuestDocument.prototype.createEvent = function (type) {
+  return new GuestCustomEvent(type);
+};
 GuestDocument.prototype.dispatchEvent = function (event) {
   if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest custom events can be dispatched");
   var listeners = (syntheticDocumentListeners[event.type] || []).slice();
@@ -1988,10 +1995,16 @@ globalThis.DOMRect = function DOMRect(x, y, width, height) {
 globalThis.DOMRectReadOnly = globalThis.DOMRect;
 var projectedClasses = Object.create(null),
   projectedClassCount = 0;
+var runtimeStringReplace = String.prototype.replace;
 String.prototype.replace = function (search, replacement) {
-  if (typeof replacement !== "function") {
-    return globalThis.__wwcStringReplace(String(this), search, replacement);
+  if (!globalThis.__wwcStringReplace) {
+    return runtimeStringReplace.call(this, search, replacement);
   }
+  var replacementType = typeof replacement;
+  if (replacementType === "string" || replacementType === "number" || replacementType === "boolean" || replacement === null || replacement === undefined) {
+    return globalThis.__wwcStringReplace(this, search, replacement);
+  }
+  var replacementIsFunction = true;
   var source = String(this),
     output = "",
     at = 0,
@@ -2025,7 +2038,7 @@ String.prototype.replace = function (search, replacement) {
   while (match) {
     for (; at < match.index; at++) output += source[at];
     var inserted = "";
-    if (typeof replacement === "function") {
+    if (replacementIsFunction) {
       inserted = String(replacement(match[0], match[1], match[2], match[3], match.index, source));
     } else {
       var text = String(replacement);
@@ -2338,18 +2351,25 @@ function GuestRange(reference) {
 }
 GuestRange.prototype = Object.create(GuestObject.prototype);
 globalThis.Range = GuestRange;
-var rectProperties = ["bottom", "height", "left", "right", "top", "width", "x", "y"];
+function measuredCoordinate(bytes, at) {
+  return (bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24) / 64;
+}
 function measuredRects(object, method) {
   var bytes = hostCall(document.reference, method, [object]);
   var count = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var rects = [];
   for (var index = 0; index < count; index++) {
-    var rect = {};
-    for (var property = 0; property < rectProperties.length; property++) {
-      var at = 4 + index * 32 + property * 4;
-      rect[rectProperties[property]] = (bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24) / 64;
-    }
-    rects.push(rect);
+    var at = 4 + index * 32;
+    rects.push({
+      bottom: measuredCoordinate(bytes, at),
+      height: measuredCoordinate(bytes, at + 4),
+      left: measuredCoordinate(bytes, at + 8),
+      right: measuredCoordinate(bytes, at + 12),
+      top: measuredCoordinate(bytes, at + 16),
+      width: measuredCoordinate(bytes, at + 20),
+      x: measuredCoordinate(bytes, at + 24),
+      y: measuredCoordinate(bytes, at + 28)
+    });
   }
   return rects;
 }
@@ -2969,32 +2989,16 @@ globalThis.cancelAnimationFrame = function (handle) {
 };
 globalThis.setImmediate = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
-  var token = {
-    active: true,
-    index: -1
-  };
-  var index = allocateCallback(function () {
-    token.active = false;
-    callback();
-  }, true);
-  token.index = index;
+  var index = allocateCallback(callback, true);
   immediate([3, document.reference, stringIndex("task"), [encode(index)]]);
-  return token;
+  return index;
 };
 globalThis.setTimeout = function (callback, delay) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
-  var token = {
-    active: true,
-    index: -1
-  };
-  var index = allocateCallback(function () {
-    token.active = false;
-    callback();
-  }, true);
-  token.index = index;
+  var index = allocateCallback(callback, true);
   hostCall(document.reference, "timerOnce", [delay, index]);
-  return token;
+  return index;
 };
 var intervalCallbacks = Object.create(null);
 globalThis.setInterval = function (callback, delay) {
@@ -3056,9 +3060,8 @@ globalThis.matchMedia = function (query) {
   return result;
 };
 globalThis.clearTimeout = function (handle) {
-  if (!handle || handle.active !== true || !Number.isInteger(handle.index)) return;
-  handle.active = false;
-  retireOneShotCallback(handle.index);
+  if (!Number.isInteger(handle)) return;
+  retireOneShotCallback(handle);
 };
 globalThis.clearImmediate = globalThis.clearTimeout;
 globalThis.queueMicrotask = function (callback) {

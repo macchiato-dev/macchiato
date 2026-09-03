@@ -1,5 +1,5 @@
 (() => {
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/common/dist/index.js
+  // node_modules/@lezer/common/dist/index.js
   var DefaultBufferLength = 1024;
   var nextPropID = 0;
   var Range = class {
@@ -1669,7 +1669,7 @@
   };
   var stoppedInner = new NodeProp({ perNode: true });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/lr/dist/index.js
+  // node_modules/@lezer/lr/dist/index.js
   var Stack = class _Stack {
     /**
     @internal
@@ -3431,7 +3431,7 @@
     return spec.get;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/highlight/dist/index.js
+  // node_modules/@lezer/highlight/dist/index.js
   var nextTagID = 0;
   var Tag = class _Tag {
     /**
@@ -4155,7 +4155,7 @@
     { tag: tags.punctuation, class: "tok-punctuation" }
   ]);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@lezer/javascript/dist/index.js
+  // node_modules/@lezer/javascript/dist/index.js
   var noSemi = 316;
   var noSemiType = 317;
   var incdec = 1;
@@ -4367,7 +4367,7 @@
     tokenPrec: 15201
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@marijn/find-cluster-break/src/index.js
+  // node_modules/@marijn/find-cluster-break/src/index.js
   var rangeFrom = [];
   var rangeTo = [];
   (() => {
@@ -4441,7 +4441,7 @@
     return code2 < 65536 ? 1 : 2;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/state/dist/index.js
+  // node_modules/@codemirror/state/dist/index.js
   var Text = class _Text {
     /**
     Get the line description around the given position.
@@ -7809,7 +7809,7 @@
     return strict === true ? -1 : string2.length;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/style-mod/src/style-mod.js
+  // node_modules/style-mod/src/style-mod.js
   var C = "\u037C";
   var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
   var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -7940,7 +7940,7 @@
     }
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/w3c-keyname/index.js
+  // node_modules/w3c-keyname/index.js
   var base = {
     8: "Backspace",
     9: "Tab",
@@ -8046,7 +8046,7 @@
     return name2;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/view/dist/index.js
+  // node_modules/@codemirror/view/dist/index.js
   var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
   var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
   var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -16923,7 +16923,7 @@
     return last;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/language/dist/index.js
+  // node_modules/@codemirror/language/dist/index.js
   var _a;
   var languageDataProp = /* @__PURE__ */ new NodeProp();
   function defineLanguageFacet(baseData) {
@@ -18062,7 +18062,7 @@
     auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
   };
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/autocomplete/dist/index.js
+  // node_modules/@codemirror/autocomplete/dist/index.js
   function toSet(chars) {
     let flat = Object.keys(chars).join("");
     let words = /\w/.test(flat);
@@ -18451,7 +18451,7 @@
   closedBracket.endSide = -1;
   var android = typeof navigator == "object" && /* @__PURE__ */ /Android\b/.test(navigator.userAgent);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/lang-javascript/dist/index.js
+  // node_modules/@codemirror/lang-javascript/dist/index.js
   var snippets = [
     /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
@@ -18763,7 +18763,7 @@
     return true;
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/commands/dist/index.js
+  // node_modules/@codemirror/commands/dist/index.js
   var toggleComment = (target) => {
     let { state } = target, line = state.doc.lineAt(state.selection.main.from), config = getConfig(target.state, line.from);
     return config.line ? toggleLineComment(target) : config.block ? toggleBlockCommentByLine(target) : false;
@@ -19857,7 +19857,7 @@
     { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
   ].concat(standardKeymap);
 
-  // dev/wasm-web-runtimes/examples/codemirror/node_modules/@codemirror/theme-one-dark/dist/index.js
+  // node_modules/@codemirror/theme-one-dark/dist/index.js
   var chalky = "#e5c07b";
   var coral = "#e06c75";
   var cyan = "#56b6c2";
@@ -20001,10 +20001,10 @@
   ]);
   var oneDark = [oneDarkTheme, /* @__PURE__ */ syntaxHighlighting(oneDarkHighlightStyle)];
 
-  // dev/wasm-web-runtimes/examples/codemirror/generated/fixtures.js
+  // generated/fixtures.js
   var fixtures_default = { "typescript": { "path": "examples/codemirror/fixtures/example.ts", "text": 'type Project = {\n  name: string;\n  files: string[];\n  sandboxed: boolean;\n};\n\nconst projects: Project[] = [\n  { name: "Article", files: ["index.html", "style.css"], sandboxed: true },\n  { name: "Clock", files: ["index.html", "clock.js"], sandboxed: true },\n];\n\nexport function projectSummary(project: Project): string {\n  const mode = project.sandboxed ? "sandboxed" : "trusted";\n  return `${project.name}: ${project.files.length} files, ${mode}`;\n}\n\nfor (const project of projects) {\n  console.log(projectSummary(project));\n}\n' }, "html": { "path": "examples/codemirror/fixtures/example.html", "text": '<!doctype html>\n<meta charset="utf-8">\n<title>Small article</title>\n<article>\n  <h1>A small article</h1>\n  <p>A constrained document can still be useful and expressive.</p>\n  <p><a href="https://en.wikipedia.org/wiki/WebAssembly">Read about WebAssembly</a>.</p>\n</article>\n' }, "css": { "path": "examples/codemirror/fixtures/example.css", "text": ":root {\n  color-scheme: dark;\n  font-family: system-ui, sans-serif;\n}\n\narticle {\n  max-width: 42rem;\n  margin: 4rem auto;\n  line-height: 1.6;\n}\n\na { color: #61afef; }\n" }, "json": { "path": "examples/codemirror/fixtures/example.json", "text": '{\n  "container": "article",\n  "limits": {\n    "elements": 500,\n    "links": 8\n  },\n  "allowedHosts": ["*.wikipedia.org"]\n}\n' }, "markdown": { "path": "examples/codemirror/fixtures/example.md", "text": "# Sandboxed editor\n\nThe editor state belongs to QuickJS. The browser receives a constrained DOM\nprojection and returns only explicitly supported events and measurements.\n\n## Goals\n\n- Preserve familiar CodeMirror behavior.\n- Keep the browser host generic.\n- Measure before adding specialized batching.\n" } };
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/native-caret.js
+  // src/native-caret.js
   var nativeCaret = EditorView.theme({
     "&.cm-focused .cm-content, &.cm-focused .cm-line": {
       caretColor: "#528bff !important"
@@ -20012,7 +20012,7 @@
     ".cm-cursorLayer": { display: "none" }
   });
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/multi-app.js
+  // src/multi-app.js
   function startMultiEditor(files) {
     const workspace = document.getElementById("workspace");
     const tabs = document.createElement("nav");
@@ -20126,7 +20126,7 @@
     globalThis.__wwcResult = () => `CodeMirror:multi:${records.length}:${records.map((record) => record.view ? record.view.state.doc.lines : fixtures_default[record.fixture].text.split("\n").length).join(",")}`;
   }
 
-  // dev/wasm-web-runtimes/examples/codemirror/src/multi-microesnext-entry.js
+  // src/multi-microesnext-entry.js
   var plainText = () => [];
   startMultiEditor([
     ["typescript", "example.ts", () => javascript({ typescript: true })],

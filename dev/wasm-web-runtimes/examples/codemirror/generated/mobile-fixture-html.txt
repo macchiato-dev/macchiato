@@ -1,4 +1,96 @@
 
+<!-- dev/evm/playground/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macchiato EVM Playground</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div class="eyebrow">no_std Rust · WebAssembly</div>
+    <h1>Ethereum, one opcode at a time.</h1>
+    <p>Edit bytecode, supply calldata and block context, then inspect the stack,
+      output, gas, and complete instruction trace produced inside Wasm.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Program">
+      <div class="field example-field">
+        <label for="example">Example</label>
+        <select id="example"></select>
+      </div>
+      <div class="field gas-field">
+        <label for="gas">Gas</label>
+        <input id="gas" inputmode="numeric" value="100000">
+      </div>
+      <div class="field code-field">
+        <label for="code">Bytecode</label>
+        <textarea id="code" spellcheck="false" rows="5"></textarea>
+      </div>
+      <div class="field calldata-field">
+        <label for="calldata">Calldata <span>hex or <code>text:</code></span></label>
+        <textarea id="calldata" spellcheck="false" rows="3"></textarea>
+      </div>
+      <details>
+        <summary>Environment</summary>
+        <div id="environment" class="environment"></div>
+        <label class="readonly-field"><input id="read-only" type="checkbox">
+          Static, read-only frame</label>
+      </details>
+      <div class="actions">
+        <button id="run" type="button">Run program</button>
+        <button id="reset-storage" class="secondary" type="button">Reset storage</button>
+        <output id="runtime-status" aria-live="polite">Loading machine…</output>
+      </div>
+    </section>
+
+    <section class="results" aria-label="Execution result">
+      <article class="result-card exit-card">
+        <span>Exit</span><strong id="exit">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Gas left</span><strong id="gas-left">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Refund counter</span><strong id="refund">—</strong>
+      </article>
+      <article class="result-card output-card">
+        <span>Output</span><code id="output">—</code>
+        <small id="output-text"></small>
+      </article>
+      <article class="result-card stack-card">
+        <span>Final stack</span><ol id="stack"></ol>
+      </article>
+    </section>
+
+    <section class="trace-section">
+      <div class="trace-heading">
+        <div><span class="eyebrow">Execution trace</span><h2>What the machine did</h2></div>
+        <span id="trace-note">Select an example and run it.</span>
+      </div>
+      <div class="trace-scroll" tabindex="0">
+        <table>
+          <thead><tr><th>#</th><th>PC</th><th>Opcode</th><th>Gas after</th><th>Stack</th><th>Top after</th></tr></thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Bounded by construction.</strong> No allocator, WASI, filesystem,
+    clock, random source, network, or JavaScript opcode implementation.
+  </footer>
+  <script type="module" src="./playground.js"></script>
+</body>
+</html>
+
 <!-- dev/machines-pages/machine-runner/index.html -->
 <!doctype html>
 <html lang="en">
@@ -383,6 +475,94 @@ projects its constrained DOM into this browser.</p>
     status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
     throw error;
   }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile syntax benchmark</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" hidden></output>
+<script type="module">
+  await import("../../generated/codemirror-mobile-syntax-benchmark.js");
+  globalThis.benchmarkGuestCall = async (name, value) => globalThis[name](value);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · MicroQuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading MicroQuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = async (name, value) => {
+    const result = await machine.onmsg(namedCall(name, value));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+    return result;
+  };
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/quickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · QuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading QuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = (name, value) =>
+    machine.onmsg(namedCall(name, value));
 </script>
 
 <!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
@@ -899,6 +1079,104 @@ An offline reading edition built from the public-domain SQLite documentation.
   <main id="app"></main>
   <script src="./game-model.js"></script>
   <script src="./application.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/agent-app/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GH0ST // Kanban</title>
+  <link rel="stylesheet" href="/agent-app/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="identity"><span class="prompt">&gt;_</span><div><strong>GH0STBOARD</strong><small>private ops // sprint 07</small></div></div>
+      <div class="system-state"><span class="pulse"></span> ALL SYSTEMS NOMINAL <span class="clock" id="clock">00:00:00</span></div>
+    </header>
+
+    <section class="intro">
+      <div><p class="breadcrumb">/home/operator/projects/ghostboard</p><h1>MISSION CONTROL<span>_</span></h1><p class="subtitle">A tactical view of everything in flight.</p></div>
+      <button class="primary-button" id="add-task" type="button"><span>＋</span> NEW TASK</button>
+    </section>
+
+    <section class="toolbar" aria-label="Board controls">
+      <div class="board-meta"><span class="signal">●</span> SPRINT 07 <span class="divider">/</span> <span id="task-total">06</span> TASKS</div>
+      <label class="search"><span>~/search</span><input id="search" type="search" placeholder="filter tasks..." autocomplete="off"></label>
+      <div class="legend"><span><i class="dot dot-green"></i>ACTIVE</span><span><i class="dot dot-amber"></i>BLOCKED</span></div>
+    </section>
+
+    <section class="board" id="board" aria-label="Kanban board">
+      <article class="column" data-status="backlog"><header><div><span class="column-index">01</span><h2>BACKLOG</h2></div><span class="count" data-count="backlog">00</span></header><div class="task-list" data-list="backlog"></div></article>
+      <article class="column" data-status="progress"><header><div><span class="column-index">02</span><h2>IN PROGRESS</h2></div><span class="count" data-count="progress">00</span></header><div class="task-list" data-list="progress"></div></article>
+      <article class="column" data-status="review"><header><div><span class="column-index">03</span><h2>REVIEW</h2></div><span class="count" data-count="review">00</span></header><div class="task-list" data-list="review"></div></article>
+      <article class="column" data-status="done"><header><div><span class="column-index">04</span><h2>DEPLOYED</h2></div><span class="count" data-count="done">00</span></header><div class="task-list" data-list="done"></div></article>
+    </section>
+
+    <footer><span>STATUS: <b>ONLINE</b></span><span>DRAG TO REORDER // CLICK A CARD TO INSPECT</span><span>BUILD 0.7.3</span></footer>
+  </main>
+  <div class="modal-backdrop" id="modal" hidden><form class="task-form" id="task-form"><button class="close" id="close-modal" type="button" aria-label="Close">×</button><p class="eyebrow">// create new payload</p><h2>ADD TASK</h2><label>NAME<input name="title" required maxlength="80" placeholder="What needs doing?"></label><label>OWNER<input name="owner" maxlength="20" placeholder="operator"></label><label>PRIORITY<select name="priority"><option value="green">NORMAL</option><option value="amber">BLOCKED</option></select></label><button class="primary-button" type="submit">＋ INSERT TASK</button></form></div>
+  <script type="module" src="/agent-app/app.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nested Server Workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/workspace.css">
+  <link rel="stylesheet" href="/xterm.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="identity"><span class="mark">M</span><strong>server workspace</strong><span class="status"><i></i> local</span></div>
+      <nav class="tabs" role="tablist" aria-label="Workspace views">
+        <div class="tab-cluster active">
+          <button role="tab" aria-selected="true" aria-controls="content-panel" id="content-tab" data-view="content">Content</button>
+          <!-- Lucide `refresh-cw`, ISC License; attribution in README.md. -->
+          <button id="reload-preview" class="tab-reload" type="button" aria-label="Reload frontend preview" title="Reload frontend preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg></button>
+        </div>
+        <button role="tab" aria-selected="false" aria-controls="agent-panel" id="agent-tab" data-view="agent">Agent</button>
+      </nav>
+      <div class="top-actions"><span>development</span><button id="refresh" title="Refresh server state" aria-label="Refresh server state">↻</button></div>
+    </header>
+    <div class="workbench">
+      <aside class="sidebar" aria-label="Chat and activity log">
+        <div class="sidebar-heading"><div><span class="eyebrow">Live stream</span><h2>Activity</h2></div><span id="activity-count" class="count">0</span></div>
+        <ol id="activity" class="activity" aria-live="polite"></ol>
+        <form id="chat-form" class="composer">
+          <div class="composer-toolbar"><label for="chat-input">Instruct Pi</label><button>Send</button></div>
+          <textarea id="chat-input" rows="5" maxlength="4000" placeholder="Describe what you want changed…"></textarea>
+        </form>
+        <button id="sidebar-resizer" class="sidebar-resizer" type="button" aria-label="Resize activity sidebar" title="Drag to resize activity sidebar"></button>
+      </aside>
+      <main class="viewport">
+        <section id="content-panel" class="panel content-panel" role="tabpanel" aria-labelledby="content-tab">
+          <iframe id="app-preview" title="Frontend application preview" src="/agent-app/index.html"></iframe>
+        </section>
+        <section id="agent-panel" class="panel agent-panel" role="tabpanel" aria-labelledby="agent-tab" hidden>
+          <header><div><span class="eyebrow">Pi coding agent</span><h1>Frontend collaborator</h1></div><span id="agent-state" class="agent-state">Checking sign-in…</span></header>
+          <div class="agent-transcript">
+            <ol id="agent-activity" class="agent-activity" aria-live="polite"></ol>
+            <button id="agent-jump-latest" class="agent-jump-latest" type="button" hidden>↓ <span>Jump to latest</span></button>
+          </div>
+          <form id="agent-chat-form" class="agent-composer">
+            <div class="agent-composer-toolbar"><label for="agent-chat-input">Instruct Pi</label><div><span>Mirrored with Activity</span><button>Send</button></div></div>
+            <textarea id="agent-chat-input" rows="7" maxlength="4000" placeholder="Describe what you want changed in the frontend app…"></textarea>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="/client.js"></script>
 </body>
 </html>
 
@@ -2369,6 +2647,98 @@ loadSites();
 </body>
 </html>
 
+<!-- dev/evm/playground/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macchiato EVM Playground</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div class="eyebrow">no_std Rust · WebAssembly</div>
+    <h1>Ethereum, one opcode at a time.</h1>
+    <p>Edit bytecode, supply calldata and block context, then inspect the stack,
+      output, gas, and complete instruction trace produced inside Wasm.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Program">
+      <div class="field example-field">
+        <label for="example">Example</label>
+        <select id="example"></select>
+      </div>
+      <div class="field gas-field">
+        <label for="gas">Gas</label>
+        <input id="gas" inputmode="numeric" value="100000">
+      </div>
+      <div class="field code-field">
+        <label for="code">Bytecode</label>
+        <textarea id="code" spellcheck="false" rows="5"></textarea>
+      </div>
+      <div class="field calldata-field">
+        <label for="calldata">Calldata <span>hex or <code>text:</code></span></label>
+        <textarea id="calldata" spellcheck="false" rows="3"></textarea>
+      </div>
+      <details>
+        <summary>Environment</summary>
+        <div id="environment" class="environment"></div>
+        <label class="readonly-field"><input id="read-only" type="checkbox">
+          Static, read-only frame</label>
+      </details>
+      <div class="actions">
+        <button id="run" type="button">Run program</button>
+        <button id="reset-storage" class="secondary" type="button">Reset storage</button>
+        <output id="runtime-status" aria-live="polite">Loading machine…</output>
+      </div>
+    </section>
+
+    <section class="results" aria-label="Execution result">
+      <article class="result-card exit-card">
+        <span>Exit</span><strong id="exit">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Gas left</span><strong id="gas-left">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Refund counter</span><strong id="refund">—</strong>
+      </article>
+      <article class="result-card output-card">
+        <span>Output</span><code id="output">—</code>
+        <small id="output-text"></small>
+      </article>
+      <article class="result-card stack-card">
+        <span>Final stack</span><ol id="stack"></ol>
+      </article>
+    </section>
+
+    <section class="trace-section">
+      <div class="trace-heading">
+        <div><span class="eyebrow">Execution trace</span><h2>What the machine did</h2></div>
+        <span id="trace-note">Select an example and run it.</span>
+      </div>
+      <div class="trace-scroll" tabindex="0">
+        <table>
+          <thead><tr><th>#</th><th>PC</th><th>Opcode</th><th>Gas after</th><th>Stack</th><th>Top after</th></tr></thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Bounded by construction.</strong> No allocator, WASI, filesystem,
+    clock, random source, network, or JavaScript opcode implementation.
+  </footer>
+  <script type="module" src="./playground.js"></script>
+</body>
+</html>
+
 <!-- dev/machines-pages/machine-runner/index.html -->
 <!doctype html>
 <html lang="en">
@@ -2639,369 +3009,6 @@ projects its constrained DOM into this browser.</p>
     throw error;
   }
 </script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/benchmark/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>QuickJS runtime benchmark</title>
-<link rel="stylesheet" href="../benchmark.css">
-<main>
-  <p class="eyebrow">Same CodeMirror workload</p>
-  <h1>Three CodeMirror runtimes</h1>
-  <p class="lede">A warmed comparison using all six runtime orders with the
-    same full editor, source text, viewport, browser process, and key-by-key trace.</p>
-  <div id="results" aria-live="polite">Loading the latest result…</div>
-  <nav>
-    <a href="../full/">Run the MicroQuickJS editor</a>
-    <a href="/quickjs/full/">Run the QuickJS editor</a>
-    <a href="http://codemirror-comparison.localhost:3030/">View side-by-side recordings</a>
-  </nav>
-</main>
-<script type="module" src="../benchmark.js"></script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/full/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Full CodeMirror UI in MicroQuickJS</title>
-<link rel="stylesheet" href="../../demo.css">
-<main>
-  <div id="editor"></div>
-  <div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
-</main>
-<script type="module">
-  import WasmWebMachine from "../../wasm-web-machine.js";
-
-  const status = document.querySelector(".runtime-status");
-  try {
-    const response = await fetch("../../generated/codemirror-microquickjs.wasm");
-    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
-    const module = await WebAssembly.compileStreaming(response);
-    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
-    const machine = new WasmWebMachine(module, document, {
-      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
-      services: {
-        route: { get: () => "/", listen() {} },
-        storage: { get: () => null, set() {}, delete() {}, listen() {} },
-      },
-    });
-    await machine.onmsg(0);
-    document.body.dataset.ready = "true";
-    status.remove();
-  } catch (error) {
-    status.dataset.error = "";
-    status.textContent = `MicroQuickJS CodeMirror could not start: ${error?.message || error}`;
-    throw error;
-  }
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CodeMirror in MicroQuickJS</title>
-<style>
-  :root { color-scheme: dark; font-family: system-ui, sans-serif; }
-  body { max-width: 48rem; margin: 0 auto; padding: clamp(2rem, 8vw, 6rem) 1.5rem;
-    background: #282c34; color: #d7dae0; }
-  h1 { margin: 0 0 .5rem; font-size: clamp(2rem, 6vw, 3.5rem); letter-spacing: -.04em; }
-  p { color: #abb2bf; line-height: 1.55; }
-  nav { display: grid; gap: .75rem; margin-top: 2rem; }
-  a { display: block; padding: 1rem 1.1rem; border: 1px solid #454b57;
-    border-radius: 8px; color: #e5c07b; text-decoration: none; background: #21252b; }
-  a:hover, a:focus-visible { border-color: #61afef; background: #252a31; outline: none; }
-  strong { display: block; margin-bottom: .2rem; }
-  span { color: #abb2bf; font-size: .9rem; }
-</style>
-<h1>CodeMirror in MicroQuickJS</h1>
-<p>The CodeMirror application is transpiled with Babel, compiled to
-  MicroQuickJS bytecode, and executed in WebAssembly. Native C collections
-  provide the missing modern collection semantics.</p>
-<nav aria-label="MicroQuickJS demos and measurements">
-  <a href="./full/"><strong>Full UI</strong><span>Languages, search, folding, history, completion, gutters, and One Dark.</span></a>
-  <a href="./multi/"><strong>Tabbed files</strong><span>Three independent editors with search and navigation across every file.</span></a>
-  <a href="./benchmark/"><strong>Runtime benchmark</strong><span>The same warmed CodeMirror workload in QuickJS and MicroQuickJS.</span></a>
-  <a href="http://codemirror-comparison.localhost:3030/"><strong>Side-by-side recordings</strong><span>Interaction recordings in the shared CodeMirror comparison archive.</span></a>
-</nav>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/microquickjs/multi/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tabbed CodeMirror in MicroQuickJS</title>
-<link rel="stylesheet" href="../../demo.css">
-<main id="workspace"></main>
-<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
-<script type="module">
-  import WasmWebMachine from "../../wasm-web-machine.js";
-
-  const status = document.querySelector(".runtime-status");
-  try {
-    const response = await fetch("../../generated/codemirror-multi-microquickjs.wasm");
-    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
-    const module = await WebAssembly.compileStreaming(response);
-    const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
-    const machine = new WasmWebMachine(module, document, {
-      stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
-    });
-    await machine.onmsg(0);
-    document.body.dataset.ready = "true";
-    status.remove();
-  } catch (error) {
-    status.dataset.error = "";
-    status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
-    throw error;
-  }
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Viewport-local CodeMirror syntax modes</title>
-<ul>
-  <li><a href="plain/">Plain browser</a></li>
-  <li><a href="quickjs/">QuickJS</a></li>
-  <li><a href="microquickjs/">MicroQuickJS</a></li>
-</ul>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/microquickjs/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Viewport-local syntax · MicroQuickJS</title>
-<link rel="stylesheet" href="../../mobile-syntax.css">
-<main id="workspace"></main>
-<div class="runtime-status" role="status">Loading MicroQuickJS…</div>
-<script type="module">
-  import WasmWebMachine from "../../wasm-web-machine.js";
-  const encoder = new TextEncoder();
-  function namedCall(name, argument) {
-    const label = encoder.encode(name);
-    const value = encoder.encode(argument);
-    const message = new Uint8Array(2 + label.length + value.length);
-    message[0] = 2;
-    message.set(label, 1);
-    message.set(value, label.length + 2);
-    return message;
-  }
-  const fixtureText = {};
-  for (const mode of ["javascript", "css", "markdown", "html"])
-    fixtureText[mode] = await (await fetch(
-      `../../generated/mobile-fixture-${mode}.txt`)).text();
-  const response = await fetch("../../generated/codemirror-mobile-syntax-microquickjs.wasm");
-  const module = await WebAssembly.compileStreaming(response);
-  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
-  const machine = new WasmWebMachine(module, document, {
-    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
-    services: {
-      route: { get: () => "/", listen() {} },
-      storage: { get: () => null, set() {}, delete() {}, listen() {} },
-    },
-  });
-  await machine.onmsg(0);
-  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
-      ["m", "markdown"], ["h", "html"]]) {
-    await machine.onmsg(namedCall("loadMobileFixture", code + fixtureText[mode]));
-    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
-  }
-  document.querySelector(".runtime-status").remove();
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/plain/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Viewport-local syntax · plain browser</title>
-<link rel="stylesheet" href="../../mobile-syntax.css">
-<main id="workspace"></main>
-<script type="module">
-  const fixtures = {};
-  for (const mode of ["javascript", "css", "markdown", "html"])
-    fixtures[mode] = await (await fetch(
-      `../../generated/mobile-fixture-${mode}.txt`)).text();
-  await import("../../generated/codemirror-mobile-syntax.js");
-  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
-      ["m", "markdown"], ["h", "html"]])
-    loadMobileFixture(code + fixtures[mode]);
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/quickjs/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Viewport-local syntax · QuickJS</title>
-<link rel="stylesheet" href="../../mobile-syntax.css">
-<main id="workspace"></main>
-<div class="runtime-status" role="status">Loading QuickJS…</div>
-<script type="module">
-  import WasmWebMachine from "../../wasm-web-machine.js";
-  const encoder = new TextEncoder();
-  function namedCall(name, argument) {
-    const label = encoder.encode(name);
-    const value = encoder.encode(argument);
-    const message = new Uint8Array(2 + label.length + value.length);
-    message[0] = 2;
-    message.set(label, 1);
-    message.set(value, label.length + 2);
-    return message;
-  }
-  const fixtureText = {};
-  for (const mode of ["javascript", "css", "markdown", "html"])
-    fixtureText[mode] = await (await fetch(
-      `../../generated/mobile-fixture-${mode}.txt`)).text();
-  const response = await fetch("../../generated/codemirror-mobile-syntax.wasm");
-  const module = await WebAssembly.compileStreaming(response);
-  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
-  const machine = new WasmWebMachine(module, document, {
-    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
-    services: {
-      route: { get: () => "/", listen() {} },
-      storage: { get: () => null, set() {}, delete() {}, listen() {} },
-    },
-  });
-  await machine.onmsg(0);
-  for (const [code, mode] of [["j", "javascript"], ["c", "css"],
-      ["m", "markdown"], ["h", "html"]]) {
-    await machine.onmsg(namedCall("loadMobileFixture", code + fixtureText[mode]));
-  }
-  document.querySelector(".runtime-status").remove();
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/multi/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tabbed CodeMirror in QuickJS</title>
-<link rel="stylesheet" href="../demo.css">
-<main id="workspace"></main>
-<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
-<script type="module">
-  import WasmWebMachine from "../wasm-web-machine.js";
-
-  const status = document.querySelector(".runtime-status");
-  try {
-    const response = await fetch("../generated/codemirror-multi.wasm");
-    if (!response.ok) throw new Error(`Wasm response ${response.status}`);
-    const module = await WebAssembly.compileStreaming(response);
-    const machine = new WasmWebMachine(module, document);
-    await machine.onmsg(0);
-    document.body.dataset.ready = "true";
-    status.remove();
-  } catch (error) {
-    status.dataset.error = "";
-    status.textContent = `QuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
-    throw error;
-  }
-</script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/simple/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Simple CodeMirror in QuickJS</title>
-<link rel="stylesheet" href="../demo.css">
-<div id="editor" data-wasm="./generated/codemirror-simple.wasm"></div>
-<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
-<script type="module" src="../canonical-host.js"></script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/test/pages/direct/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blank direct CodeMirror comparison</title>
-<link rel="stylesheet" href="../../../demo.css">
-<div id="editor" data-initial="blank"></div>
-<script src="../../../generated/codemirror-full.js"></script>
-
-<!-- dev/wasm-web-runtimes/examples/codemirror/test/pages/wasm/index.html -->
-<!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Blank QuickJS/Wasm CodeMirror comparison</title>
-<link rel="stylesheet" href="../../../demo.css">
-<div id="editor" data-initial="blank"></div>
-<div class="runtime-status" role="status"><span class="runtime-spinner" aria-label="Loading"></span></div>
-<script type="module" src="../../../canonical-host.js"></script>
-
-<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/cat-memory/index.html -->
-<!doctype html>
-<html>
-<head>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<main id="app">
-<!-- The guest may retain meaningful source comments as DOM nodes. -->
-<svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
-<path d="M20 48 L30 18 L44 40 Z" fill="#f0a93a">
-</path>
-<path d="M80 48 L70 18 L56 40 Z" fill="#f0a93a">
-</path>
-<ellipse cx="50" cy="58" rx="34" ry="28" fill="#f0a93a">
-</ellipse>
-<circle cx="38" cy="54" r="5" fill="#1b1533">
-</circle>
-<circle cx="62" cy="54" r="5" fill="#1b1533">
-</circle>
-<path d="M46 64 Q50 68 54 64 Q50 70 46 64 Z" fill="#ea7154">
-</path>
-</svg>
-<h1>
-Cat Memory Match
-</h1>
-<p class="tagline">
-Sixteen cards, eight cats. Find every pair.
-</p>
-<div class="statline">
-<div class="stat">
-<span class="stat-label">
-Moves
-</span>
-<span class="stat-value" id="moves">
-0
-</span>
-</div>
-<div class="stat">
-<span class="stat-label">
-Pairs
-</span>
-<span class="stat-value" id="matches">
-0/8
-</span>
-</div>
-</div>
-<div class="table">
-<div id="board" role="grid" aria-label="Memory game board">
-</div>
-</div>
-<div class="controls">
-<button id="reset" type="button">
-New game
-</button>
-<div id="win" role="status" aria-label="Game result">
-</div>
-</div>
-</main>
-<script src="cat-memory.js">
-</script>
-</body>
-</html>
-
-<!-- dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/index.html -->
-<!doctype html>
-<html>
-<head>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<main id="app">
-</main>
-<script src="mahjong.js">
-</script>
-</body>
-</html>
 
 <style>
 /* embedded CSS state begins above the final viewport

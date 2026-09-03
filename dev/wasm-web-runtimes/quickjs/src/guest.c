@@ -252,22 +252,18 @@ static void report(JSValue value)
         value = JS_GetException(context);
         stack = JS_GetPropertyStr(context, value, "stack");
     }
-#ifdef WWC_CANONICAL_HOST
-    text = JS_ToCString(context, value);
-#else
     text = JS_ToCString(context, JS_IsUndefined(stack) ? value : stack);
-#endif
     if (text == NULL)
         return;
     while (text[length] != '\0') length++;
 #ifdef WWC_CANONICAL_HOST
-    report_text(text, length);
+    report_stage(text);
     if (!JS_IsUndefined(stack)) {
         const char *stack_text = JS_ToCString(context, stack);
         uint32_t stack_length = 0;
         if (stack_text != NULL) {
             while (stack_text[stack_length] != '\0') stack_length++;
-            report_text(stack_text, stack_length);
+            report_stage(stack_text);
             JS_FreeCString(context, stack_text);
         }
     }
@@ -506,11 +502,12 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
                          "guest-result.js", JS_EVAL_TYPE_GLOBAL);
     }
     else {
-        report_stage("guest-application-error");
+        /* `report()` includes the guest exception and stack. Report the
+           generic stage only if that diagnostic can return. */
     }
     if (JS_IsException(result)) {
-        report_stage("guest-result-error");
         report(result);
+        report_stage("guest-result-error");
     }
 #ifndef WWC_CANONICAL_HOST
     else report(result);

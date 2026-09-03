@@ -1,8 +1,3 @@
-import { javascript } from "@codemirror/lang-javascript";
-import { html } from "@codemirror/lang-html";
-import { css } from "@codemirror/lang-css";
-import { json } from "@codemirror/lang-json";
-import { markdown } from "@codemirror/lang-markdown";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { acceptCompletion, autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap,
   insertBracket }
@@ -12,7 +7,6 @@ import { defaultKeymap, history, historyKeymap, insertNewlineAndIndent, redo, un
 import { bracketMatching, defaultHighlightStyle, foldCode, foldGutter, foldKeymap,
   indentOnInput, syntaxHighlighting }
   from "@codemirror/language";
-import { lintKeymap } from "@codemirror/lint";
 import { highlightSelectionMatches, openSearchPanel, SearchQuery, searchKeymap,
   setSearchQuery } from "@codemirror/search";
 import { Compartment, EditorState } from "@codemirror/state";
@@ -21,14 +15,6 @@ import { crosshairCursor, dropCursor, EditorView, highlightActiveLine,
   rectangularSelection } from "@codemirror/view";
 import fixtures from "../generated/fixtures.js";
 import { nativeCaret } from "./native-caret.js";
-
-const languages = {
-  typescript: () => javascript({ typescript: true }),
-  html,
-  css,
-  json,
-  markdown,
-};
 
 const bridgedLineGeometry = EditorView.theme({
   ".cm-content": { lineHeight: "18px" },
@@ -58,7 +44,8 @@ function scheduleGutterSync(view) {
 }
 
 const gutterProjection = EditorView.updateListener.of((update) => {
-  if (update.docChanged || update.geometryChanged || update.viewportChanged) {
+  if (update.geometryChanged || update.viewportChanged ||
+      update.state.doc.lines !== update.startState.doc.lines) {
     scheduleGutterSync(update.view);
   }
 });
@@ -82,10 +69,10 @@ const editorSetup = [
   highlightActiveLine(),
   highlightSelectionMatches(),
   keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap,
-    ...historyKeymap, ...foldKeymap, ...completionKeymap, ...lintKeymap]),
+    ...historyKeymap, ...foldKeymap, ...completionKeymap]),
 ];
 
-export function start() {
+export function start(languages) {
   const parent = document.getElementById("editor");
   const language = new Compartment();
   const initial = parent.getAttribute("data-initial");
@@ -161,7 +148,7 @@ export function start() {
       }
       return view.state.doc.length;
     },
-    benchmark(name = current, count = 200) {
+    benchmark(name = current, count = 100) {
       this.open(name);
       const original = view.state.doc.length;
       const started = Date.now();
@@ -173,21 +160,17 @@ export function start() {
       view.dispatch({ changes: { from: original, to: view.state.doc.length } });
       return { name, count, elapsed, lines: view.state.doc.lines };
     },
-    metrics() { return globalThis.__wwcDomMetrics?.(); },
+    metrics() {
+      return typeof globalThis.__wwcDomMetrics === "function" ?
+        globalThis.__wwcDomMetrics() : undefined;
+    },
     dispose() { view.destroy(); },
   };
-  globalThis.__wwcBenchmark = () => {
-    const results = [];
-    for (const name of Object.keys(languages)) {
-      const measurement = editorExample.benchmark(name, 100);
-      results.push(`${name}=${measurement.lines}/${measurement.elapsed}ms`);
-    }
-    editorExample.open("typescript");
-    return results.join(",");
-  };
   globalThis.__wwcResult = () => {
-    const metrics = globalThis.__wwcDomMetrics?.();
-    return `CodeMirror:typescript=${view.state.doc.lines}:nodes=${metrics?.nodes}:listeners=${metrics?.listeners}`;
+    const metrics = typeof globalThis.__wwcDomMetrics === "function" ?
+      globalThis.__wwcDomMetrics() : undefined;
+    return "CodeMirror:typescript=" + view.state.doc.lines + ":nodes=" +
+      (metrics && metrics.nodes) + ":listeners=" + (metrics && metrics.listeners);
   };
   globalThis.__wwcPrepareVisual = () => {
     openSearchPanel(view);

@@ -16954,12 +16954,12 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     if (!openToken) return null;
     var sim = context.options.simulateBreak;
     var openLine = context.state.doc.lineAt(openToken.from);
-    var lineEnd3 = sim == null || sim <= openLine.from ? openLine.to : Math.min(openLine.to, sim);
+    var lineEnd2 = sim == null || sim <= openLine.from ? openLine.to : Math.min(openLine.to, sim);
     for (var pos = openToken.to;;) {
       var next = tree.childAfter(pos);
       if (!next || next == last) return null;
       if (!next.type.isSkipped) {
-        if (next.from >= lineEnd3) return null;
+        if (next.from >= lineEnd2) return null;
         var space4 = /^ */.exec(openLine.text.slice(openToken.to - openLine.from))[0].length;
         return {
           from: openToken.from,
@@ -22433,10 +22433,6 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       kind: kind
     });
   }
-  function lineEnd2(text, at) {
-    var end = text.indexOf("\n", at);
-    return end < 0 ? text.length : end;
-  }
   function unescapedDelimiter(text, delimiter) {
     var at = text.indexOf(delimiter);
     while (at >= 0) {
@@ -22460,88 +22456,6 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     if (state === "double" && unescapedDelimiter(tail, '"')) return "normal";
     return state;
   }
-  function javascriptState(prefix) {
-    var state = "normal";
-    var blankLine2 = true;
-    for (var at = 0; at < prefix.length;) {
-      if (state === "normal") {
-        var next = prefix.length;
-        for (var _i93 = 0, _arr3 = ["/", "`", '"', "'"]; _i93 < _arr3.length; _i93++) {
-          var marker = _arr3[_i93];
-          var found = prefix.indexOf(marker, at);
-          if (found >= 0 && found < next) next = found;
-        }
-        if (next > at) {
-          at = next;
-          continue;
-        }
-      }
-      var end = lineEnd2(prefix, at);
-      if ((at === 0 || prefix[at - 1] === "\n") && end - at > STATE_LINE_LIMIT) {
-        state = skipJavascriptTail(state, prefix.slice(at, end));
-        at = end + (end < prefix.length ? 1 : 0);
-        blankLine2 = false;
-        continue;
-      }
-      if (state === "template" && blankLine2 && (at === 0 || prefix[at - 1] === "\n")) {
-        var line = prefix.slice(at, prefix.indexOf("\n", at) < 0 ? prefix.length : prefix.indexOf("\n", at));
-        if (/^\s*(?:export\s+|import\s+|(?:async\s+)?function\s+|class\s+|(?:const|let|var)\s+)/.test(line)) state = "normal";
-      }
-      if (state === "comment") {
-        var end2 = prefix.indexOf("*/", at);
-        if (end2 < 0) return state;
-        state = "normal";
-        at = end2 + 2;
-      } else if (state === "line-comment") {
-        var _end = prefix.indexOf("\n", at);
-        if (_end < 0) return "normal";
-        state = "normal";
-        at = _end + 1;
-      } else if (state === "template" || state === "single" || state === "double") {
-        var quote = state === "template" ? "`" : state === "single" ? "'" : '"';
-        if (prefix[at] === "\\") at += 2;else if (prefix[at++] === quote) state = "normal";else if (prefix[at - 1] === "\n") {
-          blankLine2 = prefix.slice(Math.max(0, prefix.lastIndexOf("\n", at - 2) + 1), at - 1).trim().length === 0;
-          if (quote !== "`") state = "normal";
-        }
-      } else if (prefix.startsWith("/*", at)) {
-        state = "comment";
-        at += 2;
-      } else if (prefix.startsWith("//", at)) {
-        state = "line-comment";
-        at += 2;
-      } else if (prefix[at] === "`") {
-        state = "template";
-        at++;
-      } else if (prefix[at] === "'") {
-        state = "single";
-        at++;
-      } else if (prefix[at] === '"') {
-        state = "double";
-        at++;
-      } else {
-        if (prefix[at] === "\n") {
-          var start = prefix.lastIndexOf("\n", at - 1) + 1;
-          blankLine2 = prefix.slice(start, at).trim().length === 0;
-        }
-        at++;
-      }
-    }
-    return state === "comment" || state === "template" ? state : "normal";
-  }
-  function javascriptInitial(prefix, text) {
-    var state = javascriptState(prefix);
-    if (state !== "normal") return state;
-    var commentClose = text.indexOf("*/");
-    var commentOpen = text.indexOf("/*");
-    if (commentClose >= 0 && (commentOpen < 0 || commentClose < commentOpen)) return "comment";
-    var synchronization = /\n\s*\n\s*(?:export\s+|import\s+|(?:async\s+)?function\s+|class\s+|(?:const|let|var)\s+)/.exec(text);
-    var sample = text.slice(0, synchronization ? synchronization.index : text.length);
-    var delimiters = 0;
-    for (var at = 0; at < sample.length; at++) {
-      if (sample[at] === "\\") at++;else if (sample[at] === "`") delimiters++;
-    }
-    return delimiters % 2 ? "template" : "normal";
-  }
   var jsKeywords = new Set("async await break case catch class const continue debugger default delete do else export extends finally for from function get if import in instanceof let new of return set static super switch throw try typeof var void while with yield".split(" "));
   function javascriptScan(text, offset, initial, emit) {
     if (initial === void 0) {
@@ -22557,8 +22471,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     while (at < text.length) {
       if (!emit && state === "normal") {
         var next = text.length;
-        for (var _i94 = 0, _arr4 = ["/", "`", '"', "'"]; _i94 < _arr4.length; _i94++) {
-          var marker = _arr4[_i94];
+        for (var _i93 = 0, _arr3 = ["/", "`", '"', "'"]; _i93 < _arr3.length; _i93++) {
+          var marker = _arr3[_i93];
           var found = text.indexOf(marker, at);
           if (found >= 0 && found < next) next = found;
         }
@@ -22569,8 +22483,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       }
       var start = at;
       if (state === "template" && blankLine2 && (at === 0 || text[at - 1] === "\n")) {
-        var lineEnd3 = text.indexOf("\n", at);
-        var line = text.slice(at, lineEnd3 < 0 ? text.length : lineEnd3);
+        var lineEnd2 = text.indexOf("\n", at);
+        var line = text.slice(at, lineEnd2 < 0 ? text.length : lineEnd2);
         if (/^\s*(?:export\s+|import\s+|(?:async\s+)?function\s+|class\s+|(?:const|let|var)\s+)/.test(line)) state = "normal";
       }
       if (state === "comment") {
@@ -22629,55 +22543,6 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       state: state
     };
   }
-  function cssState(prefix) {
-    var state = "normal";
-    for (var at = 0; at < prefix.length;) {
-      if (state === "normal") {
-        var next = prefix.length;
-        for (var _i95 = 0, _arr5 = ["/", '"', "'"]; _i95 < _arr5.length; _i95++) {
-          var marker = _arr5[_i95];
-          var found = prefix.indexOf(marker, at);
-          if (found >= 0 && found < next) next = found;
-        }
-        if (next > at) {
-          at = next;
-          continue;
-        }
-      }
-      var end = lineEnd2(prefix, at);
-      if ((at === 0 || prefix[at - 1] === "\n") && end - at > STATE_LINE_LIMIT) {
-        state = skipCssTail(state, prefix.slice(at, end));
-        at = end + (end < prefix.length ? 1 : 0);
-        continue;
-      }
-      if (state === "comment") {
-        var end2 = prefix.indexOf("*/", at);
-        if (end2 < 0) return state;
-        state = "normal";
-        at = end2 + 2;
-      } else if (state === "single" || state === "double") {
-        var quote = state === "single" ? "'" : '"';
-        if (prefix[at] === "\\") at += 2;else if (prefix[at++] === quote) state = "normal";
-      } else if (prefix.startsWith("/*", at)) {
-        state = "comment";
-        at += 2;
-      } else if (prefix[at] === "'") {
-        state = "single";
-        at++;
-      } else if (prefix[at] === '"') {
-        state = "double";
-        at++;
-      } else at++;
-    }
-    return state;
-  }
-  function cssInitial(prefix, text) {
-    var state = cssState(prefix);
-    if (state !== "normal") return state;
-    var close = text.indexOf("*/");
-    var open = text.indexOf("/*");
-    return close >= 0 && (open < 0 || close < open) ? "comment" : "normal";
-  }
   function cssScan(text, offset, initial, emit) {
     if (initial === void 0) {
       initial = "normal";
@@ -22691,8 +22556,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     while (at < text.length) {
       if (!emit && state === "normal") {
         var next = text.length;
-        for (var _i96 = 0, _arr6 = ["/", '"', "'"]; _i96 < _arr6.length; _i96++) {
-          var marker = _arr6[_i96];
+        for (var _i94 = 0, _arr4 = ["/", '"', "'"]; _i94 < _arr4.length; _i94++) {
+          var marker = _arr4[_i94];
           var found = text.indexOf(marker, at);
           if (found >= 0 && found < next) next = found;
         }
@@ -22746,31 +22611,6 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       state: state
     };
   }
-  function markdownFence(prefix) {
-    var fence = null;
-    var at = 0;
-    while (at <= prefix.length) {
-      var end = lineEnd2(prefix, at);
-      var source = prefix.slice(at, end);
-      var line = source.length > STATE_LINE_LIMIT ? source.slice(0, STATE_LINE_LIMIT) : source;
-      var match = /^\s*(```+|~~~+)\s*([\w-]*)/.exec(line);
-      if (match && (!fence || match[1][0] === fence.marker && match[1].length >= fence.length)) {
-        fence = fence ? null : {
-          marker: match[1][0],
-          length: match[1].length,
-          language: match[2].toLowerCase(),
-          inner: "normal"
-        };
-      } else if (fence && /^(js|javascript|ts|typescript)$/.test(fence.language)) {
-        fence.inner = javascriptScan(line, 0, fence.inner, false).state;
-      } else if (fence && fence.language === "css") {
-        fence.inner = cssScan(line, 0, fence.inner, false).state;
-      }
-      if (end === prefix.length) break;
-      at = end + 1;
-    }
-    return fence;
-  }
   function markdownScan(text, offset, initialFence, emit) {
     if (emit === void 0) {
       emit = true;
@@ -22813,73 +22653,6 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       tokens: tokens || [],
       state: fence
     };
-  }
-  function htmlState(prefix) {
-    var latest = function latest(value) {
-      return Math.max(prefix.lastIndexOf(value), prefix.lastIndexOf(value.toUpperCase()));
-    };
-    var candidates = [{
-      mode: "comment",
-      open: prefix.lastIndexOf("<!--"),
-      close: prefix.lastIndexOf("-->")
-    }, {
-      mode: "javascript",
-      open: latest("<script"),
-      close: latest("<\/script")
-    }, {
-      mode: "css",
-      open: latest("<style"),
-      close: latest("</style")
-    }].filter(function (candidate) {
-      return candidate.open > candidate.close;
-    }).sort(function (left, right) {
-      return right.open - left.open;
-    });
-    if (!candidates.length) return {
-      mode: "normal",
-      inner: "normal"
-    };
-    var current = candidates[0];
-    if (current.mode === "comment") return {
-      mode: "comment",
-      inner: "normal"
-    };
-    var content2 = prefix.indexOf(">", current.open) + 1;
-    var inner = (current.mode === "javascript" ? javascriptScan : cssScan)(prefix.slice(content2), 0, "normal", false).state;
-    return {
-      mode: current.mode,
-      inner: inner
-    };
-  }
-  function htmlInitial(prefix, text) {
-    var state = htmlState(prefix);
-    if (state.mode !== "normal") return state;
-    var lower = text.toLowerCase();
-    var candidates = [{
-      close: "-->",
-      open: "<!--",
-      mode: "comment"
-    }, {
-      close: "<\/script",
-      open: "<script",
-      mode: "javascript"
-    }, {
-      close: "</style",
-      open: "<style",
-      mode: "css"
-    }];
-    for (var _i97 = 0, _candidates = candidates; _i97 < _candidates.length; _i97++) {
-      var candidate = _candidates[_i97];
-      var close = lower.indexOf(candidate.close);
-      var open = lower.indexOf(candidate.open);
-      if (close >= 0 && (open < 0 || close < open)) {
-        return {
-          mode: candidate.mode,
-          inner: "normal"
-        };
-      }
-    }
-    return state;
   }
   function htmlScan(text, offset, initial, emit) {
     if (initial === void 0) {
@@ -22925,8 +22698,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           inner: "normal"
         };
       } else if (text[at] === "<") {
-        var _end2 = text.indexOf(">", at + 1);
-        var _to5 = _end2 < 0 ? text.length : _end2 + 1;
+        var _end = text.indexOf(">", at + 1);
+        var _to5 = _end < 0 ? text.length : _end + 1;
         var tag = /^<\/?\s*[-\w:]+/.exec(text.slice(at, _to5));
         if (tag) add(tokens, offset + at, offset + at + tag[0].length, "tag");
         var attributes = new RegExp("\\s([-:\\w]+)(?=\\s*=)", "g");
@@ -22958,12 +22731,6 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }
     return htmlScan(text, offset, initial).tokens;
   }
-  function initialState(mode, prefix, text) {
-    if (mode === "javascript") return javascriptInitial(prefix, text);
-    if (mode === "css") return cssInitial(prefix, text);
-    if (mode === "markdown") return markdownFence(prefix);
-    return htmlInitial(prefix, text);
-  }
   function scanMode(mode, text, offset, state, emit) {
     if (emit === void 0) {
       emit = true;
@@ -22972,6 +22739,35 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     if (mode === "css") return cssScan(text, offset, state, emit);
     if (mode === "markdown") return markdownScan(text, offset, state, emit);
     return htmlScan(text, offset, state, emit);
+  }
+  function emptyState(mode) {
+    if (mode === "markdown") return null;
+    if (mode === "html") return {
+      mode: "normal",
+      inner: "normal"
+    };
+    return "normal";
+  }
+  function stateBeforeLine(doc2, mode, lineNumber) {
+    var state = emptyState(mode);
+    var scannedChars = 0;
+    var skippedChars = 0;
+    for (var number2 = 1; number2 < lineNumber; number2++) {
+      var line = doc2.line(number2);
+      var length = Math.min(line.length, STATE_LINE_LIMIT);
+      var text = doc2.sliceString(line.from, line.from + length) + "\n";
+      state = scanMode(mode, text, 0, state, false).state;
+      scannedChars += text.length;
+      if (line.length > length) {
+        state = skipLongTail(mode, state, doc2.sliceString(line.from + length, line.to));
+        skippedChars += line.length - length;
+      }
+    }
+    return {
+      state: state,
+      scannedChars: scannedChars,
+      skippedChars: skippedChars
+    };
   }
   function skipLongTail(mode, state, tail) {
     if (mode === "javascript") return skipJavascriptTail(state, tail);
@@ -23005,15 +22801,16 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     var tokens = [];
     var parsedChars = 0;
     var stateChars = 0;
+    var skippedStateChars = 0;
     var skippedHighlightChars = 0;
     for (var _iterator200 = _createForOfIteratorHelperLoose(view2.visibleRanges), _step200; !(_step200 = _iterator200()).done;) {
       var visible = _step200.value;
       var firstLine = doc2.lineAt(visible.from);
       var lastLine = doc2.lineAt(visible.to);
-      var prefix = doc2.sliceString(0, firstLine.from);
-      var firstText = doc2.sliceString(firstLine.from, Math.min(firstLine.to, firstLine.from + HIGHLIGHT_LINE_LIMIT));
-      var state = initialState(mode, prefix, firstText);
-      stateChars += prefix.length;
+      var recovered = stateBeforeLine(doc2, mode, firstLine.number);
+      var state = recovered.state;
+      stateChars += recovered.scannedChars;
+      skippedStateChars += recovered.skippedChars;
       for (var number2 = firstLine.number; number2 <= lastLine.number; number2++) {
         var line = doc2.line(number2);
         var length = Math.min(line.length, HIGHLIGHT_LINE_LIMIT);
@@ -23036,6 +22833,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       tokens: tokens,
       parsedChars: parsedChars,
       stateChars: stateChars,
+      skippedStateChars: skippedStateChars,
       skippedHighlightChars: skippedHighlightChars
     };
   }
@@ -23078,11 +22876,12 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           this.refreshPending = false;
           this.refresh(_update11.view);
         } else if (_update11.docChanged || _update11.viewportChanged) {
-          if (_update11.docChanged) this.decorations = this.decorations.map(_update11.changes);
+          this.decorations = Decoration.none;
           this.schedule();
         }
       };
       _proto144.clearAndSchedule = function clearAndSchedule() {
+        this.decorations = Decoration.none;
         this.schedule();
       };
       _proto144.schedule = function schedule() {
@@ -23113,6 +22912,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           retainedTokens: result.tokens.length,
           parsedChars: result.parsedChars,
           stateChars: result.stateChars,
+          skippedStateChars: result.skippedStateChars,
           skippedHighlightChars: result.skippedHighlightChars,
           updateMilliseconds: performance.now() - start
         });

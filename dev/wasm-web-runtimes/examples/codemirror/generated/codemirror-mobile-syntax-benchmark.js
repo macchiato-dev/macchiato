@@ -17892,13 +17892,13 @@
       return null;
     let sim = context.options.simulateBreak;
     let openLine = context.state.doc.lineAt(openToken.from);
-    let lineEnd3 = sim == null || sim <= openLine.from ? openLine.to : Math.min(openLine.to, sim);
+    let lineEnd2 = sim == null || sim <= openLine.from ? openLine.to : Math.min(openLine.to, sim);
     for (let pos = openToken.to; ; ) {
       let next = tree.childAfter(pos);
       if (!next || next == last)
         return null;
       if (!next.type.isSkipped) {
-        if (next.from >= lineEnd3)
+        if (next.from >= lineEnd2)
           return null;
         let space4 = /^ */.exec(openLine.text.slice(openToken.to - openLine.from))[0].length;
         return { from: openToken.from, to: openToken.to + space4 };
@@ -23619,10 +23619,6 @@
   function add(tokens, from, to, kind) {
     if (tokens && to > from) tokens.push({ from, to, kind });
   }
-  function lineEnd2(text, at) {
-    const end = text.indexOf("\n", at);
-    return end < 0 ? text.length : end;
-  }
   function unescapedDelimiter(text, delimiter) {
     let at = text.indexOf(delimiter);
     while (at >= 0) {
@@ -23646,90 +23642,6 @@
     if (state === "double" && unescapedDelimiter(tail, '"')) return "normal";
     return state;
   }
-  function javascriptState(prefix) {
-    let state = "normal";
-    let blankLine2 = true;
-    for (let at = 0; at < prefix.length; ) {
-      if (state === "normal") {
-        let next = prefix.length;
-        for (const marker of ["/", "`", '"', "'"]) {
-          const found = prefix.indexOf(marker, at);
-          if (found >= 0 && found < next) next = found;
-        }
-        if (next > at) {
-          at = next;
-          continue;
-        }
-      }
-      const end = lineEnd2(prefix, at);
-      if ((at === 0 || prefix[at - 1] === "\n") && end - at > STATE_LINE_LIMIT) {
-        state = skipJavascriptTail(state, prefix.slice(at, end));
-        at = end + (end < prefix.length ? 1 : 0);
-        blankLine2 = false;
-        continue;
-      }
-      if (state === "template" && blankLine2 && (at === 0 || prefix[at - 1] === "\n")) {
-        const line = prefix.slice(at, prefix.indexOf("\n", at) < 0 ? prefix.length : prefix.indexOf("\n", at));
-        if (/^\s*(?:export\s+|import\s+|(?:async\s+)?function\s+|class\s+|(?:const|let|var)\s+)/.test(line)) state = "normal";
-      }
-      if (state === "comment") {
-        const end2 = prefix.indexOf("*/", at);
-        if (end2 < 0) return state;
-        state = "normal";
-        at = end2 + 2;
-      } else if (state === "line-comment") {
-        const end2 = prefix.indexOf("\n", at);
-        if (end2 < 0) return "normal";
-        state = "normal";
-        at = end2 + 1;
-      } else if (state === "template" || state === "single" || state === "double") {
-        const quote = state === "template" ? "`" : state === "single" ? "'" : '"';
-        if (prefix[at] === "\\") at += 2;
-        else if (prefix[at++] === quote) state = "normal";
-        else if (prefix[at - 1] === "\n") {
-          blankLine2 = prefix.slice(Math.max(0, prefix.lastIndexOf("\n", at - 2) + 1), at - 1).trim().length === 0;
-          if (quote !== "`") state = "normal";
-        }
-      } else if (prefix.startsWith("/*", at)) {
-        state = "comment";
-        at += 2;
-      } else if (prefix.startsWith("//", at)) {
-        state = "line-comment";
-        at += 2;
-      } else if (prefix[at] === "`") {
-        state = "template";
-        at++;
-      } else if (prefix[at] === "'") {
-        state = "single";
-        at++;
-      } else if (prefix[at] === '"') {
-        state = "double";
-        at++;
-      } else {
-        if (prefix[at] === "\n") {
-          const start = prefix.lastIndexOf("\n", at - 1) + 1;
-          blankLine2 = prefix.slice(start, at).trim().length === 0;
-        }
-        at++;
-      }
-    }
-    return state === "comment" || state === "template" ? state : "normal";
-  }
-  function javascriptInitial(prefix, text) {
-    let state = javascriptState(prefix);
-    if (state !== "normal") return state;
-    const commentClose = text.indexOf("*/");
-    const commentOpen = text.indexOf("/*");
-    if (commentClose >= 0 && (commentOpen < 0 || commentClose < commentOpen)) return "comment";
-    const synchronization = /\n\s*\n\s*(?:export\s+|import\s+|(?:async\s+)?function\s+|class\s+|(?:const|let|var)\s+)/.exec(text);
-    const sample = text.slice(0, synchronization ? synchronization.index : text.length);
-    let delimiters = 0;
-    for (let at = 0; at < sample.length; at++) {
-      if (sample[at] === "\\") at++;
-      else if (sample[at] === "`") delimiters++;
-    }
-    return delimiters % 2 ? "template" : "normal";
-  }
   var jsKeywords = new Set("async await break case catch class const continue debugger default delete do else export extends finally for from function get if import in instanceof let new of return set static super switch throw try typeof var void while with yield".split(" "));
   function javascriptScan(text, offset, initial = "normal", emit = true) {
     const tokens = emit ? [] : null;
@@ -23750,8 +23662,8 @@
       }
       const start = at;
       if (state === "template" && blankLine2 && (at === 0 || text[at - 1] === "\n")) {
-        const lineEnd3 = text.indexOf("\n", at);
-        const line = text.slice(at, lineEnd3 < 0 ? text.length : lineEnd3);
+        const lineEnd2 = text.indexOf("\n", at);
+        const line = text.slice(at, lineEnd2 < 0 ? text.length : lineEnd2);
         if (/^\s*(?:export\s+|import\s+|(?:async\s+)?function\s+|class\s+|(?:const|let|var)\s+)/.test(line)) state = "normal";
       }
       if (state === "comment") {
@@ -23808,55 +23720,6 @@
       }
     }
     return { tokens: tokens || [], state };
-  }
-  function cssState(prefix) {
-    let state = "normal";
-    for (let at = 0; at < prefix.length; ) {
-      if (state === "normal") {
-        let next = prefix.length;
-        for (const marker of ["/", '"', "'"]) {
-          const found = prefix.indexOf(marker, at);
-          if (found >= 0 && found < next) next = found;
-        }
-        if (next > at) {
-          at = next;
-          continue;
-        }
-      }
-      const end = lineEnd2(prefix, at);
-      if ((at === 0 || prefix[at - 1] === "\n") && end - at > STATE_LINE_LIMIT) {
-        state = skipCssTail(state, prefix.slice(at, end));
-        at = end + (end < prefix.length ? 1 : 0);
-        continue;
-      }
-      if (state === "comment") {
-        const end2 = prefix.indexOf("*/", at);
-        if (end2 < 0) return state;
-        state = "normal";
-        at = end2 + 2;
-      } else if (state === "single" || state === "double") {
-        const quote = state === "single" ? "'" : '"';
-        if (prefix[at] === "\\") at += 2;
-        else if (prefix[at++] === quote) state = "normal";
-      } else if (prefix.startsWith("/*", at)) {
-        state = "comment";
-        at += 2;
-      } else if (prefix[at] === "'") {
-        state = "single";
-        at++;
-      } else if (prefix[at] === '"') {
-        state = "double";
-        at++;
-      } else at++;
-    }
-    return state;
-  }
-  function cssInitial(prefix, text) {
-    const state = cssState(prefix);
-    if (state !== "normal") return state;
-    const close = text.indexOf("*/");
-    const open = text.indexOf("/*");
-    return close >= 0 && (open < 0 || close < open) ? "comment" : "normal";
   }
   function cssScan(text, offset, initial = "normal", emit = true) {
     const tokens = emit ? [] : null;
@@ -23921,31 +23784,6 @@
     }
     return { tokens: tokens || [], state };
   }
-  function markdownFence(prefix) {
-    let fence = null;
-    let at = 0;
-    while (at <= prefix.length) {
-      const end = lineEnd2(prefix, at);
-      const source = prefix.slice(at, end);
-      const line = source.length > STATE_LINE_LIMIT ? source.slice(0, STATE_LINE_LIMIT) : source;
-      const match = /^\s*(```+|~~~+)\s*([\w-]*)/.exec(line);
-      if (match && (!fence || match[1][0] === fence.marker && match[1].length >= fence.length)) {
-        fence = fence ? null : {
-          marker: match[1][0],
-          length: match[1].length,
-          language: match[2].toLowerCase(),
-          inner: "normal"
-        };
-      } else if (fence && /^(js|javascript|ts|typescript)$/.test(fence.language)) {
-        fence.inner = javascriptScan(line, 0, fence.inner, false).state;
-      } else if (fence && fence.language === "css") {
-        fence.inner = cssScan(line, 0, fence.inner, false).state;
-      }
-      if (end === prefix.length) break;
-      at = end + 1;
-    }
-    return fence;
-  }
   function markdownScan(text, offset, initialFence, emit = true) {
     const tokens = emit ? [] : null;
     let fence = initialFence;
@@ -23989,46 +23827,6 @@
       at = end + 1;
     }
     return { tokens: tokens || [], state: fence };
-  }
-  function htmlState(prefix) {
-    const latest = (value) => Math.max(
-      prefix.lastIndexOf(value),
-      prefix.lastIndexOf(value.toUpperCase())
-    );
-    const candidates = [
-      { mode: "comment", open: prefix.lastIndexOf("<!--"), close: prefix.lastIndexOf("-->") },
-      { mode: "javascript", open: latest("<script"), close: latest("<\/script") },
-      { mode: "css", open: latest("<style"), close: latest("</style") }
-    ].filter((candidate) => candidate.open > candidate.close).sort((left, right) => right.open - left.open);
-    if (!candidates.length) return { mode: "normal", inner: "normal" };
-    const current = candidates[0];
-    if (current.mode === "comment") return { mode: "comment", inner: "normal" };
-    const content2 = prefix.indexOf(">", current.open) + 1;
-    const inner = (current.mode === "javascript" ? javascriptScan : cssScan)(
-      prefix.slice(content2),
-      0,
-      "normal",
-      false
-    ).state;
-    return { mode: current.mode, inner };
-  }
-  function htmlInitial(prefix, text) {
-    const state = htmlState(prefix);
-    if (state.mode !== "normal") return state;
-    const lower = text.toLowerCase();
-    const candidates = [
-      { close: "-->", open: "<!--", mode: "comment" },
-      { close: "<\/script", open: "<script", mode: "javascript" },
-      { close: "</style", open: "<style", mode: "css" }
-    ];
-    for (const candidate of candidates) {
-      const close = lower.indexOf(candidate.close);
-      const open = lower.indexOf(candidate.open);
-      if (close >= 0 && (open < 0 || close < open)) {
-        return { mode: candidate.mode, inner: "normal" };
-      }
-    }
-    return state;
   }
   function htmlScan(text, offset, initial = { mode: "normal", inner: "normal" }, emit = true) {
     const tokens = emit ? [] : null;
@@ -24084,17 +23882,37 @@
   function htmlTokens(text, offset, initial = { mode: "normal", inner: "normal" }) {
     return htmlScan(text, offset, initial).tokens;
   }
-  function initialState(mode, prefix, text) {
-    if (mode === "javascript") return javascriptInitial(prefix, text);
-    if (mode === "css") return cssInitial(prefix, text);
-    if (mode === "markdown") return markdownFence(prefix);
-    return htmlInitial(prefix, text);
-  }
   function scanMode(mode, text, offset, state, emit = true) {
     if (mode === "javascript") return javascriptScan(text, offset, state, emit);
     if (mode === "css") return cssScan(text, offset, state, emit);
     if (mode === "markdown") return markdownScan(text, offset, state, emit);
     return htmlScan(text, offset, state, emit);
+  }
+  function emptyState(mode) {
+    if (mode === "markdown") return null;
+    if (mode === "html") return { mode: "normal", inner: "normal" };
+    return "normal";
+  }
+  function stateBeforeLine(doc2, mode, lineNumber) {
+    let state = emptyState(mode);
+    let scannedChars = 0;
+    let skippedChars = 0;
+    for (let number2 = 1; number2 < lineNumber; number2++) {
+      const line = doc2.line(number2);
+      const length = Math.min(line.length, STATE_LINE_LIMIT);
+      const text = doc2.sliceString(line.from, line.from + length) + "\n";
+      state = scanMode(mode, text, 0, state, false).state;
+      scannedChars += text.length;
+      if (line.length > length) {
+        state = skipLongTail(
+          mode,
+          state,
+          doc2.sliceString(line.from + length, line.to)
+        );
+        skippedChars += line.length - length;
+      }
+    }
+    return { state, scannedChars, skippedChars };
   }
   function skipLongTail(mode, state, tail) {
     if (mode === "javascript") return skipJavascriptTail(state, tail);
@@ -24122,17 +23940,15 @@
     const tokens = [];
     let parsedChars = 0;
     let stateChars = 0;
+    let skippedStateChars = 0;
     let skippedHighlightChars = 0;
     for (const visible of view2.visibleRanges) {
       const firstLine = doc2.lineAt(visible.from);
       const lastLine = doc2.lineAt(visible.to);
-      const prefix = doc2.sliceString(0, firstLine.from);
-      const firstText = doc2.sliceString(
-        firstLine.from,
-        Math.min(firstLine.to, firstLine.from + HIGHLIGHT_LINE_LIMIT)
-      );
-      let state = initialState(mode, prefix, firstText);
-      stateChars += prefix.length;
+      const recovered = stateBeforeLine(doc2, mode, firstLine.number);
+      let state = recovered.state;
+      stateChars += recovered.scannedChars;
+      skippedStateChars += recovered.skippedChars;
       for (let number2 = firstLine.number; number2 <= lastLine.number; number2++) {
         const line = doc2.line(number2);
         const length = Math.min(line.length, HIGHLIGHT_LINE_LIMIT);
@@ -24149,7 +23965,13 @@
       }
     }
     tokens.sort((left, right) => left.from - right.from || left.to - right.to);
-    return { tokens, parsedChars, stateChars, skippedHighlightChars };
+    return {
+      tokens,
+      parsedChars,
+      stateChars,
+      skippedStateChars,
+      skippedHighlightChars
+    };
   }
   function decorationsFor(tokens) {
     const builder = new RangeSetBuilder();
@@ -24185,11 +24007,12 @@
           this.refreshPending = false;
           this.refresh(update.view);
         } else if (update.docChanged || update.viewportChanged) {
-          if (update.docChanged) this.decorations = this.decorations.map(update.changes);
+          this.decorations = Decoration.none;
           this.schedule();
         }
       }
       clearAndSchedule() {
+        this.decorations = Decoration.none;
         this.schedule();
       }
       schedule() {
@@ -24217,6 +24040,7 @@
           retainedTokens: result.tokens.length,
           parsedChars: result.parsedChars,
           stateChars: result.stateChars,
+          skippedStateChars: result.skippedStateChars,
           skippedHighlightChars: result.skippedHighlightChars,
           updateMilliseconds: performance.now() - start
         });

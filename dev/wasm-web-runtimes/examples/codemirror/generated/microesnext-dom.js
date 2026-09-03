@@ -1,5 +1,5 @@
 (() => {
-  // dev/wasm-web-runtimes/examples/codemirror/src/microesnext-promise.js
+  // src/microesnext-promise.js
   function MicroPromise(executor) {
     if (!(this instanceof MicroPromise)) throw new TypeError("Promise requires new");
     if (typeof executor !== "function") throw new TypeError("Promise executor");
@@ -1329,8 +1329,12 @@ function GuestCustomEvent(type, options) {
   this.defaultPrevented = false;
 }
 GuestCustomEvent.prototype.preventDefault = function () { this.defaultPrevented = true; };
+GuestCustomEvent.prototype.initEvent = function (type) { this.type = String(type); };
 globalThis.CustomEvent = GuestCustomEvent;
 globalThis.Event = GuestCustomEvent;
+GuestDocument.prototype.createEvent = function (type) {
+  return new GuestCustomEvent(type);
+};
 GuestDocument.prototype.dispatchEvent = function (event) {
   if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest custom events can be dispatched");
   var listeners = (syntheticDocumentListeners[event.type] || []).slice();

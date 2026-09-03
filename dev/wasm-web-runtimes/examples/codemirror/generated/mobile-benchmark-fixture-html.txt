@@ -1,4 +1,96 @@
 
+<!-- dev/evm/playground/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macchiato EVM Playground</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div class="eyebrow">no_std Rust · WebAssembly</div>
+    <h1>Ethereum, one opcode at a time.</h1>
+    <p>Edit bytecode, supply calldata and block context, then inspect the stack,
+      output, gas, and complete instruction trace produced inside Wasm.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Program">
+      <div class="field example-field">
+        <label for="example">Example</label>
+        <select id="example"></select>
+      </div>
+      <div class="field gas-field">
+        <label for="gas">Gas</label>
+        <input id="gas" inputmode="numeric" value="100000">
+      </div>
+      <div class="field code-field">
+        <label for="code">Bytecode</label>
+        <textarea id="code" spellcheck="false" rows="5"></textarea>
+      </div>
+      <div class="field calldata-field">
+        <label for="calldata">Calldata <span>hex or <code>text:</code></span></label>
+        <textarea id="calldata" spellcheck="false" rows="3"></textarea>
+      </div>
+      <details>
+        <summary>Environment</summary>
+        <div id="environment" class="environment"></div>
+        <label class="readonly-field"><input id="read-only" type="checkbox">
+          Static, read-only frame</label>
+      </details>
+      <div class="actions">
+        <button id="run" type="button">Run program</button>
+        <button id="reset-storage" class="secondary" type="button">Reset storage</button>
+        <output id="runtime-status" aria-live="polite">Loading machine…</output>
+      </div>
+    </section>
+
+    <section class="results" aria-label="Execution result">
+      <article class="result-card exit-card">
+        <span>Exit</span><strong id="exit">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Gas left</span><strong id="gas-left">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Refund counter</span><strong id="refund">—</strong>
+      </article>
+      <article class="result-card output-card">
+        <span>Output</span><code id="output">—</code>
+        <small id="output-text"></small>
+      </article>
+      <article class="result-card stack-card">
+        <span>Final stack</span><ol id="stack"></ol>
+      </article>
+    </section>
+
+    <section class="trace-section">
+      <div class="trace-heading">
+        <div><span class="eyebrow">Execution trace</span><h2>What the machine did</h2></div>
+        <span id="trace-note">Select an example and run it.</span>
+      </div>
+      <div class="trace-scroll" tabindex="0">
+        <table>
+          <thead><tr><th>#</th><th>PC</th><th>Opcode</th><th>Gas after</th><th>Stack</th><th>Top after</th></tr></thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Bounded by construction.</strong> No allocator, WASI, filesystem,
+    clock, random source, network, or JavaScript opcode implementation.
+  </footer>
+  <script type="module" src="./playground.js"></script>
+</body>
+</html>
+
 <!-- dev/machines-pages/machine-runner/index.html -->
 <!doctype html>
 <html lang="en">
@@ -383,6 +475,94 @@ projects its constrained DOM into this browser.</p>
     status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
     throw error;
   }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile syntax benchmark</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" hidden></output>
+<script type="module">
+  await import("../../generated/codemirror-mobile-syntax-benchmark.js");
+  globalThis.benchmarkGuestCall = async (name, value) => globalThis[name](value);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · MicroQuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading MicroQuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = async (name, value) => {
+    const result = await machine.onmsg(namedCall(name, value));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+    return result;
+  };
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/quickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · QuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading QuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = (name, value) =>
+    machine.onmsg(namedCall(name, value));
 </script>
 
 <!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
@@ -899,6 +1079,104 @@ An offline reading edition built from the public-domain SQLite documentation.
   <main id="app"></main>
   <script src="./game-model.js"></script>
   <script src="./application.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/agent-app/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GH0ST // Kanban</title>
+  <link rel="stylesheet" href="/agent-app/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="identity"><span class="prompt">&gt;_</span><div><strong>GH0STBOARD</strong><small>private ops // sprint 07</small></div></div>
+      <div class="system-state"><span class="pulse"></span> ALL SYSTEMS NOMINAL <span class="clock" id="clock">00:00:00</span></div>
+    </header>
+
+    <section class="intro">
+      <div><p class="breadcrumb">/home/operator/projects/ghostboard</p><h1>MISSION CONTROL<span>_</span></h1><p class="subtitle">A tactical view of everything in flight.</p></div>
+      <button class="primary-button" id="add-task" type="button"><span>＋</span> NEW TASK</button>
+    </section>
+
+    <section class="toolbar" aria-label="Board controls">
+      <div class="board-meta"><span class="signal">●</span> SPRINT 07 <span class="divider">/</span> <span id="task-total">06</span> TASKS</div>
+      <label class="search"><span>~/search</span><input id="search" type="search" placeholder="filter tasks..." autocomplete="off"></label>
+      <div class="legend"><span><i class="dot dot-green"></i>ACTIVE</span><span><i class="dot dot-amber"></i>BLOCKED</span></div>
+    </section>
+
+    <section class="board" id="board" aria-label="Kanban board">
+      <article class="column" data-status="backlog"><header><div><span class="column-index">01</span><h2>BACKLOG</h2></div><span class="count" data-count="backlog">00</span></header><div class="task-list" data-list="backlog"></div></article>
+      <article class="column" data-status="progress"><header><div><span class="column-index">02</span><h2>IN PROGRESS</h2></div><span class="count" data-count="progress">00</span></header><div class="task-list" data-list="progress"></div></article>
+      <article class="column" data-status="review"><header><div><span class="column-index">03</span><h2>REVIEW</h2></div><span class="count" data-count="review">00</span></header><div class="task-list" data-list="review"></div></article>
+      <article class="column" data-status="done"><header><div><span class="column-index">04</span><h2>DEPLOYED</h2></div><span class="count" data-count="done">00</span></header><div class="task-list" data-list="done"></div></article>
+    </section>
+
+    <footer><span>STATUS: <b>ONLINE</b></span><span>DRAG TO REORDER // CLICK A CARD TO INSPECT</span><span>BUILD 0.7.3</span></footer>
+  </main>
+  <div class="modal-backdrop" id="modal" hidden><form class="task-form" id="task-form"><button class="close" id="close-modal" type="button" aria-label="Close">×</button><p class="eyebrow">// create new payload</p><h2>ADD TASK</h2><label>NAME<input name="title" required maxlength="80" placeholder="What needs doing?"></label><label>OWNER<input name="owner" maxlength="20" placeholder="operator"></label><label>PRIORITY<select name="priority"><option value="green">NORMAL</option><option value="amber">BLOCKED</option></select></label><button class="primary-button" type="submit">＋ INSERT TASK</button></form></div>
+  <script type="module" src="/agent-app/app.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nested Server Workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/workspace.css">
+  <link rel="stylesheet" href="/xterm.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="identity"><span class="mark">M</span><strong>server workspace</strong><span class="status"><i></i> local</span></div>
+      <nav class="tabs" role="tablist" aria-label="Workspace views">
+        <div class="tab-cluster active">
+          <button role="tab" aria-selected="true" aria-controls="content-panel" id="content-tab" data-view="content">Content</button>
+          <!-- Lucide `refresh-cw`, ISC License; attribution in README.md. -->
+          <button id="reload-preview" class="tab-reload" type="button" aria-label="Reload frontend preview" title="Reload frontend preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg></button>
+        </div>
+        <button role="tab" aria-selected="false" aria-controls="agent-panel" id="agent-tab" data-view="agent">Agent</button>
+      </nav>
+      <div class="top-actions"><span>development</span><button id="refresh" title="Refresh server state" aria-label="Refresh server state">↻</button></div>
+    </header>
+    <div class="workbench">
+      <aside class="sidebar" aria-label="Chat and activity log">
+        <div class="sidebar-heading"><div><span class="eyebrow">Live stream</span><h2>Activity</h2></div><span id="activity-count" class="count">0</span></div>
+        <ol id="activity" class="activity" aria-live="polite"></ol>
+        <form id="chat-form" class="composer">
+          <div class="composer-toolbar"><label for="chat-input">Instruct Pi</label><button>Send</button></div>
+          <textarea id="chat-input" rows="5" maxlength="4000" placeholder="Describe what you want changed…"></textarea>
+        </form>
+        <button id="sidebar-resizer" class="sidebar-resizer" type="button" aria-label="Resize activity sidebar" title="Drag to resize activity sidebar"></button>
+      </aside>
+      <main class="viewport">
+        <section id="content-panel" class="panel content-panel" role="tabpanel" aria-labelledby="content-tab">
+          <iframe id="app-preview" title="Frontend application preview" src="/agent-app/index.html"></iframe>
+        </section>
+        <section id="agent-panel" class="panel agent-panel" role="tabpanel" aria-labelledby="agent-tab" hidden>
+          <header><div><span class="eyebrow">Pi coding agent</span><h1>Frontend collaborator</h1></div><span id="agent-state" class="agent-state">Checking sign-in…</span></header>
+          <div class="agent-transcript">
+            <ol id="agent-activity" class="agent-activity" aria-live="polite"></ol>
+            <button id="agent-jump-latest" class="agent-jump-latest" type="button" hidden>↓ <span>Jump to latest</span></button>
+          </div>
+          <form id="agent-chat-form" class="agent-composer">
+            <div class="agent-composer-toolbar"><label for="agent-chat-input">Instruct Pi</label><div><span>Mirrored with Activity</span><button>Send</button></div></div>
+            <textarea id="agent-chat-input" rows="7" maxlength="4000" placeholder="Describe what you want changed in the frontend app…"></textarea>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="/client.js"></script>
 </body>
 </html>
 
@@ -2369,6 +2647,98 @@ loadSites();
 </body>
 </html>
 
+<!-- dev/evm/playground/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macchiato EVM Playground</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div class="eyebrow">no_std Rust · WebAssembly</div>
+    <h1>Ethereum, one opcode at a time.</h1>
+    <p>Edit bytecode, supply calldata and block context, then inspect the stack,
+      output, gas, and complete instruction trace produced inside Wasm.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Program">
+      <div class="field example-field">
+        <label for="example">Example</label>
+        <select id="example"></select>
+      </div>
+      <div class="field gas-field">
+        <label for="gas">Gas</label>
+        <input id="gas" inputmode="numeric" value="100000">
+      </div>
+      <div class="field code-field">
+        <label for="code">Bytecode</label>
+        <textarea id="code" spellcheck="false" rows="5"></textarea>
+      </div>
+      <div class="field calldata-field">
+        <label for="calldata">Calldata <span>hex or <code>text:</code></span></label>
+        <textarea id="calldata" spellcheck="false" rows="3"></textarea>
+      </div>
+      <details>
+        <summary>Environment</summary>
+        <div id="environment" class="environment"></div>
+        <label class="readonly-field"><input id="read-only" type="checkbox">
+          Static, read-only frame</label>
+      </details>
+      <div class="actions">
+        <button id="run" type="button">Run program</button>
+        <button id="reset-storage" class="secondary" type="button">Reset storage</button>
+        <output id="runtime-status" aria-live="polite">Loading machine…</output>
+      </div>
+    </section>
+
+    <section class="results" aria-label="Execution result">
+      <article class="result-card exit-card">
+        <span>Exit</span><strong id="exit">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Gas left</span><strong id="gas-left">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Refund counter</span><strong id="refund">—</strong>
+      </article>
+      <article class="result-card output-card">
+        <span>Output</span><code id="output">—</code>
+        <small id="output-text"></small>
+      </article>
+      <article class="result-card stack-card">
+        <span>Final stack</span><ol id="stack"></ol>
+      </article>
+    </section>
+
+    <section class="trace-section">
+      <div class="trace-heading">
+        <div><span class="eyebrow">Execution trace</span><h2>What the machine did</h2></div>
+        <span id="trace-note">Select an example and run it.</span>
+      </div>
+      <div class="trace-scroll" tabindex="0">
+        <table>
+          <thead><tr><th>#</th><th>PC</th><th>Opcode</th><th>Gas after</th><th>Stack</th><th>Top after</th></tr></thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Bounded by construction.</strong> No allocator, WASI, filesystem,
+    clock, random source, network, or JavaScript opcode implementation.
+  </footer>
+  <script type="module" src="./playground.js"></script>
+</body>
+</html>
+
 <!-- dev/machines-pages/machine-runner/index.html -->
 <!doctype html>
 <html lang="en">
@@ -2753,6 +3123,94 @@ projects its constrained DOM into this browser.</p>
     status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
     throw error;
   }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile syntax benchmark</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" hidden></output>
+<script type="module">
+  await import("../../generated/codemirror-mobile-syntax-benchmark.js");
+  globalThis.benchmarkGuestCall = async (name, value) => globalThis[name](value);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · MicroQuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading MicroQuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = async (name, value) => {
+    const result = await machine.onmsg(namedCall(name, value));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+    return result;
+  };
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/quickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · QuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading QuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = (name, value) =>
+    machine.onmsg(namedCall(name, value));
 </script>
 
 <!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
@@ -3269,6 +3727,104 @@ An offline reading edition built from the public-domain SQLite documentation.
   <main id="app"></main>
   <script src="./game-model.js"></script>
   <script src="./application.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/agent-app/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GH0ST // Kanban</title>
+  <link rel="stylesheet" href="/agent-app/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="identity"><span class="prompt">&gt;_</span><div><strong>GH0STBOARD</strong><small>private ops // sprint 07</small></div></div>
+      <div class="system-state"><span class="pulse"></span> ALL SYSTEMS NOMINAL <span class="clock" id="clock">00:00:00</span></div>
+    </header>
+
+    <section class="intro">
+      <div><p class="breadcrumb">/home/operator/projects/ghostboard</p><h1>MISSION CONTROL<span>_</span></h1><p class="subtitle">A tactical view of everything in flight.</p></div>
+      <button class="primary-button" id="add-task" type="button"><span>＋</span> NEW TASK</button>
+    </section>
+
+    <section class="toolbar" aria-label="Board controls">
+      <div class="board-meta"><span class="signal">●</span> SPRINT 07 <span class="divider">/</span> <span id="task-total">06</span> TASKS</div>
+      <label class="search"><span>~/search</span><input id="search" type="search" placeholder="filter tasks..." autocomplete="off"></label>
+      <div class="legend"><span><i class="dot dot-green"></i>ACTIVE</span><span><i class="dot dot-amber"></i>BLOCKED</span></div>
+    </section>
+
+    <section class="board" id="board" aria-label="Kanban board">
+      <article class="column" data-status="backlog"><header><div><span class="column-index">01</span><h2>BACKLOG</h2></div><span class="count" data-count="backlog">00</span></header><div class="task-list" data-list="backlog"></div></article>
+      <article class="column" data-status="progress"><header><div><span class="column-index">02</span><h2>IN PROGRESS</h2></div><span class="count" data-count="progress">00</span></header><div class="task-list" data-list="progress"></div></article>
+      <article class="column" data-status="review"><header><div><span class="column-index">03</span><h2>REVIEW</h2></div><span class="count" data-count="review">00</span></header><div class="task-list" data-list="review"></div></article>
+      <article class="column" data-status="done"><header><div><span class="column-index">04</span><h2>DEPLOYED</h2></div><span class="count" data-count="done">00</span></header><div class="task-list" data-list="done"></div></article>
+    </section>
+
+    <footer><span>STATUS: <b>ONLINE</b></span><span>DRAG TO REORDER // CLICK A CARD TO INSPECT</span><span>BUILD 0.7.3</span></footer>
+  </main>
+  <div class="modal-backdrop" id="modal" hidden><form class="task-form" id="task-form"><button class="close" id="close-modal" type="button" aria-label="Close">×</button><p class="eyebrow">// create new payload</p><h2>ADD TASK</h2><label>NAME<input name="title" required maxlength="80" placeholder="What needs doing?"></label><label>OWNER<input name="owner" maxlength="20" placeholder="operator"></label><label>PRIORITY<select name="priority"><option value="green">NORMAL</option><option value="amber">BLOCKED</option></select></label><button class="primary-button" type="submit">＋ INSERT TASK</button></form></div>
+  <script type="module" src="/agent-app/app.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nested Server Workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/workspace.css">
+  <link rel="stylesheet" href="/xterm.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="identity"><span class="mark">M</span><strong>server workspace</strong><span class="status"><i></i> local</span></div>
+      <nav class="tabs" role="tablist" aria-label="Workspace views">
+        <div class="tab-cluster active">
+          <button role="tab" aria-selected="true" aria-controls="content-panel" id="content-tab" data-view="content">Content</button>
+          <!-- Lucide `refresh-cw`, ISC License; attribution in README.md. -->
+          <button id="reload-preview" class="tab-reload" type="button" aria-label="Reload frontend preview" title="Reload frontend preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg></button>
+        </div>
+        <button role="tab" aria-selected="false" aria-controls="agent-panel" id="agent-tab" data-view="agent">Agent</button>
+      </nav>
+      <div class="top-actions"><span>development</span><button id="refresh" title="Refresh server state" aria-label="Refresh server state">↻</button></div>
+    </header>
+    <div class="workbench">
+      <aside class="sidebar" aria-label="Chat and activity log">
+        <div class="sidebar-heading"><div><span class="eyebrow">Live stream</span><h2>Activity</h2></div><span id="activity-count" class="count">0</span></div>
+        <ol id="activity" class="activity" aria-live="polite"></ol>
+        <form id="chat-form" class="composer">
+          <div class="composer-toolbar"><label for="chat-input">Instruct Pi</label><button>Send</button></div>
+          <textarea id="chat-input" rows="5" maxlength="4000" placeholder="Describe what you want changed…"></textarea>
+        </form>
+        <button id="sidebar-resizer" class="sidebar-resizer" type="button" aria-label="Resize activity sidebar" title="Drag to resize activity sidebar"></button>
+      </aside>
+      <main class="viewport">
+        <section id="content-panel" class="panel content-panel" role="tabpanel" aria-labelledby="content-tab">
+          <iframe id="app-preview" title="Frontend application preview" src="/agent-app/index.html"></iframe>
+        </section>
+        <section id="agent-panel" class="panel agent-panel" role="tabpanel" aria-labelledby="agent-tab" hidden>
+          <header><div><span class="eyebrow">Pi coding agent</span><h1>Frontend collaborator</h1></div><span id="agent-state" class="agent-state">Checking sign-in…</span></header>
+          <div class="agent-transcript">
+            <ol id="agent-activity" class="agent-activity" aria-live="polite"></ol>
+            <button id="agent-jump-latest" class="agent-jump-latest" type="button" hidden>↓ <span>Jump to latest</span></button>
+          </div>
+          <form id="agent-chat-form" class="agent-composer">
+            <div class="agent-composer-toolbar"><label for="agent-chat-input">Instruct Pi</label><div><span>Mirrored with Activity</span><button>Send</button></div></div>
+            <textarea id="agent-chat-input" rows="7" maxlength="4000" placeholder="Describe what you want changed in the frontend app…"></textarea>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="/client.js"></script>
 </body>
 </html>
 
@@ -4739,6 +5295,98 @@ loadSites();
 </body>
 </html>
 
+<!-- dev/evm/playground/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macchiato EVM Playground</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div class="eyebrow">no_std Rust · WebAssembly</div>
+    <h1>Ethereum, one opcode at a time.</h1>
+    <p>Edit bytecode, supply calldata and block context, then inspect the stack,
+      output, gas, and complete instruction trace produced inside Wasm.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Program">
+      <div class="field example-field">
+        <label for="example">Example</label>
+        <select id="example"></select>
+      </div>
+      <div class="field gas-field">
+        <label for="gas">Gas</label>
+        <input id="gas" inputmode="numeric" value="100000">
+      </div>
+      <div class="field code-field">
+        <label for="code">Bytecode</label>
+        <textarea id="code" spellcheck="false" rows="5"></textarea>
+      </div>
+      <div class="field calldata-field">
+        <label for="calldata">Calldata <span>hex or <code>text:</code></span></label>
+        <textarea id="calldata" spellcheck="false" rows="3"></textarea>
+      </div>
+      <details>
+        <summary>Environment</summary>
+        <div id="environment" class="environment"></div>
+        <label class="readonly-field"><input id="read-only" type="checkbox">
+          Static, read-only frame</label>
+      </details>
+      <div class="actions">
+        <button id="run" type="button">Run program</button>
+        <button id="reset-storage" class="secondary" type="button">Reset storage</button>
+        <output id="runtime-status" aria-live="polite">Loading machine…</output>
+      </div>
+    </section>
+
+    <section class="results" aria-label="Execution result">
+      <article class="result-card exit-card">
+        <span>Exit</span><strong id="exit">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Gas left</span><strong id="gas-left">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Refund counter</span><strong id="refund">—</strong>
+      </article>
+      <article class="result-card output-card">
+        <span>Output</span><code id="output">—</code>
+        <small id="output-text"></small>
+      </article>
+      <article class="result-card stack-card">
+        <span>Final stack</span><ol id="stack"></ol>
+      </article>
+    </section>
+
+    <section class="trace-section">
+      <div class="trace-heading">
+        <div><span class="eyebrow">Execution trace</span><h2>What the machine did</h2></div>
+        <span id="trace-note">Select an example and run it.</span>
+      </div>
+      <div class="trace-scroll" tabindex="0">
+        <table>
+          <thead><tr><th>#</th><th>PC</th><th>Opcode</th><th>Gas after</th><th>Stack</th><th>Top after</th></tr></thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Bounded by construction.</strong> No allocator, WASI, filesystem,
+    clock, random source, network, or JavaScript opcode implementation.
+  </footer>
+  <script type="module" src="./playground.js"></script>
+</body>
+</html>
+
 <!-- dev/machines-pages/machine-runner/index.html -->
 <!doctype html>
 <html lang="en">
@@ -5123,6 +5771,94 @@ projects its constrained DOM into this browser.</p>
     status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
     throw error;
   }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile syntax benchmark</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" hidden></output>
+<script type="module">
+  await import("../../generated/codemirror-mobile-syntax-benchmark.js");
+  globalThis.benchmarkGuestCall = async (name, value) => globalThis[name](value);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · MicroQuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading MicroQuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = async (name, value) => {
+    const result = await machine.onmsg(namedCall(name, value));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+    return result;
+  };
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/quickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · QuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading QuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = (name, value) =>
+    machine.onmsg(namedCall(name, value));
 </script>
 
 <!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
@@ -5639,6 +6375,104 @@ An offline reading edition built from the public-domain SQLite documentation.
   <main id="app"></main>
   <script src="./game-model.js"></script>
   <script src="./application.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/agent-app/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GH0ST // Kanban</title>
+  <link rel="stylesheet" href="/agent-app/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="identity"><span class="prompt">&gt;_</span><div><strong>GH0STBOARD</strong><small>private ops // sprint 07</small></div></div>
+      <div class="system-state"><span class="pulse"></span> ALL SYSTEMS NOMINAL <span class="clock" id="clock">00:00:00</span></div>
+    </header>
+
+    <section class="intro">
+      <div><p class="breadcrumb">/home/operator/projects/ghostboard</p><h1>MISSION CONTROL<span>_</span></h1><p class="subtitle">A tactical view of everything in flight.</p></div>
+      <button class="primary-button" id="add-task" type="button"><span>＋</span> NEW TASK</button>
+    </section>
+
+    <section class="toolbar" aria-label="Board controls">
+      <div class="board-meta"><span class="signal">●</span> SPRINT 07 <span class="divider">/</span> <span id="task-total">06</span> TASKS</div>
+      <label class="search"><span>~/search</span><input id="search" type="search" placeholder="filter tasks..." autocomplete="off"></label>
+      <div class="legend"><span><i class="dot dot-green"></i>ACTIVE</span><span><i class="dot dot-amber"></i>BLOCKED</span></div>
+    </section>
+
+    <section class="board" id="board" aria-label="Kanban board">
+      <article class="column" data-status="backlog"><header><div><span class="column-index">01</span><h2>BACKLOG</h2></div><span class="count" data-count="backlog">00</span></header><div class="task-list" data-list="backlog"></div></article>
+      <article class="column" data-status="progress"><header><div><span class="column-index">02</span><h2>IN PROGRESS</h2></div><span class="count" data-count="progress">00</span></header><div class="task-list" data-list="progress"></div></article>
+      <article class="column" data-status="review"><header><div><span class="column-index">03</span><h2>REVIEW</h2></div><span class="count" data-count="review">00</span></header><div class="task-list" data-list="review"></div></article>
+      <article class="column" data-status="done"><header><div><span class="column-index">04</span><h2>DEPLOYED</h2></div><span class="count" data-count="done">00</span></header><div class="task-list" data-list="done"></div></article>
+    </section>
+
+    <footer><span>STATUS: <b>ONLINE</b></span><span>DRAG TO REORDER // CLICK A CARD TO INSPECT</span><span>BUILD 0.7.3</span></footer>
+  </main>
+  <div class="modal-backdrop" id="modal" hidden><form class="task-form" id="task-form"><button class="close" id="close-modal" type="button" aria-label="Close">×</button><p class="eyebrow">// create new payload</p><h2>ADD TASK</h2><label>NAME<input name="title" required maxlength="80" placeholder="What needs doing?"></label><label>OWNER<input name="owner" maxlength="20" placeholder="operator"></label><label>PRIORITY<select name="priority"><option value="green">NORMAL</option><option value="amber">BLOCKED</option></select></label><button class="primary-button" type="submit">＋ INSERT TASK</button></form></div>
+  <script type="module" src="/agent-app/app.js"></script>
+</body>
+</html>
+
+<!-- examples/nested-server-workspace/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nested Server Workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/workspace.css">
+  <link rel="stylesheet" href="/xterm.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="identity"><span class="mark">M</span><strong>server workspace</strong><span class="status"><i></i> local</span></div>
+      <nav class="tabs" role="tablist" aria-label="Workspace views">
+        <div class="tab-cluster active">
+          <button role="tab" aria-selected="true" aria-controls="content-panel" id="content-tab" data-view="content">Content</button>
+          <!-- Lucide `refresh-cw`, ISC License; attribution in README.md. -->
+          <button id="reload-preview" class="tab-reload" type="button" aria-label="Reload frontend preview" title="Reload frontend preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 5v4h4"></path><path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 19v-4h-4"></path></svg></button>
+        </div>
+        <button role="tab" aria-selected="false" aria-controls="agent-panel" id="agent-tab" data-view="agent">Agent</button>
+      </nav>
+      <div class="top-actions"><span>development</span><button id="refresh" title="Refresh server state" aria-label="Refresh server state">↻</button></div>
+    </header>
+    <div class="workbench">
+      <aside class="sidebar" aria-label="Chat and activity log">
+        <div class="sidebar-heading"><div><span class="eyebrow">Live stream</span><h2>Activity</h2></div><span id="activity-count" class="count">0</span></div>
+        <ol id="activity" class="activity" aria-live="polite"></ol>
+        <form id="chat-form" class="composer">
+          <div class="composer-toolbar"><label for="chat-input">Instruct Pi</label><button>Send</button></div>
+          <textarea id="chat-input" rows="5" maxlength="4000" placeholder="Describe what you want changed…"></textarea>
+        </form>
+        <button id="sidebar-resizer" class="sidebar-resizer" type="button" aria-label="Resize activity sidebar" title="Drag to resize activity sidebar"></button>
+      </aside>
+      <main class="viewport">
+        <section id="content-panel" class="panel content-panel" role="tabpanel" aria-labelledby="content-tab">
+          <iframe id="app-preview" title="Frontend application preview" src="/agent-app/index.html"></iframe>
+        </section>
+        <section id="agent-panel" class="panel agent-panel" role="tabpanel" aria-labelledby="agent-tab" hidden>
+          <header><div><span class="eyebrow">Pi coding agent</span><h1>Frontend collaborator</h1></div><span id="agent-state" class="agent-state">Checking sign-in…</span></header>
+          <div class="agent-transcript">
+            <ol id="agent-activity" class="agent-activity" aria-live="polite"></ol>
+            <button id="agent-jump-latest" class="agent-jump-latest" type="button" hidden>↓ <span>Jump to latest</span></button>
+          </div>
+          <form id="agent-chat-form" class="agent-composer">
+            <div class="agent-composer-toolbar"><label for="agent-chat-input">Instruct Pi</label><div><span>Mirrored with Activity</span><button>Send</button></div></div>
+            <textarea id="agent-chat-input" rows="7" maxlength="4000" placeholder="Describe what you want changed in the frontend app…"></textarea>
+          </form>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script type="module" src="/client.js"></script>
 </body>
 </html>
 
@@ -7109,6 +7943,98 @@ loadSites();
 </body>
 </html>
 
+<!-- dev/evm/playground/index.html -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Macchiato EVM Playground</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header>
+    <div class="eyebrow">no_std Rust · WebAssembly</div>
+    <h1>Ethereum, one opcode at a time.</h1>
+    <p>Edit bytecode, supply calldata and block context, then inspect the stack,
+      output, gas, and complete instruction trace produced inside Wasm.</p>
+  </header>
+
+  <main>
+    <section class="controls" aria-label="Program">
+      <div class="field example-field">
+        <label for="example">Example</label>
+        <select id="example"></select>
+      </div>
+      <div class="field gas-field">
+        <label for="gas">Gas</label>
+        <input id="gas" inputmode="numeric" value="100000">
+      </div>
+      <div class="field code-field">
+        <label for="code">Bytecode</label>
+        <textarea id="code" spellcheck="false" rows="5"></textarea>
+      </div>
+      <div class="field calldata-field">
+        <label for="calldata">Calldata <span>hex or <code>text:</code></span></label>
+        <textarea id="calldata" spellcheck="false" rows="3"></textarea>
+      </div>
+      <details>
+        <summary>Environment</summary>
+        <div id="environment" class="environment"></div>
+        <label class="readonly-field"><input id="read-only" type="checkbox">
+          Static, read-only frame</label>
+      </details>
+      <div class="actions">
+        <button id="run" type="button">Run program</button>
+        <button id="reset-storage" class="secondary" type="button">Reset storage</button>
+        <output id="runtime-status" aria-live="polite">Loading machine…</output>
+      </div>
+    </section>
+
+    <section class="results" aria-label="Execution result">
+      <article class="result-card exit-card">
+        <span>Exit</span><strong id="exit">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Gas left</span><strong id="gas-left">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Steps</span><strong id="steps">—</strong>
+      </article>
+      <article class="result-card">
+        <span>Refund counter</span><strong id="refund">—</strong>
+      </article>
+      <article class="result-card output-card">
+        <span>Output</span><code id="output">—</code>
+        <small id="output-text"></small>
+      </article>
+      <article class="result-card stack-card">
+        <span>Final stack</span><ol id="stack"></ol>
+      </article>
+    </section>
+
+    <section class="trace-section">
+      <div class="trace-heading">
+        <div><span class="eyebrow">Execution trace</span><h2>What the machine did</h2></div>
+        <span id="trace-note">Select an example and run it.</span>
+      </div>
+      <div class="trace-scroll" tabindex="0">
+        <table>
+          <thead><tr><th>#</th><th>PC</th><th>Opcode</th><th>Gas after</th><th>Stack</th><th>Top after</th></tr></thead>
+          <tbody id="trace"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <strong>Bounded by construction.</strong> No allocator, WASI, filesystem,
+    clock, random source, network, or JavaScript opcode implementation.
+  </footer>
+  <script type="module" src="./playground.js"></script>
+</body>
+</html>
+
 <!-- dev/machines-pages/machine-runner/index.html -->
 <!doctype html>
 <html lang="en">
@@ -7493,6 +8419,94 @@ projects its constrained DOM into this browser.</p>
     status.textContent = `MicroQuickJS multi-file CodeMirror could not start: ${error?.message || error}`;
     throw error;
   }
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mobile syntax benchmark</title>
+<link rel="stylesheet" href="../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" hidden></output>
+<script type="module">
+  await import("../../generated/codemirror-mobile-syntax-benchmark.js");
+  globalThis.benchmarkGuestCall = async (name, value) => globalThis[name](value);
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/microquickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · MicroQuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading MicroQuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark-microquickjs.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = async (name, value) => {
+    const result = await machine.onmsg(namedCall(name, value));
+    await machine.onmsg(new Uint8Array([255, 255, 255, 255]));
+    return result;
+  };
+</script>
+
+<!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/benchmark/quickjs/index.html -->
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Syntax benchmark · QuickJS</title>
+<link rel="stylesheet" href="../../../mobile-syntax.css">
+<main id="workspace"></main>
+<output id="benchmark-status" data-ready="false">Loading QuickJS…</output>
+<script type="module">
+  import WasmWebMachine from "../../../wasm-web-machine.js";
+  const encoder = new TextEncoder();
+  function namedCall(name, argument) {
+    const label = encoder.encode(name);
+    const value = encoder.encode(argument);
+    const message = new Uint8Array(2 + label.length + value.length);
+    message[0] = 2;
+    message.set(label, 1);
+    message.set(value, label.length + 2);
+    return message;
+  }
+  const response = await fetch(
+    "../../../generated/codemirror-mobile-syntax-benchmark.wasm");
+  const module = await WebAssembly.compileStreaming(response);
+  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
+  const machine = new WasmWebMachine(module, document, {
+    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
+    services: {
+      route: { get: () => "/", listen() {} },
+      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+    },
+  });
+  await machine.onmsg(0);
+  globalThis.benchmarkGuestCall = (name, value) =>
+    machine.onmsg(namedCall(name, value));
 </script>
 
 <!-- dev/wasm-web-runtimes/examples/codemirror/mobile-syntax/index.html -->
@@ -7996,1033 +9010,5 @@ An offline reading edition built from the public-domain SQLite documentation.
     </div>
   </dialog>
   <script type="module" src="./client.js"></script>
-</body>
-</html>
-
-<!-- examples/mahjong/index.html -->
-<!doctype html>
-<html>
-<head>
-  <link rel="stylesheet" href="./style.css">
-</head>
-<body>
-  <main id="app"></main>
-  <script src="./game-model.js"></script>
-  <script src="./application.js"></script>
-</body>
-</html>
-
-<!-- examples/resources-website/index.html -->
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resources.co</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<main class="layout">
-
-    <!-- BRAND + HEADER PATH -->
-    <header class="box brand" data-screen-label="brand">
-      <nav class="brand__path" id="brand-path" aria-label="Path">
-        <a class="brand__home" href="/" aria-label="Resources.co home">Resources<span class="dot">.co</span></a>
-      </nav>
-    </header>
-
-    <!-- USERBAR -->
-    <section class="box userbar" data-screen-label="userbar">
-      <div class="ub-pop">
-        <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-          <span class="ub-dot"></span>
-        </button>
-        <div class="popover user-menu" role="menu">
-          <div class="menu__head">Notifications</div>
-          <div class="menu__empty">You're all caught up.</div>
-        </div>
-      </div>
-      <div class="ub-pop">
-        <button class="ub-icon" aria-label="Create new" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        </button>
-        <div class="popover user-menu" role="menu">
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>New project</button>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>New organization</button>
-          <div class="menu__sep"></div>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><line x1="12" y1="15" x2="12" y2="3"></line></svg>Import resource</button>
-        </div>
-      </div>
-      <div class="ub-pop">
-        <button class="ub-acct" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
-          <span class="ub-avatar">MD</span>
-          <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-        </button>
-        <div class="popover user-menu" role="menu">
-          <div class="menu__acct">
-            <span class="ub-avatar">MD</span>
-            <div class="menu__acct-meta"><span class="menu__acct-name">macchiato-dev</span><span>Signed in</span></div>
-          </div>
-          <div class="menu__sep"></div>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5"></path><path d="m2 12 10 5 10-5"></path></svg>Your projects</button>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Your profile</button>
-          <div class="menu__sep"></div>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>Settings</button>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Help &amp; docs</button>
-          <div class="menu__sep"></div>
-          <div class="menu__head">Appearance</div>
-          <div class="seg" role="group" aria-label="Appearance">
-            <button class="seg__btn" aria-pressed="true">Dark</button>
-            <button class="seg__btn" aria-pressed="false">Light</button>
-            <button class="seg__btn" aria-pressed="false">System</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- MAIN CONTENT -->
-    <div class="main" id="main">
-      <div id="content" class="content-root"><section class="box block"><div class="block__eyebrow">Self-hosted building blocks</div><h1>Infrastructure you own, composed from parts.</h1><p>Resources.co is a startup building self-hostable primitives for the web — containers, components, and usage providers you run on your own stack, wired together however you like.</p><p>Pick a section from the panel on the right to start, or browse the full catalogue.</p></section><section class="box block"><h2>Featured collections</h2><div class="items"><a href="#resources/containers"><span class="it-name">resources/containers</span><span class="it-desc">Self-hostable runtimes for everything you ship.</span></a><a href="#macchiato/components"><span class="it-name">macchiato/components</span><span class="it-desc">Composable UI and service building blocks.</span></a><a href="#resources/usage-providers"><span class="it-name">resources/usage-providers</span><span class="it-desc">DOM, Style, and Navigator state — shared cleanly.</span></a><a href="#halcyon/design-tokens"><span class="it-name">halcyon/design-tokens</span><span class="it-desc">A living spec for color, type, and spacing.</span></a><a href="#northwind/adapters"><span class="it-name">northwind/adapters</span><span class="it-desc">Uniform interfaces to external services and data.</span></a></div></section></div>
-    </div>
-
-    <!-- NAV -->
-    <nav class="box nav" data-screen-label="nav" aria-label="Primary">
-      <a data-section="home" aria-current="page"><span>Home</span></a>
-      <a data-section="explore"><span>Explore</span></a>
-      <a data-section="about"><span>About</span></a>
-      <a data-section="blog"><span>Blog</span></a>
-      <div class="nav__sep"></div>
-      <div class="nav__label">Trending</div>
-      <a class="nav__sub" data-section="macchiato/components"><span>components</span></a>
-      <a class="nav__sub" data-section="resources/containers"><span>containers</span></a>
-      <a class="nav__sub" data-section="halcyon/design-tokens"><span>design tokens</span></a>
-    </nav>
-
-    <!-- FOOTER -->
-    <footer class="box footer" data-screen-label="footer">
-      <div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div>
-    </footer>
-
-  </main>
-</body>
-</html>
-
-<!-- examples/resources-website/page.html -->
-<main class="layout">
-
-    <!-- BRAND + HEADER PATH -->
-    <header class="box brand" data-screen-label="brand">
-      <nav class="brand__path" id="brand-path" aria-label="Path">
-        <a class="brand__home" href="/" aria-label="Resources.co home">Resources<span class="dot">.co</span></a>
-      </nav>
-    </header>
-
-    <!-- USERBAR -->
-    <section class="box userbar" data-screen-label="userbar">
-      <div class="ub-pop">
-        <button class="ub-icon" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-          <span class="ub-dot"></span>
-        </button>
-        <div class="popover user-menu" role="menu">
-          <div class="menu__head">Notifications</div>
-          <div class="menu__empty">You're all caught up.</div>
-        </div>
-      </div>
-      <div class="ub-pop">
-        <button class="ub-icon" aria-label="Create new" aria-haspopup="true" aria-expanded="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-        </button>
-        <div class="popover user-menu" role="menu">
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"></path><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>New project</button>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>New organization</button>
-          <div class="menu__sep"></div>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><line x1="12" y1="15" x2="12" y2="3"></line></svg>Import resource</button>
-        </div>
-      </div>
-      <div class="ub-pop">
-        <button class="ub-acct" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">
-          <span class="ub-avatar">MD</span>
-          <svg class="ub-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
-        </button>
-        <div class="popover user-menu" role="menu">
-          <div class="menu__acct">
-            <span class="ub-avatar">MD</span>
-            <div class="menu__acct-meta"><span class="menu__acct-name">macchiato-dev</span><span>Signed in</span></div>
-          </div>
-          <div class="menu__sep"></div>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 10 5-10 5L2 7z"></path><path d="m2 17 10 5 10-5"></path><path d="m2 12 10 5 10-5"></path></svg>Your projects</button>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Your profile</button>
-          <div class="menu__sep"></div>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"></path></svg>Settings</button>
-          <button class="item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>Help &amp; docs</button>
-          <div class="menu__sep"></div>
-          <div class="menu__head">Appearance</div>
-          <div class="seg" role="group" aria-label="Appearance">
-            <button class="seg__btn" aria-pressed="true">Dark</button>
-            <button class="seg__btn" aria-pressed="false">Light</button>
-            <button class="seg__btn" aria-pressed="false">System</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- MAIN CONTENT -->
-    <div class="main" id="main">
-      <div id="content" class="content-root"><section class="box block"><div class="block__eyebrow">Self-hosted building blocks</div><h1>Infrastructure you own, composed from parts.</h1><p>Resources.co is a startup building self-hostable primitives for the web — containers, components, and usage providers you run on your own stack, wired together however you like.</p><p>Pick a section from the panel on the right to start, or browse the full catalogue.</p></section><section class="box block"><h2>Featured collections</h2><div class="items"><a href="#resources/containers"><span class="it-name">resources/containers</span><span class="it-desc">Self-hostable runtimes for everything you ship.</span></a><a href="#macchiato/components"><span class="it-name">macchiato/components</span><span class="it-desc">Composable UI and service building blocks.</span></a><a href="#resources/usage-providers"><span class="it-name">resources/usage-providers</span><span class="it-desc">DOM, Style, and Navigator state — shared cleanly.</span></a><a href="#halcyon/design-tokens"><span class="it-name">halcyon/design-tokens</span><span class="it-desc">A living spec for color, type, and spacing.</span></a><a href="#northwind/adapters"><span class="it-name">northwind/adapters</span><span class="it-desc">Uniform interfaces to external services and data.</span></a></div></section></div>
-    </div>
-
-    <!-- NAV -->
-    <nav class="box nav" data-screen-label="nav" aria-label="Primary">
-      <a data-section="home" aria-current="page"><span>Home</span></a>
-      <a data-section="explore"><span>Explore</span></a>
-      <a data-section="about"><span>About</span></a>
-      <a data-section="blog"><span>Blog</span></a>
-      <div class="nav__sep"></div>
-      <div class="nav__label">Trending</div>
-      <a class="nav__sub" data-section="macchiato/components"><span>components</span></a>
-      <a class="nav__sub" data-section="resources/containers"><span>containers</span></a>
-      <a class="nav__sub" data-section="halcyon/design-tokens"><span>design tokens</span></a>
-    </nav>
-
-    <!-- FOOTER -->
-    <footer class="box footer" data-screen-label="footer">
-      <div class="copy">© 2026 Resources<span class="dot">.co</span>. All rights reserved.</div>
-    </footer>
-
-  </main>
-
-<!-- examples/todo-matrix/source.html -->
-<div id="app"></div>
-<script type="module">
-const STORAGE_KEY = "todo-matrix-state";
-const SAMPLE = [
-  ["Task", "Design", "Build", "Review", "Ship"],
-  ["Header", "", "", "", ""],
-  ["Schemas", "", "", "", ""],
-  ["Playwright", "", "", "", ""],
-  ["Commit", "", "", "", ""],
-].map((row) => row.join("\t")).join("\n");
-
-let model = load();
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function splitLine(line, delimiter) {
-  return line.split(delimiter).map((cell) => cell.trim());
-}
-
-function parseMatrix(text) {
-  const lines = String(text || SAMPLE).split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  const delimiter = lines.some((line) => line.includes("\t")) ? "\t" : ",";
-  const rows = lines.map((line) => splitLine(line, delimiter));
-  const width = Math.max(2, ...rows.map((row) => row.length));
-  while (rows.length < 2) rows.push([]);
-  rows.forEach((row) => { while (row.length < width) row.push(""); });
-  const columns = rows[0].slice(1).map((value, index) => value || `Column ${index + 1}`);
-  const rowHeaders = rows.slice(1).map((row, index) => row[0] || `Row ${index + 1}`);
-  const cells = rowHeaders.map((_, rowIndex) => columns.map((__, columnIndex) => {
-    const value = rows[rowIndex + 1][columnIndex + 1].toLowerCase();
-    if (value === "x" || value === "1" || value === "yes" || value === "done" || value === "complete") return "done";
-    if (value === "/" || value === "wip" || value === "doing" || value === "construction" || value === "under construction") return "doing";
-    return "open";
-  }));
-  return { columns, rowHeaders, cells };
-}
-
-function load() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
-    if (saved && saved.columns && saved.rowHeaders && saved.cells) return saved;
-  } catch (_err) {}
-  return null;
-}
-
-function save() {
-  if (model) localStorage.setItem(STORAGE_KEY, JSON.stringify(model));
-}
-
-function normalizeState(value) {
-  if (value === true || value === "done") return "done";
-  if (value === "doing") return "doing";
-  return "open";
-}
-
-function nextState(value) {
-  const state = normalizeState(value);
-  if (state === "open") return "doing";
-  if (state === "doing") return "done";
-  return "open";
-}
-
-function stateLabel(value) {
-  const state = normalizeState(value);
-  if (state === "done") return "complete";
-  if (state === "doing") return "under construction";
-  return "open";
-}
-
-function label(row, column, state) {
-  return `${row} / ${column}: ${stateLabel(state)}`;
-}
-
-function renderEntry(root) {
-  const shell = el("main", "matrix-app");
-  const entry = el("section", "matrix-entry");
-  entry.setAttribute("data-view", "entry");
-
-  const copy = el("div", "entry-copy");
-  copy.appendChild(el("p", "eyebrow", "Todo Matrix"));
-  copy.appendChild(el("h1", "", "Paste a grid"));
-  copy.appendChild(el("p", "", "Use tabs, or commas when the cells themselves do not contain commas. The first row and first column become headers."));
-
-  const panel = el("div", "entry-panel");
-  const textarea = el("textarea", "matrix-source");
-  textarea.id = "matrix-source";
-  textarea.setAttribute("placeholder", "Task\tDesign\tBuild\tShip\nHeader\t\t\t\nDocs\t\t\t");
-  textarea.value = SAMPLE;
-  const go = el("button", "go-button", "Go");
-  go.id = "go-button";
-  go.setAttribute("type", "button");
-  go.addEventListener("click", () => {
-    model = parseMatrix(go.value);
-    save();
-    render();
-  });
-  panel.appendChild(textarea);
-  panel.appendChild(go);
-
-  entry.appendChild(copy);
-  entry.appendChild(panel);
-  shell.appendChild(entry);
-  root.appendChild(shell);
-}
-
-function renderBoard(root) {
-  const shell = el("main", "matrix-app");
-  const board = el("section", "matrix-board");
-  board.setAttribute("data-view", "board");
-  const head = el("div", "board-head");
-  const restart = el("button", "restart-button");
-  restart.id = "restart-button";
-  restart.setAttribute("type", "button");
-  restart.setAttribute("aria-label", "Start over");
-  restart.setAttribute("title", "Start over");
-  const restartIcon = el("span", "restart-icon");
-  restartIcon.setAttribute("aria-hidden", "true");
-  restartIcon.appendChild(el("span", "restart-page"));
-  restartIcon.appendChild(el("span", "restart-plus"));
-  const restartTip = el("span", "restart-tip", "Start over");
-  restart.appendChild(restartIcon);
-  restart.appendChild(restartTip);
-  restart.addEventListener("click", () => {
-    localStorage.removeItem(STORAGE_KEY);
-    model = null;
-    render();
-  });
-  head.appendChild(restart);
-
-  const wrap = el("div", "matrix-wrap");
-  const grid = el("div", "task-grid");
-  grid.setAttribute("aria-label", "Todo matrix");
-  const headRow = el("div", "matrix-row matrix-head-row");
-  headRow.appendChild(el("div", "matrix-heading matrix-corner"));
-  model.columns.forEach((column) => {
-    const heading = el("div", "matrix-heading matrix-column-heading");
-    heading.appendChild(el("span", "column-label", column));
-    headRow.appendChild(heading);
-  });
-  grid.appendChild(headRow);
-
-  model.rowHeaders.forEach((rowHeader, rowIndex) => {
-    const row = el("div", "matrix-row");
-    const rowHeading = el("div", "matrix-heading matrix-row-heading");
-    rowHeading.appendChild(el("span", "row-label", rowHeader));
-    row.appendChild(rowHeading);
-    model.columns.forEach((column, columnIndex) => {
-      const state = normalizeState(model.cells[rowIndex][columnIndex]);
-      const button = el("button", "cell-toggle");
-      button.setAttribute("type", "button");
-      button.setAttribute("data-state", state);
-      button.setAttribute("aria-pressed", state === "open" ? "false" : "true");
-      button.setAttribute("aria-label", label(rowHeader, column, state));
-      button.addEventListener("click", () => {
-        model.cells[rowIndex][columnIndex] = nextState(model.cells[rowIndex][columnIndex]);
-        save();
-        render();
-      });
-      row.appendChild(button);
-    });
-    grid.appendChild(row);
-  });
-  wrap.appendChild(grid);
-  board.appendChild(head);
-  board.appendChild(wrap);
-  shell.appendChild(board);
-  root.appendChild(shell);
-}
-
-function render() {
-  const root = document.getElementById("app");
-  root.innerHTML = "";
-  if (model) renderBoard(root);
-  else renderEntry(root);
-}
-
-render();
-</script>
-
-<!-- examples/todo/index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Todo — Guest DOM Prototype</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; }
-  body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #4a306d;
-    margin: 0;
-    padding: 2rem 1rem;
-    color: #e0e0e0;
-  }
-  .todoapp {
-    max-width: 550px;
-    margin: 0 auto;
-    background: #1e1e24;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3), 0 25px 50px rgba(0,0,0,0.2);
-    border-radius: 8px;
-    overflow: hidden;
-  }
-  h1 {
-    text-align: center;
-    font-size: 4rem;
-    font-weight: 200;
-    color: rgba(255, 255, 255, 0.06);
-    margin: 0.5rem 0;
-    letter-spacing: -2px;
-  }
-  .header {
-    border-bottom: 1px solid #333340;
-  }
-  .input-wrap {
-    position: relative;
-  }
-  .new-todo {
-    width: 100%;
-    padding: 16px 70px 16px 16px;
-    font-size: 24px;
-    font-weight: 300;
-    border: none;
-    outline: none;
-    background: #1e1e24;
-    box-shadow: inset 0 -2px 1px rgba(0,0,0,0.2);
-    color: #e0e0e0;
-  }
-  .new-todo::placeholder {
-    font-style: italic;
-    font-weight: 300;
-    color: #3d3d4a;
-  }
-  .add-btn {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: #7c5cc7;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 6px 14px;
-    font-size: 14px;
-    cursor: pointer;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s, background 0.2s;
-  }
-  .add-btn:hover {
-    background: #8d6dd8;
-  }
-  .new-todo:not(:placeholder-shown) + .add-btn {
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .todo-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .todo-item {
-    position: relative;
-    display: flex;
-    align-items: center;
-    padding: 0;
-    border-bottom: 1px solid #333340;
-    font-size: 24px;
-    font-weight: 300;
-    transition: background 0.2s;
-    background: #1e1e24;
-  }
-  .todo-item:hover {
-    background: #2a2a38;
-  }
-  .todo-item.dragging {
-    opacity: 0.5;
-    background: #2a2a38;
-  }
-  .todo-item.over {
-    border-top: 2px solid #9b7ed8;
-  }
-  .drag-handle {
-    width: 40px;
-    height: 100%;
-    min-height: 58px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: grab;
-    color: #4a4a5a;
-    opacity: 0;
-    transition: opacity 0.2s, color 0.2s;
-    flex-shrink: 0;
-  }
-  .todo-item:hover .drag-handle {
-    opacity: 1;
-  }
-  .drag-handle:hover {
-    color: #777788;
-  }
-  .drag-handle:active {
-    cursor: grabbing;
-  }
-  .todo-item .toggle {
-    width: 40px;
-    height: 40px;
-    margin: 0 6px 0 0;
-    cursor: pointer;
-    flex-shrink: 0;
-    appearance: none;
-    border: 1px solid #4a4a5a;
-    border-radius: 50%;
-    position: relative;
-    transition: border-color 0.2s;
-  }
-  .todo-item .toggle:checked {
-    border-color: #5a7a5a;
-  }
-  .todo-item .toggle:checked::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: 10px;
-    height: 18px;
-    border: solid #5a7a5a;
-    border-width: 0 2px 2px 0;
-    transform: translate(-50%, -60%) rotate(45deg);
-  }
-  .todo-item label {
-    flex: 1;
-    padding: 15px 15px 15px 5px;
-    min-width: 0;
-    overflow-wrap: break-word;
-    word-break: normal;
-    cursor: text;
-    transition: color 0.2s;
-    color: #e0e0e0;
-  }
-  .todo-item.completed label {
-    text-decoration: line-through;
-    color: #5d5d70;
-  }
-  .todo-item .edit {
-    display: none;
-    flex: 1;
-    padding: 14px 15px 14px 5px;
-    field-sizing: content;
-    min-height: 58px;
-    max-height: 12rem;
-    font-size: 24px;
-    font-family: inherit;
-    font-weight: 300;
-    line-height: 1.35;
-    border: 1px solid #4a4a5a;
-    box-shadow: inset 0 -1px 5px rgba(0,0,0,0.3);
-    outline: none;
-    color: #e0e0e0;
-    background: #1e1e24;
-    margin: 0;
-    overflow: auto;
-    resize: vertical;
-  }
-  .todo-item.editing .edit {
-    display: block;
-  }
-  .todo-item.editing label {
-    display: none;
-  }
-  .todo-item .destroy {
-    width: 40px;
-    height: 40px;
-    font-size: 30px;
-    color: #888899;
-    background: none;
-    border: none;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.2s, color 0.2s;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1;
-  }
-  .todo-item:hover .destroy {
-    opacity: 1;
-  }
-  .destroy:hover {
-    color: #e57373;
-  }
-  .footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 15px;
-    border-top: 1px solid #333340;
-    color: #888899;
-    font-size: 14px;
-  }
-  .todo-count strong {
-    font-weight: 600;
-    color: #e0e0e0;
-  }
-  .filters {
-    display: flex;
-    gap: 4px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .filters a {
-    color: inherit;
-    text-decoration: none;
-    padding: 3px 7px;
-    border: 1px solid transparent;
-    border-radius: 3px;
-    transition: border-color 0.2s;
-    cursor: pointer;
-    user-select: none;
-  }
-  .filters a:hover {
-    border-color: rgba(155, 126, 216, 0.2);
-  }
-  .filters a.selected {
-    border-color: rgba(155, 126, 216, 0.4);
-  }
-  .clear-completed {
-    color: inherit;
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    padding: 0;
-    transition: color 0.2s, text-decoration 0.2s;
-  }
-  .clear-completed:hover {
-    text-decoration: underline;
-  }
-  .hidden { display: none !important; }
-</style>
-</head>
-<body>
-<div id="app"></div>
-<script type="module">
-// ===================== GUEST DOM SIMULATION =====================
-class GuestNode {
-  constructor() {
-    this.parentNode = null;
-    /** @type {GuestNode[]} */
-    this.children = [];
-  }
-  appendChild(child) {
-    if (child.parentNode) child.parentNode.removeChild(child);
-    child.parentNode = this;
-    this.children.push(child);
-    return child;
-  }
-  removeChild(child) {
-    const idx = this.children.indexOf(child);
-    if (idx !== -1) {
-      this.children.splice(idx, 1);
-      child.parentNode = null;
-    }
-    return child;
-  }
-  insertBefore(newNode, refNode) {
-    if (newNode.parentNode) newNode.parentNode.removeChild(newNode);
-    const idx = refNode ? this.children.indexOf(refNode) : -1;
-    if (idx === -1) {
-      this.children.push(newNode);
-    } else {
-      this.children.splice(idx, 0, newNode);
-    }
-    newNode.parentNode = this;
-    return newNode;
-  }
-}
-
-class GuestElement extends GuestNode {
-  constructor(tagName) {
-    super();
-    this.tagName = tagName;
-    this.attributes = {};
-    this._classList = new Set();
-    this._style = {};
-    this._listeners = {};
-    this._textContent = '';
-    this._value = '';
-  }
-  get id() { return this.attributes.id || ''; }
-  set id(v) { if (v) this.attributes.id = v; else delete this.attributes.id; }
-  get className() { return Array.from(this._classList).join(' '); }
-  set className(v) { this._classList = new Set(String(v).split(/\s+/).filter(Boolean)); }
-  get textContent() { return this._textContent; }
-  set textContent(v) {
-    this._textContent = String(v);
-    this.children = [];
-  }
-  get value() { return this._value; }
-  set value(v) { this._value = String(v); }
-  get classList() {
-    const self = this;
-    return {
-      add(...c) { c.forEach(x => x && self._classList.add(x)); },
-      remove(...c) { c.forEach(x => self._classList.delete(x)); },
-      toggle(c) { self._classList.has(c) ? self._classList.delete(c) : self._classList.add(c); },
-      contains(c) { return self._classList.has(c); },
-    };
-  }
-  get style() {
-    const self = this;
-    return new Proxy(self._style, {
-      set(t, p, v) { t[p] = v; return true; }
-    });
-  }
-  setAttribute(n, v) { this.attributes[n] = String(v); }
-  getAttribute(n) { return this.attributes[n]; }
-  removeAttribute(n) { delete this.attributes[n]; }
-  addEventListener(event, handler) {
-    if (!this._listeners[event]) this._listeners[event] = [];
-    this._listeners[event].push(handler);
-  }
-  removeEventListener(event, handler) {
-    if (!this._listeners[event]) return;
-    this._listeners[event] = this._listeners[event].filter(h => h !== handler);
-  }
-}
-
-class GuestDocument {
-  constructor() {
-    this.body = this.createElement('body');
-  }
-  createElement(tagName) { return new GuestElement(tagName); }
-  createTextNode(text) {
-    const el = new GuestElement('__text__');
-    el.textContent = text;
-    return el;
-  }
-  getElementById(id) { return this._findId(this.body, id); }
-  _findId(node, id) {
-    if (node.attributes && node.attributes.id === id) return node;
-    for (const c of node.children) { const f = this._findId(c, id); if (f) return f; }
-    return null;
-  }
-}
-
-// ===================== HOST RENDERER =====================
-class HostRenderer {
-  constructor(realDoc) {
-    this.realDoc = realDoc;
-    this.map = new WeakMap();
-  }
-  render(guest) {
-    if (guest.tagName === '__text__') {
-      return this.realDoc.createTextNode(guest.textContent);
-    }
-    const real = this.realDoc.createElement(guest.tagName);
-    this.map.set(guest, real);
-    for (const [k, v] of Object.entries(guest.attributes)) real.setAttribute(k, v);
-    if (guest.tagName === 'input' || guest.tagName === 'textarea') real.value = guest.value;
-    if (guest._classList.size) real.className = Array.from(guest._classList).join(' ');
-    for (const [k, v] of Object.entries(guest._style)) real.style[k] = v;
-    for (const [evt, handlers] of Object.entries(guest._listeners)) {
-      handlers.forEach(h => real.addEventListener(evt, e => {
-          const ge = {
-          target: { value: e.target.value, checked: e.target.checked, dataset: e.target.dataset },
-          preventDefault: () => e.preventDefault(),
-          stopPropagation: () => e.stopPropagation(),
-          key: e.key,
-          metaKey: e.metaKey,
-          ctrlKey: e.ctrlKey,
-          shiftKey: e.shiftKey,
-          dataTransfer: e.dataTransfer ? {
-            getData: t => e.dataTransfer.getData(t),
-            setData: (t, d) => e.dataTransfer.setData(t, d),
-            effectAllowed: e.dataTransfer.effectAllowed,
-          } : null,
-        };
-        h(ge);
-      }));
-    }
-    for (const c of guest.children) real.appendChild(this.render(c));
-    if (!guest.children.length && guest._textContent) real.textContent = guest._textContent;
-    return real;
-  }
-  sync(guestRoot, realParent) {
-    realParent.innerHTML = '';
-    realParent.appendChild(this.render(guestRoot));
-  }
-}
-
-// ===================== TODO APP =====================
-let state = {
-  todos: JSON.parse(localStorage.getItem('guest-todos') || '[]'),
-  filter: 'all',
-  editingId: null,
-};
-
-function save() {
-  localStorage.setItem('guest-todos', JSON.stringify(state.todos));
-}
-
-function setState(patch) {
-  state = { ...state, ...patch };
-  save();
-  render();
-}
-
-function nextId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
-}
-
-const doc = new GuestDocument();
-const renderer = new HostRenderer(document);
-
-function addTodo(text) {
-  const trimmed = text.trim();
-  if (!trimmed) return;
-  setState({ todos: [...state.todos, { id: nextId(), text: trimmed, completed: false, order: state.todos.length }] });
-}
-
-function buildApp() {
-  const filtered = state.todos.filter(t =>
-    state.filter === 'all' ? true :
-    state.filter === 'active' ? !t.completed :
-    t.completed
-  );
-  const activeCount = state.todos.filter(t => !t.completed).length;
-
-  const app = doc.createElement('div');
-  app.className = 'todoapp';
-
-  const header = doc.createElement('header');
-  header.className = 'header';
-
-  const h1 = doc.createElement('h1');
-  h1.textContent = 'todos';
-  header.appendChild(h1);
-
-  const inputWrap = doc.createElement('div');
-  inputWrap.className = 'input-wrap';
-
-  const input = doc.createElement('input');
-  input.className = 'new-todo';
-  input.setAttribute('placeholder', 'What needs to be done?');
-  input.setAttribute('autofocus', 'true');
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      addTodo(e.target.value);
-      e.target.value = '';
-    }
-  });
-  inputWrap.appendChild(input);
-
-  const addBtn = doc.createElement('button');
-  addBtn.className = 'add-btn';
-  addBtn.textContent = 'Add';
-  addBtn.addEventListener('click', () => {
-    const realInput = document.querySelector('.new-todo');
-    if (realInput) {
-      addTodo(realInput.value);
-      realInput.value = '';
-    }
-  });
-  inputWrap.appendChild(addBtn);
-
-  header.appendChild(inputWrap);
-
-  app.appendChild(header);
-
-  if (state.todos.length) {
-    const list = doc.createElement('ul');
-    list.className = 'todo-list';
-    list.id = 'todo-list';
-
-    filtered.forEach((todo, index) => {
-      const item = doc.createElement('li');
-      item.className = 'todo-item' + (todo.completed ? ' completed' : '') + (state.editingId === todo.id ? ' editing' : '');
-      item.setAttribute('draggable', 'true');
-      item.setAttribute('data-id', todo.id);
-      item.setAttribute('data-index', String(index));
-
-      const handle = doc.createElement('span');
-      handle.className = 'drag-handle';
-      handle.textContent = '⋮⋮';
-      handle.setAttribute('title', 'Drag to reorder');
-      item.appendChild(handle);
-
-      const toggle = doc.createElement('input');
-      toggle.className = 'toggle';
-      toggle.setAttribute('type', 'checkbox');
-      if (todo.completed) toggle.setAttribute('checked', 'checked');
-      toggle.addEventListener('change', () => {
-        setState({
-          todos: state.todos.map(t => t.id === todo.id ? { ...t, completed: !t.completed } : t)
-        });
-      });
-      item.appendChild(toggle);
-
-      const label = doc.createElement('label');
-      label.textContent = todo.text;
-      label.addEventListener('dblclick', () => setState({ editingId: todo.id }));
-      item.appendChild(label);
-
-      const edit = doc.createElement('textarea');
-      edit.className = 'edit';
-      edit.setAttribute('rows', '1');
-      edit.value = todo.text;
-      edit.addEventListener('keydown', e => {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-          e.preventDefault();
-          const text = e.target.value.trim();
-          if (text) {
-            setState({
-              todos: state.todos.map(t => t.id === todo.id ? { ...t, text } : t),
-              editingId: null,
-            });
-          }
-        } else if (e.key === 'Escape') {
-          setState({ editingId: null });
-        }
-      });
-      edit.addEventListener('blur', e => {
-        const text = e.target.value.trim();
-        if (text) {
-          setState({
-            todos: state.todos.map(t => t.id === todo.id ? { ...t, text } : t),
-            editingId: null,
-          });
-        }
-      });
-      item.appendChild(edit);
-
-      const destroy = doc.createElement('button');
-      destroy.className = 'destroy';
-      destroy.textContent = '×';
-      destroy.addEventListener('click', () => {
-        setState({ todos: state.todos.filter(t => t.id !== todo.id) });
-      });
-      item.appendChild(destroy);
-
-      // Drag events
-      item.addEventListener('dragstart', e => {
-        e.dataTransfer.setData('text/plain', todo.id);
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      item.addEventListener('dragover', e => {
-        e.preventDefault();
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      item.addEventListener('drop', e => {
-        e.preventDefault();
-        const draggedId = e.dataTransfer.getData('text/plain');
-        if (draggedId === todo.id) return;
-        const fromIdx = state.todos.findIndex(t => t.id === draggedId);
-        const toIdx = state.todos.findIndex(t => t.id === todo.id);
-        if (fromIdx === -1 || toIdx === -1) return;
-        const next = [...state.todos];
-        const [moved] = next.splice(fromIdx, 1);
-        next.splice(toIdx, 0, moved);
-        setState({ todos: next });
-      });
-
-      list.appendChild(item);
-    });
-    app.appendChild(list);
-
-    const footer = doc.createElement('footer');
-    footer.className = 'footer';
-
-    const count = doc.createElement('span');
-    count.className = 'todo-count';
-    count.innerHTML = `<strong>${activeCount}</strong> item${activeCount !== 1 ? 's' : ''} left`;
-    footer.appendChild(count);
-
-    const filters = doc.createElement('ul');
-    filters.className = 'filters';
-    const filtersData = [
-      { label: 'All', val: 'all' },
-      { label: 'Active', val: 'active' },
-      { label: 'Completed', val: 'completed' },
-    ];
-    filtersData.forEach(f => {
-      const li = doc.createElement('li');
-      const a = doc.createElement('a');
-      a.textContent = f.label;
-      if (state.filter === f.val) a.className = 'selected';
-      a.addEventListener('click', () => setState({ filter: f.val }));
-      li.appendChild(a);
-      filters.appendChild(li);
-    });
-    footer.appendChild(filters);
-
-    const clearBtn = doc.createElement('button');
-    clearBtn.className = 'clear-completed';
-    clearBtn.textContent = 'Clear completed';
-    if (!state.todos.some(t => t.completed)) clearBtn.className += ' hidden';
-    clearBtn.addEventListener('click', () => {
-      setState({ todos: state.todos.filter(t => !t.completed) });
-    });
-    footer.appendChild(clearBtn);
-
-    app.appendChild(footer);
-  }
-
-  return app;
-}
-
-function render() {
-  const guestRoot = buildApp();
-  const realApp = document.getElementById('app');
-  renderer.sync(guestRoot, realApp);
-  if (state.editingId) {
-    const input = realApp.querySelector('.todo-item.editing .edit');
-    if (input) {
-      input.focus();
-      input.selectionStart = input.selectionEnd = input.value.length;
-    }
-  }
-}
-
-render();
-</script>
 </body>
 </html>

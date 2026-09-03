@@ -1,5 +1,5 @@
 (() => {
-  // dev/wasm-web-runtimes/examples/codemirror/src/microesnext-promise.js
+  // src/microesnext-promise.js
   function MicroPromise(executor) {
     if (!(this instanceof MicroPromise)) throw new TypeError("Promise requires new");
     if (typeof executor !== "function") throw new TypeError("Promise executor");
