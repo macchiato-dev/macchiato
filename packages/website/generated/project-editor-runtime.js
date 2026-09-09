@@ -1,4 +1,4 @@
-// ../../dev/wasm-web-machine/dist/module/wasm-web-machine.js
+// dev/wasm-web-machine/dist/module/wasm-web-machine.js
 var CSS_PROPERTIES = /* @__PURE__ */ new Set([
   "-webkit-user-modify",
   "-webkit-user-select",
@@ -921,6 +921,11 @@ var WasmWebBridge = class {
       if (encoded[0] === "s") return { string: strings[encoded[1]]?.slice(0, 512) };
       if (encoded instanceof Uint8Array) return { bytes: encoded.byteLength };
       return { arrayLength: encoded.length };
+    }
+    function traceResult(result) {
+      if (result === null || result === void 0 || typeof result === "string" || typeof result === "number" || typeof result === "boolean") return result;
+      if (result instanceof Uint8Array) return { bytes: result.byteLength };
+      return { type: result.constructor?.name || typeof result };
     }
     function reference(value2) {
       if (typeof value2 !== "object" && typeof value2 !== "function" || value2 === null) {
@@ -1962,7 +1967,14 @@ var WasmWebBridge = class {
       try {
         const handler = operationHandlers[item[0]];
         if (!handler) fail(`unknown operation ${String(item[0])}`);
-        return handler(item, object, name);
+        const result = handler(item, object, name);
+        if (instrument) trace("operation-result", {
+          code: item[0],
+          object: item[1],
+          name,
+          result: traceResult(result)
+        });
+        return result;
       } catch (error) {
         if (instrument) trace("operation-error", {
           code: item[0],
@@ -2221,13 +2233,44 @@ var WasmWebBridge = class {
         });
       }
     }
-    this.imports = { host: { msg, now: () => performance.now() } };
+    const writeU32 = (offset, value2) => {
+      if (!instance?.exports?.memory) return;
+      new DataView(instance.exports.memory.buffer).setUint32(offset, value2, true);
+    };
+    this.imports = {
+      host: { msg, now: () => performance.now() },
+      // Emscripten is the established browser build for native libraries such
+      // as Oniguruma. Reactors need only these inert process-environment
+      // services; memory growth remains inside the module.
+      env: {
+        emscripten_notify_memory_growth() {
+        },
+        __syscall_getcwd() {
+          return -52;
+        }
+      },
+      wasi_snapshot_preview1: {
+        fd_write(_fd, _iovs, _count, written) {
+          writeU32(written, 0);
+          return 0;
+        },
+        environ_sizes_get(count, size) {
+          writeU32(count, 0);
+          writeU32(size, 0);
+          return 0;
+        },
+        environ_get() {
+          return 0;
+        }
+      }
+    };
     this.connect = async (nextInstance) => {
       if (instance) fail("host is already running a guest");
       instance = nextInstance;
       if (typeof instance?.exports?.onmsg !== "function" || !(instance.exports.memory instanceof WebAssembly.Memory)) {
         fail("guest exports do not match the 0.1 ABI");
       }
+      if (typeof instance.exports._initialize === "function") instance.exports._initialize();
       instance.exports.onmsg(0);
       await Promise.all(pendingChecks);
       if (instrument) trace("connected", { pendingChecks: pendingChecks.length });
@@ -2301,7 +2344,7 @@ var WasmWebMachine = class {
   };
 };
 
-// project-machines.js
+// packages/website/project-machines.js
 var encoder2 = new TextEncoder();
 var decoder2 = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
@@ -2617,7 +2660,7 @@ async function createProjectEditorMachine({
   });
 }
 
-// project-editor-runtime.js
+// packages/website/project-editor-runtime.js
 async function mountResourcesProjectEditor(options) {
   const controller = await createProjectEditorMachine({
     root: options.root,

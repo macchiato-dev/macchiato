@@ -14,6 +14,10 @@ npm ci --prefix "$repo_root/packages/website/blog-examples/vtv"
 npm run build --prefix "$repo_root/packages/website/blog-examples/vtv"
 npm ci --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
 npm run build --prefix "$repo_root/packages/website/blog-examples/markdown-editor"
+# The controller and its child guests share a protocol. Rebuild them together;
+# checked-in artifacts may predate a change to the workspace handoff.
+node "$repo_root/packages/website/build-project-editor.js"
+node "$repo_root/packages/website/build-resources-frontend.js"
 node "$repo_root/packages/website/build-resources-server.js"
 node "$repo_root/packages/website/build-resources-backend-artifact.js"
 node "$repo_root/packages/website/export-static.js" --out "$out_dir/site/$storage_prefix"

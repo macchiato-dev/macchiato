@@ -1350,9 +1350,11 @@ GuestStyle.prototype = Object.create(GuestObject.prototype);
 ["backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis", "fontFamily", "fontFeatureSettings", "fontKerning", "fontSize", "fontStyle", "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing", "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow", "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "right", "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace", "width", "zIndex"].forEach(function (name) {
   Object.defineProperty(GuestStyle.prototype, name, {
     set: function set(value) {
-      var property = name.replace(new RegExp("[A-Z]", "g"), function (letter) {
-        return "-" + letter.toLowerCase();
-      });
+      var property = "";
+      for (var index = 0; index < name.length; index++) {
+        var letter = name[index];
+        property += letter >= "A" && letter <= "Z" ? "-" + letter.toLowerCase() : letter;
+      }
       if (value === "") {
         immediate([3, this.reference, stringIndex("removeProperty"), [encode(property)]]);
         return;
@@ -1400,12 +1402,12 @@ Object.defineProperty(GuestElement.prototype, "style", {
 });
 GuestElement.prototype.append = function () {
   var args = [];
-  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(index < 0 || arguments.length <= index ? undefined : arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("append"), args]);
 };
 GuestElement.prototype.replaceChildren = function () {
   var args = [];
-  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(index < 0 || arguments.length <= index ? undefined : arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
 };
 GuestElement.prototype.setAttribute = function (name, value) {
@@ -1788,6 +1790,7 @@ function dispatch(message) {
   callback(eventReference < 0 ? undefined : eventForDelivery(eventReference));
   flush();
 }
+globalThis.__wwcDispatch = dispatch;
 globalThis.document = document;
 globalThis.window = globalThis.self = globalThis.parent = globalThis;
 if (typeof globalThis.URL !== "function") {
@@ -1903,8 +1906,14 @@ function GuestCustomEvent(type, options) {
 GuestCustomEvent.prototype.preventDefault = function () {
   this.defaultPrevented = true;
 };
+GuestCustomEvent.prototype.initEvent = function (type) {
+  this.type = String(type);
+};
 globalThis.CustomEvent = GuestCustomEvent;
 globalThis.Event = GuestCustomEvent;
+GuestDocument.prototype.createEvent = function (type) {
+  return new GuestCustomEvent(type);
+};
 GuestDocument.prototype.dispatchEvent = function (event) {
   if (!(event instanceof GuestCustomEvent)) throw new TypeError("only guest custom events can be dispatched");
   var listeners = (syntheticDocumentListeners[event.type] || []).slice();
@@ -1959,8 +1968,8 @@ var NativeDate = Date;
 var runtimeDateNow = function runtimeDateNow() {
   return runtimePerformanceNow ? Math.round(runtimeEpochOrigin + runtimePerformanceNow() - runtimePerformanceOrigin) : hostCall(document.reference, "dateNow", []);
 };
-function GuestDate(value) {
-  return new NativeDate(arguments.length ? Number(value) : runtimeDateNow());
+function GuestDate() {
+  return new NativeDate(arguments.length ? Number(arguments.length <= 0 ? undefined : arguments[0]) : runtimeDateNow());
 }
 GuestDate.prototype = NativeDate.prototype;
 GuestDate.now = runtimeDateNow;
@@ -1986,6 +1995,71 @@ globalThis.DOMRect = function DOMRect(x, y, width, height) {
 globalThis.DOMRectReadOnly = globalThis.DOMRect;
 var projectedClasses = Object.create(null),
   projectedClassCount = 0;
+var runtimeStringReplace = String.prototype.replace;
+String.prototype.replace = function (search, replacement) {
+  if (!globalThis.__wwcStringReplace) {
+    return runtimeStringReplace.call(this, search, replacement);
+  }
+  var replacementType = typeof replacement;
+  if (replacementType === "string" || replacementType === "number" || replacementType === "boolean" || replacement === null || replacement === undefined) {
+    return globalThis.__wwcStringReplace(this, search, replacement);
+  }
+  var replacementIsFunction = true;
+  var source = String(this),
+    output = "",
+    at = 0,
+    match = null,
+    global = false;
+  if (typeof search === "string") {
+    var foundAt = -1;
+    for (var candidate = 0; candidate + search.length <= source.length; candidate++) {
+      var same = true;
+      for (var offset = 0; offset < search.length; offset++) {
+        if (source[candidate + offset] !== search[offset]) {
+          same = false;
+          break;
+        }
+      }
+      if (same) {
+        foundAt = candidate;
+        break;
+      }
+    }
+    if (foundAt < 0) return source;
+    match = [search];
+    match.index = foundAt;
+  } else {
+    search.lastIndex = 0;
+    match = search.exec(source);
+    for (var flag = 0; search.flags && flag < search.flags.length; flag++) {
+      if (search.flags[flag] === "g") global = true;
+    }
+  }
+  while (match) {
+    for (; at < match.index; at++) output += source[at];
+    var inserted = "";
+    if (replacementIsFunction) {
+      inserted = String(replacement(match[0], match[1], match[2], match[3], match.index, source));
+    } else {
+      var text = String(replacement);
+      for (var index = 0; index < text.length; index++) {
+        if (text[index] === "$" && text[index + 1] === "&") {
+          inserted += match[0];
+          index++;
+        } else if (text[index] === "$" && text[index + 1] >= "1" && text[index + 1] <= "9") {
+          inserted += match[+text[++index]] || "";
+        } else inserted += text[index];
+      }
+    }
+    output += inserted;
+    at = match.index + match[0].length;
+    if (!global) break;
+    if (!match[0].length) search.lastIndex++;
+    match = search.exec(source);
+  }
+  for (; at < source.length; at++) output += source[at];
+  return output;
+};
 function projectClassToken(token) {
   if (new RegExp("^[a-z_][a-z0-9_-]*$", "i").test(token)) return token;
   return projectedClasses[token] || (projectedClasses[token] = "wwc-c" + ++projectedClassCount);
@@ -2277,18 +2351,25 @@ function GuestRange(reference) {
 }
 GuestRange.prototype = Object.create(GuestObject.prototype);
 globalThis.Range = GuestRange;
-var rectProperties = ["bottom", "height", "left", "right", "top", "width", "x", "y"];
+function measuredCoordinate(bytes, at) {
+  return (bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24) / 64;
+}
 function measuredRects(object, method) {
   var bytes = hostCall(document.reference, method, [object]);
   var count = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var rects = [];
   for (var index = 0; index < count; index++) {
-    var rect = {};
-    for (var property = 0; property < rectProperties.length; property++) {
-      var at = 4 + index * 32 + property * 4;
-      rect[rectProperties[property]] = (bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24) / 64;
-    }
-    rects.push(rect);
+    var at = 4 + index * 32;
+    rects.push({
+      bottom: measuredCoordinate(bytes, at),
+      height: measuredCoordinate(bytes, at + 4),
+      left: measuredCoordinate(bytes, at + 8),
+      right: measuredCoordinate(bytes, at + 12),
+      top: measuredCoordinate(bytes, at + 16),
+      width: measuredCoordinate(bytes, at + 20),
+      x: measuredCoordinate(bytes, at + 24),
+      y: measuredCoordinate(bytes, at + 28)
+    });
   }
   return rects;
 }
@@ -2349,7 +2430,7 @@ Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
   GuestCanvasContext.prototype[name] = function () {
     var args = [];
     for (var index = 0; index < arguments.length; index++) {
-      args.push(encode(Math.round(Number(arguments[index]) * 1024)));
+      args.push(encode(Math.round(Number(index < 0 || arguments.length <= index ? undefined : arguments[index]) * 1024)));
     }
     pendingOperations.push([3, this.reference, stringIndex(name), args]);
   };
@@ -2550,6 +2631,17 @@ function GuestStylesheetNode() {
   this.parentNode = null;
   this._text = "";
 }
+function projectClassSelectors(source) {
+  var pattern = new RegExp("\\.([^\\d\\s.#:\\[\\]{};>+~(),][^\\s.#:\\[\\]{};>+~(),]*)", "g");
+  var output = "",
+    at = 0,
+    match;
+  while (match = pattern.exec(source)) {
+    output += source.slice(at, match.index) + "." + projectClassToken(match[1]);
+    at = pattern.lastIndex;
+  }
+  return output + source.slice(at);
+}
 function projectStylesheet(source) {
   var output = "",
     at = 0;
@@ -2559,9 +2651,7 @@ function projectStylesheet(source) {
     var match = pattern.exec(source);
     if (!match) {
       output += source.slice(at);
-      output = output.replace(new RegExp("\\.([^\\d\\s.#:\\[\\]{};>+~(),][^\\s.#:\\[\\]{};>+~(),]*)", "g"), function (_, token) {
-        return "." + projectClassToken(token);
-      });
+      output = projectClassSelectors(output);
       return omitCssUrls(output);
     }
     output += source.slice(at, match.index);
@@ -2899,32 +2989,16 @@ globalThis.cancelAnimationFrame = function (handle) {
 };
 globalThis.setImmediate = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
-  var token = {
-    active: true,
-    index: -1
-  };
-  var index = allocateCallback(function () {
-    token.active = false;
-    callback();
-  }, true);
-  token.index = index;
+  var index = allocateCallback(callback, true);
   immediate([3, document.reference, stringIndex("task"), [encode(index)]]);
-  return token;
+  return index;
 };
 globalThis.setTimeout = function (callback, delay) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
-  var token = {
-    active: true,
-    index: -1
-  };
-  var index = allocateCallback(function () {
-    token.active = false;
-    callback();
-  }, true);
-  token.index = index;
+  var index = allocateCallback(callback, true);
   hostCall(document.reference, "timerOnce", [delay, index]);
-  return token;
+  return index;
 };
 var intervalCallbacks = Object.create(null);
 globalThis.setInterval = function (callback, delay) {
@@ -2986,9 +3060,8 @@ globalThis.matchMedia = function (query) {
   return result;
 };
 globalThis.clearTimeout = function (handle) {
-  if (!handle || handle.active !== true || !Number.isInteger(handle.index)) return;
-  handle.active = false;
-  retireOneShotCallback(handle.index);
+  if (!Number.isInteger(handle)) return;
+  retireOneShotCallback(handle);
 };
 globalThis.clearImmediate = globalThis.clearTimeout;
 globalThis.queueMicrotask = function (callback) {
@@ -3011,7 +3084,7 @@ globalThis.cancelIdleCallback = globalThis.clearTimeout;
 function reportConsole() {
   var parts = [];
   for (var index = 0; index < arguments.length; index++) {
-    var value = arguments[index];
+    var value = index < 0 || arguments.length <= index ? undefined : arguments[index];
     parts.push(value && value.stack ? String(value) + "\n" + value.stack : String(value));
   }
   globalThis.__wwcReportError(parts.join("\n"));
@@ -3296,7 +3369,7 @@ GuestObject.prototype.after = function (node) {
 };
 GuestElement.prototype.append = function () {
   for (var i = 0; i < arguments.length; i++) {
-    var child = arguments[i];
+    var child = i < 0 || arguments.length <= i ? undefined : arguments[i];
     if (!(child instanceof GuestObject)) child = document.createTextNode(String(child));
     this.appendChild(child);
   }
@@ -3308,7 +3381,7 @@ GuestElement.prototype.replaceChildren = function () {
   }
   var args = [];
   for (var j = 0; j < arguments.length; j++) {
-    var child = arguments[j];
+    var child = j < 0 || arguments.length <= j ? undefined : arguments[j];
     if (!(child instanceof GuestObject)) child = document.createTextNode(String(child));
     detachGuestNode(child);
     childrenOf(this).push(child);
@@ -3371,7 +3444,7 @@ GuestClassList.prototype.contains = function (token) {
 GuestClassList.prototype.add = function () {
   var tokens = this.tokens();
   for (var index = 0; index < arguments.length; index++) {
-    var token = projectClassToken(String(arguments[index]));
+    var token = projectClassToken(String(index < 0 || arguments.length <= index ? undefined : arguments[index]));
     if (tokens.indexOf(token) < 0) tokens.push(token);
   }
   this.element.setAttribute("class", tokens.join(" "));
@@ -3379,7 +3452,7 @@ GuestClassList.prototype.add = function () {
 GuestClassList.prototype.remove = function () {
   var remove = [];
   for (var index = 0; index < arguments.length; index++) {
-    remove.push(projectClassToken(String(arguments[index])));
+    remove.push(projectClassToken(String(index < 0 || arguments.length <= index ? undefined : arguments[index])));
   }
   this.element.setAttribute("class", this.tokens().filter(function (token) {
     return remove.indexOf(token) < 0;
@@ -3398,9 +3471,13 @@ Object.defineProperty(GuestElement.prototype, "classList", {
   }
 });
 function datasetAttribute(name) {
-  return "data-" + String(name).replace(new RegExp("[A-Z]", "g"), function (letter) {
-    return "-" + letter.toLowerCase();
-  });
+  var source = String(name),
+    result = "data-";
+  for (var index = 0; index < source.length; index++) {
+    var letter = source[index];
+    result += letter >= "A" && letter <= "Z" ? "-" + letter.toLowerCase() : letter;
+  }
+  return result;
 }
 Object.defineProperty(GuestElement.prototype, "dataset", {
   get: function get() {

@@ -7,7 +7,7 @@ var __export = (target, all) => {
     __defProp(target, name2, { get: all[name2], enumerable: true });
 };
 
-// ../../node_modules/@codemirror/view/dist/index.js
+// node_modules/@codemirror/view/dist/index.js
 var dist_exports2 = {};
 __export(dist_exports2, {
   BidiSpan: () => BidiSpan,
@@ -63,7 +63,7 @@ __export(dist_exports2, {
   tooltips: () => tooltips
 });
 
-// ../../node_modules/@codemirror/state/dist/index.js
+// node_modules/@codemirror/state/dist/index.js
 var dist_exports = {};
 __export(dist_exports, {
   Annotation: () => Annotation,
@@ -97,7 +97,7 @@ __export(dist_exports, {
   fromCodePoint: () => fromCodePoint
 });
 
-// ../../node_modules/@marijn/find-cluster-break/src/index.js
+// node_modules/@marijn/find-cluster-break/src/index.js
 var rangeFrom = [];
 var rangeTo = [];
 (() => {
@@ -171,7 +171,7 @@ function codePointSize(code2) {
   return code2 < 65536 ? 1 : 2;
 }
 
-// ../../node_modules/@codemirror/state/dist/index.js
+// node_modules/@codemirror/state/dist/index.js
 var Text = class _Text {
   /**
   Get the line description around the given position.
@@ -3545,7 +3545,7 @@ function findColumn(string2, col, tabSize, strict) {
   return strict === true ? -1 : string2.length;
 }
 
-// ../../node_modules/style-mod/src/style-mod.js
+// node_modules/style-mod/src/style-mod.js
 var C = "\u037C";
 var COUNT = typeof Symbol == "undefined" ? "__" + C : Symbol.for(C);
 var SET = typeof Symbol == "undefined" ? "__styleSet" + Math.floor(Math.random() * 1e8) : /* @__PURE__ */ Symbol("styleSet");
@@ -3676,7 +3676,7 @@ var StyleSet = class {
   }
 };
 
-// ../../node_modules/w3c-keyname/index.js
+// node_modules/w3c-keyname/index.js
 var base = {
   8: "Backspace",
   9: "Tab",
@@ -3782,7 +3782,7 @@ function keyName(event) {
   return name2;
 }
 
-// ../../node_modules/crelt/index.js
+// node_modules/crelt/index.js
 function crelt() {
   var elt = arguments[0];
   if (typeof elt == "string") elt = document.createElement(elt);
@@ -3811,7 +3811,7 @@ function add(elt, child) {
   }
 }
 
-// ../../node_modules/@codemirror/view/dist/index.js
+// node_modules/@codemirror/view/dist/index.js
 var nav = typeof navigator != "undefined" ? navigator : { userAgent: "", vendor: "", platform: "" };
 var doc = typeof document != "undefined" ? document : { documentElement: { style: {} } };
 var ie_edge = /* @__PURE__ */ /Edge\/(\d+)/.exec(nav.userAgent);
@@ -14538,7 +14538,7 @@ var __test = {
   getHeightChangeFlag: () => heightChangeFlag
 };
 
-// ../../node_modules/@codemirror/language/dist/index.js
+// node_modules/@codemirror/language/dist/index.js
 var dist_exports5 = {};
 __export(dist_exports5, {
   DocInput: () => DocInput,
@@ -14597,7 +14597,7 @@ __export(dist_exports5, {
   unfoldEffect: () => unfoldEffect
 });
 
-// ../../node_modules/@lezer/common/dist/index.js
+// node_modules/@lezer/common/dist/index.js
 var dist_exports3 = {};
 __export(dist_exports3, {
   DefaultBufferLength: () => DefaultBufferLength,
@@ -16664,7 +16664,7 @@ function enterFragments(mounts, ranges) {
   return result2;
 }
 
-// ../../node_modules/@lezer/highlight/dist/index.js
+// node_modules/@lezer/highlight/dist/index.js
 var dist_exports4 = {};
 __export(dist_exports4, {
   Tag: () => Tag,
@@ -17422,7 +17422,7 @@ var classHighlighter = tagHighlighter([
   { tag: tags.punctuation, class: "tok-punctuation" }
 ]);
 
-// ../../node_modules/@codemirror/language/dist/index.js
+// node_modules/@codemirror/language/dist/index.js
 var _a;
 var languageDataProp = /* @__PURE__ */ new NodeProp();
 function defineLanguageFacet(baseData) {
@@ -19735,7 +19735,7 @@ var marks = {
   auto: /* @__PURE__ */ Decoration.mark({ class: "cm-iso", inclusive: true, attributes: { dir: "auto" }, bidiIsolate: null })
 };
 
-// ../../node_modules/@codemirror/commands/dist/index.js
+// node_modules/@codemirror/commands/dist/index.js
 var toggleComment = (target) => {
   let { state } = target, line = state.doc.lineAt(state.selection.main.from), config2 = getConfig(target.state, line.from);
   return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
@@ -20830,7 +20830,7 @@ var defaultKeymap = /* @__PURE__ */ [
   { key: "Ctrl-m", mac: "Shift-Alt-m", run: toggleTabFocusMode }
 ].concat(standardKeymap);
 
-// ../../node_modules/@codemirror/search/dist/index.js
+// node_modules/@codemirror/search/dist/index.js
 var basicNormalize = typeof String.prototype.normalize == "function" ? (x) => x.normalize("NFKD") : (x) => x;
 var SearchCursor = class {
   /**
@@ -21912,7 +21912,7 @@ var searchExtensions = [
   baseTheme3
 ];
 
-// ../../node_modules/@codemirror/autocomplete/dist/index.js
+// node_modules/@codemirror/autocomplete/dist/index.js
 var dist_exports6 = {};
 __export(dist_exports6, {
   CompletionContext: () => CompletionContext,
@@ -23881,7 +23881,7 @@ function setSelectedCompletion(index) {
   return setSelectedEffect.of(index);
 }
 
-// ../../node_modules/@codemirror/lint/dist/index.js
+// node_modules/@codemirror/lint/dist/index.js
 var SelectedDiagnostic = class {
   constructor(from, to, diagnostic) {
     this.from = from;
@@ -24490,7 +24490,7 @@ var lintExtensions = [
   baseTheme5
 ];
 
-// ../../node_modules/codemirror/dist/index.js
+// node_modules/codemirror/dist/index.js
 var basicSetup = /* @__PURE__ */ (() => [
   lineNumbers(),
   highlightActiveLineGutter(),
@@ -24520,7 +24520,7 @@ var basicSetup = /* @__PURE__ */ (() => [
   ])
 ])();
 
-// ../../node_modules/@lezer/lr/dist/index.js
+// node_modules/@lezer/lr/dist/index.js
 var dist_exports7 = {};
 __export(dist_exports7, {
   ContextTracker: () => ContextTracker,
@@ -26291,7 +26291,7 @@ function getSpecializer(spec) {
   return spec.get;
 }
 
-// ../project-editor/src/syntax.js
+// packages/project-editor/src/syntax.js
 function hasSyntaxErrors(state, language3) {
   const source = state.doc.toString();
   if (language3 === "javascript") {
@@ -26313,7 +26313,7 @@ function hasSyntaxErrors(state, language3) {
   return false;
 }
 
-// ../project-editor/src/source-envelope.js
+// packages/project-editor/src/source-envelope.js
 var isSafeInteger = (value) => typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
 var SOURCE_LIMITS = Object.freeze({
   maxCodePoints: 500 * 80 * 2,
@@ -26380,7 +26380,7 @@ function createSourceEnvelopeExtension(options = {}) {
   return [hardWrap, limits];
 }
 
-// ../project-editor/src/guest.js
+// packages/project-editor/src/guest.js
 var isSafeInteger2 = (value) => typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
 if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
   globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
@@ -26908,7 +26908,7 @@ globalThis.__codeEditorBeforeInput = (json) => {
   return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });
 };
 
-// ../hub/src/project-history.js
+// packages/hub/src/project-history.js
 var PATH = /^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$/;
 var MAX_FILES = 64;
 var MAX_FILE_BYTES = 70 * 1024 * 1024;
@@ -27045,7 +27045,7 @@ function emptyProjectSnapshot() {
   return normalizeProjectSnapshot({ files: [], config: {} });
 }
 
-// project-editor-guest.js
+// packages/website/project-editor-guest.js
 var notifyHost = globalThis.__browserUseNotify;
 globalThis.__browserUseNotify = (text) => {
   let message;
@@ -27152,7 +27152,7 @@ globalThis.__resourcesProjectStatusReport = (json) => {
 };
 globalThis.__resourcesProjectStatusInspect = () => projectStatusResult();
 
-// ../hub/src/url-pattern.js
+// packages/hub/src/url-pattern.js
 var HOST_LABEL = /^(?:\*|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$/i;
 function wildcardSource(value, { dotAware = false } = {}) {
   return value.split("*").map((part) => part.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")).join(dotAware ? "[^.]+" : ".*");
@@ -27204,7 +27204,7 @@ function validateAllowedUrlPatterns(patterns) {
   return patterns;
 }
 
-// ../hub/src/container-elements.js
+// packages/hub/src/container-elements.js
 var rule = (parents, attributes = []) => Object.freeze({ parents: Object.freeze(parents), attributes: Object.freeze(attributes) });
 var CONTAINER_ELEMENT_RULES = Object.freeze({
   article: Object.freeze({
@@ -27286,7 +27286,7 @@ function containerElementNames(container) {
   return Object.keys(CONTAINER_ELEMENT_RULES[container] || {});
 }
 
-// project-editor-application-services.js
+// packages/website/project-editor-application-services.js
 var listeners = null;
 var nextRequest = 1;
 var pending = /* @__PURE__ */ new Map();
@@ -27462,7 +27462,7 @@ async function mountResourcesProjectPreview(options) {
   });
 }
 
-// project-html-parser.js
+// packages/website/project-html-parser.js
 var ParsedNode = class {
   constructor(type, name2 = "", text = "", attributes = []) {
     this.nodeType = type;
@@ -27577,7 +27577,7 @@ function parseProjectHtml(source) {
   return document2;
 }
 
-// content-form-client.js
+// packages/website/content-form-client.js
 var PROJECT_IMAGE_TYPES = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
 function isProjectImage(file) {
   const extension = String(file?.path || "").split(".").at(-1).toLowerCase();
