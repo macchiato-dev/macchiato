@@ -49,9 +49,66 @@ function urlMatchesAllowedPatterns(url, patterns) {
   return (patterns || []).some((pattern) => compileAllowedUrlPattern(pattern)(url));
 }
 
+// packages/website/project-output-storage.js
+var encoder = new TextEncoder();
+var limits = { local: 8192, session: 128 * 1024 };
+var ProjectOutputStorage = class {
+  constructor(window2, scope) {
+    if (typeof scope !== "string" || !scope || scope.length > 2048) {
+      throw new TypeError("Project storage requires a bounded controller identity");
+    }
+    this.window = window2;
+    this.prefix = `resources-output:${encodeURIComponent(scope)}:`;
+    this.listeners = /* @__PURE__ */ new Set();
+    this.changed = (event) => {
+      for (const entry of this.listeners) {
+        if (event.storageArea === this.area(entry.kind) && (event.key === null || event.key === this.key(entry.key))) entry.listener();
+      }
+    };
+    window2.addEventListener("storage", this.changed);
+  }
+  area(kind) {
+    if (!Object.hasOwn(limits, kind)) throw new TypeError("Unknown project storage area");
+    return kind === "local" ? this.window.localStorage : this.window.sessionStorage;
+  }
+  key(key) {
+    if (typeof key !== "string" || key.length > 1024) throw new TypeError("Project storage key is too long");
+    return this.prefix + key;
+  }
+  get(kind, key) {
+    return this.area(kind).getItem(this.key(key));
+  }
+  set(kind, key, value) {
+    const area = this.area(kind), target = this.key(key);
+    if (typeof value !== "string") throw new TypeError("Project storage values must be strings");
+    let size = encoder.encode(key).length + encoder.encode(value).length;
+    for (let index = 0; index < area.length && size <= limits[kind]; index++) {
+      const existing = area.key(index);
+      if (existing?.startsWith(this.prefix) && existing !== target) {
+        size += encoder.encode(existing.slice(this.prefix.length)).length;
+        size += encoder.encode(area.getItem(existing) || "").length;
+      }
+    }
+    if (size > limits[kind]) throw new RangeError(`Project ${kind} storage quota exceeded`);
+    area.setItem(target, value);
+  }
+  delete(kind, key) {
+    this.area(kind).removeItem(this.key(key));
+  }
+  listen(kind, key, listener) {
+    this.area(kind);
+    this.key(key);
+    this.listeners.add({ kind, key, listener });
+  }
+  destroy() {
+    this.window.removeEventListener("storage", this.changed);
+    this.listeners.clear();
+  }
+};
+
 // packages/website/project-output-frame-controller.js
 var protocol = "resources-project-output-machine-v1";
-var encoder = new TextEncoder();
+var encoder2 = new TextEncoder();
 var decoder = new TextDecoder();
 var machine = null;
 var response;
@@ -64,16 +121,17 @@ var routeListeners = /* @__PURE__ */ new Set();
 var moduleFiles = /* @__PURE__ */ new Map();
 var moduleRequests = /* @__PURE__ */ new Map();
 var nextModuleRequest = 1;
+var storage;
 function taggedMessage(tag, value) {
-  const bytes = encoder.encode(value);
+  const bytes = encoder2.encode(value);
   const message = new Uint8Array(bytes.length + 1);
   message[0] = tag;
   message.set(bytes, 1);
   return message;
 }
 function callMessage(name, payload) {
-  const fn = encoder.encode(name);
-  const argument = encoder.encode(JSON.stringify(payload));
+  const fn = encoder2.encode(name);
+  const argument = encoder2.encode(JSON.stringify(payload));
   const message = new Uint8Array(2 + fn.length + argument.length);
   message[0] = 2;
   message.set(fn, 1);
@@ -100,7 +158,7 @@ function projectFetch(files, allowedOrigins, maxBytes = 1048576) {
     const file = projectFiles.get(path);
     if (!file) throw new Error(`Project file not found: ${path}`);
     const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
-    const bytes = data ? Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0)) : encoder.encode(file.content);
+    const bytes = data ? Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0)) : encoder2.encode(file.content);
     if (bytes.byteLength > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
     return resourceResult(bytes, data?.[1] || mimeFor(path), data ? "" : file.content);
   };
@@ -130,7 +188,7 @@ function imageResolver(files) {
   for (const file of files) {
     if (/^data:image\/(?:gif|jpeg|png|webp);base64,/i.test(file.content)) images.set(file.path, file.content);
     else if (file.path.toLowerCase().endsWith(".svg"))
-      images.set(file.path, resourceResult(encoder.encode(file.content), "image/svg+xml").resourceUrl);
+      images.set(file.path, resourceResult(encoder2.encode(file.content), "image/svg+xml").resourceUrl);
   }
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
@@ -169,6 +227,7 @@ async function start(payload, port) {
   imageResolverImpl = imageResolver(payload.files || []);
   navigationPatterns = payload.allowedLinkPatterns || [];
   moduleFiles = new Map((payload.files || []).map((file) => [file.path, file.content]));
+  storage = new ProjectOutputStorage(window, payload.storageScope);
   machine = new WasmWebMachine(runtime, document.getElementById("project-output-a"), {
     environment: payload.environment || {},
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1e3 : 50,
@@ -188,10 +247,7 @@ async function start(payload, port) {
           addEventListener("hashchange", listener);
         }
       },
-      storage: { get: () => null, set() {
-      }, delete() {
-      }, listen() {
-      } }
+      storage
     },
     onMessage(text) {
       if (text.startsWith("__wwcModule:")) {
@@ -242,6 +298,8 @@ async function operation(name, payload) {
   }
   if (name === "inspect") return { runtime: "quickjs", programs, realm: "iframe" };
   if (name === "destroy") {
+    storage?.destroy();
+    storage = null;
     for (const listener of routeListeners) removeEventListener("hashchange", listener);
     routeListeners.clear();
     for (const pending of moduleRequests.values()) pending.reject(new Error("Project output was destroyed"));

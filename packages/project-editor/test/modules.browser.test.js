@@ -36,6 +36,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
       return;
     }
     const frame = document.createElement("iframe");
+    frame.sandbox = "allow-scripts allow-same-origin allow-forms";
     frame.src = "/frame.html";
     await new Promise(resolve => { frame.onload = resolve; document.body.append(frame); });
     const channel = new MessageChannel(), pending = new Map();
@@ -83,6 +84,19 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   files[1].content = 'import { result } from "./lib/a.js"; const loaded = await import("./lib/value.js"); await new Promise(resolve => setTimeout(resolve, 5)); document.querySelector("main").textContent = result + loaded.value;';
   await load(files);
   assert.equal(await surface.innerText(), "AB70");
+  if (iframe) {
+    files[1].content = 'sessionStorage.setItem("notes", "kept"); document.querySelector("main").textContent = sessionStorage.getItem("notes");';
+    await load(files);
+    assert.equal(await surface.innerText(), "kept");
+    files[1].content = 'document.querySelector("main").textContent = sessionStorage.getItem("notes");';
+    await load(files);
+    assert.equal(await surface.innerText(), "kept");
+    files[0].content = '<dialog><form method="dialog"><button>Cancel</button></form></dialog><script type="module" src="app.js"></script>';
+    files[1].content = 'document.querySelector("dialog").showModal();';
+    await load(files);
+    await page.frameLocator("iframe").getByRole("button", { name: "Cancel", exact: true }).click();
+    assert.equal(await page.frameLocator("iframe").locator("dialog").evaluate(node => node.open), false);
+  }
   assert.ok(network.every(url => url.startsWith("http://modules.test/")));
   await page.evaluate(() => window.output.destroy());
   assert.deepEqual(errors, []);

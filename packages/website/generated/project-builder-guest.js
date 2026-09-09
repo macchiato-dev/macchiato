@@ -11519,6 +11519,7 @@
     "button",
     "canvas",
     "code",
+    "dialog",
     "div",
     "em",
     "footer",
@@ -11689,6 +11690,9 @@
         if (!name || !svg && !ELEMENTS.has(name)) throw new Error(`<${value.localName}> is not available in the project surface`);
         const attributes = value.attributeEntries.map(([key2, data2]) => [svg ? { viewbox: "viewBox", gradientunits: "gradientUnits" }[key2] || key2 : key2, data2]).filter(([key2, data2]) => (ATTRIBUTES.has(key2) || /^(aria|data)-[a-z][a-z0-9-]*$/.test(key2) || svg && SVG_ATTRIBUTES.has(key2)) && data2.length <= 2e3);
         const href = value.getAttribute("href") || "";
+        if (name === "form" && value.getAttribute("method") === "dialog") {
+          attributes.push(["method", "dialog"]);
+        }
         if (value.localName === "a" && href) {
           if (href.length > 2048) throw new Error("Link URL is too long");
           attributes.push(["href", href]);

@@ -87,6 +87,18 @@ cycles, dynamic imports, and top-level `await`. Each output load uses new module
 identities so edited dependencies are evaluated again. Old module records are
 released when the output runtime is disposed, not on each refresh.
 
+Output storage is separate from the website's storage. The controller chooses
+the namespace from the project identity (or page path for an unsaved project),
+not from guest input or the iframe's shared URL. Guest keys are unprefixed;
+local storage is limited to 8 KiB and session storage to 128 KiB per project,
+counting UTF-8 key and value bytes. Changes can be observed across eligible
+same-origin contexts without exposing other projects' keys. Removing an output
+removes its listeners, but does not erase its saved notes or preferences.
+
+Native `dialog` elements and `form method="dialog"` work in output. The machine
+cancels all network form submissions, including submission to the current URL
+when no action is specified. Guest submit handlers still receive the event.
+
 Output mounts in one static iframe from the beginning, so initial rendering,
 ordinary refreshes, and future hot reload use the same surface semantics. A
 source edit starts a configurable 900 ms trailing debounce and prepares the

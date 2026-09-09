@@ -700,6 +700,7 @@ var ATTRIBUTES = /* @__PURE__ */ new Set([
   "href",
   "id",
   "main-field",
+  "method",
   "name",
   "offset",
   "opacity",
@@ -828,6 +829,7 @@ var WasmWebBridge = class {
       HTMLCanvasElement,
       HTMLDialogElement,
       HTMLElement,
+      HTMLFormElement,
       HTMLImageElement,
       HTMLInputElement,
       HTMLMetaElement,
@@ -987,6 +989,15 @@ var WasmWebBridge = class {
       if (documentTarget) return node === hostDocument.head || node === hostDocument.body || hostDocument.documentElement.contains(node);
       return ownedNodes.has(node) || roots.some((root) => node === root || root.contains(node));
     }
+    const guardSubmit = (event) => {
+      const form = event.target;
+      if (form instanceof HTMLFormElement && insideDocument(form)) {
+        const submitter = event.submitter;
+        const method = submitter?.getAttribute("formmethod")?.toLowerCase() ?? form.method;
+        if (method !== "dialog") event.preventDefault();
+      }
+    };
+    if (!messagesOnly) hostDocument.addEventListener("submit", guardSubmit, true);
     function get(object, name) {
       if ((object instanceof MediaQueryList || object instanceof MediaQueryListEvent) && (name === "matches" || name === "media")) return object[name];
       if (object === hostDocument && name === "profiling" && options.development === true) {
@@ -1741,6 +1752,9 @@ var WasmWebBridge = class {
         if (args[0] === "form" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement) || args[1] !== "")) {
           fail("only an empty form override is allowed on controls");
         }
+        if (args[0] === "method" && (!(object instanceof HTMLFormElement) || args[1] !== "dialog")) {
+          fail("only the non-network dialog form method is allowed");
+        }
         if (args[0] === "main-field" && (!(object instanceof HTMLInputElement) || args[1] !== "true")) {
           fail("main-field is only allowed on a search input");
         }
@@ -2305,6 +2319,7 @@ var WasmWebBridge = class {
       }
     };
     this.destroy = () => {
+      if (!messagesOnly) hostDocument.removeEventListener("submit", guardSubmit, true);
       for (const object of listenedObjects) {
         for (const record of eventListeners.get(object) || []) {
           object.removeEventListener(record.type, record.listener, { capture: record.capture });
