@@ -27,6 +27,26 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     const { default: Machine } = await import("/machine.js");
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
     window.messages = [];
+    const pendingTimers = new Set(), pendingFrames = new Set(), listeners = new Map();
+    const timeout = window.setTimeout, clear = window.clearTimeout;
+    const frame = window.requestAnimationFrame, cancel = window.cancelAnimationFrame;
+    const add = window.addEventListener, remove = window.removeEventListener;
+    window.setTimeout = (callback, delay, ...args) => {
+      const id = timeout(() => { pendingTimers.delete(id); callback(...args); }, delay);
+      pendingTimers.add(id); return id;
+    };
+    window.clearTimeout = id => { pendingTimers.delete(id); clear(id); };
+    window.requestAnimationFrame = callback => {
+      const id = frame(time => { pendingFrames.delete(id); callback(time); });
+      pendingFrames.add(id); return id;
+    };
+    window.cancelAnimationFrame = id => { pendingFrames.delete(id); cancel(id); };
+    window.addEventListener = function (type, callback, options) {
+      listeners.set(callback, type); add.call(this, type, callback, options);
+    };
+    window.removeEventListener = function (type, callback, options) {
+      listeners.delete(callback); remove.call(this, type, callback, options);
+    };
     for (let index = 0; index < 10; index++) {
       const machine = new Machine(module, document.getElementById("guest"), {
         frameInterval: index % 2 ? 30 : 0,
@@ -50,13 +70,48 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
       machine.onmsg(message);
       machine.destroy();
       machine.destroy();
+      if (pendingTimers.size || pendingFrames.size || listeners.size) {
+        throw new Error('Native work retained after disposal: ' + JSON.stringify({
+          timers: pendingTimers.size, frames: pendingFrames.size, listeners: listeners.size,
+        }));
+      }
     }
     dispatchEvent(new Event('resize'));
     dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     document.dispatchEvent(new MouseEvent('click'));
+    const live = new Machine(module, document.getElementById('guest'), {
+      onMessage: message => messages.push(message),
+    });
+    await live.onmsg(0);
+    const code = new TextEncoder().encode(`
+      function removed() { __wwcPostMessage('removed callback'); }
+      for (var index = 0; index < 4200; index++) {
+        addEventListener('resize', removed);
+        removeEventListener('resize', removed);
+        clearInterval(setTimeout(removed, 60000));
+        clearTimeout(setInterval(removed, 60000));
+        clearImmediate(setImmediate(removed));
+      }
+      function active() { __wwcPostMessage(this === globalThis ? 'live callback' : 'wrong receiver'); }
+      addEventListener('resize', active);
+      addEventListener('resize', active);
+    `);
+    const message = new Uint8Array(code.length + 1);
+    message[0] = 1; message.set(code, 1);
+    live.onmsg(message);
+    if (pendingTimers.size) throw new Error('Cancelled timers retained in browser');
+    if (listeners.size !== 2) throw new Error('Expected only submission guard and one resize listener');
+    dispatchEvent(new Event('resize'));
+    // Disposal also invalidates the event checkpoint already queued by this
+    // synchronous dispatch, before its microtask has a chance to run.
+    live.destroy();
+    if (listeners.size) throw new Error('Window listeners retained');
+    Object.assign(window, { setTimeout: timeout, clearTimeout: clear,
+      requestAnimationFrame: frame, cancelAnimationFrame: cancel,
+      addEventListener: add, removeEventListener: remove });
   });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.waitForTimeout(120);
-  assert.deepEqual(await page.evaluate(() => messages), []);
+  assert.deepEqual(await page.evaluate(() => messages), ['live callback']);
   assert.deepEqual(errors, []);
 });

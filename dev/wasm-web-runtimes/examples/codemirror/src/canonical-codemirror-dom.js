@@ -1130,35 +1130,37 @@ globalThis.cancelAnimationFrame = function (handle) {
   delete animationCallbacks[handle];
   immediate([3, document.reference, stringIndex("cancelAnimationFrame"), [encode(handle)]]);
 };
-globalThis.setImmediate = function (callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  var index = allocateCallback(callback, true);
-  immediate([3, document.reference, stringIndex("task"), [encode(index)]]);
-  return index;
-};
-globalThis.setTimeout = function (callback, delay) {
+var timerCallbacks = Object.create(null);
+function createTimer(callback, delay, repeat, args) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
-  var index = allocateCallback(callback, true);
-  hostCall(document.reference, "timerOnce", [delay, index]);
-  return index;
-};
-var intervalCallbacks = Object.create(null);
-globalThis.setInterval = function (callback, delay) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
-  var index = allocateCallback(callback, false);
-  var handle = hostCall(document.reference, "timer", [delay, index]);
-  intervalCallbacks[handle] = index;
+  var handle;
+  var index = allocateCallback(function () {
+    if (!repeat) delete timerCallbacks[handle];
+    callback.apply(globalThis, args);
+  }, !repeat);
+  handle = hostCall(document.reference, repeat ? "timer" : "timerOnce", [delay, index]);
+  timerCallbacks[handle] = index;
   return handle;
+}
+globalThis.setTimeout = function (callback, delay) {
+  return createTimer(callback, delay, false, arguments.length > 2 ? Array.prototype.slice.call(arguments, 2) : null);
 };
-globalThis.clearInterval = function (handle) {
-  var index = intervalCallbacks[handle];
+globalThis.setInterval = function (callback, delay) {
+  return createTimer(callback, delay, true, arguments.length > 2 ? Array.prototype.slice.call(arguments, 2) : null);
+};
+globalThis.setImmediate = function (callback) {
+  return createTimer(callback, 0, false, arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : null);
+};
+globalThis.clearTimeout = function (handle) {
+  handle = Number(handle);
+  var index = timerCallbacks[handle];
   if (index === undefined) return;
-  releaseCallback(index);
-  delete intervalCallbacks[handle];
   hostCall(document.reference, "timerCancel", [handle]);
+  delete timerCallbacks[handle];
+  releaseCallback(index);
 };
+globalThis.clearInterval = globalThis.clearImmediate = globalThis.clearTimeout;
 // Keep a real MediaQueryList lease. Preference changes do not necessarily
 // resize the viewport, and .matches remains live even without a listener.
 function GuestMediaQueryList(reference) { GuestObject.call(this, reference); }
@@ -1180,11 +1182,6 @@ GuestMediaQueryList.prototype.removeListener = function (callback) {
 globalThis.matchMedia = function (query) {
   return new GuestMediaQueryList(hostCall(document.reference, "matchMedia", [String(query)])[1]);
 };
-globalThis.clearTimeout = function (handle) {
-  if (!Number.isInteger(handle)) return;
-  retireOneShotCallback(handle);
-};
-globalThis.clearImmediate = globalThis.clearTimeout;
 globalThis.queueMicrotask = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   Promise.resolve().then(callback);
@@ -1286,7 +1283,7 @@ globalThis.addEventListener = function (type, callback) {
   }
   var record = { type: type, callback: callback, active: true };
   var callbackIndex = allocateCallback(function (event) {
-    if (record.active) record.callback(event || { type: type });
+    if (record.active) record.callback.call(globalThis, event || { type: type });
   }, false);
   record.index = callbackIndex;
   immediate([3, document.reference, stringIndex("windowListen"), [
