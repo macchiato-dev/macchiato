@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -9,8 +9,10 @@ const option = (name, fallback) => {
   const index = process.argv.indexOf(name);
   return index < 0 ? fallback : process.argv[index + 1];
 };
-const generated = option("--output-dir", join(here, "generated"));
-const application = option("--application", join(here, "application.js"));
+// Cargo runs in the runtime directory, so its environment needs absolute
+// paths even when the build command was given repository-relative arguments.
+const generated = resolve(option("--output-dir", join(here, "generated")));
+const application = resolve(option("--application", join(here, "application.js")));
 mkdirSync(generated, { recursive: true });
 const source = [join(here, "runtime.js"), application]
   .map(path => readFileSync(path, "utf8").trim()).join("\n\n") + "\n";

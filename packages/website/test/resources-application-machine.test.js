@@ -144,6 +144,20 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.deepEqual(await withTimeout(application.request(["store", "content",
     "publishProject", ["user-1", "project-1", { title: "Ready" }]])),
     ["ok", true]);
+  // The real tour has a current and a published snapshot around 6 MiB each.
+  // Exercise normalization and the response encoder, not just SQL transport.
+  const largeSource = "<p>猫</p>\n".repeat(550_000);
+  const largeSnapshot = JSON.stringify({ files: [{ path: "index.html", content: largeSource }], config: {} });
+  await database.execute({ sql: "UPDATE resource_project_state SET snapshot_json = ? WHERE project_id = ?",
+    args: [largeSnapshot, "project-1"] });
+  await database.execute({ sql: "UPDATE resource_project_publications SET snapshot_json = ? WHERE project_id = ?",
+    args: [largeSnapshot, "project-1"] });
+  const largeWorkspace = await application.request(["store", "content", "getProjectWorkspace",
+    ["latte", "renamed", "user-1"]]);
+  assert.equal(largeWorkspace[0], "ok");
+  assert.ok(largeWorkspace[1].snapshot.files[0].content === largeSource);
+  assert.ok(largeWorkspace[1].publishedSnapshot.files[0].content === largeSource);
+  assert.equal(largeWorkspace[1].hasUnpublishedChanges, false);
   assert.deepEqual(await withTimeout(application.request(["store", "content",
     "deleteProject", ["user-1", "project-1"]])), ["ok", true]);
 });

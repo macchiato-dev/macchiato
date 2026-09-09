@@ -1,0 +1,804 @@
+ÃSQL_OPERATIONS(STORE_SQL_OPERATIONSpolicyPendingpolicyFailpolicyValuespolicyOperationserverHandleconvertedpolicyResultserverResumebeginPolicyunescape$encodeURIComponent$decodeURIComponentescape__hostSendisFinitehostCallreadkind"SELECT 1 AS readysqlmaxRows
+readyresultsystem.readyîSELECT 1 FROM resource_organizations WHERE slug = ? COLLATE NOCASE LIMIT 1usernameparametersexists@account.organization-slug-exists
+writetUPDATE users SET username = ?, updated_at = ? WHERE id = ?updated-atuser-idaffected.account.update-usernameÑUPDATE resource_projects SET namespace_slug = ?, updated_at = ?
+                WHERE namespace_kind = 'user' AND namespace_id = ?@account.update-project-namespacerSELECT id, display_name, username FROM users WHERE id = ?iddisplay_nameaccount.getzSELECT 1 FROM users WHERE username = ? COLLATE NOCASE LIMIT 1slug.content.username-existsÃINSERT INTO resource_organizations
+                  (id, owner_user_id, slug, name, description, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)owner-user-iddescriptioncreated-at6content.insert-organizationÏ
+SELECT v.sequence, v.reason, v.created_at, COALESCE(l.title, '') AS title,
+                     l.saved_at,
+                     CASE WHEN l.sequence = (SELECT x.sequence FROM resource_project_version_labels x
+                       WHERE x.project_id = v.project_id ORDER BY x.saved_at DESC, x.sequence DESC LIMIT 1)
+                       THEN 1 ELSE 0 END AS latest
+              FROM resource_project_versions v
+              LEFT JOIN resource_project_version_labels l ON l.project_id = v.project_id AND l.sequence = v.sequence
+              JOIN resource_projects p ON p.id = v.project_id
+              WHERE v.project_id = ? AND p.owner_user_id = ?
+              ORDER BY v.sequence DESCproject-idsequencecreated_at
+titlestring-emptysaved_atnullable-numberlatest content.versions¬SELECT s.last_version_sequence, s.checkpoint_snapshot_json
+              FROM resource_project_state s
+              JOIN resource_projects p ON p.id = s.project_id
+              WHERE s.project_id = ? AND p.owner_user_id = ?*last_version_sequence0checkpoint_snapshot_json,content.latest-version˛SELECT v.sequence, v.patch_json
+              FROM resource_project_versions v
+              JOIN resource_projects p ON p.id = v.project_id
+              WHERE v.project_id = ? AND p.owner_user_id = ? AND v.sequence <= ?
+              ORDER BY v.sequencepatch_json.content.version-patchesîUPDATE resource_notifications SET read_at = ? WHERE id = ? AND user_id = ?nownotification-idForganization.mark-notification-readöDELETE FROM resource_organization_invitations
+              WHERE status = 'pending' AND id = (
+                SELECT invitation_id FROM resource_notifications WHERE id = ? AND user_id = ?
+              )Lorganization.delete-pending-invitation~DELETE FROM resource_notifications WHERE id = ? AND user_id = ?@organization.delete-notificationÜSELECT n.id, i.id AS invitation_id, i.organization_id, i.role, i.status, o.slug
+              FROM resource_notifications n
+              JOIN resource_organization_invitations i ON i.id = n.invitation_id
+              JOIN resource_organizations o ON o.id = i.organization_id
+              WHERE n.id = ? AND n.user_id = ?invitation_idorganization_idrole.organization.invitationíINSERT INTO resource_organization_members (organization_id, user_id, role, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)organization-id4organization.insert-memberËUPDATE resource_organization_invitations SET status = 'accepted', updated_at = ? WHERE id = ? AND status = 'pending'invitation-id<organization.accept-invitation∫SELECT o.id, o.slug, o.name, o.description, o.owner_user_id,
+                   CASE WHEN o.owner_user_id = ? THEN 'owner' ELSE m.role END AS viewer_role
+            FROM resource_organizations o
+            LEFT JOIN resource_organization_members m
+              ON m.organization_id = o.id AND m.user_id = ?
+            WHERE o.slug = ? COLLATE NOCASE
+              AND (o.owner_user_id = ? OR m.role = 'admin')viewer-aviewer-bviewer-cowner_user_idviewer_role(organization.managedÄSELECT id, username FROM users WHERE username = ? COLLATE NOCASE:organization.user-by-username™SELECT 1 FROM resource_organization_members WHERE organization_id = ? AND user_id = ?8organization.existing-member¿SELECT 1 FROM resource_organization_members WHERE organization_id = ? AND role = 'admin' LIMIT 16organization.existing-admin™INSERT INTO resource_organization_invitations
+                  (id, organization_id, inviter_user_id, invitee_user_id, role, status, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)inviter-idinvitee-id<organization.insert-invitationæINSERT INTO resource_notifications (id, user_id, kind, invitation_id, read_at, created_at)
+                VALUES (?, ?, 'organization_invitation', ?, NULL, ?)@organization.insert-notificationˆUPDATE resource_organization_members SET role = ?, updated_at = ?
+                WHERE organization_id = ? AND user_id = ?0organization.change-role$migration.schema-1parameterCountÜCREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    display_name TEXT NOT NULL,
+    username TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT$migration.schema-2ˆCREATE TABLE IF NOT EXISTS user_identities (
+    provider TEXT NOT NULL,
+    provider_user_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    provider_username TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (provider, provider_user_id)
+  ) STRICT$migration.schema-3»CREATE TABLE IF NOT EXISTS user_emails (
+    normalized_email TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES users(id),
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT$migration.schema-4§CREATE INDEX IF NOT EXISTS user_identities_user_id
+    ON user_identities(user_id)$migration.schema-5îCREATE INDEX IF NOT EXISTS user_emails_user_id
+    ON user_emails(user_id)$migration.schema-6∫CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique
+    ON users(username COLLATE NOCASE)"account.providersêSELECT provider FROM user_identities WHERE user_id = ? ORDER BY provider account.identityûSELECT users.id, users.display_name, users.username
+              FROM user_identities
+              JOIN users ON users.id = user_identities.user_id
+              WHERE provider = ? AND provider_user_id = ?6account.update-display-name†UPDATE users SET display_name = ?, updated_at = ?
+                  WHERE id = ?@account.update-provider-username¸UPDATE user_identities SET provider_username = ?, updated_at = ?
+                  WHERE provider = ? AND provider_user_id = ? account.by-emailÏSELECT users.id, users.display_name, users.username
+              FROM user_emails
+              JOIN users ON users.id = user_emails.user_id
+              WHERE normalized_email = ?&account.insert-user⁄INSERT INTO users (id, display_name, username, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?)(account.insert-emailñINSERT INTO user_emails
+                  (normalized_email, email, user_id, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?).account.insert-identity»INSERT INTO user_identities
+                (provider, provider_user_id, user_id, provider_username, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?)$migration.schema-7ÊCREATE TABLE IF NOT EXISTS resource_organizations (
+    id TEXT PRIMARY KEY,
+    owner_user_id TEXT NOT NULL REFERENCES users(id),
+    slug TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT$migration.schema-8‡CREATE INDEX IF NOT EXISTS resource_organizations_owner
+    ON resource_organizations(owner_user_id, created_at)$migration.schema-9å	CREATE TABLE IF NOT EXISTS resource_projects (
+    id TEXT PRIMARY KEY,
+    owner_user_id TEXT NOT NULL REFERENCES users(id),
+    namespace_kind TEXT NOT NULL CHECK (namespace_kind IN ('user', 'organization')),
+    namespace_id TEXT NOT NULL,
+    namespace_slug TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    visibility TEXT NOT NULL CHECK (visibility IN ('public', 'private')),
+    template TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE (namespace_kind, namespace_id, slug)
+  ) STRICT&migration.schema-10ÃCREATE INDEX IF NOT EXISTS resource_projects_owner
+    ON resource_projects(owner_user_id, created_at)&migration.schema-11ƒCREATE TRIGGER IF NOT EXISTS resource_projects_global_limit
+    BEFORE INSERT ON resource_projects
+    WHEN (SELECT COUNT(*) FROM resource_projects) >= 50000
+    BEGIN SELECT RAISE(ABORT, 'resource_projects_global_limit'); END&migration.schema-12äCREATE TRIGGER IF NOT EXISTS resource_projects_owner_limit
+    BEFORE INSERT ON resource_projects
+    WHEN (SELECT COUNT(*) FROM resource_projects WHERE owner_user_id = NEW.owner_user_id) >= 20
+    BEGIN SELECT RAISE(ABORT, 'resource_projects_owner_limit'); END&migration.schema-13¢CREATE TABLE IF NOT EXISTS resource_project_state (
+    project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
+    snapshot_json TEXT NOT NULL,
+    checkpoint_snapshot_json TEXT NOT NULL,
+    last_version_sequence INTEGER NOT NULL,
+    last_version_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT&migration.schema-14™CREATE TABLE IF NOT EXISTS resource_project_versions (
+    project_id TEXT NOT NULL REFERENCES resource_projects(id) ON DELETE CASCADE,
+    sequence INTEGER NOT NULL,
+    reason TEXT NOT NULL CHECK (reason IN ('initial', 'periodic', 'before_destructive', 'destructive', 'restore', 'manual')),
+    patch_json TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (project_id, sequence)
+  ) STRICT&migration.schema-15ÙCREATE INDEX IF NOT EXISTS resource_project_versions_created
+    ON resource_project_versions(project_id, created_at DESC)&migration.schema-16∞CREATE TABLE IF NOT EXISTS resource_project_version_labels (
+    project_id TEXT NOT NULL,
+    sequence INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    saved_at INTEGER NOT NULL,
+    PRIMARY KEY (project_id, sequence),
+    FOREIGN KEY (project_id, sequence) REFERENCES resource_project_versions(project_id, sequence) ON DELETE CASCADE
+  ) STRICT&migration.schema-17∏CREATE TABLE IF NOT EXISTS resource_project_publications (
+    project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
+    snapshot_json TEXT NOT NULL,
+    published_at INTEGER NOT NULL
+  ) STRICT&migration.schema-18∞CREATE TRIGGER IF NOT EXISTS resource_organizations_owner_limit
+    BEFORE INSERT ON resource_organizations
+    WHEN (SELECT COUNT(*) FROM resource_organizations WHERE owner_user_id = NEW.owner_user_id) >= 5
+    BEGIN SELECT RAISE(ABORT, 'resource_organizations_owner_limit'); END&migration.schema-19æINSERT OR IGNORE INTO resource_project_state
+      (project_id, snapshot_json, checkpoint_snapshot_json,
+       last_version_sequence, last_version_at, updated_at)
+    SELECT id, '{"files":[],"config":{}}', '{"files":[],"config":{}}', 1, created_at, updated_at
+    FROM resource_projects&migration.schema-20ÆINSERT OR IGNORE INTO resource_project_versions
+      (project_id, sequence, reason, patch_json, created_at)
+    SELECT id, 1, 'initial', '{"version":1,"files":[],"config":[]}', created_at
+    FROM resource_projects&migration.schema-21‘INSERT OR IGNORE INTO resource_project_publications (project_id, snapshot_json, published_at)
+    SELECT project_id, snapshot_json, updated_at FROM resource_project_state&migration.schema-22êINSERT OR IGNORE INTO resource_project_version_labels (project_id, sequence, title, saved_at)
+    SELECT p.project_id, s.last_version_sequence, '', p.published_at
+    FROM resource_project_publications p JOIN resource_project_state s ON s.project_id = p.project_id&migration.schema-23ñCREATE TABLE IF NOT EXISTS resource_organization_members (
+    organization_id TEXT NOT NULL REFERENCES resource_organizations(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL CHECK (role IN ('member', 'admin')),
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (organization_id, user_id)
+  ) STRICT&migration.schema-24ûCREATE UNIQUE INDEX IF NOT EXISTS resource_organization_single_admin
+    ON resource_organization_members(organization_id) WHERE role = 'admin'&migration.schema-25‹CREATE TABLE IF NOT EXISTS resource_organization_invitations (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES resource_organizations(id) ON DELETE CASCADE,
+    inviter_user_id TEXT NOT NULL REFERENCES users(id),
+    invitee_user_id TEXT NOT NULL REFERENCES users(id),
+    role TEXT NOT NULL CHECK (role IN ('member', 'admin')),
+    status TEXT NOT NULL CHECK (status IN ('pending', 'accepted')),
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT&migration.schema-26‹CREATE UNIQUE INDEX IF NOT EXISTS resource_organization_pending_invitation
+    ON resource_organization_invitations(organization_id, invitee_user_id) WHERE status = 'pending'&migration.schema-27÷CREATE UNIQUE INDEX IF NOT EXISTS resource_organization_pending_admin
+    ON resource_organization_invitations(organization_id) WHERE status = 'pending' AND role = 'admin'&migration.schema-28⁄CREATE TABLE IF NOT EXISTS resource_notifications (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL CHECK (kind IN ('organization_invitation')),
+    invitation_id TEXT REFERENCES resource_organization_invitations(id) ON DELETE CASCADE,
+    read_at INTEGER,
+    created_at INTEGER NOT NULL
+  ) STRICT&migration.schema-29‹CREATE INDEX IF NOT EXISTS resource_notifications_user
+    ON resource_notifications(user_id, created_at DESC)8content.project-by-namespace˛SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
+                     description, visibility, template, created_at
+              FROM resource_projects
+              WHERE namespace_slug = ? COLLATE NOCASE AND slug = ? COLLATE NOCASE.content.owned-workspaceƒ	SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
+                     p.name, p.description, p.visibility, p.template, p.created_at,
+                     s.snapshot_json, s.last_version_sequence, s.updated_at,
+                     pub.snapshot_json AS published_snapshot_json
+              FROM resource_projects p
+              JOIN resource_project_state s ON s.project_id = p.id
+              JOIN resource_project_publications pub ON pub.project_id = p.id
+              WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
+                AND p.owner_user_id = ?0content.public-workspace SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
+                     p.name, p.description, p.visibility, p.template, p.created_at,
+                     pub.snapshot_json, s.last_version_sequence, s.updated_at
+              FROM resource_projects p
+              JOIN resource_project_state s ON s.project_id = p.id
+              JOIN resource_project_publications pub ON pub.project_id = p.id
+              WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
+                AND p.visibility = 'public'.content.public-projectsﬁSELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
+                     p.name, p.description, p.visibility, p.template, p.created_at
+              FROM resource_projects p
+              JOIN resource_project_state s ON s.project_id = p.id
+              WHERE p.visibility = 'public'
+                AND (? IS NULL OR p.namespace_slug COLLATE NOCASE IN (SELECT value FROM json_each(?)))
+              ORDER BY p.updated_at DESC, p.name COLLATE NOCASE
+              LIMIT ?4content.namespace-identityÃSELECT 'user' AS kind, username AS slug, display_name AS name
+              FROM users WHERE username = ? COLLATE NOCASE
+              UNION ALL
+              SELECT 'organization' AS kind, slug, name
+              FROM resource_organizations WHERE slug = ? COLLATE NOCASE
+              LIMIT 14content.namespace-projectsSELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
+                     description, visibility, template, created_at
+              FROM resource_projects
+              WHERE namespace_slug = ? COLLATE NOCASE
+                AND (visibility = 'public' OR owner_user_id = ?)
+              ORDER BY updated_at DESC, name COLLATE NOCASE
+              LIMIT 100<content.organizations-for-user SELECT id, slug, name, description, created_at
+                FROM resource_organizations o
+                WHERE o.owner_user_id = ? OR EXISTS (
+                  SELECT 1 FROM resource_organization_members m
+                  WHERE m.organization_id = o.id AND m.user_id = ?
+                )
+                ORDER BY updated_at DESC, name COLLATE NOCASE2content.projects-for-useréSELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
+                       description, visibility, template, created_at
+                FROM resource_projects WHERE owner_user_id = ?
+                ORDER BY updated_at DESC, name COLLATE NOCASE4content.owned-organizationºSELECT id, slug FROM resource_organizations
+                WHERE id = ? AND owner_user_id = ?,content.insert-projectéINSERT INTO resource_projects
+                  (id, owner_user_id, namespace_kind, namespace_id, namespace_slug,
+                   slug, name, description, visibility, template, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)(content.insert-state∂INSERT INTO resource_project_state
+                  (project_id, snapshot_json, checkpoint_snapshot_json,
+                   last_version_sequence, last_version_at, updated_at)
+                VALUES (?, ?, ?, 1, ?, ?),content.insert-version™INSERT INTO resource_project_versions
+                  (project_id, sequence, reason, patch_json, created_at)
+                VALUES (?, ?, ?, ?, ?)8content.insert-initial-labelINSERT INTO resource_project_version_labels (project_id, sequence, title, saved_at)
+                VALUES (?, 1, '', ?)4content.insert-publicationËINSERT INTO resource_project_publications (project_id, snapshot_json, published_at)
+                VALUES (?, ?, ?),content.update-project˛UPDATE resource_projects
+                SET namespace_kind = ?, namespace_id = ?, namespace_slug = ?, slug = ?,
+                    name = ?, description = ?, visibility = ?, template = ?, updated_at = ?
+                WHERE id = ? AND owner_user_id = ?*content.project-by-idÙSELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
+                     description, visibility, template, created_at
+              FROM resource_projects WHERE id = ?*content.project-state–SELECT s.snapshot_json, s.checkpoint_snapshot_json, s.last_version_sequence,
+                     s.last_version_at, s.updated_at
+              FROM resource_project_state s
+              JOIN resource_projects p ON p.id = s.project_id
+              WHERE s.project_id = ? AND p.owner_user_id = ?0content.checkpoint-state˛UPDATE resource_project_state
+                SET checkpoint_snapshot_json = snapshot_json, last_version_sequence = ?, last_version_at = ?, updated_at = ?
+                WHERE project_id = ?(content.update-state®UPDATE resource_project_state
+              SET snapshot_json = ?, checkpoint_snapshot_json = ?, last_version_sequence = ?,
+                  last_version_at = ?, updated_at = ?
+              WHERE project_id = ?*content.touch-projectîUPDATE resource_projects
+              SET updated_at = ?, template = CASE WHEN ? = '' THEN template ELSE ? END
+              WHERE id = ?content.publishûUPDATE resource_project_publications
+              SET snapshot_json = (SELECT s.snapshot_json FROM resource_project_state s
+                                   JOIN resource_projects p ON p.id = s.project_id
+                                   WHERE s.project_id = ? AND p.owner_user_id = ?),
+                  published_at = ?
+              WHERE project_id = ?
+                AND EXISTS (SELECT 1 FROM resource_projects p WHERE p.id = ? AND p.owner_user_id = ?)*content.label-version¿INSERT INTO resource_project_version_labels (project_id, sequence, title, saved_at)
+              SELECT s.project_id, s.last_version_sequence, ?, ? FROM resource_project_state s
+              JOIN resource_projects p ON p.id = s.project_id
+              WHERE s.project_id = ? AND p.owner_user_id = ?
+              ON CONFLICT(project_id, sequence) DO UPDATE SET title = excluded.title, saved_at = excluded.saved_at,content.delete-projectÄDELETE FROM resource_projects WHERE id = ? AND owner_user_id = ?4content.published-snapshot¸SELECT pub.snapshot_json FROM resource_project_publications pub
+              JOIN resource_projects p ON p.id = pub.project_id
+              WHERE pub.project_id = ? AND p.owner_user_id = ?(organization.members÷SELECT m.user_id, u.username, u.display_name, m.role, m.created_at
+              FROM resource_organization_members m JOIN users u ON u.id = m.user_id
+              WHERE m.organization_id = ? ORDER BY m.role, u.username COLLATE NOCASE4organization.notifications†	SELECT n.id, n.kind, n.invitation_id, n.read_at, n.created_at,
+                     i.organization_id, i.role, i.status,
+                     o.slug AS organization_slug, o.name AS organization_name,
+                     inviter.username AS inviter_username
+              FROM resource_notifications n
+              JOIN resource_organization_invitations i ON i.id = n.invitation_id
+              JOIN resource_organizations o ON o.id = i.organization_id
+              JOIN users inviter ON inviter.id = i.inviter_user_id
+              WHERE n.user_id = ? ORDER BY n.created_at DESC LIMIT 100.migration.ensure-ledger¥CREATE TABLE IF NOT EXISTS resource_schema_migrations (
+  version INTEGER PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  applied_at INTEGER NOT NULL
+) STRICT,migration.list-applied¢SELECT version, name, applied_at FROM resource_schema_migrations ORDER BY version,migration.find-versionzSELECT name FROM resource_schema_migrations WHERE version = ?0migration.record-version∫INSERT OR IGNORE INTO resource_schema_migrations (version, name, applied_at) VALUES (?, ?, ?)*server-application.jspendingnextCallWriterReadersendreservebyteuinttexttake__serverReceive
+bytesatmaxsubarrayisSafeIntegerinvalid integer
+floorcharCodeAt
+depthitementries
+entry"value is too deep6only integers are supportedisArray"unsupported valuetruncated value
+scale&integer is too longtruncated bytes
+slicechunkspushfromCharCodetypekeyhasOwnPropertycall<unsafe or duplicate object key&unknown value type writerdeviceoperationreadercontinuation,invalid server message.unknown device response,invalid server request
+error$resources policy: 
+count@SQL operation has invalid valuesHSQL operation value is not supportedselectedSQL operation  is not allowedstoreOperationstoreIndex
+querybatchOperationqueries$request is invaliddatabase-clientexecute,store query is invalid<store statement is not allowedcompatibilitydatabase
+batch,store batch is invalidHstore batch statement is not allowed$compatibilityBatch@store operation is not available>request device is not available batch is invalid*batch call is invalid:batch may contain only writes
+namesrowscolumnsDstore result exceeds its row limitmapJdatabase result exceeds its row limitrowcolumnindexOf,database result lacks   ®  	 	Ã)™   Ê  Ë Í ÏDÓDDÚDÙDˆD¯	D˙
+   ⁄  –  ¬  ¸  ˛  Ã     “  Ä  Ç  Ñ  ™  å  †  Œ  Ü  ‘  à  æ‚æ\ æ\ æ\ æ\ æ\ æ\	 æ Ï«  I    I  ¥I	  
+  J   & I  I    I    I    & I  ¥I	    I  I    I    I        & I    I  I    I    I        & I    I  I    I    I    & I  ¥I	    L   &   L   &   L   & & I  I    I    I    & I  ¥I	    I  I     I  !  I    "    :   #  $    & I    I  I%    I  &  I  '    & I  ºËI	  (  J   & è   L   & )  J   & *  +  & ,  -  & .  K   & & I  I/    I  0  I  '    & I  ¥I	  1  J   & 2  L   & & I  I3    I  4  I  '    (  & I  ºËI	  (  J   & 5  L   & & I  I6    I  7  I  8  9    & I    I  I:    I  ;  I  9    & I    I  I<    I  =  I  9    & I    I  I>    I  ?  I  9    & I  ¥I	  @  L   & A  L   & B  L   & é   L   &   L   & & I  IC    I  D  I  E    B  $    & I    I  IF    I  G  I    H  & I    I  II    I  J  I  K  L    M  & I  ¥I	    L   &   L   & N  L   & O  L   & & I  IP    I  Q  I    & I  ¥I	    L   &   L   & & I  IR    I  S  I  E    & I  ¥I	    I  IT    I  U  I  E  & I  ¥I	    I  IV    I  W  I    E  X  Y  B  $    & I    I  IZ    I  [  I      H  $  & I    I  I\    I  ]  I  B    E    & I    I  I^  9  _  I:     I  ≥I`  ºËI	  Ia  b  I:     I  ≥I`  ºËI	  Ic  d  I:     I  ≥I`  ºËI	  Ie  f  I:     I  ≥I`  ºËI	  Ig  h  I:     I  ≥I`  ºËI	  Ii  j  I:     I  ≥I`  ºËI	  Ik  l  I:     I  ¥I`  ºËI	  Im    I:     I  ¥I`  ºËI	  I    I:     I  ¥I`  ºËI	  I    I:     I  ∂I`  ºËI	  I    I:     I  ∂I`  ºËI	  I  n  I:     I  µI`  ºËI	  Io  p  I:     I  ∂I`  ºËI	  Iq  r  I:     I  ∑I`  ºËI	  Is  t  I:     I  ¥I`  ºËI	  Iu  v  I:     I  ∏I`  ºËI	  Iw  x  I:     I  ∏I`  ºËI	  Iy  z  I:     I  πI`  ºËI	  I{  |  I:     I  ≥I`  ºËI	  I}  ~  I:     I  ≥I`  ºËI	  I  Ä  I:     I  ≥I`  ºËI	  IÅ  Ç  I:     I  ≥I`  ºËI	  IÉ  Ñ  I:     I  ≥I`  ºËI	  IÖ  Ü  I:     I  ≥I`  ºËI	  Iá  à  I:     I  ≥I`  ºËI	  Iâ  ä  I:     I  ≥I`  ºËI	  Iã  å  I:     I  ≥I`  ºËI	  Iç  é  I:     I  ≥I`  ºËI	  Iè  ê  I:     I  ≥I`  ºËI	  Ië  í  I:     I  ≥I`  ºËI	  Iì  î  I:     I  ≥I`  ºËI	  Iï  ñ  I:     I  ≥I`  ºËI	  Ió  ò  I:     I  ≥I`  ºËI	  Iô  ö  I:     I  ≥I`  ºËI	  Iõ  ú  I:     I  ≥I`  ºËI	  Iù  û  I:     I  ≥I`  ºËI	  Iü  †  I:     I  ≥I`  ºËI	  I°  ¢  I:     I  ≥I`  ºËI	  I£  §  I:     I  ≥I`  ºËI	  I•  ¶  I:     I  ≥I`  ºËI	  Iß  ®  I:     I  ≥I`  ºËI	  I©  ™  I:     I  µI`  ºËI	  I´  ¨  I:     I  ∂I`  ºËI	  I≠  Æ  I:     I  µI`  ºËI	  IØ  ∞  I:     I  ∂I`  ºËI	  I±  ≤  I:     I  µI`  ºËI	  I≥  ¥  I:     I  µI`  ºËI	  Iµ  /  I:     I  µI`  ºËI	  I&  3  I:     I  µI`  ºËI	  I0  6  I:     I  ∂I`  ºËI	  I4  ∂  I:     I  µI`  ºËI	  I∑  ∏  I:     I  ¥I`  ºËI	  Iπ     I:     I  ¥I`  ºËI	  I  %  I:     I  ∫I`  ºËI	  I!  ∫  I:     I  µI`  ºËI	  Iª  º  I:     I  ªI`  ºËI	  IΩ  æ  I:     I  ∏I`  ºËI	  Iø  ¿  I:     I  ∏I`  ºËI	  I¡  ¬  I:     I  µI`  ºËI	  I√  ƒ  I:     I  ∂I`  ºËI	  I≈  ∆  I:     I  ªI`  ºËI	  I«  »  I:     I  ¥I`  ºËI	  I…     I:     I  µI`  ºËI	  IÀ  Ã  I:     I  ∑I`  ºËI	  IÕ  Œ  I:     I  πI`  ºËI	  Iœ  –  I:     I  ∑I`  ºËI	  I—  “  I:     I  πI`  ºËI	  I”  ‘  I:     I  ∑I`  ºËI	  I’  ÷  I:     I  µI`  ºËI	  I◊  ÿ  I:     I  µI`  ºËI	  IŸ  P  I:     I  ∑I`  ºËI	  IJ  ⁄  I:     I  ¥I`  ºËI	  I€  R  I:     I  ¥I`  ºËI	  IQ  T  I:     I  µI`  ºËI	  IS  V  I:     I  ¥I`  ºËI	  IU  Z  I:     I  ∫I`  ºËI	  IW  \  I:     I  ∑I`  ºËI	  I[  ‹  I:     I  ¥I`  ºËI	  I›  :  I:     I  ∂I`  ºËI	  I7  <  I:     I  µI`  ºËI	  I;  >  I:     I  µI`  ºËI	  I=  C  I:     I  µI`  ºËI	  I?  F  I:     I  ∏I`  ºËI	  ID  I  I:     I  µI`  ºËI	  IG  ^  I:     I  ∑I`  ºËI	  I]  ﬁ  I:     I  ≥I`  ºËI	  Iﬂ  ‡  I:     I  ≥I`  ºËI	  I·  ‚  I:     I  ¥I`  ¥I	  I„  ‰  I:     I  ∂I`  ºËI	  IÂ  9 9 8 :
+ æJ˘   9 À(Ã   #∫ £$ Ï Ê# C   ´Œ @–@“ @‘@÷@ ⁄ – ¬ ¸ ˛ Ã   “ Ä Ç Ñ ™ ÚCå † æ …æ æ¡8 !  «¥»≈=?   æ?Ï  ≈=?   æ?Ì  ≈=?   æ?Ó  ≈=?   æ?Ô  ≈=?   æ?D   ∆=?   æ?Ì  ∆=?   æ?Ó  ∆=?   æ	?  ∆=?   æ
+?Ô  ∆=?   æ?D   8 æ?  8 æ?Ò  )Ãf 6& 
+     D     F •/function () {
+  "use strict";
+  var pending = new Map();
+  var nextCall = 1;
+
+  // Byte storage must stay byte-sized even when a project contains megabytes
+  // of text or images. A JS number array multiplies that memory cost.
+  function Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }
+  Writer.prototype.reserve = function (length) {
+    if (length <= this.bytes.length - this.at) return;
+    var next = new Uint8Array(Math.max(this.at + length, this.bytes.length * 2));
+    next.set(this.bytes.subarray(0, this.at));
+    this.bytes = next;
+  };
+  Writer.prototype.byte = function (value) {
+    this.reserve(1);
+    this.bytes[this.at++] = value;
+  };
+  Writer.prototype.uint = function (value) {
+    if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("invalid integer");
+    do {
+      var byte = value % 128;
+      value = Math.floor(value / 128);
+      this.byte(byte | (value ? 128 : 0));
+    } while (value);
+  };
+  Writer.prototype.text = function (value) {
+    var text = unescape(encodeURIComponent(value));
+    this.uint(text.length);
+    this.reserve(text.length);
+    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
+  };
+  Writer.prototype.value = function (value, depth) {
+    depth = depth || 0;
+    if (depth > 32) throw new TypeError("value is too deep");
+    if (value === null) return this.byte(0);
+    if (value === false) return this.byte(1);
+    if (value === true) return this.byte(2);
+    if (typeof value === "number") {
+      if (!Number.isSafeInteger(value)) throw new TypeError("only integers are supported");
+      this.byte(value >= 0 ? 3 : 4);
+      return this.uint(value >= 0 ? value : -value - 1);
+    }
+    if (typeof value === "string") { this.byte(5); return this.text(value); }
+    if (value instanceof Uint8Array) {
+      this.byte(6); this.uint(value.length);
+      this.reserve(value.length);
+      this.bytes.set(value, this.at);
+      this.at += value.length;
+      return;
+    }
+    if (Array.isArray(value)) {
+      this.byte(7); this.uint(value.length);
+      for (var item of value) this.value(item, depth + 1);
+      return;
+    }
+    if (value && Object.getPrototypeOf(value) === Object.prototype) {
+      var entries = Object.entries(value);
+      this.byte(8); this.uint(entries.length);
+      for (var entry of entries) { this.text(entry[0]); this.value(entry[1], depth + 1); }
+      return;
+    }
+    throw new TypeError("unsupported value");
+  };
+
+  function Reader(bytes) { this.bytes = bytes; this.at = 0; }
+  Reader.prototype.byte = function () {
+    if (this.at >= this.bytes.length) throw new TypeError("truncated value");
+    return this.bytes[this.at++];
+  };
+  Reader.prototype.uint = function () {
+    var value = 0, scale = 1;
+    for (var index = 0; index < 8; index++) {
+      var byte = this.byte();
+      value += (byte & 127) * scale;
+      if (!(byte & 128)) return value;
+      scale *= 128;
+    }
+    throw new TypeError("integer is too long");
+  };
+  Reader.prototype.take = function (length) {
+    if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
+    var value = this.bytes.slice(this.at, this.at + length);
+    this.at += length;
+    return value;
+  };
+  Reader.prototype.text = function () {
+    var bytes = this.take(this.uint()), chunks = [];
+    // Bounded native calls avoid repeated concatenation of a growing string
+    // and do not put a whole project on the interpreter's argument stack.
+    for (var index = 0; index < bytes.length; index += 2048) {
+      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
+    }
+    return decodeURIComponent(escape(chunks.join("")));
+  };
+  Reader.prototype.value = function (depth) {
+    depth = depth || 0;
+    if (depth > 32) throw new TypeError("value is too deep");
+    var type = this.byte(), length, result, index;
+    if (type === 0) return null;
+    if (type === 1) return false;
+    if (type === 2) return true;
+    if (type === 3) return this.uint();
+    if (type === 4) return -this.uint() - 1;
+    if (type === 5) return this.text();
+    if (type === 6) return this.take(this.uint());
+    if (type === 7) {
+      result = []; length = this.uint();
+      for (index = 0; index < length; index++) result.push(this.value(depth + 1));
+      return result;
+    }
+    if (type === 8) {
+      result = {}; length = this.uint();
+      for (index = 0; index < length; index++) {
+        var key = this.text();
+        if (key === "__proto__" || Object.prototype.hasOwnProperty.call(result, key)) {
+          throw new TypeError("unsafe or duplicate object key");
+        }
+        result[key] = this.value(depth + 1);
+      }
+      return result;
+    }
+    throw new TypeError("unknown value type " + type);
+  };
+
+  function send(value) {
+    var writer = new Writer();
+    writer.value(value);
+    __hostSend(writer.bytes.subarray(0, writer.at));
+  }
+  globalThis.hostCall = function (device, operation, input) {
+    var id = nextCall++;
+    return new Promise(function (resolve, reject) {
+      pending.set(id, [resolve, reject]);
+      send([2, id, device, operation, input]);
+    });
+  };
+  globalThis.__serverReceive = function (bytes) {
+    var reader = new Reader(new Uint8Array(bytes));
+    var message = reader.value();
+    if (reader.at !== reader.bytes.length || !Array.isArray(message)) {
+      throw new TypeError("invalid server message");
+    }
+    if (message[0] === 3) {
+      var continuation = pending.get(message[1]);
+      if (!continuation) throw new TypeError("unknown device response");
+      pending.delete(message[1]);
+      return (message[2] ? continuation[0] : continuation[1])(message[3]);
+    }
+    if (message[0] !== 0 || typeof serverHandle !== "function") {
+      throw new TypeError("invalid server request");
+    }
+    return Promise.resolve(serverHandle(message[2])).then(
+      function (result) { send([1, message[1], result]); },
+      function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }
+    );
+  };
+}C“        «√8  º ! ?Ú  √≥?Û  )Ã("%*Efunction Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }C   _d  ‹       ⁄ »œƒ=Ú  Áƒ=Û  ú¢Ë)8  8 >Ù  ƒ=Û  œõƒ=Ú  Áµò$ ! À>F   ƒ=Ú  >ı  ≥ƒ=Û  $ $ ƒ√?Ú  )Ã8))@7 I1 %"'Êfunction (length) {
+    if (length <= this.bytes.length - this.at) return;
+    var next = new Uint8Array(Math.max(this.at + length, this.bytes.length * 2));
+    next.set(this.bytes.subarray(0, this.at));
+    this.bytes = next;
+  }C    #à    «√>Ï  ¥$ √=Ú  √>Û  è?Û  œF)Ã+  %Nfunction (value) {
+    this.reserve(1);
+    this.bytes[this.at++] = value;
+  }C   Uà  ⁄     – ¬ ⁄ »8  >ˆ  œ$ îÈœ≥°Ë8 ˜  ! 0œºÄ ö«8 >¯  œºÄ ô$ ”ƒ>Ì  √œËºÄ Í≥≠$ œÈ“)Ã2!*/%	C#/ˇfunction (value) {
+    if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("invalid integer");
+    do {
+      var byte = value % 128;
+      value = Math.floor(value / 128);
+      this.byte(byte | (value ? 128 : 0));
+    } while (value);
+  }C   Oà  ﬁ   ∂    ¸ ˛ …8  8 œÌÌ«≈>Ó  √Á$ ≈>Ï  √Á$ ≥»ƒ√Á°Ë#≈=Ú  ≈>Û  è?Û  √>˘  ƒ$ FëÍŸ)Ã>&%		
+0 %UÎfunction (value) {
+    var text = unescape(encodeURIComponent(value));
+    this.uint(text.length);
+    this.reserve(text.length);
+    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
+  }C   ∑à  Ù  ˆ   ¯  ˙    ¬ –   Ã    –È≥ÿª £Ë8  ˛  ! 0œÒË∆>Ì  ≥% œ	©Ë∆>Ì  ¥% œ
+©Ë∆>Ì  µ% œïJ   ©ËE8 >ˆ  œ$ îË8  ˇ  ! 0∆>Ì  œ≥§Ë∂Í∑$ ∆>Ó  œ≥§ËœÍœä¥ú% œïL   ©Ë∆>Ì  ∏$ ∆>Ô  œ% œ8 •ËI∆>Ì  π$ ∆>Ó  œÁ$ ∆>Ï  œÁ$ ∆=Ú  >F   œ∆=Û  $ ∆>Û  œÁõ?Û  )8 >   œ$ Ë2∆>Ì  ∫$ ∆>Ó  œÁ$ œ{Í«∆>D   √–¥õ$ ~ ËÓÇ)œËf8 >c   œ$ 8 =?   ©ËO8 >¸  œ$ »∆>Ì  ª$ ∆>Ó  ƒÁ$ ƒ{Í…∆>Ô  ≈≥C$ ∆>D   ≈¥C–¥õ$ ~ ËﬂÇ)8    ! 0Ãé & /%* , !* 0 &/%C%Y/  
+ !U" 
+
+
+-
+
+
+!	
+ 
+
+
+5C	 3%
+
+	
+
+
+!5w	/%÷	function (value, depth) {
+    depth = depth || 0;
+    if (depth > 32) throw new TypeError("value is too deep");
+    if (value === null) return this.byte(0);
+    if (value === false) return this.byte(1);
+    if (value === true) return this.byte(2);
+    if (typeof value === "number") {
+      if (!Number.isSafeInteger(value)) throw new TypeError("only integers are supported");
+      this.byte(value >= 0 ? 3 : 4);
+      return this.uint(value >= 0 ? value : -value - 1);
+    }
+    if (typeof value === "string") { this.byte(5); return this.text(value); }
+    if (value instanceof Uint8Array) {
+      this.byte(6); this.uint(value.length);
+      this.reserve(value.length);
+      this.bytes.set(value, this.at);
+      this.at += value.length;
+      return;
+    }
+    if (Array.isArray(value)) {
+      this.byte(7); this.uint(value.length);
+      for (var item of value) this.value(item, depth + 1);
+      return;
+    }
+    if (value && Object.getPrototypeOf(value) === Object.prototype) {
+      var entries = Object.entries(value);
+      this.byte(8); this.uint(entries.length);
+      for (var entry of entries) { this.text(entry[0]); this.value(entry[1], depth + 1); }
+      return;
+    }
+    throw new TypeError("unsupported value");
+  }C‘   ‰    «√œ?Ú  √≥?Û  )Ã
+A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C     4  ¬ «√=Û  √=Ú  Á§Ë8    ! 0√=Ú  √>Û  è?Û  C(ÃB @/%- %!Åfunction () {
+    if (this.at >= this.bytes.length) throw new TypeError("truncated value");
+    return this.bytes[this.at++];
+  }C     Dà   Ü  ∂  ⁄    ¬ ¡≥«¥»≥…≈ª°Ë)¿>Ì  $   √∆ª´ƒòõ«∆ºÄ ´îË√(ƒºÄ ò»ëÍ”8    ! 0Ã6F
+
+
+ 
+% 8 3/%ëfunction () {
+    var value = 0, scale = 1;
+    for (var index = 0; index < 8; index++) {
+      var byte = this.byte();
+      value += (byte & 127) * scale;
+      if (!(byte & 128)) return value;
+      scale *= 128;
+    }
+    throw new TypeError("integer is too long");
+  }C   Md  à     ¬ »œƒ=Ú  Áƒ=Û  ú£Ë8    ! 0ƒ=Ú  >  ƒ=Û  ƒ=Û  œõ$ «ƒ>Û  œõ?Û  √(Ã0P#'R/%3  ##!”function (length) {
+    if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
+    var value = this.bytes.slice(this.at, this.at + length);
+    this.at += length;
+    return value;
+  }C   
+  f‰   é  ∂    “ Ä	 Ç
+  ∆>  ∆>Ó  $  $ «&  »≥…≈√Á°Ë2ƒ>  8  =	  >^   √>ı  ≈≈º õ$ $ $ º íÍ 8 8 ƒ>_   ø$ Ì# ÃBV 
+B7
+
+/ 
+)3F(Q& 
+?¥function () {
+    var bytes = this.take(this.uint()), chunks = [];
+    // Bounded native calls avoid repeated concatenation of a growing string
+    // and do not put a whole project on the interpreter's argument stack.
+    for (var index = 0; index < bytes.length; index += 2048) {
+      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
+    }
+    return decodeURIComponent(escape(chunks.join("")));
+  }C   ∫Ù  î   d  ñ  ∂  ñ    ¬   ¡œÈ≥◊ª £Ë8  ˛  ! 0¿>Ì  $  À≥©Ë(√¥©Ë	(√µ©Ë
+(√∂©Ë¿>Ó  %  √∑©Ë¿>Ó  $  ä¥ú(√∏©Ë¿>Ô  %  √π©Ë¿>  ¿>Ó  $  % √∫©Ë4&  …¿>Ó  $  »≥ ∆ƒ°Ë≈>  ¿>D   œ¥õ$ $ ëÍ·≈(√ª©Ëi…¿>Ó  $  »≥ ∆ƒ°ËS¿>Ô  $  ¬H   ©È8 =?   =  >  ≈¿$ Ë8    ! 0≈¿¿>D   œ¥õ$ FëÍ™≈(8    √õ! 0Ã»_& /%
+
+
+
+
+$
+&
+'
+$
+$%
+3
+
+3&%;	
+
+3
+%&e/%	 	 ;	/D-%ôfunction (depth) {
+    depth = depth || 0;
+    if (depth > 32) throw new TypeError("value is too deep");
+    var type = this.byte(), length, result, index;
+    if (type === 0) return null;
+    if (type === 1) return false;
+    if (type === 2) return true;
+    if (type === 3) return this.uint();
+    if (type === 4) return -this.uint() - 1;
+    if (type === 5) return this.text();
+    if (type === 6) return this.take(this.uint());
+    if (type === 7) {
+      result = []; length = this.uint();
+      for (index = 0; index < length; index++) result.push(this.value(depth + 1));
+      return result;
+    }
+    if (type === 8) {
+      result = {}; length = this.uint();
+      for (index = 0; index < length; index++) {
+        var key = this.text();
+        if (key === "__proto__" || Object.prototype.hasOwnProperty.call(result, key)) {
+          throw new TypeError("unsafe or duplicate object key");
+        }
+        result[key] = this.value(depth + 1);
+      }
+      return result;
+    }
+    throw new TypeError("unknown value type " + type);
+  }C÷  *à  †   “  Ñ €!  À>D   œ$ 8 √=Ú  >ı  ≥√=Û  $ Ì)Ã}&- +áfunction send(value) {
+    var writer = new Writer();
+    writer.value(value);
+    __hostSend(writer.bytes.subarray(0, writer.at));
+  }C ¢@§@∏@∂  @Œ   ÷  –  ™ ›è·«8 æ ! (ÃÇ #◊function (device, operation, input) {
+    var id = nextCall++;
+    return new Promise(function (resolve, reject) {
+      pending.set(id, [resolve, reject]);
+      send([2, id, device, operation, input]);
+    });
+  }C    ä  å  Œ  ∂   ÷ ¢  § ∏ €>F   ‹œ–& $ ›µ‹ﬁ[ [ & Ì)ÃÑ!
+
+ 7{function (resolve, reject) {
+      pending.set(id, [resolve, reject]);
+      send([2, id, device, operation, input]);
+    }C 	Õ‰  ¶   l @®  ÷  “ ‘    Ã ¬ Œ   ÚC™ ›8 œ! ! À>D   $  »√=Û  √=Ú  Á™È8 >   ƒ$ îË8   ! 0ƒ≥C∂©ËB[ >E   ƒ¥C$ ÕîË8   ! 0[ >	   ƒ¥C$ ƒµCË≈≥CÍ≈¥Cƒ∂C# ƒ≥C≥™È7 ï   ™Ë8   ! 08 >Ö   8 ƒµCÌ$ >Ñ   æ æ% ÃÖâ8
+!U/%	
+10/%%
+} 0?/%	
+4/_⁄function (bytes) {
+    var reader = new Reader(new Uint8Array(bytes));
+    var message = reader.value();
+    if (reader.at !== reader.bytes.length || !Array.isArray(message)) {
+      throw new TypeError("invalid server message");
+    }
+    if (message[0] === 3) {
+      var continuation = pending.get(message[1]);
+      if (!continuation) throw new TypeError("unknown device response");
+      pending.delete(message[1]);
+      return (message[2] ? continuation[0] : continuation[1])(message[3]);
+    }
+    if (message[0] !== 0 || typeof serverHandle !== "function") {
+      throw new TypeError("invalid server request");
+    }
+    return Promise.resolve(serverHandle(message[2])).then(
+      function (result) { send([1, message[1], result]); },
+      function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }
+    );
+  }C    ñ  ÷  l  €¥‹¥Cœ& Ì)Ãô(
+!4function (result) { send([1, message[1], result]); }C    '∞  ÷  l  “ €¥‹¥CºÙ&  8 œËœ=6   ÈœÌ& & Ì)Ãö&%
+/5%A_function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }C Ï   l  Œ 8    œõ! 0Ã§ R/:+Qfunction policyFail(message) { throw new Error("resources policy: " + message); }C Ó  zﬁ  ¥  ∂   à  Ã ÏCÜ ⁄  œ8  •îÈœÁ–™Ë8   Ì≥«√œÁ°ËXœ√CÃÒÈMƒïL   ™ËCƒïK   ™Ë9ƒïJ   ©Ë8 ƒÌË8 >¯  ƒ$ ƒ©îËƒ8 •îË8   Ìë Í§)ÃV¶ $ *[*
+&/.0e9 É"0*  Öfunction policyValues(values, count) {
+  if (!(values instanceof Array) || values.length !== count) {
+    policyFail("SQL operation has invalid values");
+  }
+  for (var index = 0; index < values.length; index++) {
+    var value = values[index];
+    if (value !== null && typeof value !== "string" && typeof value !== "boolean" &&
+        !(typeof value === "number" && isFinite(value) && Math.floor(value) === value) &&
+        !(value instanceof Uint8Array)) policyFail("SQL operation value is not supported");
+  }
+}C   1t  ﬁ  ∫   Ê  ÏCÓC8  œCÀîË8   œõ  õÌ8 –√=  È&  ÁÓ√(Ã%≤ "/*< 11>$G	Ífunction policyOperation(name, values) {
+  var selected = SQL_OPERATIONS[name];
+  if (!selected) policyFail("SQL operation " + name + " is not allowed");
+  policyValues(values, (selected.parameters || []).length);
+  return selected;
+}C Ú	  ‚
+∏  ¿   ¬  ƒ  ∆  »  ∂  ö  ∫  §  Ã ÏCË ÓCÍ Cœ8  •îÈœÁ∂™Èœ¥CïL   ™Ë8 %  Ìœ≥C&  ©h+  œ¥C'  ©Ë{œµC8  •îÈœµCÁµ™ÈœµC≥CïL   ™Ë8 (  Ì8 œµC≥CCÀîË8 )  Ì8 œµC¥C√=`  Ó
+I*  √I  9 µ+  √=  œµC& (œ¥C,  ©hé   œµC8  •îÈœµCÁîË8 -  Ì≥»ƒœµCÁ°ËFœµCƒCÕ8  •Ë	8 ≈≥CCŒîÈ∆=    ™Ë8 .  Ì8 ≈¥C∆=`  ÓëÍ¥
+I/  9 µ+  ,  œµC& (8 0  Ìœ≥C  ™Ë8 1  Ìœ¥C,  ©h∑   œµC8  •îÈœµCÁîË8 2  Ì&  ¡≥¡¿œµCÁ°ËeœµC¿C¬8  •îÈ¿Áµ™Ë8 3  Ì8 ¿≥C¿¥CÓ¬=    ™Ë8 4  Ì¿>  ¿=  ¿¥C& $ ëÍî,  I  9 µ+  ,  ¿& (8 œ¥CœµCÓ¬9 µ+  ¿=  ¿=  œµC& & (ÃÁπ " *
+ 
+0â*
+ !
+ 	
+ *
+Q
+/*3*
+G *=
+
+7%dX5
+a	
+ !	
+ ,
+*W
+
++
+"(*
+{ $4Q*
+
+1 f Åv@
+I	*
+ *;
+ !	
+ ,
+*g
+
+
+  **[ 
+34*Q' 	H cä@?	 
+
+
+D
+%w›function serverHandle(input) {
+  if (!(input instanceof Array) || input.length !== 3 || typeof input[1] !== "string") {
+    policyFail("request is invalid");
+  }
+  if (input[0] === "database-client") {
+    if (input[1] === "execute") {
+      if (!(input[2] instanceof Array) || input[2].length !== 2 ||
+          typeof input[2][0] !== "string") policyFail("store query is invalid");
+      var storeOperation = STORE_SQL_OPERATIONS[input[2][0]];
+      if (!storeOperation) policyFail("store statement is not allowed");
+      policyValues(input[2][1], storeOperation.parameterCount);
+      policyPending = { compatibility: true, operation: storeOperation };
+      return [2, "database", storeOperation.kind, input[2]];
+    }
+    if (input[1] === "batch") {
+      if (!(input[2] instanceof Array) || !input[2].length) policyFail("store batch is invalid");
+      for (var storeIndex = 0; storeIndex < input[2].length; storeIndex++) {
+        var query = input[2][storeIndex];
+        var batchOperation = query instanceof Array && STORE_SQL_OPERATIONS[query[0]];
+        if (!batchOperation || batchOperation.kind !== "write") {
+          policyFail("store batch statement is not allowed");
+        }
+        policyValues(query[1], batchOperation.parameterCount);
+      }
+      policyPending = { compatibilityBatch: true };
+      return [2, "database", "batch", input[2]];
+    }
+    policyFail("store operation is not available");
+  }
+  if (input[0] !== "sql") policyFail("request device is not available");
+  if (input[1] === "batch") {
+    if (!(input[2] instanceof Array) || !input[2].length) policyFail("batch is invalid");
+    var queries = [];
+    for (var index = 0; index < input[2].length; index++) {
+      var call = input[2][index];
+      if (!(call instanceof Array) || call.length !== 2) policyFail("batch call is invalid");
+      var selected = policyOperation(call[0], call[1]);
+      if (selected.kind !== "write") policyFail("batch may contain only writes");
+      queries.push([selected.sql, call[1]]);
+    }
+    policyPending = { result: "batch" };
+    return [2, "database", "batch", queries];
+  }
+  var operation = policyOperation(input[1], input[2]);
+  policyPending = operation;
+  return [2, "database", operation.kind, [operation.sql, input[2]]];
+}C Ù   Qà  å  – ‘ “ –J   ©Ë8  œ# –-  ©ËœÒË(8  œÌ(–K   ©Ë8 œ# –+  ©Ë8 œÈø# 8 œ# Ã7È  
+*% 
+<$I7 
+,' 
+6 +¶function converted(value, kind) {
+  if (kind === "number") return Number(value);
+  if (kind === "nullable-number") return value === null ? null : Number(value);
+  if (kind === "boolean") return Boolean(value);
+  if (kind === "string-empty") return String(value || "");
+  return String(value);
+}C ˆ    
+à  û   œ& (ÃÒ Z6function policyResult(value) { return ["ok", value]; }C ¯÷º  ñ  ∫   Í @Ï  Ó@– ÏCÙCÍ Œ “ ˆCÃ œîË9 8 8 –Ì! 08 «9 √=/  Ë8 –# √=*  ËC–¥C8 •îÈ%√=  =    ©Ë–¥CÁ√=  =	  £Ë8 8  Ì8 –# √=  ,  ©Ë8 –>9  æ $ # –≥C»–¥CÕ8 •îÈ≈Á√=	  È≥£Ë√=    ©Ë8 :  Ì√=    ©Ë8 8  –µCÌÈ≥& # √=    ©Ë8 ≈ÁË¥& Í&  # √=  8 •Ë√=  ≥CïL   ©Ë√=  & Í√=   8 ≈>9  æ$ # Ã…Û  @#!%8'9& *4q'<*k'4%;  *4:4©*4./5?4*>/'&6 0ç4'		%7Í
+function serverResume(ok, result) {
+  if (!ok) { policyPending = null; throw new Error(String(result)); }
+  var selected = policyPending;
+  policyPending = null;
+  if (selected.compatibilityBatch) return policyResult(result);
+  if (selected.compatibility) {
+    if (!(result[1] instanceof Array) || selected.operation.kind === "read" &&
+        result[1].length > selected.operation.maxRows) policyFail("store result exceeds its row limit");
+    return policyResult(result);
+  }
+  if (selected.result === "batch") {
+    return policyResult(result.map(function (item) { return Number(item) || 0; }));
+  }
+  var names = result[0];
+  var rows = result[1];
+  if (!(rows instanceof Array) || rows.length > (selected.maxRows || 0) && selected.kind === "read") {
+    policyFail("database result exceeds its row limit");
+  }
+  if (selected.result === "affected") return policyResult([Number(result[2]) || 0]);
+  if (selected.result === "exists") return policyResult(rows.length ? [1] : []);
+  var columns = selected.result instanceof Array && typeof selected.result[0] === "string"
+    ? [selected.result] : selected.result;
+  return policyResult(rows.map(function (row) {
+    return columns.map(function (column) {
+      var index = names.indexOf(column[0]);
+      if (index < 0) policyFail("database result lacks " + column[0]);
+      return converted(row[index], column[1]);
+    });
+  }));
+}C     ˆ  –  8  œÌÈ≥(Ã˛#2 -function (item) { return Number(item) || 0; }C   ˆ @Í  ÏCÙCÓ  ﬁ>9  æ % Ã	â'%Èfunction (row) {
+    return columns.map(function (column) {
+      var index = names.indexOf(column[0]);
+      if (index < 0) policyFail("database result lacks " + column[0]);
+      return converted(row[index], column[1]);
+    });
+  }C    +¯  ∂   Í  ÏCÙCˆ  €>=  œ≥C$ À≥°Ë8 >  œ≥CõÌ8 ﬁ√Cœ¥C# Ã)ä	
+)
+*L3#Eªfunction (column) {
+      var index = names.indexOf(column[0]);
+      if (index < 0) policyFail("database result lacks " + column[0]);
+      return converted(row[index], column[1]);
+    }b    n∏  ñ  †à †∞ É˙
+ Ã à ¯	C“ ^  8  œÌ«8 >   _  $ ËR_  ≥Cµ©ËI^ »k   8 _  ¥C_  µC_  ∂CÔâ` Í…k   8 	8 ≈ÌÓ`  ÍÆ08 
+_ Ó`  Í†_  /Ã=ñ 
+F/
+
+9J(-&"Êasync function (input) {
+  let result = beginPolicy(input);
+  while (Array.isArray(result) && result[0] === 2) {
+    let value;
+    try {
+      value = await hostCall(result[1], result[2], result[3]);
+    } catch (error) {
+      result = serverResume(false, String(error));
+      continue;
+    }
+    result = serverResume(true, value);
+  }
+  return result;
+}

@@ -1704,24 +1704,30 @@
     globalThis.TextEncoder = class TextEncoder {
       encode(value) {
         const text2 = String(value);
-        const bytes = [];
+        let length = 0;
         for (const character of text2) {
           const point = character.codePointAt(0);
-          if (point < 128) bytes.push(point);
-          else if (point < 2048) bytes.push(192 | point >> 6, 128 | point & 63);
-          else if (point < 65536) bytes.push(
-            224 | point >> 12,
-            128 | point >> 6 & 63,
-            128 | point & 63
-          );
-          else bytes.push(
-            240 | point >> 18,
-            128 | point >> 12 & 63,
-            128 | point >> 6 & 63,
-            128 | point & 63
-          );
+          length += point < 128 ? 1 : point < 2048 ? 2 : point < 65536 ? 3 : 4;
         }
-        return Uint8Array.from(bytes);
+        const bytes = new Uint8Array(length);
+        let at = 0;
+        for (const character of text2) {
+          let point = character.codePointAt(0);
+          if (point >= 55296 && point <= 57343) point = 65533;
+          if (point < 128) bytes[at++] = point;
+          else if (point < 2048) {
+            bytes[at++] = 192 | point >> 6;
+            bytes[at++] = 128 | point & 63;
+          } else {
+            if (point >= 65536) {
+              bytes[at++] = 240 | point >> 18;
+              bytes[at++] = 128 | point >> 12 & 63;
+            } else bytes[at++] = 224 | point >> 12;
+            bytes[at++] = 128 | point >> 6 & 63;
+            bytes[at++] = 128 | point & 63;
+          }
+        }
+        return bytes;
       }
     };
   }

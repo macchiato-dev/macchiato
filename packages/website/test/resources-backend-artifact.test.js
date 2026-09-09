@@ -20,5 +20,5 @@ test("the Resources backend artifact contains its application and policy machine
       total + files.get(`${name}/${chunk}`).length, 0));
   }
   assert.equal(files.has("resources-project-version/manifest.json"), false);
-  assert.equal(files.size, 13);
+  assert.equal(files.size, 14);
 });

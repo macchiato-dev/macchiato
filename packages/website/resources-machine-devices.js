@@ -36,6 +36,13 @@ export class ResourcesProjectResourceDevice {
       return { ...file, content: value };
     });
   }
+  compilationFiles(files) {
+    return this.hydrateFiles(files).map(file => {
+      const image = /\.(?:gif|jpe?g|png|svg|webp)$/i.test(file.path);
+      const binary = /^data:[^,]*;base64,/i.test(file.content);
+      return image || binary ? { ...file, content: "" } : file;
+    });
+  }
   compactText(text) {
     const value = JSON.parse(text);
     if (value?.snapshot) value.snapshot = this.compactSnapshot(value.snapshot);
@@ -131,13 +138,12 @@ export class ResourcesBuildDevice {
   constructor(projectResources) { this.projectResources = projectResources; }
   async compile(payload) {
     const machine = await createProjectBuildMachine();
-    // Compilation reads source files, while opaque image/resource contents are
+    // Compilation reads source files, while image/binary resource contents are
     // resolved later by the output device. Keeping those bytes out of this
     // QuickJS request avoids copying large assets through an unrelated VM.
-    const files = (Array.isArray(payload.files) ? payload.files : []).map((file) => ({
-      ...file,
-      content: String(file?.content || "").startsWith(projectResourcePrefix) ? "" : file.content,
-    }));
+    // Large JS/CSS/HTML is opaque in the editor too, but it is still source.
+    // Replacing every opaque reference with "" silently erased those scripts.
+    const files = this.projectResources.compilationFiles(payload.files);
     try { return machine.compileFiles(files, payload.config); }
     finally { machine.destroy(); }
   }

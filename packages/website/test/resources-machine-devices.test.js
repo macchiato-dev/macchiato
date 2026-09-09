@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ResourcesProjectResourceDevice } from "../resources-machine-devices.js";
+import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
 
 test("project resources stay opaque until a host device hydrates them", () => {
   const resources = new ResourcesProjectResourceDevice();
@@ -31,4 +32,21 @@ test("workspace transport compacts and restores project resources", () => {
   assert.match(JSON.parse(compact).snapshot.files[0].content,
     /^\0resources-project-resource:/);
   assert.deepEqual(JSON.parse(resources.hydrateText(compact)), workspace);
+});
+
+test("compilation restores large source files but keeps image bytes out of the build guest", () => {
+  const resources = new ResourcesProjectResourceDevice();
+  const source = 'var book = "' + "paragraph ".repeat(8_000) + '";\n';
+  const snapshot = { files: [
+    { path: "index.html", content: '<main id="book"></main><script src="book.js">\n</script>' },
+    { path: "book.js", content: source },
+    { path: "tile.png", content: "data:image/png;base64,AAAA" },
+  ], config: {} };
+  const compact = resources.compactSnapshot(snapshot);
+  const files = resources.compilationFiles(compact.files);
+  assert.equal(files[1].content, source);
+  assert.equal(files[2].content, "");
+  const compiled = compileProjectFiles(files);
+  assert.deepEqual(compiled.scripts, [{ source: "book.js", code: source }]);
+  assert.deepEqual(resources.hydrateSnapshot(compact), snapshot);
 });
