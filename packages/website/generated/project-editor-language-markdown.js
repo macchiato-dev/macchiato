@@ -583,7 +583,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         this.block.addChild(e.toTree(this.parser.nodeSet), e.from - this.block.from);
       };
       _proto5.addLeafElement = function addLeafElement(e, t) {
-        this.addNode(this.buffer.writeElements(_O(t.children, e.marks), -t.from).finish(t.type, t.to - t.from), t.from);
+        this.addNode(this.buffer.writeElements(vO(t.children, e.marks), -t.from).finish(t.type, t.to - t.from), t.from);
       };
       _proto5.finishContext = function finishContext() {
         var e = this.stack.pop(),
@@ -595,14 +595,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         return this.addGaps(this.block.toTree(this.parser.nodeSet, this.lineStart));
       };
       _proto5.addGaps = function addGaps(e) {
-        return this.ranges.length > 1 ? ve(this.ranges, 0, e.topNode, this.ranges[0].from, this.reusePlaceholders) : e;
+        return this.ranges.length > 1 ? _e(this.ranges, 0, e.topNode, this.ranges[0].from, this.reusePlaceholders) : e;
       };
       _proto5.finishLeaf = function finishLeaf(e) {
         for (var _iterator10 = _createForOfIteratorHelperLoose(e.parsers), _step10; !(_step10 = _iterator10()).done;) {
           var a = _step10.value;
           if (a.finish(this, e)) return;
         }
-        var t = _O(this.parser.parseInline(e.content, e.start), e.marks);
+        var t = vO(this.parser.parseInline(e.content, e.start), e.marks);
         this.addNode(this.buffer.writeElements(t, -e.start).finish(u.Paragraph, e.content.length), e.start);
       };
       _proto5.elt = function elt(e, t, a, r) {
@@ -625,7 +625,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         }
       }]);
     }();
-  function ve(O, e, t, a, r) {
+  function _e(O, e, t, a, r) {
     var i = O[e].to,
       n = [],
       l = [],
@@ -641,7 +641,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var c = o.from + a,
         p = void 0,
         $ = r.get(o.tree);
-      $ ? p = $ : o.to + a > i ? (p = ve(O, e, o, a, r), Q(o.to + a, !1)) : p = o.toTree(), n.push(p), l.push(c - s);
+      $ ? p = $ : o.to + a > i ? (p = _e(O, e, o, a, r), Q(o.to + a, !1)) : p = o.toTree(), n.push(p), l.push(c - s);
     }
     return Q(t.to + a, !1), new X.Tree(t.type, n, l, t.to + a - s, t.tree ? t.tree.propValues : void 0);
   }
@@ -667,7 +667,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     };
     _proto6.configure = function configure(e) {
       var _a7;
-      var t = vO(e);
+      var t = _O(e);
       if (!t) return this;
       var a = this.nodeSet,
         r = this.skipContextMarkup,
@@ -769,12 +769,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function K(O) {
     return O != null && O.length > 0;
   }
-  function vO(O) {
+  function _O(O) {
     if (!Array.isArray(O)) return O;
     if (O.length == 0) return null;
-    var e = vO(O[0]);
+    var e = _O(O[0]);
     if (O.length == 1) return e;
-    var t = vO(O.slice(1));
+    var t = _O(O.slice(1));
     if (!t || !e) return e || t;
     var a = function a(n, l) {
         return (n || D).concat(l || D);
@@ -797,8 +797,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     if (t < 0) throw new RangeError("Position specified relative to unknown parser " + e);
     return t;
   }
-  var _e = [X.NodeType.none];
-  for (var O = 1, e; e = u[O]; O++) _e[O] = X.NodeType.define({
+  var ve = [X.NodeType.none];
+  for (var O = 1, e; e = u[O]; O++) ve[O] = X.NodeType.define({
     id: O,
     name: e,
     props: O >= u.Escape ? [] : [[X.NodeProp.group, O in Ze ? ["Block", "BlockContext"] : ["Block", "LeafBlock"]]],
@@ -1144,7 +1144,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   }();
   aO.linkStart = M;
   aO.imageStart = dO;
-  function _O(O, e) {
+  function vO(O, e) {
     if (!e.length) return O;
     if (!O.length) return e;
     var t = O.slice(),
@@ -1154,7 +1154,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       for (; a < t.length && t[a].to < r.to;) a++;
       if (a < t.length && t[a].from < r.from) {
         var i = t[a];
-        i instanceof I && (t[a] = new I(i.type, i.from, i.to, _O(i.children, [r])));
+        i instanceof I && (t[a] = new I(i.type, i.from, i.to, vO(i.children, [r])));
       } else t.splice(a++, 0, r);
     }
     return t;
@@ -1248,7 +1248,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       LinkTitle: g.tags.string,
       Paragraph: g.tags.content
     }),
-    Le = new eO(new X.NodeSet(_e).extend(ga), Object.keys(oO).map(function (O) {
+    Le = new eO(new X.NodeSet(ve).extend(ga), Object.keys(oO).map(function (O) {
       return oO[O];
     }), Object.keys(oO).map(function (O) {
       return je[O];
@@ -1539,14 +1539,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }]
     };
   var G = require("@lezer/lr"),
-    v = require("@lezer/highlight"),
+    _ = require("@lezer/highlight"),
     tt = require("@lezer/common"),
     wa = 55,
     Ta = 1,
     Ya = 56,
     ja = 2,
-    va = 57,
-    _a = 3,
+    _a = 57,
+    va = 3,
     Ne = 4,
     Ra = 5,
     UO = 6,
@@ -1797,19 +1797,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   }
   var lr = MO("script", wa, Ta),
     sr = MO("style", Ya, ja),
-    or = MO("textarea", va, _a),
-    Qr = (0, v.styleTags)({
-      "Text RawText IncompleteTag IncompleteCloseTag": v.tags.content,
-      "StartTag StartCloseTag SelfClosingEndTag EndTag": v.tags.angleBracket,
-      TagName: v.tags.tagName,
-      "MismatchedCloseTag/TagName": [v.tags.tagName, v.tags.invalid],
-      AttributeName: v.tags.attributeName,
-      "AttributeValue UnquotedAttributeValue": v.tags.attributeValue,
-      Is: v.tags.definitionOperator,
-      "EntityReference CharacterReference": v.tags.character,
-      Comment: v.tags.blockComment,
-      ProcessingInst: v.tags.processingInstruction,
-      DoctypeDecl: v.tags.documentMeta
+    or = MO("textarea", _a, va),
+    Qr = (0, _.styleTags)({
+      "Text RawText IncompleteTag IncompleteCloseTag": _.tags.content,
+      "StartTag StartCloseTag SelfClosingEndTag EndTag": _.tags.angleBracket,
+      TagName: _.tags.tagName,
+      "MismatchedCloseTag/TagName": [_.tags.tagName, _.tags.invalid],
+      AttributeName: _.tags.attributeName,
+      "AttributeValue UnquotedAttributeValue": _.tags.attributeValue,
+      Is: _.tags.definitionOperator,
+      "EntityReference CharacterReference": _.tags.character,
+      Comment: _.tags.blockComment,
+      ProcessingInst: _.tags.processingInstruction,
+      DoctypeDecl: _.tags.documentMeta
     }),
     ct = G.LRParser.deserialize({
       version: 14,
@@ -2046,7 +2046,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       "[ ]": S.tags.squareBracket,
       "{ }": S.tags.brace
     }),
-    vr = {
+    _r = {
       __proto__: null,
       lang: 44,
       "nth-child": 44,
@@ -2061,7 +2061,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       domain: 158,
       regexp: 158
     },
-    _r = {
+    vr = {
       __proto__: null,
       or: 104,
       and: 104,
@@ -2113,12 +2113,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       specialized: [{
         term: 150,
         get: function get(O) {
-          return vr[O] || -1;
+          return _r[O] || -1;
         }
       }, {
         term: 151,
         get: function get(O) {
-          return _r[O] || -1;
+          return vr[O] || -1;
         }
       }, {
         term: 4,
@@ -2138,7 +2138,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }],
       tokenPrec: 2444
     });
-  var _ = require("@codemirror/language"),
+  var v = require("@codemirror/language"),
     hO = require("@lezer/common"),
     NO = null;
   function DO() {
@@ -2237,7 +2237,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       return function (e) {
         var t = e.state,
           a = e.pos,
-          r = (0, _.syntaxTree)(t).resolveInner(a, -1),
+          r = (0, v.syntaxTree)(t).resolveInner(a, -1),
           i = r.type.isError && r.from == r.to - 1 && t.doc.sliceString(r.from, r.to) == "-";
         if (r.name == "PropertyName" || (i || r.name == "TagName") && /^(Block|Styles)$/.test(r.resolve(r.to).name)) return {
           from: r.from,
@@ -2297,13 +2297,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     Ar = Ur(function (O) {
       return O.name == "VariableName";
     }),
-    iO = _.LRLanguage.define({
+    iO = v.LRLanguage.define({
       name: "css",
       parser: gt.configure({
-        props: [_.indentNodeProp.add({
-          Declaration: (0, _.continuedIndent)()
-        }), _.foldNodeProp.add({
-          "Block KeyframeList": _.foldInside
+        props: [v.indentNodeProp.add({
+          Declaration: (0, v.continuedIndent)()
+        }), v.foldNodeProp.add({
+          "Block KeyframeList": v.foldInside
         })]
       }),
       languageData: {
@@ -2318,7 +2318,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }
     });
   function kt() {
-    return new _.LanguageSupport(iO, iO.data.of({
+    return new v.LanguageSupport(iO, iO.data.of({
       autocomplete: Ar
     }));
   }
@@ -2603,10 +2603,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     });
   var k = require("@codemirror/language"),
     jt = require("@codemirror/state"),
-    vt = require("@codemirror/view"),
+    _t = require("@codemirror/view"),
     y = require("@codemirror/autocomplete"),
     gO = require("@lezer/common"),
-    _t = [(0, y.snippetCompletion)("function ${name}(${params}) {\n	${}\n}", {
+    vt = [(0, y.snippetCompletion)("function ${name}(${params}) {\n	${}\n}", {
       label: "function",
       detail: "definition",
       type: "keyword"
@@ -2651,7 +2651,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       detail: "default",
       type: "keyword"
     })],
-    Pi = _t.concat([(0, y.snippetCompletion)("interface ${name} {\n	${}\n}", {
+    Pi = vt.concat([(0, y.snippetCompletion)("interface ${name} {\n	${}\n}", {
       label: "interface",
       detail: "definition",
       type: "keyword"
@@ -2854,7 +2854,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       O = {};
     }
     var e = O.jsx ? O.typescript ? ee : Oe : O.typescript ? HO : W,
-      t = O.typescript ? Pi.concat(bi) : _t.concat(Gt);
+      t = O.typescript ? Pi.concat(bi) : vt.concat(Gt);
     return new k.LanguageSupport(e, [W.data.of({
       autocomplete: (0, y.ifNotIn)(qt, (0, y.completeFromList)(t))
     }), W.data.of({
@@ -2876,7 +2876,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     return "";
   }
   var yi = typeof navigator == "object" && /Android\b/.test(navigator.userAgent),
-    wi = vt.EditorView.inputHandler.of(function (O, e, t, a, r) {
+    wi = _t.EditorView.inputHandler.of(function (O, e, t, a, r) {
       if ((yi ? O.composing : O.compositionStarted) || O.state.readOnly || e != t || a != ">" && a != "/" || !W.isActiveAt(O.state, e, -1)) return !1;
       var i = r(),
         n = i.state,
@@ -3612,7 +3612,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       validFor: Dt
     };
   }
-  function vi(O, e, t, a, r) {
+  function _i(O, e, t, a, r) {
     var i;
     var n = (i = t.parent) === null || i === void 0 ? void 0 : i.getChild("AttributeName"),
       l = [],
@@ -3657,12 +3657,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       if (!s || !s.type.isError || s.from < s.to) break;
       i = r = l, n = s.from;
     }
-    return r.name == "TagName" ? r.parent && /CloseTag$/.test(r.parent.name) ? Et(t, r, r.from, a) : Ct(t, O, r, r.from, a) : r.name == "StartTag" || r.name == "IncompleteTag" ? Ct(t, O, r, a, a) : r.name == "StartCloseTag" || r.name == "IncompleteCloseTag" ? Et(t, r, a, a) : r.name == "OpenTag" || r.name == "SelfClosingTag" || r.name == "AttributeName" ? ji(t, O, r, r.name == "AttributeName" ? r.from : a, a) : r.name == "Is" || r.name == "AttributeValue" || r.name == "UnquotedAttributeValue" ? vi(t, O, r, r.name == "Is" ? a : r.from, a) : e.explicit && (i.name == "Element" || i.name == "Text" || i.name == "Document") ? Yi(t, O, r, a) : null;
+    return r.name == "TagName" ? r.parent && /CloseTag$/.test(r.parent.name) ? Et(t, r, r.from, a) : Ct(t, O, r, r.from, a) : r.name == "StartTag" || r.name == "IncompleteTag" ? Ct(t, O, r, a, a) : r.name == "StartCloseTag" || r.name == "IncompleteCloseTag" ? Et(t, r, a, a) : r.name == "OpenTag" || r.name == "SelfClosingTag" || r.name == "AttributeName" ? ji(t, O, r, r.name == "AttributeName" ? r.from : a, a) : r.name == "Is" || r.name == "AttributeValue" || r.name == "UnquotedAttributeValue" ? _i(t, O, r, r.name == "Is" ? a : r.from, a) : e.explicit && (i.name == "Element" || i.name == "Text" || i.name == "Document") ? Yi(t, O, r, a) : null;
   }
   function Ft(O) {
     return Jt(B.default, O);
   }
-  function _i(O) {
+  function vi(O) {
     var e = O.extraTags,
       t = O.extraGlobalAttributes,
       a = t || e ? new B(e, t) : B.default;
@@ -3786,7 +3786,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       dialect: e
     }) : SO;
     return new q.LanguageSupport(a, [SO.data.of({
-      autocomplete: _i(O)
+      autocomplete: vi(O)
     }), O.autoCloseTags !== !1 ? qi : [], Lt().support, kt().support]);
   }
   var Ut = new Set("area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
@@ -4376,7 +4376,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         alias: [O.name].concat(O.aliases),
         extensions: O.extensions,
         load: function load() {
-          return Promise.resolve(globalThis.__codeEditorLoadedLanguage(O.name));
+          return globalThis.__codeEditorEnsureLanguage(O.name);
         }
       });
     });

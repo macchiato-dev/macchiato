@@ -27288,12 +27288,25 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   function createEditorLanguageLoader(load) {
     var loaded = new Set();
+    var pending = new Map();
     return function (name2) {
       var entry = editorLanguages.find(function (language3) {
         return language3.name === name2;
       });
       if (!entry || loaded.has(entry.package)) return;
-      load("language-" + entry.package + ".bin");
+      if (pending.has(entry.package)) return pending.get(entry.package);
+      var result = load("language-" + entry.package + ".bin");
+      if (result && typeof result.then === "function") {
+        var promise = result.then(function () {
+          loaded.add(entry.package);
+          pending.delete(entry.package);
+        }, function (error) {
+          pending.delete(entry.package);
+          throw error;
+        });
+        pending.set(entry.package, promise);
+        return promise;
+      }
       loaded.add(entry.package);
     };
   }
@@ -27575,16 +27588,47 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     dynamicLanguageFactories[name2] = factory;
   };
   var languageCache = new Map();
-  function loadedLanguage(name2) {
-    if (!dynamicLanguageFactories[name2] && globalThis.__codeEditorLoadLanguage) {
-      globalThis.__codeEditorLoadLanguage(name2);
-    }
+  var pendingLanguages = new Map();
+  function languageSupport(name2) {
     var factory = dynamicLanguageFactories[name2];
     if (!factory) return [];
     if (!languageCache.has(name2)) languageCache.set(name2, factory());
     return languageCache.get(name2);
   }
+  function loadedLanguage(name2) {
+    if (!dynamicLanguageFactories[name2] && !pendingLanguages.has(name2) && globalThis.__codeEditorLoadLanguage) {
+      var request = globalThis.__codeEditorLoadLanguage(name2);
+      if (request && typeof request.then === "function") {
+        var pending = request.then(function () {
+          pendingLanguages.delete(name2);
+          var support = languageSupport(name2);
+          if (currentLanguage === name2 && globalThis.__codeEditorView) {
+            globalThis.__codeEditorView.dispatch({
+              effects: language2.reconfigure(support)
+            });
+          }
+          return support;
+        }, function (error) {
+          pendingLanguages.delete(name2);
+          throw error;
+        });
+        pendingLanguages.set(name2, pending);
+        pending.catch(function (error) {
+          return globalThis.__browserUseNotify(JSON.stringify({
+            type: "language-error",
+            language: name2,
+            message: error.message || String(error)
+          }));
+        });
+      }
+    }
+    return languageSupport(name2);
+  }
   globalThis.__codeEditorLoadedLanguage = loadedLanguage;
+  globalThis.__codeEditorEnsureLanguage = function (name2) {
+    var support = loadedLanguage(name2);
+    return pendingLanguages.get(name2) || Promise.resolve(support);
+  };
   function languageExtension(name2) {
     return loadedLanguage(name2);
   }

@@ -78,6 +78,11 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     ...(process.env.MACCHIATO_TEST_ARTIFACTS ? { recordVideo: { dir: artifacts,
       size: { width: 1440, height: 900 } } } : {}),
   });
+  const languageDownloads = [];
+  page.on("request", request => {
+    const name = new URL(request.url()).pathname.split("/").pop();
+    if (/^project-editor-language-.*\.bin$/.test(name)) languageDownloads.push(name);
+  });
   const errors = [];
   const oldEditorRequests = [];
   page.on("pageerror", (error) => errors.push(error.stack || error.message));
@@ -99,6 +104,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     throw error;
   });
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
+  await page.waitForFunction(() => document.querySelectorAll(".cm-line span[class]").length > 0);
+  assert.deepEqual(languageDownloads, ["project-editor-language-html.bin"]);
   // The frontend is MicroQuickJS: this also catches guest-wrapper APIs that
   // work in full QuickJS but are absent from the smaller engine.
   for (const colorScheme of ["light", "dark", "light"]) {

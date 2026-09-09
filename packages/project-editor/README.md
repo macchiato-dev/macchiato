@@ -203,17 +203,28 @@ TypeScript, and TSX share a package, with distinct parser configurations.
 HTML, CSS, JSON, Vue, Svelte, Markdown, Python, Rust, SQL, YAML, and C/C++ are
 also supported. File detection and fence descriptions share one registry.
 
-This defers execution and parser initialization, not download: all supported
-bytecode chunks are still included in the stamped Wasm artifact. MicroQuickJS
-requires ROM atom tables to be relocated and registered before executing guest
-JavaScript, so `JS_LoadBytecode` cannot simply move into a late `load()` call.
-The editor's load capability remains restricted to its installed immutable
-programs; leaving that gate open does not grant fetching or host JavaScript
-execution. Separately supplied, project-specific bytecode is still needed to
-reach the intended resource-loading design above.
+Language bytecode is downloaded separately on guest request. The controller
+grants only the named, build-produced language artifacts; it neither chooses
+the active language nor evaluates JavaScript. Concurrent requests for a shared
+package use one download, failed downloads can retry, and an editor disposed
+while downloading cannot receive the result. CodeMirror adds an arriving parser
+with a compartment reconfiguration, preserving text, selection, and undo.
+
+MicroQuickJS normally registers ROM atoms before guest execution. The build
+therefore includes a small shared atom catalog, not all language programs, in
+the initial stamp. Late relocation must resolve every compiled atom to an
+already registered ROM atom. The runtime rejects missing atoms, duplicate
+program names, exhausted storage, and installations after `closeGuest()`.
+Downloaded bytes stay outside the moving heap for the context's lifetime.
+Tag 3 carries a name, NUL, and trusted compiler-produced bytecode; installation
+is acknowledged before the guest calls `load(name)` to execute it. This is not
+a validator for arbitrary third-party bytecode or a host-code execution grant.
 
 The browser regression switches between files and Markdown fences in the real
-MicroQuickJS Wasm runtime. A smaller regression also checks that dynamically
+MicroQuickJS Wasm runtime, with both stamped and downloaded modules. It holds a
+download while typing and verifies selection and undo after the parser arrives.
+The project-page test verifies that an HTML project initially requests only
+the HTML language module. A smaller regression also checks that dynamically
 interned bytecode-string property keys survive collection: ROM strings are not
 GC-marked, but their canonical entries must remain valid for the context's
 lifetime. The patch retains those entries without retaining unused atom-table

@@ -68,8 +68,9 @@ bridge, and disposes their listeners, handles, context, and runtime on page
 teardown. Build the controller and guest artifacts with
 `node packages/website/build-project-editor.js`. The editor artifact currently
 retains the filename `project-editor-quickjs-runtime.wasm`, despite using
-MicroQuickJS. Language bytecode executes on demand but is still downloaded
-together; see the project-editor package's language-loading design.
+MicroQuickJS. Language bytecode downloads and executes on guest request; the
+initial artifact includes only its small shared atom catalog. See the
+project-editor package's language-loading design.
 
 The project program is not executed in the editor runtime. Each executable
 output generation gets a disposable QuickJS context with its own DOM handle
@@ -385,7 +386,7 @@ container by name, with only container options stored alongside that name;
 the allowed DOM rules are derived from the container registry.
 
 The next design slices include richer template-specific creation and
-project-specific language-bytecode downloads for the MicroQuickJS editor.
+further per-file editor lifecycle refinements.
 
 The standalone file remains a design/prototype reference, not executable input
 to the server or a trusted bundle.

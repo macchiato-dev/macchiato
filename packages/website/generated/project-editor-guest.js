@@ -26339,10 +26339,23 @@ function editorLanguageForPath(path) {
 }
 function createEditorLanguageLoader(load) {
   const loaded = /* @__PURE__ */ new Set();
+  const pending2 = /* @__PURE__ */ new Map();
   return (name2) => {
     const entry = editorLanguages.find((language3) => language3.name === name2);
     if (!entry || loaded.has(entry.package)) return;
-    load(`language-${entry.package}.bin`);
+    if (pending2.has(entry.package)) return pending2.get(entry.package);
+    const result2 = load(`language-${entry.package}.bin`);
+    if (result2 && typeof result2.then === "function") {
+      const promise = result2.then(() => {
+        loaded.add(entry.package);
+        pending2.delete(entry.package);
+      }, (error) => {
+        pending2.delete(entry.package);
+        throw error;
+      });
+      pending2.set(entry.package, promise);
+      return promise;
+    }
     loaded.add(entry.package);
   };
 }
@@ -26571,16 +26584,43 @@ globalThis.__codeEditorRegisterLanguage = (name2, factory) => {
   dynamicLanguageFactories[name2] = factory;
 };
 var languageCache = /* @__PURE__ */ new Map();
-function loadedLanguage(name2) {
-  if (!dynamicLanguageFactories[name2] && globalThis.__codeEditorLoadLanguage) {
-    globalThis.__codeEditorLoadLanguage(name2);
-  }
+var pendingLanguages = /* @__PURE__ */ new Map();
+function languageSupport(name2) {
   const factory = dynamicLanguageFactories[name2];
   if (!factory) return [];
   if (!languageCache.has(name2)) languageCache.set(name2, factory());
   return languageCache.get(name2);
 }
+function loadedLanguage(name2) {
+  if (!dynamicLanguageFactories[name2] && !pendingLanguages.has(name2) && globalThis.__codeEditorLoadLanguage) {
+    const request = globalThis.__codeEditorLoadLanguage(name2);
+    if (request && typeof request.then === "function") {
+      const pending2 = request.then(() => {
+        pendingLanguages.delete(name2);
+        const support = languageSupport(name2);
+        if (currentLanguage === name2 && globalThis.__codeEditorView) {
+          globalThis.__codeEditorView.dispatch({ effects: language2.reconfigure(support) });
+        }
+        return support;
+      }, (error) => {
+        pendingLanguages.delete(name2);
+        throw error;
+      });
+      pendingLanguages.set(name2, pending2);
+      pending2.catch((error) => globalThis.__browserUseNotify(JSON.stringify({
+        type: "language-error",
+        language: name2,
+        message: error.message || String(error)
+      })));
+    }
+  }
+  return languageSupport(name2);
+}
 globalThis.__codeEditorLoadedLanguage = loadedLanguage;
+globalThis.__codeEditorEnsureLanguage = (name2) => {
+  const support = loadedLanguage(name2);
+  return pendingLanguages.get(name2) || Promise.resolve(support);
+};
 function languageExtension(name2) {
   return loadedLanguage(name2);
 }

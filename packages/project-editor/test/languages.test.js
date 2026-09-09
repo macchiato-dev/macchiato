@@ -21,3 +21,20 @@ test("language modules are requested only when needed and once per shared packag
     load(name);
   assert.deepEqual(requests, ["language-html.bin", "language-javascript.bin", "language-python.bin"]);
 });
+
+test("concurrent language downloads share a request and failures can retry", async () => {
+  let complete, fail, requests = 0;
+  const load = createEditorLanguageLoader(() => {
+    requests++;
+    return new Promise((resolve, reject) => { complete = resolve; fail = reject; });
+  });
+  const first = load("typescript");
+  assert.equal(load("tsx"), first);
+  fail(new Error("offline"));
+  await assert.rejects(first, /offline/);
+  const retry = load("jsx");
+  complete();
+  await retry;
+  assert.equal(load("javascript"), undefined);
+  assert.equal(requests, 2);
+});
