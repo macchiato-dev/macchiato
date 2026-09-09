@@ -26355,7 +26355,18 @@ var SOURCE_LIMITS = Object.freeze({
   maxLines: 500
 });
 function countCodePoints(value) {
-  return [...value].length;
+  let count = value.length;
+  for (let index = 0; index < value.length; index++) {
+    const first = value.charCodeAt(index);
+    if (first >= 55296 && first <= 56319) {
+      const second = value.charCodeAt(index + 1);
+      if (second >= 56320 && second <= 57343) {
+        index++;
+        count--;
+      }
+    }
+  }
+  return count;
 }
 function hardBreakChanges(value, width) {
   const changes = [];
@@ -26376,12 +26387,48 @@ function hardBreakChanges(value, width) {
   return changes;
 }
 function sourceUsage(value) {
-  const lines = value.split("\n");
-  return {
-    codePoints: countCodePoints(value),
-    lines: lines.length,
-    longestLineCodePoints: Math.max(...lines.map(countCodePoints))
-  };
+  let codePoints = 0, lines = 1, column = 0, longestLineCodePoints = 0;
+  for (let index = 0; index < value.length; index++) {
+    const first = value.charCodeAt(index);
+    codePoints++;
+    if (first === 10) {
+      longestLineCodePoints = Math.max(longestLineCodePoints, column);
+      column = 0;
+      lines++;
+    } else {
+      column++;
+      if (first >= 55296 && first <= 56319) {
+        const second = value.charCodeAt(index + 1);
+        if (second >= 56320 && second <= 57343) index++;
+      }
+    }
+  }
+  return { codePoints, lines, longestLineCodePoints: Math.max(longestLineCodePoints, column) };
+}
+var documentUsageCache = /* @__PURE__ */ new WeakMap();
+function documentSourceUsage(doc2) {
+  const cached = documentUsageCache.get(doc2);
+  if (cached) return cached;
+  let codePoints = 0, longestLineCodePoints = 0;
+  if (doc2.children) {
+    codePoints = doc2.children.length - 1;
+    for (const child of doc2.children) {
+      const usage2 = documentSourceUsage(child);
+      codePoints += usage2.codePoints;
+      longestLineCodePoints = Math.max(longestLineCodePoints, usage2.longestLineCodePoints);
+    }
+  } else {
+    codePoints = doc2.lines - 1;
+    const iterator = doc2.iterLines();
+    while (!iterator.next().done) {
+      const length = countCodePoints(iterator.value);
+      codePoints += length;
+      longestLineCodePoints = Math.max(longestLineCodePoints, length);
+    }
+  }
+  const usage = { codePoints, lines: doc2.lines, longestLineCodePoints };
+  documentUsageCache.set(doc2, usage);
+  return usage;
 }
 function createSourceEnvelopeExtension(options = {}) {
   if (typeof options === "function") options = { onLimit: options };
@@ -26399,9 +26446,9 @@ function createSourceEnvelopeExtension(options = {}) {
   });
   const limits = EditorState.changeFilter.of((transaction) => {
     if (!transaction.docChanged) return true;
-    const usage = sourceUsage(transaction.newDoc.toString());
     const budget = limitsForTransaction();
     if (!budget) return true;
+    const usage = documentSourceUsage(transaction.newDoc);
     const atomicInput = transaction.isUserEvent("input.paste") || transaction.isUserEvent("input.drop");
     const accepted = usage.lines <= budget.maxLines && usage.codePoints <= budget.maxCodePoints && (!atomicInput || !isSafeInteger(budget.maxLineCodePoints) || usage.longestLineCodePoints <= budget.maxLineCodePoints);
     if (!accepted) onLimit({
@@ -26475,7 +26522,7 @@ var documentLimits = {
   maxLineCodePoints: null
 };
 function documentUsage(doc2) {
-  const usage = sourceUsage(doc2.toString());
+  const usage = documentSourceUsage(doc2);
   if (!documentLimits) return {
     characters: doc2.length,
     lines: doc2.lines,

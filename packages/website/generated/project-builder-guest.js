@@ -11487,16 +11487,24 @@
     maxLineCodePoints: 256,
     maxLines: 500
   });
-  function countCodePoints(value) {
-    return [...value].length;
-  }
   function sourceUsage(value) {
-    const lines = value.split("\n");
-    return {
-      codePoints: countCodePoints(value),
-      lines: lines.length,
-      longestLineCodePoints: Math.max(...lines.map(countCodePoints))
-    };
+    let codePoints = 0, lines = 1, column = 0, longestLineCodePoints = 0;
+    for (let index = 0; index < value.length; index++) {
+      const first = value.charCodeAt(index);
+      codePoints++;
+      if (first === 10) {
+        longestLineCodePoints = Math.max(longestLineCodePoints, column);
+        column = 0;
+        lines++;
+      } else {
+        column++;
+        if (first >= 55296 && first <= 56319) {
+          const second = value.charCodeAt(index + 1);
+          if (second >= 56320 && second <= 57343) index++;
+        }
+      }
+    }
+    return { codePoints, lines, longestLineCodePoints: Math.max(longestLineCodePoints, column) };
   }
 
   // packages/project-editor/src/single-file-compiler.js

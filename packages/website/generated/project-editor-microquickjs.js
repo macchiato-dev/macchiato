@@ -27306,7 +27306,18 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     maxLines: 500
   });
   function countCodePoints(value) {
-    return _toConsumableArray(value).length;
+    var count = value.length;
+    for (var index = 0; index < value.length; index++) {
+      var first = value.charCodeAt(index);
+      if (first >= 55296 && first <= 56319) {
+        var second = value.charCodeAt(index + 1);
+        if (second >= 56320 && second <= 57343) {
+          index++;
+          count--;
+        }
+      }
+    }
+    return count;
   }
   function hardBreakChanges(value, width) {
     var changes = [];
@@ -27331,12 +27342,61 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return changes;
   }
   function sourceUsage(value) {
-    var lines = value.split("\n");
+    var codePoints = 0,
+      lines = 1,
+      column = 0,
+      longestLineCodePoints = 0;
+    for (var index = 0; index < value.length; index++) {
+      var first = value.charCodeAt(index);
+      codePoints++;
+      if (first === 10) {
+        longestLineCodePoints = Math.max(longestLineCodePoints, column);
+        column = 0;
+        lines++;
+      } else {
+        column++;
+        if (first >= 55296 && first <= 56319) {
+          var second = value.charCodeAt(index + 1);
+          if (second >= 56320 && second <= 57343) index++;
+        }
+      }
+    }
     return {
-      codePoints: countCodePoints(value),
-      lines: lines.length,
-      longestLineCodePoints: Math.max.apply(Math, _toConsumableArray(lines.map(countCodePoints)))
+      codePoints: codePoints,
+      lines: lines,
+      longestLineCodePoints: Math.max(longestLineCodePoints, column)
     };
+  }
+  var documentUsageCache = new WeakMap();
+  function documentSourceUsage(doc2) {
+    var cached = documentUsageCache.get(doc2);
+    if (cached) return cached;
+    var codePoints = 0,
+      longestLineCodePoints = 0;
+    if (doc2.children) {
+      codePoints = doc2.children.length - 1;
+      for (var _iterator270 = _createForOfIteratorHelperLoose(doc2.children), _step270; !(_step270 = _iterator270()).done;) {
+        var child = _step270.value;
+        var usage2 = documentSourceUsage(child);
+        codePoints += usage2.codePoints;
+        longestLineCodePoints = Math.max(longestLineCodePoints, usage2.longestLineCodePoints);
+      }
+    } else {
+      codePoints = doc2.lines - 1;
+      var iterator = doc2.iterLines();
+      while (!iterator.next().done) {
+        var length = countCodePoints(iterator.value);
+        codePoints += length;
+        longestLineCodePoints = Math.max(longestLineCodePoints, length);
+      }
+    }
+    var usage = {
+      codePoints: codePoints,
+      lines: doc2.lines,
+      longestLineCodePoints: longestLineCodePoints
+    };
+    documentUsageCache.set(doc2, usage);
+    return usage;
   }
   function createSourceEnvelopeExtension(options) {
     if (options === void 0) {
@@ -27363,9 +27423,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     });
     var limits = _EditorState2.changeFilter.of(function (transaction) {
       if (!transaction.docChanged) return true;
-      var usage = sourceUsage(transaction.newDoc.toString());
       var budget = limitsForTransaction();
       if (!budget) return true;
+      var usage = documentSourceUsage(transaction.newDoc);
       var atomicInput = transaction.isUserEvent("input.paste") || transaction.isUserEvent("input.drop");
       var accepted = usage.lines <= budget.maxLines && usage.codePoints <= budget.maxCodePoints && (!atomicInput || !isSafeInteger(budget.maxLineCodePoints) || usage.longestLineCodePoints <= budget.maxLineCodePoints);
       if (!accepted) onLimit(_extends({}, usage, {
@@ -27464,7 +27524,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     maxLineCodePoints: null
   };
   function documentUsage(doc2) {
-    var usage = sourceUsage(doc2.toString());
+    var usage = documentSourceUsage(doc2);
     if (!documentLimits) return {
       characters: doc2.length,
       lines: doc2.lines,
