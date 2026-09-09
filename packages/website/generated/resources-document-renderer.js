@@ -219,7 +219,7 @@ function projectViewHtml(project, messages, workspace, csrf, owner, session, con
 }
 function projectFormHtml(session, content, token, messages, url) {
   var snapshot = initialProjectSnapshot();
-  return "<div class=\"account-dashboard project-create\">\n    ".concat(formError(url, messages), "\n    <form class=\"create-form\" method=\"post\" action=\"/projects\">\n      <input type=\"hidden\" name=\"csrf\" value=\"").concat(escapeHtml(token), "\">\n      <div class=\"project-create__layout\">\n        ").concat(projectEditorHtml({
+  return "<div class=\"account-dashboard project-create project-view project-workspace\">\n    ".concat(formError(url, messages), "\n    <form class=\"create-form\" method=\"post\" action=\"/projects\">\n      <input type=\"hidden\" name=\"csrf\" value=\"").concat(escapeHtml(token), "\">\n      <div class=\"project-create__layout\">\n        ").concat(projectEditorHtml({
     snapshot: snapshot,
     messages: messages,
     persistence: "session"
