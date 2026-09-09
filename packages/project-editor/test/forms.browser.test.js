@@ -5,7 +5,7 @@ import { build } from "esbuild";
 import { chromium } from "playwright";
 import { compileProjectFiles } from "../src/single-file-compiler.js";
 
-test("native dialog forms close, but guest forms cannot submit to the network", async t => {
+for (const documentMode of [false, true]) test(`dialog forms work without network submission (${documentMode ? "document" : "element"})`, async t => {
   const runtime = await readFile(new URL("../../website/generated/project-quickjs-runtime.wasm", import.meta.url));
   const machine = await build({
     entryPoints: [new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname],
@@ -26,17 +26,17 @@ test("native dialog forms close, but guest forms cannot submit to the network", 
       : { contentType: "text/html", body: '<div id="guest"></div><form id="outside"></form>' });
   });
   await page.goto("http://forms.test/");
-  await page.evaluate(async () => {
+  await page.evaluate(async documentMode => {
     const { default: Machine } = await import("/machine.js");
     window.machine = new Machine(await WebAssembly.compileStreaming(fetch("/runtime.wasm")),
-      document.querySelector("#guest"), {});
+      documentMode ? document : document.querySelector("#guest"), {});
     await machine.onmsg(0);
     window.run = async source => {
       const text = new TextEncoder().encode(source), bytes = new Uint8Array(text.length + 1);
       bytes[0] = 1; bytes.set(text, 1);
       await machine.onmsg(bytes);
     };
-  });
+  }, documentMode);
   const html = '<dialog id="modal"><form method="dialog"><button value="cancel">Cancel</button></form></dialog>';
   const project = compileProjectFiles([{ path: "index.html", content: html }]);
   assert.deepEqual(project.tree[0][4][0][3], [["method", "dialog"]]);
@@ -65,7 +65,7 @@ test("native dialog forms close, but guest forms cannot submit to the network", 
   `));
   await page.getByRole("button", { name: "Submit", exact: true }).click();
   await page.getByRole("button", { name: "Guest received submit" }).waitFor();
-  await page.locator("#guest input").press("Enter");
+  await page.locator('input[name="secret"]').press("Enter");
   for (const code of ["form.setAttribute('method', 'post')", "button.setAttribute('formmethod', 'get')",
     "form.setAttribute('action', 'https://outside.test/')", "form.submit()", "form.requestSubmit()"] ) {
     await assert.rejects(page.evaluate(code => run(code), code));
@@ -74,7 +74,7 @@ test("native dialog forms close, but guest forms cannot submit to the network", 
   assert.equal(requests.length, before);
   assert.equal(page.url(), "http://forms.test/");
   assert.equal(await page.locator("#outside").evaluate(form =>
-    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))), true);
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))), !documentMode);
   await page.evaluate(() => machine.destroy());
   assert.deepEqual(errors, []);
 });
