@@ -1,5 +1,5 @@
 (() => {
-  // src/microesnext-promise.js
+  // dev/wasm-web-runtimes/examples/codemirror/src/microesnext-promise.js
   function MicroPromise(executor) {
     if (!(this instanceof MicroPromise)) throw new TypeError("Promise requires new");
     if (typeof executor !== "function") throw new TypeError("Promise executor");
@@ -2389,39 +2389,26 @@ globalThis.clearInterval = function (handle) {
   delete intervalCallbacks[handle];
   hostCall(document.reference, "timerCancel", [handle]);
 };
-globalThis.matchMedia = function (query) {
-  query = String(query);
-  var listeners = [];
-  var result = {
-    matches: hostCall(document.reference, "mediaMatches", [query]),
-    media: query,
-    onchange: null,
-    addListener: function (callback) { result.addEventListener("change", callback); },
-    removeListener: function (callback) { result.removeEventListener("change", callback); },
-    addEventListener: function (type, callback) {
-      if (type === "change" && typeof callback === "function" && listeners.indexOf(callback) < 0) {
-        listeners.push(callback);
-      }
-    },
-    removeEventListener: function (type, callback) {
-      if (type !== "change") return;
-      var index = listeners.indexOf(callback);
-      if (index >= 0) listeners.splice(index, 1);
-    },
-    dispatchEvent: function (event) {
-      listeners.slice().forEach(function (callback) { callback.call(result, event); });
-      return true;
-    }
-  };
-  globalThis.addEventListener("resize", function () {
-    var matches = hostCall(document.reference, "mediaMatches", [query]);
-    if (matches === result.matches) return;
-    result.matches = matches;
-    var event = { matches: matches, media: query };
-    if (typeof result.onchange === "function") result.onchange.call(result, event);
-    result.dispatchEvent(event);
+// Keep a real MediaQueryList lease. Preference changes do not necessarily
+// resize the viewport, and .matches remains live even without a listener.
+function GuestMediaQueryList(reference) { GuestObject.call(this, reference); }
+GuestMediaQueryList.prototype = Object.create(GuestObject.prototype);
+["matches", "media"].forEach(function (name) {
+  Object.defineProperty(GuestMediaQueryList.prototype, name, {
+    get: function () { return hostGet(this.reference, name); }
   });
-  return result;
+  Object.defineProperty(GuestEvent.prototype, name, {
+    get: function () { return hostGet(this.reference, name); }
+  });
+});
+GuestMediaQueryList.prototype.addListener = function (callback) {
+  this.addEventListener("change", callback);
+};
+GuestMediaQueryList.prototype.removeListener = function (callback) {
+  this.removeEventListener("change", callback);
+};
+globalThis.matchMedia = function (query) {
+  return new GuestMediaQueryList(hostCall(document.reference, "matchMedia", [String(query)])[1]);
 };
 globalThis.clearTimeout = function (handle) {
   if (!Number.isInteger(handle)) return;
@@ -2544,7 +2531,7 @@ globalThis.removeEventListener = function (type, callback) {
   }
 };
 
-function allocateElementCallback(callback) {
+function allocateElementCallback(callback, target) {
   // A DOM EventTarget may retain this listener for the life of the surface.
   // Do not reuse callback slots that can still be named by a host listener.
   var index = callbacks.length;
@@ -2556,7 +2543,7 @@ function allocateElementCallback(callback) {
     var current = state.callback;
     if (!state.active || !current) return releaseCallback(index);
     try {
-      current(event);
+      current.call(target, event);
     } catch (error) {
       var message = String(error), stack = error && error.stack;
       globalThis.__wwcReportError(stack && stack.indexOf(message) < 0 ?
@@ -2574,7 +2561,7 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
     return record.type === type && record.callback === callback;
   })) return;
   var local = type === "instanttooltiphide" || type === "themechange";
-  var index = local ? -1 : allocateElementCallback(callback);
+  var index = local ? -1 : allocateElementCallback(callback, this);
   var capture = options === true || Boolean(options && options.capture);
   records.push({ type: type, callback: callback, index: index, capture: capture, local: local });
   if (!local) pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
@@ -2598,6 +2585,8 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
 // mouseup, just as they are in a browser DOM.
 GuestDocument.prototype.addEventListener = GuestElement.prototype.addEventListener;
 GuestDocument.prototype.removeEventListener = GuestElement.prototype.removeEventListener;
+GuestMediaQueryList.prototype.addEventListener = GuestElement.prototype.addEventListener;
+GuestMediaQueryList.prototype.removeEventListener = GuestElement.prototype.removeEventListener;
 var addDocumentEventListener = GuestDocument.prototype.addEventListener;
 GuestDocument.prototype.addEventListener = function (type, callback, options) {
   if (type === "themechange" || type === "instanttooltiphide") {
@@ -2629,7 +2618,7 @@ Object.defineProperty(GuestElement.prototype, "hidden", {
   });
 });
 ["change", "click", "keydown", "keyup"].forEach(function (type) {
-  Object.defineProperty(GuestElement.prototype, "on" + type, {
+  var descriptor = {
     get: function () { return this["_guestOn" + type] || null; },
     set: function (callback) {
       var previous = this["_guestOn" + type];
@@ -2637,7 +2626,9 @@ Object.defineProperty(GuestElement.prototype, "hidden", {
       this["_guestOn" + type] = typeof callback === "function" ? callback : null;
       if (this["_guestOn" + type]) this.addEventListener(type, this["_guestOn" + type]);
     }
-  });
+  };
+  Object.defineProperty(GuestElement.prototype, "on" + type, descriptor);
+  if (type === "change") Object.defineProperty(GuestMediaQueryList.prototype, "onchange", descriptor);
 });
 Object.defineProperty(GuestElement.prototype, "ownerDocument", {
   get: function () { return document; }

@@ -837,6 +837,8 @@ var WasmWebBridge = class {
       HTMLTitleElement,
       InputEvent,
       KeyboardEvent,
+      MediaQueryList,
+      MediaQueryListEvent,
       MouseEvent,
       MutationObserver,
       MutationRecord,
@@ -986,6 +988,7 @@ var WasmWebBridge = class {
       return ownedNodes.has(node) || roots.some((root) => node === root || root.contains(node));
     }
     function get(object, name) {
+      if ((object instanceof MediaQueryList || object instanceof MediaQueryListEvent) && (name === "matches" || name === "media")) return object[name];
       if (object === hostDocument && name === "profiling" && options.development === true) {
         return options.profiling === true;
       }
@@ -1467,6 +1470,9 @@ var WasmWebBridge = class {
       if (object === hostDocument && name === "mediaMatches" && args.length === 1 && typeof args[0] === "string" && args[0].length <= 256) {
         return hostDocument.defaultView.matchMedia(args[0]).matches;
       }
+      if (object === hostDocument && name === "matchMedia" && args.length === 1 && typeof args[0] === "string" && args[0].length <= 256) {
+        return reference(hostDocument.defaultView.matchMedia(args[0]));
+      }
       if (object === hostDocument && name === "mutationObserve" && args.length === 3 && args[0] instanceof Node && Number.isInteger(args[1]) && Number.isInteger(args[2])) {
         const flags = args[1];
         if (flags < 1 || flags > 31) fail("mutation observer flags are not allowed");
@@ -1932,7 +1938,8 @@ var WasmWebBridge = class {
       ].includes(type);
       const elementEvent = object instanceof Element && elementEventName;
       const documentEvent = object === hostDocument && (elementEventName || ["instanttooltiphide", "selectionchange", "themechange", "visibilitychange"].includes(type));
-      if (!elementEvent && !documentEvent || !Number.isInteger(callback)) fail(`event listener ${type} is not allowed`);
+      const mediaEvent = object instanceof MediaQueryList && type === "change";
+      if (!elementEvent && !documentEvent && !mediaEvent || !Number.isInteger(callback)) fail(`event listener ${type} is not allowed`);
       const listener = (event) => {
         deliver(callback, event);
       };
