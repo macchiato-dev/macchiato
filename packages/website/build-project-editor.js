@@ -17,6 +17,8 @@ const workspace = join(directory, "..", "..");
 const rustupCargo = join(process.env.HOME || "", ".cargo", "bin", "cargo");
 const cargo = process.env.CARGO || (existsSync(rustupCargo) ? rustupCargo : "cargo");
 await mkdir(outputDirectory, { recursive: true });
+execFileSync(process.execPath, [join(workspace, "dev/wasm-web-runtimes/examples/codemirror/build.js"),
+  "--environments-only"], { stdio: "inherit" });
 await build({
   entryPoints: [join(directory, "project-output-frame-controller.js")],
   bundle: true,

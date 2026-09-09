@@ -60,6 +60,44 @@ await writeFile(canonicalEnvironment,
     .replace(/\/\* Exercise the native lease finalizer[\s\S]*?gc\(\);\n/, "") +
   "\n" + fullEngineSurface);
 
+const lowerForMicroQuickJS = async source => (await transformAsync(source, {
+  comments: false,
+  compact: false,
+  assumptions: { iterableIsArray: false },
+  plugins: [microQuickJSSyntax],
+  presets: [[presetEnv, {
+    bugfixes: true,
+    loose: true,
+    modules: false,
+    targets: { ie: "11" },
+    useBuiltIns: false,
+  }]],
+})).code;
+
+await build({
+  entryPoints: [new URL("src/microquickjs-ponyfills.js", import.meta.url).pathname],
+  bundle: true,
+  format: "iife",
+  target: "es2022",
+  outfile: ponyfills,
+});
+
+// Build environments independently of editor demos. Website builds consume
+// these files and must regenerate them from source, not use an old checkout's
+// generated DOM facade.
+const microEnvironment = (await readFile(ponyfills, "utf8")) + "\n" +
+  "function releaseHostReferenceLease(reference) { new HostReference(reference); }\n" +
+  "function releaseHostReference(reference) { void reference; }\n" +
+  "var devicePixelRatio, innerHeight, innerWidth, pageXOffset, pageYOffset;\n" +
+  (await readFile(canonicalEnvironment, "utf8"))
+    .replace("var bridge = globalThis.bridge;", "var bridge = print;")
+    .replaceAll("hostReference(", "new HostReference(") +
+  "\nPromise._immediateFn = function(callback) { setTimeout(callback, 0); };\n" +
+  // Late language modules remain restricted to programs in the stamp.
+  "\nload('application.bin');\n";
+await writeFile(microRuntime, await lowerForMicroQuickJS(microEnvironment));
+if (process.argv.includes("--environments-only")) process.exit(0);
+
 await build({
   entryPoints: [new URL("src/microesnext-promise.js", import.meta.url).pathname],
   bundle: true,
@@ -221,28 +259,6 @@ await build({
   target: "es2022",
   outfile: microESNextMultiModern,
 });
-await build({
-  entryPoints: [new URL("src/microquickjs-ponyfills.js", import.meta.url).pathname],
-  bundle: true,
-  format: "iife",
-  target: "es2022",
-  outfile: ponyfills,
-});
-
-const lowerForMicroQuickJS = async source => (await transformAsync(source, {
-  comments: false,
-  compact: false,
-  assumptions: { iterableIsArray: false },
-  plugins: [microQuickJSSyntax],
-  presets: [[presetEnv, {
-    bugfixes: true,
-    loose: true,
-    modules: false,
-    targets: { ie: "11" },
-    useBuiltIns: false,
-  }]],
-})).code;
-
 const modernApplication = await readFile(modern, "utf8");
 await writeFile(microModern, modernApplication);
 const lowerForMicroESNext = source => source
@@ -261,18 +277,3 @@ await writeFile(mobileMicro, await lowerForMicroQuickJS(
   await readFile(mobileModern, "utf8")));
 await writeFile(mobileBenchmarkMicro, await lowerForMicroQuickJS(
   await readFile(mobileBenchmarkModern, "utf8")));
-
-// MicroQuickJS supplies `print` and `HostReference` as native globals. The
-// canonical full-QuickJS build uses equivalent Rust-hosted bindings instead.
-const microEnvironment = (await readFile(ponyfills, "utf8")) + "\n" +
-  "function releaseHostReferenceLease(reference) { new HostReference(reference); }\n" +
-  "function releaseHostReference(reference) { void reference; }\n" +
-  "var devicePixelRatio, innerHeight, innerWidth, pageXOffset, pageYOffset;\n" +
-  (await readFile(canonicalEnvironment, "utf8"))
-    .replace("var bridge = globalThis.bridge;", "var bridge = print;")
-    .replaceAll("hostReference(", "new HostReference(") +
-  "\nPromise._immediateFn = function(callback) { setTimeout(callback, 0); };\n" +
-  // Editor guests may load another installed language module after startup.
-  // load() is still restricted to the immutable programs supplied in the stamp.
-  "\nload('application.bin');\n";
-await writeFile(microRuntime, await lowerForMicroQuickJS(microEnvironment));

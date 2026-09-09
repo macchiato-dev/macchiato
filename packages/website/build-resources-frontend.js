@@ -16,6 +16,8 @@ const frontend = join(directory, "frontend");
 const microRuntime = join(workspace, "dev", "wasm-web-runtimes", "examples",
   "microquickjs-suite", "microquickjs-guest-runtime");
 const compiler = join(microRuntime, "microquickjs", "mqjs");
+execFileSync(process.execPath, [join(workspace, "dev/wasm-web-runtimes/examples/codemirror/build.js"),
+  "--environments-only"], { stdio: "inherit" });
 const rustupCargo = join(process.env.HOME || "", ".cargo", "bin", "cargo");
 const cargo = process.env.CARGO || (existsSync(rustupCargo) ? rustupCargo : "cargo");
 const baseRuntime = join(microRuntime, "target", "wasm32-unknown-unknown", "release",
