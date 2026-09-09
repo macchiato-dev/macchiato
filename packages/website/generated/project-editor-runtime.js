@@ -221,7 +221,8 @@ function createCssRenderer(dependencies) {
     pendingChecks,
     reject: fail2,
     scopeClass,
-    scopeSelector: scopeSelector2
+    scopeSelector: scopeSelector2,
+    renderSvg
   } = dependencies;
   function installStylesheet(bytes, targetStyle = null, replace = false) {
     if (!(bytes instanceof Uint8Array) || bytes.length > 128 * 1024) {
@@ -272,6 +273,13 @@ function createCssRenderer(dependencies) {
           const readValue = (depth2 = 0) => {
             if (++nodes > 512 || depth2 > 16) fail2("stylesheet value tree is too complex");
             const kind = reader.byte();
+            if (kind === 11) {
+              const length = reader.uint();
+              if (length > reader.bytes.length - reader.at) fail2("truncated SVG image");
+              const image = reader.bytes.subarray(reader.at, reader.at + length);
+              reader.at += length;
+              return `url("${renderSvg(image)}")`;
+            }
             if (kind === 1) {
               const identifier = reader.text();
               if (!/^--?[a-z][a-z0-9-]*$|^[a-z][a-z0-9-]*$/i.test(identifier)) {
@@ -2085,7 +2093,8 @@ var WasmWebBridge = class {
       pendingChecks,
       reject: fail,
       scopeClass,
-      scopeSelector
+      scopeSelector,
+      renderSvg
     });
     function readValue(reader) {
       const tag = reader.byte();

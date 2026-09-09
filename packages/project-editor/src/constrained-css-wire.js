@@ -34,6 +34,21 @@ class Writer {
 
 function writeValue(writer, node) {
   writer.byte(node[0]);
+  if (node[0] === 11) {
+    const image = new Writer();
+    image.uint(1);
+    function svg(value) {
+      image.text(value[0]);
+      image.uint(value[1].length);
+      for (const [name, text] of value[1]) { image.text(name); image.text(text); }
+      image.uint(value[2].length);
+      value[2].forEach(svg);
+    }
+    svg(node[1]);
+    writer.uint(image.bytes.length);
+    image.bytes.forEach((byte) => writer.byte(byte));
+    return;
+  }
   if ((node[0] >= 1 && node[0] <= 4) || node[0] === 9) writer.text(node[1]);
   else if (node[0] === 7) { writer.text(node[1]); writeValue(writer, node[2]); }
   else if (node[0] === 10) {
@@ -44,7 +59,10 @@ function writeValue(writer, node) {
 }
 
 export function encodeConstrainedCss(source) {
-  const rules = parseConstrainedCss(source);
+  return encodeConstrainedCssRules(parseConstrainedCss(source));
+}
+
+export function encodeConstrainedCssRules(rules) {
   const writer = new Writer();
   writer.uint(4);
   writer.uint(rules.length);

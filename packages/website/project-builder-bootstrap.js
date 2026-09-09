@@ -1,4 +1,4 @@
-import { compileProjectFiles, compileSingleFileProject } from "../project-editor/src/single-file-compiler.js";
+import { compileProjectFiles, compileSingleFileProject, PROJECT_SOURCE_LIMITS } from "../project-editor/src/single-file-compiler.js";
 import { compileTemplate, parse as parseVueSfc } from "@vue/compiler-sfc";
 import { compile as compileSvelte } from "svelte/compiler";
 import { FRAMEWORK_RUNTIMES } from "./generated/framework-runtimes.js";
@@ -11,7 +11,8 @@ globalThis.__resourcesBuildProject = (json) => {
 globalThis.__resourcesCompileFiles = (json) => {
   try {
     const request = JSON.parse(json);
-    return JSON.stringify({ ok: true, value: compileProjectFiles(request.files, request.config) });
+    return JSON.stringify({ ok: true, value: compileProjectFiles(request.files, request.config,
+      { limits: PROJECT_SOURCE_LIMITS }) });
   } catch (error) {
     return JSON.stringify({ ok: false, error: error?.message || String(error), stack: error?.stack || "" });
   }

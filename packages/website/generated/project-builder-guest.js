@@ -11392,6 +11392,24 @@
   };
   function writeValue(writer, node2) {
     writer.byte(node2[0]);
+    if (node2[0] === 11) {
+      let svg = function(value) {
+        image.text(value[0]);
+        image.uint(value[1].length);
+        for (const [name, text2] of value[1]) {
+          image.text(name);
+          image.text(text2);
+        }
+        image.uint(value[2].length);
+        value[2].forEach(svg);
+      };
+      const image = new Writer();
+      image.uint(1);
+      svg(node2[1]);
+      writer.uint(image.bytes.length);
+      image.bytes.forEach((byte) => writer.byte(byte));
+      return;
+    }
     if (node2[0] >= 1 && node2[0] <= 4 || node2[0] === 9) writer.text(node2[1]);
     else if (node2[0] === 7) {
       writer.text(node2[1]);
@@ -11402,8 +11420,7 @@
       node2[2].forEach((child) => writeValue(writer, child));
     } else throw new TypeError("CSS value node is not understood");
   }
-  function encodeConstrainedCss(source2) {
-    const rules = parseCss(source2);
+  function encodeConstrainedCssRules(rules) {
     const writer = new Writer();
     writer.uint(4);
     writer.uint(rules.length);
@@ -11534,6 +11551,85 @@
     "type",
     "value"
   ]);
+  var SVG_ELEMENTS = new Map([
+    "svg",
+    "g",
+    "defs",
+    "circle",
+    "ellipse",
+    "line",
+    "linearGradient",
+    "path",
+    "rect",
+    "stop",
+    "text"
+  ].map((name) => [name.toLowerCase(), name]));
+  var SVG_ATTRIBUTES = /* @__PURE__ */ new Set([
+    "cx",
+    "cy",
+    "d",
+    "fill",
+    "gradientUnits",
+    "height",
+    "offset",
+    "opacity",
+    "r",
+    "rx",
+    "ry",
+    "stop-color",
+    "stroke",
+    "stroke-linecap",
+    "stroke-width",
+    "viewBox",
+    "width",
+    "x",
+    "x1",
+    "x2",
+    "y",
+    "y1",
+    "y2"
+  ]);
+  var PROJECT_SOURCE_LIMITS = Object.freeze({
+    maxCodePoints: 2 * 1024 * 1024,
+    maxLineCodePoints: 2 * 1024 * 1024,
+    maxLines: 1e5
+  });
+  function cssImages(rules) {
+    function image(node2) {
+      if (node2[0] === 7 && node2[1] === "url") {
+        let tree = function(element2) {
+          if (element2.nodeType !== 1 || !SVG_ELEMENTS.has(element2.localName)) {
+            throw new SyntaxError("CSS SVG element is not supported");
+          }
+          return [
+            SVG_ELEMENTS.get(element2.localName),
+            element2.attributeEntries.filter(([name]) => name !== "xmlns").map(([name, value2]) => [{ viewbox: "viewBox", gradientunits: "gradientUnits" }[name] || name, value2]),
+            element2.childNodes.filter((child) => child.nodeType !== 3 || child.textContent.trim()).map(tree)
+          ];
+        };
+        const value = node2[2];
+        const prefix = "data:image/svg+xml,";
+        if (value[0] !== 4 || !value[1].startsWith(prefix)) {
+          throw new SyntaxError("CSS image must be an embedded SVG; external URLs are not allowed");
+        }
+        const parsed = parseProjectHtml(decodeURIComponent(value[1].slice(prefix.length)));
+        const roots = parsed.body.childNodes.filter((child) => child.nodeType !== 3 || child.textContent.trim());
+        if (roots.length !== 1 || roots[0].localName !== "svg") throw new SyntaxError("CSS image requires one SVG root");
+        return [11, tree(roots[0])];
+      }
+      if (node2[0] === 7) node2[2] = image(node2[2]);
+      if (node2[0] === 10) node2[2] = node2[2].map(image);
+      return node2;
+    }
+    for (const rule2 of rules) {
+      if (rule2.rules) cssImages(rule2.rules);
+      if (rule2.frames) cssImages(rule2.frames);
+      for (const declaration3 of rule2.declarations || []) {
+        if (declaration3.value) declaration3.value = image(declaration3.value);
+      }
+    }
+    return rules;
+  }
   var SingleFileProjectCompiler = class {
     constructor({ limits = SOURCE_LIMITS } = {}) {
       this.limits = Object.freeze({ ...limits });
@@ -11555,8 +11651,9 @@
       const css = cssParts2.join("\n");
       let stylesheet = null;
       if (css) {
-        validateConstrainedCssRules(parseCss(css));
-        stylesheet = [...encodeConstrainedCss(css)];
+        const rules = cssImages(parseCss(css));
+        validateConstrainedCssRules(rules);
+        stylesheet = [...encodeConstrainedCssRules(rules)];
       }
       for (const script of parsed.querySelectorAll("script")) {
         const src = script.getAttribute("src");
@@ -11574,8 +11671,10 @@
         if (value.nodeType !== 1) return [];
         if (WRAPPERS.has(value.localName)) return value.childNodes.flatMap(nodes);
         if (OMITTED.has(value.localName)) return [];
-        if (!ELEMENTS.has(value.localName)) throw new Error(`<${value.localName}> is not available in the playground`);
-        const attributes = value.attributeEntries.filter(([name, data2]) => ATTRIBUTES.has(name) && data2.length <= 2e3);
+        const svg = value.namespaceURI === "http://www.w3.org/2000/svg";
+        const name = svg ? SVG_ELEMENTS.get(value.localName) : value.localName;
+        if (!name || !svg && !ELEMENTS.has(name)) throw new Error(`<${value.localName}> is not available in the project surface`);
+        const attributes = value.attributeEntries.map(([key2, data2]) => [svg ? { viewbox: "viewBox", gradientunits: "gradientUnits" }[key2] || key2 : key2, data2]).filter(([key2, data2]) => (ATTRIBUTES.has(key2) || /^(aria|data)-[a-z][a-z0-9-]*$/.test(key2) || svg && SVG_ATTRIBUTES.has(key2)) && data2.length <= 2e3);
         const href = value.getAttribute("href") || "";
         if (value.localName === "a" && href) {
           if (href.length > 2048) throw new Error("Link URL is too long");
@@ -11584,7 +11683,7 @@
             attributes.push(["target", "_blank"], ["rel", "noopener noreferrer"]);
           }
         }
-        return [[1, value.localName, 0, attributes, value.childNodes.flatMap(nodes)]];
+        return [[1, name, svg ? 1 : 0, attributes, value.childNodes.flatMap(nodes)]];
       };
       const tree = parsed.body.childNodes.flatMap(nodes);
       return { tree, stylesheets: stylesheet ? [{ operations: stylesheet }] : [], scripts, usage };
@@ -11600,7 +11699,7 @@
   function compileSingleFileProject(source2, options) {
     return new SingleFileProjectCompiler(options).compile(source2);
   }
-  function compileProjectFiles(files, config2 = {}) {
+  function compileProjectFiles(files, config2 = {}, options = {}) {
     if (!Array.isArray(files)) throw new TypeError("Project files must be an array");
     const resources = /* @__PURE__ */ new Map();
     for (const file of files) {
@@ -11611,7 +11710,7 @@
     }
     const entry = localResourcePath(config2.entry || "index.html");
     if (!resources.has(entry)) throw new Error(`Project entry not found: ${entry}`);
-    return new SingleFileProjectCompiler().compile(resources.get(entry), { config: config2, resources, sourceName: entry });
+    return new SingleFileProjectCompiler(options).compile(resources.get(entry), { config: config2, resources, sourceName: entry });
   }
 
   // node_modules/@vue/compiler-sfc/dist/compiler-sfc.esm-browser.js
@@ -51214,7 +51313,7 @@ ${generateCodeFrame(
   function is_load_error_element(name) {
     return LOAD_ERROR_ELEMENTS.includes(name);
   }
-  var SVG_ELEMENTS = [
+  var SVG_ELEMENTS2 = [
     "altGlyph",
     "altGlyphDef",
     "altGlyphItem",
@@ -51303,7 +51402,7 @@ ${generateCodeFrame(
     "vkern"
   ];
   function is_svg(name) {
-    return SVG_ELEMENTS.includes(name);
+    return SVG_ELEMENTS2.includes(name);
   }
   var MATHML_ELEMENTS = [
     "annotation",
@@ -91378,7 +91477,11 @@ Did you specify these with the most recent transformation maps first?`
   globalThis.__resourcesCompileFiles = (json) => {
     try {
       const request = JSON.parse(json);
-      return JSON.stringify({ ok: true, value: compileProjectFiles(request.files, request.config) });
+      return JSON.stringify({ ok: true, value: compileProjectFiles(
+        request.files,
+        request.config,
+        { limits: PROJECT_SOURCE_LIMITS }
+      ) });
     } catch (error2) {
       return JSON.stringify({ ok: false, error: error2?.message || String(error2), stack: error2?.stack || "" });
     }

@@ -9,6 +9,21 @@ that decides which material is open, whether it is being read or edited, and
 how that work participates in project history. The retired `code-editor-use`
 prototype is not part of the runtime path.
 
+## Compilation limits and embedded images
+
+The playground's short-source limits are an authoring policy, not limits on
+saved Resources projects. The Resources build guest explicitly selects a
+2 Mi-code-point source budget, including long lines, while playground calls
+retain their smaller default budget. Neither changes the machine's DOM or
+network authority.
+
+Inline SVG keeps its namespace and drawing attributes. An embedded SVG in a
+CSS background becomes a semantic SVG tree in the stylesheet wire message.
+The host validates and renders that tree before producing a base64 image URL;
+it never applies the guest's raw URL or SVG string. Remote CSS URLs remain
+blocked. The supported image input currently uses a percent-encoded SVG data
+URL, as used by Cat Memory Match's paw-print card backs.
+
 ## Project Home tab
 
 Every project has a Home tab identified by a home icon. It is a stable project
