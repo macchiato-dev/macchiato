@@ -6,6 +6,8 @@ import test from "node:test";
 import { chromium } from "playwright";
 
 for (const [fixture, expected] of [
+  ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
+    values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
   ["rom-string-keys", { before: true, after: true, same: true }],
   ["string-iteration", { counts: [0, 3, 1, 5], first: "😀", second: "x", done: true,

@@ -470,20 +470,22 @@ static JSValue js_collection_for_each(JSContext *ctx, JSValue *this_value,
                                       int argc, JSValue *argv, int magic)
 {
     uint32_t index, size;
-    JSValue receiver = argc > 1 ? argv[1] : JS_UNDEFINED;
     if (!collection_this(ctx, *this_value, strong_collection_class(magic)) ||
         argc < 1 || !JS_IsFunction(ctx, argv[0]))
         return JS_ThrowTypeError(ctx, "collection callback must be a function");
     size = JS_CollectionSize(ctx, *this_value);
     for (index = 0; index < size; index++) {
+        if (JS_StackCheck(ctx, 5)) return JS_EXCEPTION;
         JSValue key = JS_CollectionKeyAt(ctx, *this_value, index);
         JSValue value = magic ? key : JS_CollectionValueAt(ctx, *this_value, index);
         JSValue result;
-        JS_PushArg(ctx, value);
-        JS_PushArg(ctx, key);
+        /* JS_Call consumes arguments in reverse push order. Read thisArg
+           from its rooted argument slot after every callback/collection. */
         JS_PushArg(ctx, *this_value);
+        JS_PushArg(ctx, key);
+        JS_PushArg(ctx, value);
         JS_PushArg(ctx, argv[0]);
-        JS_PushArg(ctx, receiver);
+        JS_PushArg(ctx, argc > 1 ? argv[1] : JS_UNDEFINED);
         result = JS_Call(ctx, 3);
         if (JS_IsException(result)) return result;
     }
