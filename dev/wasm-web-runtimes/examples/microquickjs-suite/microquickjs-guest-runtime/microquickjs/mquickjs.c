@@ -66,7 +66,13 @@
 #define JS_MAX_FUNC_STACK_SIZE 65535
 #define JS_MAX_ARGC 65535
 /* maximum number of recursing JS_Call() */
-#define JS_MAX_CALL_RECURSE 8
+// CUSTOMIZATION: 1 lines below commented out: embedded default is too small for tree visitors.
+// #define JS_MAX_CALL_RECURSE 8
+// CUSTOMIZATION: 4 lines below added: bounded native callback nesting for the browser runtime.
+// Lezer recursively uses Array.some() while traversing syntax trees. Each
+// native array callback re-enters JS_Call, unlike an ordinary JS-to-JS call.
+// Keep a finite guard, but allow useful trees within the Wasm stack budget.
+#define JS_MAX_CALL_RECURSE 64
 
 
 #define JS_VALUE_IS_BOTH_INT(a, b) ((((a) | (b)) & 1) == 0)

@@ -662,6 +662,19 @@
   if (typeof globalThis.WeakMap !== "function") globalThis.WeakMap = WeakMapPonyfill;
   if (typeof globalThis.WeakSet !== "function") globalThis.WeakSet = WeakSetPonyfill;
   globalThis.Promise = src_default;
+  if (globalThis.__microQuickJS) {
+    Array.prototype.some = function (callback, thisArg) {
+      "use strict";
+
+      if (this == null || typeof callback !== "function") throw new TypeError("Invalid Array.some receiver or callback");
+      var object = Object(this);
+      var length = Math.min(Math.max(Math.floor(Number(object.length)) || 0, 0), 9007199254740991);
+      for (var index = 0; index < length; index++) {
+        if ((Object.prototype.hasOwnProperty.call(object, index) || index in object) && (thisArg === void 0 ? callback(object[index], index, object) : callback.call(thisArg, object[index], index, object))) return true;
+      }
+      return false;
+    };
+  }
   if (!String.prototype.includes) {
     String.prototype.includes = function (value, start) {
       return String(this).indexOf(String(value), start || 0) !== -1;

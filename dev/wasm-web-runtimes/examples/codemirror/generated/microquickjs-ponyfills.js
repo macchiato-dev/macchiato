@@ -1,5 +1,5 @@
 (() => {
-  // vendor/ungap/map.js
+  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/map.js
   function sameValueZero(left, right) {
     return left === right || left !== left && right !== right;
   }
@@ -71,7 +71,7 @@
     return iterator(this.entries());
   };
 
-  // vendor/ungap/set.js
+  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/set.js
   function sameValueZero2(left, right) {
     return left === right || left !== left && right !== right;
   }
@@ -130,7 +130,7 @@
     return iterator2(this.values());
   };
 
-  // vendor/ungap/weakmap.js
+  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/weakmap.js
   var nextWeakMap = 0;
   var hasOwn = Object.prototype.hasOwnProperty;
   function WeakMapPonyfill(iterable) {
@@ -159,7 +159,7 @@
     return this;
   };
 
-  // vendor/ungap/weakset.js
+  // dev/wasm-web-runtimes/examples/codemirror/vendor/ungap/weakset.js
   var members = new WeakMapPonyfill();
   function WeakSetPonyfill(iterable) {
     members.set(this, new WeakMapPonyfill());
@@ -176,7 +176,7 @@
     return members.get(this).has(value);
   };
 
-  // node_modules/promise-polyfill/src/finally.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/finally.js
   function finallyConstructor(callback) {
     var constructor = this.constructor;
     return this.then(
@@ -194,7 +194,7 @@
   }
   var finally_default = finallyConstructor;
 
-  // node_modules/promise-polyfill/src/allSettled.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/allSettled.js
   function allSettled(arr) {
     var P = this;
     return new P(function(resolve2, reject2) {
@@ -239,7 +239,7 @@
   }
   var allSettled_default = allSettled;
 
-  // node_modules/promise-polyfill/src/any.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/any.js
   function AggregateError(errors, message) {
     this.name = "AggregateError", this.errors = errors;
     this.message = message || "";
@@ -275,7 +275,7 @@
   }
   var any_default = any;
 
-  // node_modules/promise-polyfill/src/index.js
+  // dev/wasm-web-runtimes/examples/codemirror/node_modules/promise-polyfill/src/index.js
   var setTimeoutFunc = setTimeout;
   function isArray(x) {
     return Boolean(x && typeof x.length !== "undefined");
@@ -472,7 +472,7 @@
   };
   var src_default = Promise2;
 
-  // src/microquickjs-platform.js
+  // dev/wasm-web-runtimes/examples/codemirror/src/microquickjs-platform.js
   globalThis.__microQuickJS = true;
   if (typeof TextEncoder === "undefined") {
     globalThis.TextEncoder = function TextEncoder2() {
@@ -705,12 +705,24 @@
     }
   );
 
-  // src/microquickjs-ponyfills.js
+  // dev/wasm-web-runtimes/examples/codemirror/src/microquickjs-ponyfills.js
   if (typeof globalThis.Map !== "function") globalThis.Map = MapPonyfill;
   if (typeof globalThis.Set !== "function") globalThis.Set = SetPonyfill;
   if (typeof globalThis.WeakMap !== "function") globalThis.WeakMap = WeakMapPonyfill;
   if (typeof globalThis.WeakSet !== "function") globalThis.WeakSet = WeakSetPonyfill;
   globalThis.Promise = src_default;
+  if (globalThis.__microQuickJS) {
+    Array.prototype.some = function(callback, thisArg) {
+      "use strict";
+      if (this == null || typeof callback !== "function") throw new TypeError("Invalid Array.some receiver or callback");
+      var object = Object(this);
+      var length = Math.min(Math.max(Math.floor(Number(object.length)) || 0, 0), 9007199254740991);
+      for (var index = 0; index < length; index++) {
+        if ((Object.prototype.hasOwnProperty.call(object, index) || index in object) && (thisArg === void 0 ? callback(object[index], index, object) : callback.call(thisArg, object[index], index, object))) return true;
+      }
+      return false;
+    };
+  }
   if (!String.prototype.includes) {
     String.prototype.includes = function(value, start) {
       return String(this).indexOf(String(value), start || 0) !== -1;

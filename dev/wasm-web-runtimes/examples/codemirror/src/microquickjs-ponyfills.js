@@ -14,6 +14,25 @@ if (typeof globalThis.WeakMap !== "function") globalThis.WeakMap = WeakMapPonyfi
 if (typeof globalThis.WeakSet !== "function") globalThis.WeakSet = WeakSetPonyfill;
 globalThis.Promise = PromisePonyfill;
 
+// Recursive tree visitors frequently use some() without a thisArg. Keeping
+// those calls in bytecode avoids consuming a native C stack frame per level.
+// The explicit receiver branch retains the usual callback this semantics.
+if (globalThis.__microQuickJS) {
+  Array.prototype.some = function (callback, thisArg) {
+    "use strict";
+    if (this == null || typeof callback !== "function") throw new TypeError("Invalid Array.some receiver or callback");
+    var object = Object(this);
+    var length = Math.min(Math.max(Math.floor(Number(object.length)) || 0, 0), 9007199254740991);
+    for (var index = 0; index < length; index++) {
+      // MicroQuickJS's `in` checks named properties, not indexed array slots.
+      if ((Object.prototype.hasOwnProperty.call(object, index) || index in object) && (thisArg === undefined
+        ? callback(object[index], index, object)
+        : callback.call(thisArg, object[index], index, object))) return true;
+    }
+    return false;
+  };
+}
+
 // Babel lowers syntax, not standard-library calls. These small string methods
 // are used by ordinary application code and keep the authored source shared
 // with full QuickJS and the browser.

@@ -28,3 +28,16 @@ QuickJS runtime message tag `1` means UTF-8 JavaScript source. Tag `2` invokes
 a named global with a UTF-8 string argument and reports its string result. A
 bytecode tag can be added without changing the machine or its two-function
 `msg`/`onmsg` ABI.
+
+## MicroQuickJS callback depth
+
+The browser build bounds nested native-to-JavaScript calls at 64, rather than
+the upstream embedded default of eight. This is distinct from ordinary
+bytecode-to-bytecode recursion. Native array methods that call a recursive tree
+visitor can otherwise hit the C-call guard on ordinary editor documents.
+
+The CodeMirror guest implements `Array.some` in JavaScript so its common
+no-receiver callback path stays on the bytecode stack. The host is unchanged.
+Browser tests cover deep visitors, array mutation/receiver semantics, and both
+overflow and recovery through a still-native callback method. Do not remove
+the C-call guard or equate raising it with fixing arbitrary recursive code.
