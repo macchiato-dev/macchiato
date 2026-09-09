@@ -107,6 +107,7 @@ typedef struct {
 } GuestProgram;
 static GuestProgram programs[MAX_PROGRAMS];
 static uint32_t program_count;
+static uint32_t stamp_used;
 
 static void report_guest_error(JSContext *ctx, uint32_t stage)
 {
@@ -193,6 +194,7 @@ static int unpack_stamp(uint32_t total, uint8_t **runtime, uint32_t *runtime_len
         data += length;
         if (cursor < separator) cursor++;
     }
+    stamp_used = (total + 7) & ~7u;
     return *runtime != NULL && program_count > 0 && data == total ? 0 : -1;
 }
 
@@ -642,6 +644,53 @@ static void call_named(const uint8_t *bytes, uint32_t length)
     if (JS_IsException(result)) report_guest_error(context, 4);
 }
 
+/* Tag 3 installs a trusted compiler artifact supplied by the controller:
+   UTF-8 name, NUL, then bytecode. The guest still chooses when to load() it.
+   A startup atom catalog makes late relocation independent of live heap
+   atoms; no new ROM table or moving-heap reference is admitted here. */
+static void install_program(const uint8_t *bytes, uint32_t length)
+{
+    uint32_t separator = 1;
+    while (separator < length && bytes[separator] != 0) separator++;
+    if (!bytecode_loading_open || separator <= 1 || separator > 128 ||
+        separator >= length || program_count == MAX_PROGRAMS) goto invalid;
+    for (uint32_t index = 0; index < program_count; index++) {
+        if (same_bytes(programs[index].name, programs[index].name_length,
+                       (const char *)(bytes + 1))) goto invalid;
+    }
+    uint32_t name_length = separator - 1;
+    uint32_t bytecode_length = length - separator - 1;
+    uint32_t bytecode_start = (stamp_used + name_length + 7) & ~7u;
+    if (bytecode_start > sizeof(stamp_memory) ||
+        bytecode_length > sizeof(stamp_memory) - bytecode_start) goto invalid;
+    uint8_t *name = stamp_memory + stamp_used;
+    uint8_t *bytecode = stamp_memory + bytecode_start;
+    for (uint32_t index = 0; index < name_length; index++) name[index] = bytes[index + 1];
+    for (uint32_t index = 0; index < bytecode_length; index++) bytecode[index] = bytes[separator + 1 + index];
+    if (JS_RelocateBytecode(context, bytecode, bytecode_length) != 0) goto invalid;
+    JSValue program = JS_LoadRegisteredBytecode(context, bytecode);
+    if (JS_IsException(program)) { report_guest_error(context, 7); return; }
+    programs[program_count++] = (GuestProgram) {
+        name, name_length, bytecode, bytecode_length, program, 0
+    };
+    stamp_used = (bytecode_start + bytecode_length + 7) & ~7u;
+    // Acknowledgement means installed, not executed. Keep it separate from
+    // the application's JSON response channel.
+    const char *prefix = "__wwcBytecode:";
+    uint32_t size = 0;
+    while (prefix[size]) { transfer[size] = prefix[size]; size++; }
+    for (uint32_t index = 0; index < name_length; index++) transfer[size++] = name[index];
+    JS_PushArg(context, JS_NewStringLen(context, (const char *)transfer, size));
+    JS_PushArg(context, JS_GetPropertyStr(context, JS_GetGlobalObject(context), "__wwcPostMessage"));
+    JS_PushArg(context, JS_GetGlobalObject(context));
+    if (JS_IsException(JS_Call(context, 1))) { report_guest_error(context, 7); return; }
+    dispatch(UINT32_MAX);
+    return;
+invalid:
+    JS_ThrowTypeError(context, "bytecode program installation is unavailable");
+    report_guest_error(context, 7);
+}
+
 void guest_onmsg(uint32_t minimum_length)
 {
     if (context == NULL) {
@@ -689,5 +738,7 @@ void guest_onmsg(uint32_t minimum_length)
                  ((uint32_t)transfer[2] << 16) | ((uint32_t)transfer[3] << 24));
     } else if (actual > 2 && transfer[0] == 2) {
         call_named(transfer, actual);
+    } else if (actual > 2 && transfer[0] == 3) {
+        install_program(transfer, actual);
     }
 }

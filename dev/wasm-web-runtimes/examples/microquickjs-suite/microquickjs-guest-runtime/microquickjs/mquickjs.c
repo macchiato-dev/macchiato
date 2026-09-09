@@ -13331,6 +13331,36 @@ JSValue JS_LoadBytecode(JSContext *ctx, const uint8_t *buf)
 }
 
 /**********************************************************************/
+// CUSTOMIZATION: 29 lines below added: load late bytecode using pre-registered ROM atoms.
+/* Late programs may use only atoms that a startup catalog already owns.
+   Relocation must have replaced every atom with that canonical ROM pointer.
+   This keeps movable heap strings out of bytecode and requires no GC scan of
+   downloaded programs. The bytecode storage still lives for the context. */
+JSValue JS_LoadRegisteredBytecode(JSContext *ctx, const uint8_t *buf)
+{
+    const JSBytecodeHeader *hdr = (const JSBytecodeHeader *)buf;
+    const JSValueArray *atoms;
+    if (hdr->magic != JS_BYTECODE_MAGIC || hdr->version != JS_BYTECODE_VERSION ||
+        hdr->base_addr != (uintptr_t)(hdr + 1))
+        return JS_ThrowInternalError(ctx, "bytecode not relocated");
+    atoms = JS_VALUE_TO_PTR(hdr->unique_strings);
+    for (int index = 0; index < atoms->size; index++) {
+        BOOL found = FALSE;
+        for (int table = 0; table < ctx->n_rom_atom_tables; table++) {
+            const JSValueArray *registered = ctx->rom_atom_tables[table];
+            int position;
+            if (find_atom(ctx, &position, registered, registered->size,
+                          atoms->arr[index]) == atoms->arr[index]) {
+                found = TRUE;
+                break;
+            }
+        }
+        if (!found)
+            return JS_ThrowTypeError(ctx, "bytecode atom is not registered");
+    }
+    return hdr->main_func;
+}
+
 /* runtime */
 
 JSValue js_function_constructor(JSContext *ctx, JSValue *this_val,

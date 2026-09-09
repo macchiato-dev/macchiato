@@ -387,6 +387,8 @@ int JS_RelocateBytecode(JSContext *ctx,
    it. warning: the bytecode is not checked so it should come from a
    trusted source. */
 JSValue JS_LoadBytecode(JSContext *ctx, const uint8_t *buf);
+// CUSTOMIZATION: 1 line below added: late bytecode must use existing ROM atoms.
+JSValue JS_LoadRegisteredBytecode(JSContext *ctx, const uint8_t *buf);
 
 /* debug functions */
 void JS_SetLogFunc(JSContext *ctx, JSWriteFunc *write_func);
