@@ -5,7 +5,10 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
 
-test("MicroQuickJS admits useful native callback nesting and still bounds recursion", async (t) => {
+for (const [fixture, expected] of [
+  ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
+  ["rom-string-keys", { before: true, after: true, same: true }],
+]) test(`MicroQuickJS runtime regression: ${fixture}`, async (t) => {
   const root = new URL("../../../", import.meta.url).pathname;
   const working = resolve(root, "../macchiato-work");
   await mkdir(working, { recursive: true });
@@ -15,7 +18,7 @@ test("MicroQuickJS admits useful native callback nesting and still bounds recurs
   const runtime = resolve(examples, "microquickjs-suite/microquickjs-guest-runtime");
   const application = resolve(directory, "application.bin");
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", application,
-    new URL("fixtures/nested-callbacks.js", import.meta.url).pathname]);
+    new URL(`fixtures/${fixture}.js`, import.meta.url).pathname]);
   const output = resolve(directory, "callbacks.wasm");
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
     resolve(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
@@ -46,7 +49,5 @@ test("MicroQuickJS admits useful native callback nesting and still bounds recurs
     machine.destroy();
     return result;
   });
-  assert.deepEqual(messages.map((message) => JSON.parse(message)), [
-    { normal: true, overflow: true, recovered: true, deep: true, semantics: true },
-  ]);
+  assert.deepEqual(messages.map((message) => JSON.parse(message)), [expected]);
 });

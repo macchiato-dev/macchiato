@@ -12449,7 +12449,14 @@ static void gc_mark_all(JSContext *ctx, BOOL keep_atoms)
 
         j = 0;
         for(i = 0; i < arr->size; i++) {
-            if (gc_mb_is_marked(arr->arr[i])) {
+            // CUSTOMIZATION: 1 line below commented out: ROM keys are not GC-marked.
+            // if (gc_mb_is_marked(arr->arr[i])) {
+            // CUSTOMIZATION: 5 lines below added: keep interned ROM keys for the context lifetime.
+            /* A bytecode string first used as a property key at runtime lives
+               outside the heap. Losing its canonical entry breaks equal keys. */
+            if ((JS_IsPtr(arr->arr[i]) &&
+                 JS_IS_ROM_PTR(ctx, JS_VALUE_TO_PTR(arr->arr[i]))) ||
+                gc_mb_is_marked(arr->arr[i])) {
                 arr->arr[j++] = arr->arr[i];
             }
         }
