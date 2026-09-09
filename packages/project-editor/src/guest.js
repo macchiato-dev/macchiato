@@ -19,7 +19,7 @@ import { editorLanguages, editorLanguageForPath, createEditorLanguageLoader } fr
 globalThis.__codeEditorLanguages = editorLanguages;
 globalThis.__codeEditorLanguageForPath = editorLanguageForPath;
 globalThis.__codeEditorCreateLanguageLoader = createEditorLanguageLoader;
-import { createSourceEnvelopeExtension, sourceUsage } from "./source-envelope.js";
+import { createSourceEnvelopeExtension, sourceUsage, documentSourceUsage } from "./source-envelope.js";
 
 const isSafeInteger = (value) => typeof value === "number" && value >= -2147483648 &&
   value <= 2147483647 && (value | 0) === value;
@@ -72,7 +72,7 @@ let documentLimits = {
   maxLineCodePoints: null,
 };
 function documentUsage(doc) {
-  const usage = sourceUsage(doc.toString());
+  const usage = documentSourceUsage(doc);
   if (!documentLimits) return {
     characters: doc.length,
     lines: doc.lines,
