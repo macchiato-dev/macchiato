@@ -62,19 +62,21 @@ may continue using full-document navigation.
 
 The focused project view mounts the `project-editor` guest directly into a bounded page
 subtree; it does not use an iframe. CodeMirror state, extensions, and commands
-run in a dedicated QuickJS WebAssembly runtime with declared heap and stack
+run in a dedicated MicroQuickJS WebAssembly runtime with declared heap and stack
 limits. The host owns only the constrained DOM renderer and filtered input
 bridge, and disposes their listeners, handles, context, and runtime on page
-teardown. Build its two cacheable assets with `npm run build:resources-editor`:
-the native controller/provider bundle and the CodeMirror guest bundle remain
-separate to avoid a large combined parse/allocation spike.
+teardown. Build the controller and guest artifacts with
+`node packages/website/build-project-editor.js`. The editor artifact currently
+retains the filename `project-editor-quickjs-runtime.wasm`, despite using
+MicroQuickJS. Language bytecode executes on demand but is still downloaded
+together; see the project-editor package's language-loading design.
 
 The project program is not executed in the editor runtime. Each executable
 output generation gets a disposable QuickJS context with its own DOM handle
 table, timers, capabilities, and lifetime. The preview extracts inline and
 same-project scripts before projecting the declared container DOM; those
-scripts run only inside QuickJS. `browser-use` forwards the admitted DOM subset
-and `canvas-use` forwards a bounded Canvas 2D command set.
+scripts run only inside QuickJS. The guest's browser facade forwards admitted
+DOM and drawing operations through `wasm-web-machine`.
 
 Output mounts in one static iframe from the beginning, so initial rendering,
 ordinary refreshes, and future hot reload use the same surface semantics. A
@@ -92,7 +94,9 @@ The iframe is deliberately not given the HTML `sandbox` attribute. It is a
 layout and lifecycle boundary; QuickJS plus the constrained DOM bridge remains
 the code boundary. The static frame evaluates CSS media queries such as
 `prefers-color-scheme` in the normal browser realm without exposing
-`matchMedia`, its window, or other browser globals to the project guest.
+unrestricted browser globals to the project guest. Guest `matchMedia` returns
+a constrained live MediaQueryList reference; change events cross the machine
+bridge, with no polling or synthetic resize needed.
 
 Both output-frame paths receive the resolved Resources appearance. They expose that
 choice as `html[data-theme="light"|"dark"]`, the standard `color-scheme`
@@ -380,16 +384,16 @@ that creates a branch boundary. Project configuration invokes a reusable
 container by name, with only container options stored alongside that name;
 the allowed DOM rules are derived from the container registry.
 
-The next design slices include richer template-specific creation and moving
-the embedded editor from the isolated reference bundle to the complete
-QuickJS-backed `project-editor` deployment artifact.
+The next design slices include richer template-specific creation and
+project-specific language-bytecode downloads for the MicroQuickJS editor.
 
 The standalone file remains a design/prototype reference, not executable input
 to the server or a trusted bundle.
 
-The Bunny profile does not nest QuickJS inside Bunny's V8 isolate. Security
-comes from a small edge program, an allowlisted immutable export, strict `use-*`
-validation before publication, and the Bunny isolate's own limits.
+The Bunny profile runs the QuickJS application and MicroQuickJS policy and
+document guests inside its V8 isolate. They communicate through constrained
+server devices. Immutable public artifacts are validated before publication;
+the backend runtimes and bytecode remain in the private Storage artifact.
 
 ## Build the edge artifacts
 
