@@ -19,6 +19,8 @@ await mkdir(outputDirectory, { recursive: true });
 const lowerForMicroQuickJS = async (source, plugins = []) => (await transformAsync(source, {
   comments: false,
   compact: false,
+  // Strings, Sets, and Maps are iterable too; loose array spread changes data.
+  assumptions: { iterableIsArray: false },
   plugins: [...plugins, microQuickJSSyntax],
   presets: [[presetEnv, { bugfixes: true, loose: true, modules: false,
     targets: { ie: "11" }, useBuiltIns: false }]],

@@ -13,3 +13,8 @@ function inspectEditor() {
   globalThis.__wwcPostMessage("__wwcResponse:" + globalThis.__codeEditorInspect());
   flush();
 }
+
+function collectEditor() {
+  gc();
+  inspectEditor();
+}

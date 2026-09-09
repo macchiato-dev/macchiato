@@ -232,6 +232,7 @@ await build({
 const lowerForMicroQuickJS = async source => (await transformAsync(source, {
   comments: false,
   compact: false,
+  assumptions: { iterableIsArray: false },
   plugins: [microQuickJSSyntax],
   presets: [[presetEnv, {
     bugfixes: true,

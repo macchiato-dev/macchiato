@@ -186,10 +186,28 @@ resource access, and editor policy independently auditable. An environment hash
 can identify the exact resource/capability set used by a context without
 exposing its implementation.
 
-The current stamped runtime eagerly loads the language chunks needed by the
-project snapshot because MicroQuickJS closes its bytecode-loading gate after
-bootstrap. Replacing that temporary constraint with guest-initiated resource
-loading is the intended design.
+The current editor requests a language module when opening a file, or when a
+Markdown fence needs its parser. Switching files may request additional modules
+after bootstrap; each installed module executes at most once. JavaScript, JSX,
+TypeScript, and TSX share a package, with distinct parser configurations.
+HTML, CSS, JSON, Vue, Svelte, Markdown, Python, Rust, SQL, YAML, and C/C++ are
+also supported. File detection and fence descriptions share one registry.
+
+This defers execution and parser initialization, not download: all supported
+bytecode chunks are still included in the stamped Wasm artifact. MicroQuickJS
+requires ROM atom tables to be relocated and registered before executing guest
+JavaScript, so `JS_LoadBytecode` cannot simply move into a late `load()` call.
+The editor's load capability remains restricted to its installed immutable
+programs; leaving that gate open does not grant fetching or host JavaScript
+execution. Separately supplied, project-specific bytecode is still needed to
+reach the intended resource-loading design above.
+
+The browser regression switches between files and Markdown fences in the real
+MicroQuickJS Wasm runtime. A smaller regression also checks that dynamically
+interned bytecode-string property keys survive collection: ROM strings are not
+GC-marked, but their canonical entries must remain valid for the context's
+lifetime. The patch retains those entries without retaining unused atom-table
+slots or unreachable heap strings.
 
 ## Runtime build transformations
 

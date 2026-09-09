@@ -16,7 +16,17 @@ The Babel output compiles to MicroQuickJS bytecode. Four ISC-licensed ungap
 collection fallbacks are vendored by source file and installed only when the
 host lacks the native C collection. A small, separate platform ponyfill contains
 additional APIs discovered by executing CodeMirror, currently `Array.find`,
-`Object.assign`, and `encodeURIComponent`.
+`Object.assign`, `encodeURIComponent`, string iteration, and `Array.from`.
+
+The build explicitly disables Babel's `iterableIsArray` assumption. Treating
+`[...text]` as `[text]` silently breaks source-size accounting and other string
+operations. The guest iterates strings by code point, including empty strings
+and surrogate pairs. Its `Array.from` supports the iterable and array-like
+inputs used here, mapping callbacks, and closing an iterator after a callback
+throws. Native Map/Set contents use the runtime's existing array-returning
+`entries()`/`values()` methods; this is not a claim of complete ECMAScript
+collection iteration or constructor-subclass semantics. Live collection
+iteration during mutation remains separate runtime work.
 
 The complete bundle executes end to end in MicroQuickJS. The same acceptance
 suite exercises completion, folding, search, selection, clipboard behavior,

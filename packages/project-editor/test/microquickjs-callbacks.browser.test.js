@@ -8,6 +8,8 @@ import { chromium } from "playwright";
 for (const [fixture, expected] of [
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
   ["rom-string-keys", { before: true, after: true, same: true }],
+  ["string-iteration", { counts: [0, 3, 1, 5], first: "😀", second: "x", done: true,
+    mapped: [8, 13], closed: true, set: ["a", "b"], map: [["a", 1], ["b", 2]] }],
 ]) test(`MicroQuickJS runtime regression: ${fixture}`, async (t) => {
   const root = new URL("../../../", import.meta.url).pathname;
   const working = resolve(root, "../macchiato-work");

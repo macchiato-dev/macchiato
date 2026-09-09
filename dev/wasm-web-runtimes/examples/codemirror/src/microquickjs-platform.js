@@ -60,6 +60,56 @@ if (typeof Symbol === "undefined") {
   globalThis.Symbol = SymbolPonyfill;
 }
 
+// Spread and Array.from must iterate strings by code point, including the
+// empty string. Treating every iterable as an array loses that distinction.
+if (!String.prototype[Symbol.iterator]) {
+  String.prototype[Symbol.iterator] = function () {
+    "use strict";
+    if (this == null) throw new TypeError("Invalid string iterator receiver");
+    var text = String(this), offset = 0;
+    var iterator = { next: function () {
+      if (offset >= text.length) return { value: undefined, done: true };
+      var start = offset++, first = text.charCodeAt(start);
+      if (first >= 0xd800 && first <= 0xdbff && offset < text.length) {
+        var second = text.charCodeAt(offset);
+        if (second >= 0xdc00 && second <= 0xdfff) offset++;
+      }
+      return { value: text.slice(start, offset), done: false };
+    } };
+    iterator[Symbol.iterator] = function () { return this; };
+    return iterator;
+  };
+}
+if (!Array.from) {
+  Array.from = function (source, map, receiver) {
+    if (source == null || map !== undefined && typeof map !== "function")
+      throw new TypeError("Invalid Array.from input");
+    var result = [], index = 0, iterate = source[Symbol.iterator];
+    if (iterate != null) {
+      var iterator = iterate.call(source), step;
+      try {
+        while (!(step = iterator.next()).done) {
+          result.push(map === undefined ? step.value : map.call(receiver, step.value, index));
+          index++;
+        }
+      } catch (error) {
+        if (typeof iterator.return === "function") iterator.return();
+        throw error;
+      }
+    } else {
+      // The native MicroQuickJS collections currently expose their ordered
+      // contents as arrays, not iterator objects. Array.from can consume that
+      // existing API directly; don't add a misleading live-iterator facade.
+      if (source instanceof Map) source = source.entries();
+      else if (source instanceof Set) source = source.values();
+      var length = Math.min(Math.max(Math.floor(Number(source.length)) || 0, 0), 9007199254740991);
+      for (; index < length; index++)
+        result.push(map === undefined ? source[index] : map.call(receiver, source[index], index));
+    }
+    return result;
+  };
+}
+
 // A JavaScript ponyfill cannot make a reference weak. This preserves the API
 // while the MicroQuickJS adapter moves identity retention into its native
 // host-reference finalizers.

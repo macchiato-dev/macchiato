@@ -57,6 +57,7 @@ const wrapped = `(async function resourcesFrontend() {\n${modern}\n})()` +
 const lowered = (await transformAsync(wrapped, {
   comments: false,
   compact: false,
+  assumptions: { iterableIsArray: false },
   plugins: [lowerDatasetAccess, microQuickJSSyntax],
   presets: [[presetEnv, {
     bugfixes: true,

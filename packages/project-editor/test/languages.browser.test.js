@@ -68,8 +68,12 @@ test("the MicroQuickJS editor loads language bytecode on demand, including Markd
     const info = await page.evaluate((request) => window.callGuest("selectFile", request), { path, content });
     assert.equal(info.language, language, path);
     assert.equal(info.languageLoaded, true, JSON.stringify({ path, info }));
+    assert.equal(info.usage.codePoints, [...content].length, path + " code-point count");
     assert.notEqual(info.syntaxTree, "", path);
     await page.waitForFunction(() => document.querySelectorAll(".cm-line span[class]").length > 0);
+    const collected = await page.evaluate(() => window.callGuest("collectEditor", {}));
+    assert.equal(collected.languageLoaded, true, path + " after GC");
+    assert.equal(collected.document, content, path + " after GC");
     return info;
   }
   const first = await select("index.html", '<h1 class="title">Hello</h1>', "html");
@@ -79,7 +83,7 @@ test("the MicroQuickJS editor loads language bytecode on demand, including Markd
   const nested = await page.evaluate(() => window.callGuest("inspectEditor", {}));
   assert.deepEqual(nested.registeredLanguages.sort(), ["html", "markdown", "python"]);
   for (const [path, content, language] of [
-    ["main.py", 'def greet(name):\n    return "Hi " + name\n', "python"],
+    ["main.py", 'def greet(name):\n    return "Hi 😀 café 中文 " + name\n', "python"],
     ["main.rs", 'fn main() {\n    let value = 42;\n    println!("{}", value);\n}\n', "rust"],
     ["query.sql", "SELECT name FROM projects WHERE visible = 1;\n", "sql"],
     ["config.yaml", "project:\n  name: demo\n  enabled: true\n", "yaml"],
