@@ -7,9 +7,17 @@ function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" 
 function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (_n) { return void e(_n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (_r) { o = !0, n = _r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 (function (_document$querySelect) {
   globalThis.__resourcesDatasetGet = function (element, name) {
@@ -117,19 +125,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }));
       return;
     }
-    var keys = [].concat(new Set([].concat(Object.keys(before), Object.keys(after)))).sort();
+    var keys = _toConsumableArray(new Set([].concat(_toConsumableArray(Object.keys(before)), _toConsumableArray(Object.keys(after))))).sort();
     for (var _iterator = _createForOfIteratorHelperLoose(keys), _step; !(_step = _iterator()).done;) {
       var key = _step.value;
       if (!own(after, key)) operations.push(Object.freeze({
         op: "delete",
-        path: Object.freeze([].concat(path, [key])),
+        path: Object.freeze([].concat(_toConsumableArray(path), [key])),
         before: before[key]
       }));else if (!own(before, key)) operations.push(Object.freeze({
         op: "set",
-        path: Object.freeze([].concat(path, [key])),
+        path: Object.freeze([].concat(_toConsumableArray(path), [key])),
         absent: true,
         value: after[key]
-      }));else configDiff(before[key], after[key], [].concat(path, [key]), operations);
+      }));else configDiff(before[key], after[key], [].concat(_toConsumableArray(path), [key]), operations);
     }
   }
   function diffProjectSnapshots(beforeValue, afterValue) {
@@ -138,7 +146,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     var beforeFiles = fileMap(before);
     var afterFiles = fileMap(after);
     var files = [];
-    for (var _iterator2 = _createForOfIteratorHelperLoose([].concat(new Set([].concat(beforeFiles.keys(), afterFiles.keys()))).sort()), _step2; !(_step2 = _iterator2()).done;) {
+    for (var _iterator2 = _createForOfIteratorHelperLoose(_toConsumableArray(new Set([].concat(_toConsumableArray(beforeFiles.keys()), _toConsumableArray(afterFiles.keys())))).sort()), _step2; !(_step2 = _iterator2()).done;) {
       var path = _step2.value;
       if (!afterFiles.has(path)) files.push(Object.freeze({
         op: "delete",
@@ -216,9 +224,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       } else throw new Error("Unsupported configuration operation: " + _operation.op);
     }
     return normalizeProjectSnapshot({
-      files: [].concat(files).map(function (_ref) {
-        var path = _ref[0],
-          content = _ref[1];
+      files: _toConsumableArray(files).map(function (_ref) {
+        var _ref2 = _slicedToArray(_ref, 2),
+          path = _ref2[0],
+          content = _ref2[1];
         return {
           path: path,
           content: content
@@ -379,9 +388,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   };
   var HOST_LABEL = new RegExp("^(?:\\*|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$", "i");
   function wildcardSource(value, _temp) {
-    var _ref2 = _temp === void 0 ? {} : _temp,
-      _ref2$dotAware = _ref2.dotAware,
-      dotAware = _ref2$dotAware === void 0 ? false : _ref2$dotAware;
+    var _ref3 = _temp === void 0 ? {} : _temp,
+      _ref3$dotAware = _ref3.dotAware,
+      dotAware = _ref3$dotAware === void 0 ? false : _ref3$dotAware;
     return value.split("*").map(function (part) {
       return part.replace(new RegExp("[\\\\^$.*+?()[\\]{}|]", "g"), "\\$&");
     }).join(dotAware ? "[^.]+" : ".*");
@@ -849,9 +858,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       this.childNodes = [];
       this.parentElement = null;
       this.attributeEntries = attributes;
-      this.attributes = attributes.map(function (_ref3) {
-        var attributeName = _ref3[0],
-          value = _ref3[1];
+      this.attributes = attributes.map(function (_ref4) {
+        var _ref5 = _slicedToArray(_ref4, 2),
+          attributeName = _ref5[0],
+          value = _ref5[1];
         return {
           name: attributeName,
           value: value
@@ -865,15 +875,17 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       this.childNodes.push(node);
     };
     _proto3.hasAttribute = function hasAttribute(name) {
-      return this.attributeEntries.some(function (_ref4) {
-        var key = _ref4[0];
+      return this.attributeEntries.some(function (_ref6) {
+        var _ref7 = _slicedToArray(_ref6, 1),
+          key = _ref7[0];
         return key === name;
       });
     };
     _proto3.getAttribute = function getAttribute(name) {
       var _this$attributeEntrie, _this$attributeEntrie2;
-      return (_this$attributeEntrie = (_this$attributeEntrie2 = this.attributeEntries.find(function (_ref5) {
-        var key = _ref5[0];
+      return (_this$attributeEntrie = (_this$attributeEntrie2 = this.attributeEntries.find(function (_ref8) {
+        var _ref9 = _slicedToArray(_ref8, 1),
+          key = _ref9[0];
         return key === name;
       })) == null ? void 0 : _this$attributeEntrie2[1]) != null ? _this$attributeEntrie : null;
     };
@@ -884,18 +896,20 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var expression = new RegExp("\\[([a-z][a-z0-9-]*)(?:=\"([^\"]*)\")?\\]", "gi");
       var entry;
       while (entry = expression.exec(match[2])) attributes.push([entry[1].toLowerCase(), entry[2]]);
-      if (attributes.map(function (_ref6) {
-        var name = _ref6[0],
-          value = _ref6[1];
+      if (attributes.map(function (_ref0) {
+        var _ref1 = _slicedToArray(_ref0, 2),
+          name = _ref1[0],
+          value = _ref1[1];
         return value === void 0 ? "[" + name + "]" : "[" + name + "=\"" + value + "\"]";
       }).join("") !== match[2]) {
         throw new SyntaxError("Unsupported inert selector: " + selector);
       }
       var found = [];
       var _visit = function visit(node) {
-        if (node.nodeType === 1 && node.localName === match[1].toLowerCase() && attributes.every(function (_ref7) {
-          var name = _ref7[0],
-            value = _ref7[1];
+        if (node.nodeType === 1 && node.localName === match[1].toLowerCase() && attributes.every(function (_ref10) {
+          var _ref11 = _slicedToArray(_ref10, 2),
+            name = _ref11[0],
+            value = _ref11[1];
           return node.hasAttribute(name) && (value === void 0 || node.getAttribute(name) === value);
         })) found.push(node);
         for (var _iterator8 = _createForOfIteratorHelperLoose(node.childNodes), _step8; !(_step8 = _iterator8()).done;) {
@@ -921,10 +935,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     var entries = [];
     var rest = source.trim();
     while (rest) {
-      var _ref8, _ref9, _match$;
+      var _ref12, _ref13, _match$;
       var match = /^([A-Za-z_:][A-Za-z0-9_.:-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?\s*/.exec(rest);
       if (!match) throw new SyntaxError("HTML attribute input was not consumed: " + rest.slice(0, 32));
-      entries.push([match[1].toLowerCase(), (_ref8 = (_ref9 = (_match$ = match[2]) != null ? _match$ : match[3]) != null ? _ref9 : match[4]) != null ? _ref8 : ""]);
+      entries.push([match[1].toLowerCase(), (_ref12 = (_ref13 = (_match$ = match[2]) != null ? _match$ : match[3]) != null ? _ref13 : match[4]) != null ? _ref12 : ""]);
       rest = rest.slice(match[0].length);
     }
     return entries;
@@ -1141,7 +1155,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     var stack = [];
     try {
       stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || [];
-    } catch (_unused11) {}
+    } catch (_unused0) {}
     if (!Array.isArray(stack)) stack = [];
     var previous = stack.at(-1);
     close.href = typeof previous === "string" && previous.startsWith("/") ? previous : "/";
@@ -1553,7 +1567,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     var select = _step11.value;
     var before = select.querySelector('option[value="vue"]');
     for (var _i3 = 0, _arr = [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]; _i3 < _arr.length; _i3++) {
-      var _arr$_i = _arr[_i3],
+      var _arr$_i = _slicedToArray(_arr[_i3], 2),
         value = _arr$_i[0],
         label = _arr$_i[1];
       if (select.querySelector("option[value=\"" + value + "\"]")) continue;
@@ -1753,15 +1767,15 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     return date.getFullYear() + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate()).padStart(2, "0") + " " + formatVersionClock(date);
   }
   function versionChoice(label, timestamp, _temp2) {
-    var _ref0 = _temp2 === void 0 ? {} : _temp2,
-      _ref0$current = _ref0.current,
-      current = _ref0$current === void 0 ? false : _ref0$current,
-      _ref0$sequence = _ref0.sequence,
-      sequence = _ref0$sequence === void 0 ? 0 : _ref0$sequence,
-      _ref0$title = _ref0.title,
-      title = _ref0$title === void 0 ? "" : _ref0$title,
-      _ref0$latest = _ref0.latest,
-      latest = _ref0$latest === void 0 ? false : _ref0$latest;
+    var _ref14 = _temp2 === void 0 ? {} : _temp2,
+      _ref14$current = _ref14.current,
+      current = _ref14$current === void 0 ? false : _ref14$current,
+      _ref14$sequence = _ref14.sequence,
+      sequence = _ref14$sequence === void 0 ? 0 : _ref14$sequence,
+      _ref14$title = _ref14.title,
+      title = _ref14$title === void 0 ? "" : _ref14$title,
+      _ref14$latest = _ref14.latest,
+      latest = _ref14$latest === void 0 ? false : _ref14$latest;
     var button = document.createElement("button");
     button.type = "button";
     button.className = "project-editor__version";
@@ -1813,25 +1827,25 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               historyPanel.style.maxHeight = Math.max(120, innerHeight - buttonRect.bottom - gap - edge) + "px";
             };
             closeHistory = function _closeHistory(_temp10) {
-              var _ref22 = _temp10 === void 0 ? {} : _temp10,
-                _ref22$restoreFocus = _ref22.restoreFocus,
-                restoreFocus = _ref22$restoreFocus === void 0 ? false : _ref22$restoreFocus;
+              var _ref28 = _temp10 === void 0 ? {} : _temp10,
+                _ref28$restoreFocus = _ref28.restoreFocus,
+                restoreFocus = _ref28$restoreFocus === void 0 ? false : _ref28$restoreFocus;
               historyPanel.hidden = true;
               versionButton.setAttribute("aria-expanded", "false");
               if (restoreFocus) versionButton.focus();
             };
             applyTemplateSnapshot = function _applyTemplateSnapsho(next, _temp1) {
               var _next$config$containe, _next$config;
-              var _ref20 = _temp1 === void 0 ? {} : _temp1,
-                _ref20$notice = _ref20.notice,
-                notice = _ref20$notice === void 0 ? true : _ref20$notice,
-                _ref20$previousSnapsh = _ref20.previousSnapshot,
-                previousSnapshot = _ref20$previousSnapsh === void 0 ? state : _ref20$previousSnapsh;
+              var _ref26 = _temp1 === void 0 ? {} : _temp1,
+                _ref26$notice = _ref26.notice,
+                notice = _ref26$notice === void 0 ? true : _ref26$notice,
+                _ref26$previousSnapsh = _ref26.previousSnapshot,
+                previousSnapshot = _ref26$previousSnapsh === void 0 ? state : _ref26$previousSnapsh;
               if (linkPatterns) linkPatterns.value = (((_next$config$containe = next.config.containerOptions) == null ? void 0 : _next$config$containe.allowedLinkPatterns) || []).join("\n");
               if (template) template.value = next.config.template || "blank";
               growTextarea(linkPatterns);
               selected = next.files[0].path;
-              openTabs = Array.isArray((_next$config = next.config) == null ? void 0 : _next$config.editorTabs) ? [].concat(next.config.editorTabs) : next.files.map(function (file) {
+              openTabs = Array.isArray((_next$config = next.config) == null ? void 0 : _next$config.editorTabs) ? _toConsumableArray(next.config.editorTabs) : next.files.map(function (file) {
                 return file.path;
               });
               updateSnapshot(next, {
@@ -1851,8 +1865,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 validateAllowedUrlPatterns(allowedLinkPatterns);
                 linkPatterns == null || linkPatterns.setCustomValidity("");
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "false");
-              } catch (_error19) {
-                linkPatterns == null || linkPatterns.setCustomValidity(_error19.message);
+              } catch (_error22) {
+                linkPatterns == null || linkPatterns.setCustomValidity(_error22.message);
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "true");
                 return;
               }
@@ -1922,9 +1936,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               }
             };
             openPresentation = function _openPresentation(_temp0) {
-              var _ref19 = _temp0 === void 0 ? {} : _temp0,
-                _ref19$keyboard = _ref19.keyboard,
-                keyboard = _ref19$keyboard === void 0 ? false : _ref19$keyboard;
+              var _ref25 = _temp0 === void 0 ? {} : _temp0,
+                _ref25$keyboard = _ref25.keyboard,
+                keyboard = _ref25$keyboard === void 0 ? false : _ref25$keyboard;
               __resourcesDatasetSet(root, "data-presenting", "true");
               document.body.classList.add("project-presenting");
               previewSection.classList.add("project-editor__preview--presenting");
@@ -1948,25 +1962,25 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               presentButton.setAttribute("aria-pressed", "false");
             };
             closeOutputOverflow = function _closeOutputOverflow(_temp9) {
-              var _ref17 = _temp9 === void 0 ? {} : _temp9,
-                _ref17$focus = _ref17.focus,
-                focus = _ref17$focus === void 0 ? false : _ref17$focus;
+              var _ref23 = _temp9 === void 0 ? {} : _temp9,
+                _ref23$focus = _ref23.focus,
+                focus = _ref23$focus === void 0 ? false : _ref23$focus;
               outputOverflowMenu.hidden = true;
               outputOverflowTrigger.setAttribute("aria-expanded", "false");
               if (focus) outputOverflowTrigger.focus();
             };
             closeEditorOverflow = function _closeEditorOverflow(_temp8) {
-              var _ref15 = _temp8 === void 0 ? {} : _temp8,
-                _ref15$focus = _ref15.focus,
-                focus = _ref15$focus === void 0 ? false : _ref15$focus;
+              var _ref21 = _temp8 === void 0 ? {} : _temp8,
+                _ref21$focus = _ref21.focus,
+                focus = _ref21$focus === void 0 ? false : _ref21$focus;
               editorOverflowMenu.hidden = true;
               editorOverflowTrigger.setAttribute("aria-expanded", "false");
               if (focus) editorOverflowTrigger.focus();
             };
             closeFileMenu = function _closeFileMenu(_temp7) {
-              var _ref14 = _temp7 === void 0 ? {} : _temp7,
-                _ref14$focus = _ref14.focus,
-                focus = _ref14$focus === void 0 ? false : _ref14$focus;
+              var _ref20 = _temp7 === void 0 ? {} : _temp7,
+                _ref20$focus = _ref20.focus,
+                focus = _ref20$focus === void 0 ? false : _ref20$focus;
               fileMenu.hidden = true;
               fileTrigger.setAttribute("aria-expanded", "false");
               if (focus) fileTrigger.focus();
@@ -2025,9 +2039,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               sendContent();
             };
             receiveEditorChange = function _receiveEditorChange(content, _temp6) {
-              var _ref13 = _temp6 === void 0 ? {} : _temp6,
-                _ref13$syntaxErrors = _ref13.syntaxErrors,
-                syntaxErrors = _ref13$syntaxErrors === void 0 ? false : _ref13$syntaxErrors;
+              var _ref19 = _temp6 === void 0 ? {} : _temp6,
+                _ref19$syntaxErrors = _ref19.syntaxErrors,
+                syntaxErrors = _ref19$syntaxErrors === void 0 ? false : _ref19$syntaxErrors;
               if (typeof content !== "string") return;
               if (readOnly || selected === "config" || content === selectedContent()) return;
               try {
@@ -2054,7 +2068,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     return (_editorController3 = editorController) == null ? void 0 : _editorController3.renderSnapshot();
                   } : renderPreview, debounceMs);
                 }
-              } catch (_unused10) {}
+              } catch (_error21) {
+                setStatus("Editor update failed: " + (_error21.message || String(_error21)), "error", null, "editor");
+              }
             };
             _renderStoredVersions = function _renderStoredVersions3() {
               _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee1() {
@@ -2197,7 +2213,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 setStatus("Current version");
               });
               versionList.append(current);
-              [].concat(localHistory.patches).reverse().forEach(function (_, reverseIndex) {
+              _toConsumableArray(localHistory.patches).reverse().forEach(function (_, reverseIndex) {
                 var sequence = localHistory.patches.length - reverseIndex;
                 var button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], {
                   sequence: sequence
@@ -2300,7 +2316,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       return page.text();
                     case 7:
                       documentCopy = _t8.parseFromString.call(_t8, _context0.v, "text/html");
-                      fresh = (_find = [].concat(documentCopy.querySelectorAll("[data-project-editor]")).find(function (editor) {
+                      fresh = (_find = _toConsumableArray(documentCopy.querySelectorAll("[data-project-editor]")).find(function (editor) {
                         return __resourcesDatasetGet(editor, "data-project-id") === projectId;
                       })) == null ? void 0 : __resourcesDatasetGet(_find, "data-csrf");
                       if (!fresh) {
@@ -2366,9 +2382,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               return _save.apply(this, arguments);
             };
             checkpointDraft = function _checkpointDraft(_temp5) {
-              var _ref12 = _temp5 === void 0 ? {} : _temp5,
-                _ref12$destructive = _ref12.destructive,
-                destructive = _ref12$destructive === void 0 ? false : _ref12$destructive;
+              var _ref18 = _temp5 === void 0 ? {} : _temp5,
+                _ref18$destructive = _ref18.destructive,
+                destructive = _ref18$destructive === void 0 ? false : _ref18$destructive;
               var now = Date.now();
               if (editorController && historyInEditorMachine) {
                 localHistory = editorController.history.checkpoint(state, {
@@ -2392,9 +2408,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             updateSnapshot = function _updateSnapshot(next, _temp4) {
               var _editorController2, _root$closest8;
-              var _ref11 = _temp4 === void 0 ? {} : _temp4,
-                _ref11$destructive = _ref11.destructive,
-                destructive = _ref11$destructive === void 0 ? false : _ref11$destructive;
+              var _ref17 = _temp4 === void 0 ? {} : _temp4,
+                _ref17$destructive = _ref17.destructive,
+                destructive = _ref17$destructive === void 0 ? false : _ref17$destructive;
               var normalized = normalizeProjectSnapshot(next);
               if (projectPatchIsEmpty(diffProjectSnapshots(state, normalized))) return false;
               var branchedFromHistory = viewingHistorical;
@@ -2500,9 +2516,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               var _state$files$2;
               var menu = root.querySelector("[data-project-file-options]");
               var tabs = root.querySelector("[data-project-tabs]");
-              var available = new Set([].concat(state.files.map(function (file) {
+              var available = new Set([].concat(_toConsumableArray(state.files.map(function (file) {
                 return file.path;
-              }), ["config"]));
+              })), ["config"]));
               var selectedAvailable = typeof selected === "string" && available.has(selected);
               openTabs = openTabs.filter(function (path, index) {
                 return available.has(path) && openTabs.indexOf(path) === index;
@@ -2531,13 +2547,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               openChoices.setAttribute("aria-label", openHeading.textContent);
               openSection.append(openHeading, openChoices);
               menu.append(availableChoices, openSection);
-              function addChoice(_ref10) {
-                var path = _ref10.path,
-                  label = _ref10.label,
-                  _ref10$config = _ref10.config,
-                  config = _ref10$config === void 0 ? false : _ref10$config,
-                  _ref10$open = _ref10.open,
-                  open = _ref10$open === void 0 ? false : _ref10$open;
+              function addChoice(_ref16) {
+                var path = _ref16.path,
+                  label = _ref16.label,
+                  _ref16$config = _ref16.config,
+                  config = _ref16$config === void 0 ? false : _ref16$config,
+                  _ref16$open = _ref16.open,
+                  open = _ref16$open === void 0 ? false : _ref16$open;
                 var tabPath = config ? "config" : path;
                 var row = document.createElement("div");
                 row.className = "project-editor__file-option-row";
@@ -2728,8 +2744,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               try {
                 var _editorController;
                 return ((_editorController = editorController) == null ? void 0 : _editorController.projectStatus.report(generation, event)) || null;
-              } catch (_error18) {
-                setStatus("Editor status bridge failed: " + _error18.message, "error", null, "editor");
+              } catch (_error20) {
+                setStatus("Editor status bridge failed: " + _error20.message, "error", null, "editor");
                 return null;
               }
             };
@@ -2778,10 +2794,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           var href = node.getAttribute("href");
                           var patterns = ((_previewState$config5 = previewState.config) == null || (_previewState$config5 = _previewState$config5.containerOptions) == null ? void 0 : _previewState$config5.allowedLinkPatterns) || ((_previewState$config6 = previewState.config) == null || (_previewState$config6 = _previewState$config6.container) == null ? void 0 : _previewState$config6.allowedLinkPatterns) || [];
                           if (urlMatchesAllowedPatterns(href, patterns)) {
-                            var _ref23, _previewState$config7, _previewState$config8;
+                            var _ref29, _previewState$config7, _previewState$config8;
                             var attributes = [["href", href]];
                             var authoredTarget = node.getAttribute("target");
-                            if (authoredTarget) attributes.push(["target", authoredTarget]);else if (((_ref23 = ((_previewState$config7 = previewState.config) == null || (_previewState$config7 = _previewState$config7.containerOptions) == null ? void 0 : _previewState$config7.links) || ((_previewState$config8 = previewState.config) == null || (_previewState$config8 = _previewState$config8.container) == null ? void 0 : _previewState$config8.links)) == null ? void 0 : _ref23.addTargetBlank) !== false) attributes.push(["target", "_blank"]);
+                            if (authoredTarget) attributes.push(["target", authoredTarget]);else if (((_ref29 = ((_previewState$config7 = previewState.config) == null || (_previewState$config7 = _previewState$config7.containerOptions) == null ? void 0 : _previewState$config7.links) || ((_previewState$config8 = previewState.config) == null || (_previewState$config8 = _previewState$config8.container) == null ? void 0 : _previewState$config8.links)) == null ? void 0 : _ref29.addTargetBlank) !== false) attributes.push(["target", "_blank"]);
                             projectedAttributes.set(element, attributes);
                           } else {
                             reject("The href for " + href + " was omitted because it is outside the allowed URL patterns.");
@@ -2814,8 +2830,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       renderStatusState();
                       try {
                         (_editorController5 = editorController) == null || _editorController5.projectStatus.begin(generation);
-                      } catch (_error17) {
-                        setStatus("Editor status bridge failed: " + _error17.message, "error", null, "editor");
+                      } catch (_error19) {
+                        setStatus("Editor status bridge failed: " + _error19.message, "error", null, "editor");
                       }
                       previewState = state;
                       if (!((_state$config8 = state.config) != null && _state$config8.build)) {
@@ -3220,7 +3236,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                               return _context6.a(2);
                             case 8:
                               outputFrame.hidden = false;
-                              for (_i9 = 0, _arr6 = [].concat(preview.children); _i9 < _arr6.length; _i9++) {
+                              for (_i9 = 0, _arr6 = _toConsumableArray(preview.children); _i9 < _arr6.length; _i9++) {
                                 child = _arr6[_i9];
                                 if (child !== outputFrame) child.remove();
                               }
@@ -3265,9 +3281,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             sendContent = function _sendContent(_temp3) {
               var _editorMount$parentEl, _editorMount$parentEl2;
-              var _ref1 = _temp3 === void 0 ? {} : _temp3,
-                _ref1$resetHistoryOnE = _ref1.resetHistoryOnEdit,
-                resetHistoryOnEdit = _ref1$resetHistoryOnE === void 0 ? false : _ref1$resetHistoryOnE;
+              var _ref15 = _temp3 === void 0 ? {} : _temp3,
+                _ref15$resetHistoryOn = _ref15.resetHistoryOnEdit,
+                resetHistoryOnEdit = _ref15$resetHistoryOn === void 0 ? false : _ref15$resetHistoryOn;
               if (!ready || !editorController) return;
               __resourcesDatasetSet(root, "data-editor-loading", "true");
               var selectedFile = state.files.find(function (file) {
@@ -3424,7 +3440,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     sessionStorage.removeItem(pendingSnapshotKey);
                   }
                 }
-              } catch (_unused9) {
+              } catch (_unused7) {
                 sessionStorage.removeItem(pendingSnapshotKey);
               }
             }
@@ -3450,8 +3466,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             openTabs = [];
             try {
               openTabs = JSON.parse(sessionStorage.getItem(tabSessionKey)) || [];
-            } catch (_unused0) {}
-            if (!openTabs.length) openTabs = Array.isArray((_state$config4 = state.config) == null ? void 0 : _state$config4.editorTabs) ? [].concat(state.config.editorTabs) : [selected];
+            } catch (_unused8) {}
+            if (!openTabs.length) openTabs = Array.isArray((_state$config4 = state.config) == null ? void 0 : _state$config4.editorTabs) ? _toConsumableArray(state.config.editorTabs) : [selected];
             ready = false;
             pending2 = recoveredPendingSnapshot;
             saveTimer = 0;
@@ -3508,7 +3524,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     }));
                     state = normalizeProjectSnapshot(stored.snapshot);
                   }
-                } catch (_unused1) {
+                } catch (_unused9) {
                   sessionStorage.removeItem(DRAFT_KEY);
                 }
               }
@@ -3524,7 +3540,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             tabScrollBack = document.createElement("button");
             tabScrollForward = document.createElement("button");
             for (_i4 = 0, _arr2 = [[tabScrollBack, "Scroll tabs left", "\u2039"], [tabScrollForward, "Scroll tabs right", "\u203A"]]; _i4 < _arr2.length; _i4++) {
-              _arr2$_i = _arr2[_i4], _button2 = _arr2$_i[0], _label = _arr2$_i[1], text = _arr2$_i[2];
+              _arr2$_i = _slicedToArray(_arr2[_i4], 3), _button2 = _arr2$_i[0], _label = _arr2$_i[1], text = _arr2$_i[2];
               _button2.type = "button";
               _button2.className = "project-editor__tab-scroll";
               _button2.setAttribute("aria-label", _label);
@@ -3647,7 +3663,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               }
               if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
               event.preventDefault();
-              var options = [].concat(fileMenu.querySelectorAll('[role="menuitemradio"]')).filter(function (option) {
+              var options = _toConsumableArray(fileMenu.querySelectorAll('[role="menuitemradio"]')).filter(function (option) {
                 return !option.closest(".project-editor__file-option-row").hidden;
               });
               var current = Math.max(0, options.indexOf(document.activeElement));
@@ -3682,7 +3698,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               updateSnapshot({
                 files: state.files,
                 config: _extends({}, state.config, {
-                  editorTabs: [].concat(openTabs)
+                  editorTabs: _toConsumableArray(openTabs)
                 })
               });
               setStatus("Tab configuration saved");
@@ -3698,8 +3714,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 var _root$closest9;
                 var projectName = String(((_root$closest9 = root.closest("form")) == null || (_root$closest9 = _root$closest9.elements) == null || (_root$closest9 = _root$closest9.namedItem("slug")) == null ? void 0 : _root$closest9.value) || __resourcesDatasetGet(root, "data-project-slug") || "").trim();
                 downloadProjectArchive(state, projectName);
-              } catch (_error16) {
-                setStatus(_error16.message, "error");
+              } catch (_error18) {
+                setStatus(_error18.message, "error");
               }
             });
             archiveInput.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee3() {
@@ -4094,9 +4110,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         }, "*");
       },
       closeBlogPresentation = function closeBlogPresentation(_temp11) {
-        var _ref26 = _temp11 === void 0 ? {} : _temp11,
-          _ref26$focus = _ref26.focus,
-          focus = _ref26$focus === void 0 ? true : _ref26$focus;
+        var _ref32 = _temp11 === void 0 ? {} : _temp11,
+          _ref32$focus = _ref32.focus,
+          focus = _ref32$focus === void 0 ? true : _ref32$focus;
         if (!figure.classList.contains("blog-example-block--fullscreen")) return;
         figure.classList.remove("blog-example-block--fullscreen");
         blogContentBlock == null || blogContentBlock.style.removeProperty("animation");

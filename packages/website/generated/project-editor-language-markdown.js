@@ -5,6 +5,10 @@ function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = 
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -395,7 +399,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           i = t.next;
         if (r < 0) return !1;
         var n = P(u.HeaderMark, e.lineStart + t.pos, e.lineStart + r);
-        return e.nextLine(), e.addLeafElement(a, P(i == 61 ? u.SetextHeading1 : u.SetextHeading2, a.start, e.prevLineEnd(), [].concat(e.parser.parseInline(a.content, a.start), [n]))), !0;
+        return e.nextLine(), e.addLeafElement(a, P(i == 61 ? u.SetextHeading1 : u.SetextHeading2, a.start, e.prevLineEnd(), [].concat(_toConsumableArray(e.parser.parseInline(a.content, a.start)), [n]))), !0;
       };
       _proto4.finish = function finish() {
         return !1;
@@ -706,7 +710,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         }
         a = new X.NodeSet(p), $ && (a = a.extend((0, g.styleTags)($)));
       }
-      if (K(t.props) && (a = (_a7 = a).extend.apply(_a7, t.props)), K(t.remove)) {
+      if (K(t.props) && (a = (_a7 = a).extend.apply(_a7, _toConsumableArray(t.props))), K(t.remove)) {
         for (var _iterator14 = _createForOfIteratorHelperLoose(t.remove), _step14; !(_step14 = _iterator14()).done;) {
           var _p = _step14.value;
           var _$2 = this.blockNames.indexOf(_p),
@@ -1412,7 +1416,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
         return !1;
       };
       _proto11.finish = function finish(e, t) {
-        return e.addLeafElement(t, e.elt("Task", t.start, t.start + t.content.length, [e.elt("TaskMarker", t.start, t.start + 3)].concat(e.parser.parseInline(t.content.slice(3), t.start + 3)))), !0;
+        return e.addLeafElement(t, e.elt("Task", t.start, t.start + t.content.length, [e.elt("TaskMarker", t.start, t.start + 3)].concat(_toConsumableArray(e.parser.parseInline(t.content.slice(3), t.start + 3))))), !0;
       };
       return zO;
     }(),

@@ -29049,7 +29049,8 @@ ${bundleProjectModule(entry, script.textContent)}
         const debounceMs = Math.min(5e3, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
         editorPreviewTimer = setTimeout(root.dataset.outputOwner === "editor" ? () => editorController?.renderSnapshot() : renderPreview, debounceMs);
       }
-    } catch {
+    } catch (error) {
+      setStatus(`Editor update failed: ${error.message || String(error)}`, "error", null, "editor");
     }
   }
   function selectProjectFile(event) {

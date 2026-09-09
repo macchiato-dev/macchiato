@@ -1,6 +1,14 @@
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _inheritsLoose(t, o) { t.prototype = Object.create(o.prototype), t.prototype.constructor = t, _setPrototypeOf(t, o); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (_r10) { o = !0, n = _r10; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -212,7 +220,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (props && props.length) {
         this.props = Object.create(null);
         for (var _iterator5 = _createForOfIteratorHelperLoose(props), _step5; !(_step5 = _iterator5()).done;) {
-          var _step5$value = _step5.value,
+          var _step5$value = _slicedToArray(_step5.value, 2),
             prop = _step5$value[0],
             value = _step5$value[1];
           this.props[typeof prop == "number" ? prop : prop.id] = value;
@@ -2826,7 +2834,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       var newStacks = this.stacks = [];
       var stopped, stoppedTokens;
       if (this.bigReductionCount > 300 && stacks.length == 1) {
-        var s = stacks[0];
+        var _stacks = _slicedToArray(stacks, 1),
+          s = _stacks[0];
         while (s.forceReduce() && s.stack.length && s.stack[s.stack.length - 2] >= this.lastBigReductionStart) {}
         this.bigReductionCount = this.lastBigReductionSize = 0;
       }
@@ -3111,7 +3120,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           skipped: spec.skippedNodes && spec.skippedNodes.indexOf(i2) > -1
         });
       }));
-      if (spec.propSources) _this6.nodeSet = (_this6$nodeSet = _this6.nodeSet).extend.apply(_this6$nodeSet, spec.propSources);
+      if (spec.propSources) _this6.nodeSet = (_this6$nodeSet = _this6.nodeSet).extend.apply(_this6$nodeSet, _toConsumableArray(spec.propSources));
       _this6.strict = false;
       _this6.bufferLength = DefaultBufferLength;
       var tokenArray = decodeArray(spec.tokenData);
@@ -3222,7 +3231,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     _proto25.configure = function configure(config2) {
       var _this$nodeSet;
       var copy = Object.assign(Object.create(_LRParser.prototype), this);
-      if (config2.props) copy.nodeSet = (_this$nodeSet = this.nodeSet).extend.apply(_this$nodeSet, config2.props);
+      if (config2.props) copy.nodeSet = (_this$nodeSet = this.nodeSet).extend.apply(_this$nodeSet, _toConsumableArray(config2.props));
       if (config2.top) {
         var info = this.topRules[config2.top];
         if (!info) throw new RangeError("Invalid top rule name " + config2.top);
@@ -4133,8 +4142,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     };
     _proto29.replace = function replace(from, to, text) {
       var _clip = clip(this, from, to);
-      from = _clip[0];
-      to = _clip[1];
+      var _clip2 = _slicedToArray(_clip, 2);
+      from = _clip2[0];
+      to = _clip2[1];
       var parts = [];
       this.decompose(0, from, parts, 2);
       if (text.length) text.decompose(0, text.length, parts, 1 | 2);
@@ -4148,9 +4158,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (to === void 0) {
         to = this.length;
       }
-      var _clip2 = clip(this, from, to);
-      from = _clip2[0];
-      to = _clip2[1];
+      var _clip3 = clip(this, from, to);
+      var _clip4 = _slicedToArray(_clip3, 2);
+      from = _clip4[0];
+      to = _clip4[1];
       var parts = [];
       this.decompose(from, to, parts, 0);
       return TextNode.from(parts, to - from);
@@ -4248,9 +4259,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     };
     _proto30.replace = function replace(from, to, text) {
       if (!(text instanceof _TextLeaf)) return _Text2.prototype.replace.call(this, from, to, text);
-      var _clip3 = clip(this, from, to);
-      from = _clip3[0];
-      to = _clip3[1];
+      var _clip5 = clip(this, from, to);
+      var _clip6 = _slicedToArray(_clip5, 2);
+      from = _clip6[0];
+      to = _clip6[1];
       var lines = appendText(this.text, appendText(text.text, sliceText(this.text, 0, from)), to);
       var newLen = this.length + text.length - (to - from);
       if (lines.length <= 32) return new _TextLeaf(lines, newLen);
@@ -4263,9 +4275,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip4 = clip(this, from, to);
-      from = _clip4[0];
-      to = _clip4[1];
+      var _clip7 = clip(this, from, to);
+      var _clip8 = _slicedToArray(_clip7, 2);
+      from = _clip8[0];
+      to = _clip8[1];
       var result = "";
       for (var pos = 0, i2 = 0; pos <= to && i2 < this.text.length; i2++) {
         var line = this.text[i2],
@@ -4350,9 +4363,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       }
     };
     _proto31.replace = function replace(from, to, text) {
-      var _clip5 = clip(this, from, to);
-      from = _clip5[0];
-      to = _clip5[1];
+      var _clip9 = clip(this, from, to);
+      var _clip0 = _slicedToArray(_clip9, 2);
+      from = _clip0[0];
+      to = _clip0[1];
       if (text.lines < this.lines) for (var i2 = 0, pos = 0; i2 < this.children.length; i2++) {
         var child = this.children[i2],
           end = pos + child.length;
@@ -4377,9 +4391,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip6 = clip(this, from, to);
-      from = _clip6[0];
-      to = _clip6[1];
+      var _clip1 = clip(this, from, to);
+      var _clip10 = _slicedToArray(_clip1, 2);
+      from = _clip10[0];
+      to = _clip10[1];
       var result = "";
       for (var i2 = 0, pos = 0; i2 < this.children.length && pos <= to; i2++) {
         var child = this.children[i2],
@@ -4400,10 +4415,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (!(other instanceof _TextNode)) return 0;
       var length = 0;
       var _ref2 = dir > 0 ? [0, 0, this.children.length, other.children.length] : [this.children.length - 1, other.children.length - 1, -1, -1],
-        iA = _ref2[0],
-        iB = _ref2[1],
-        eA = _ref2[2],
-        eB = _ref2[3];
+        _ref3 = _slicedToArray(_ref2, 4),
+        iA = _ref3[0],
+        iB = _ref3[1],
+        eA = _ref3[2],
+        eB = _ref3[3];
       for (;; iA += dir, iB += dir) {
         if (iA == eA || iB == eB) return length;
         var chA = this.children[iA],
@@ -7237,8 +7253,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var StyleModule = function () {
     function StyleModule(spec, options) {
       this.rules = [];
-      var _ref3 = options || {},
-        finish = _ref3.finish;
+      var _ref4 = options || {},
+        finish = _ref4.finish;
       function splitSelector(selector) {
         return /^@/.test(selector) ? [selector] : selector.split(/,\s*/);
       }
@@ -7329,7 +7345,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         }
       }
       if (sheet) {
-        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(root.adoptedStyleSheets);
+        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(_toConsumableArray(root.adoptedStyleSheets));
       } else {
         var text = "";
         for (var _i13 = 0; _i13 < this.modules.length; _i13++) text += this.modules[_i13].getRules() + "\n";
@@ -8603,11 +8619,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       }));
     };
     _ViewPlugin.define = function define(create, spec) {
-      var _ref4 = spec || {},
-        eventHandlers = _ref4.eventHandlers,
-        eventObservers = _ref4.eventObservers,
-        provide = _ref4.provide,
-        deco = _ref4.decorations;
+      var _ref5 = spec || {},
+        eventHandlers = _ref5.eventHandlers,
+        eventObservers = _ref5.eventObservers,
+        provide = _ref5.provide,
+        deco = _ref5.decorations;
       return new _ViewPlugin(nextPluginID++, create, eventHandlers, eventObservers, function (plugin) {
         var ext = [];
         if (deco) ext.push(decorations.of(function (view) {
@@ -10129,9 +10145,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       var _a2;
       var changedRanges = _update2.changedRanges;
       if (this.minWidth > 0 && changedRanges.length) {
-        if (!changedRanges.every(function (_ref5) {
-          var fromA = _ref5.fromA,
-            toA = _ref5.toA;
+        if (!changedRanges.every(function (_ref6) {
+          var fromA = _ref6.fromA,
+            toA = _ref6.toA;
           return toA < _this30.minWidthFrom || fromA > _this30.minWidthTo;
         })) {
           this.minWidth = this.minWidthFrom = this.minWidthTo = 0;
@@ -10280,9 +10296,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           } else {
             var range = document.createRange();
             if (main.anchor > main.head) {
-              var _ref6 = [head, anchor];
-              anchor = _ref6[0];
-              head = _ref6[1];
+              var _ref7 = [head, anchor];
+              anchor = _ref7[0];
+              head = _ref7[1];
             }
             range.setEnd(head.node, head.offset);
             range.setStart(anchor.node, anchor.offset);
@@ -10572,7 +10588,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         this.dynamicDecorationMap[i2++] = dynamicOuter;
         allDeco.push(RangeSet.join(outerDeco));
       }
-      this.decorations = [this.editContextFormatting].concat(allDeco, [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
+      this.decorations = [this.editContextFormatting].concat(_toConsumableArray(allDeco), [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
       while (i2 < this.decorations.length) this.dynamicDecorationMap[i2++] = false;
       this.blockWrappers = this.view.state.facet(blockWrappers).map(function (v) {
         return typeof v == "function" ? v(_this35.view) : v;
@@ -13292,9 +13308,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         main = this.state.selection.main;
       var _loop11 = function _loop11() {
         var pos = _i41 ? main.head : main.anchor;
-        if (!viewports.some(function (_ref7) {
-          var from = _ref7.from,
-            to = _ref7.to;
+        if (!viewports.some(function (_ref8) {
+          var from = _ref8.from,
+            to = _ref8.to;
           return pos >= from && pos <= to;
         })) {
           var _this46$lineBlockAt = _this46.lineBlockAt(pos),
@@ -13482,9 +13498,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         to = changes.mapPos(viewport.to, 1);
       return new Viewport(this.heightMap.lineAt(from, QueryType.ByPos, this.heightOracle, 0, 0).from, this.heightMap.lineAt(to, QueryType.ByPos, this.heightOracle, 0, 0).to);
     };
-    _proto105.viewportIsAppropriate = function viewportIsAppropriate(_ref8, bias) {
-      var from = _ref8.from,
-        to = _ref8.to;
+    _proto105.viewportIsAppropriate = function viewportIsAppropriate(_ref9, bias) {
+      var from = _ref9.from,
+        to = _ref9.to;
       if (bias === void 0) {
         bias = 0;
       }
@@ -13721,9 +13737,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       ranges: ranges
     };
   }
-  function findPosition(_ref9, ratio) {
-    var total = _ref9.total,
-      ranges = _ref9.ranges;
+  function findPosition(_ref0, ratio) {
+    var total = _ref0.total,
+      ranges = _ref0.ranges;
     if (ratio <= 0) return ranges[0].from;
     if (ratio >= 1) return ranges[ranges.length - 1].to;
     var dist2 = Math.floor(total * ratio);
@@ -13784,9 +13800,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       var vpHeight = 0,
         base2 = 0,
         domBase = 0;
-      this.viewports = viewports.map(function (_ref0) {
-        var from = _ref0.from,
-          to = _ref0.to;
+      this.viewports = viewports.map(function (_ref1) {
+        var from = _ref1.from,
+          to = _ref1.to;
         var top2 = heightMap.lineAt(from, QueryType.ByPos, oracle, 0, 0).top;
         var bottom = heightMap.lineAt(to, QueryType.ByPos, oracle, 0, 0).bottom;
         vpHeight += bottom - top2;
@@ -14593,11 +14609,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       focusOffset = range.endOffset;
     var curAnchor = view.docView.domAtPos(view.state.selection.main.anchor, 1);
     if (isEquivalentPosition(curAnchor.node, curAnchor.offset, focusNode, focusOffset)) {
-      var _ref1 = [focusNode, focusOffset, anchorNode, anchorOffset];
-      anchorNode = _ref1[0];
-      anchorOffset = _ref1[1];
-      focusNode = _ref1[2];
-      focusOffset = _ref1[3];
+      var _ref10 = [focusNode, focusOffset, anchorNode, anchorOffset];
+      anchorNode = _ref10[0];
+      anchorOffset = _ref10[1];
+      focusNode = _ref10[2];
+      focusOffset = _ref10[3];
     }
     return {
       anchorNode: anchorNode,
@@ -15118,9 +15134,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           }
           var measuring = [];
           if (!(changed & 4)) {
-            var _ref10 = [measuring, this.measureRequests];
-            this.measureRequests = _ref10[0];
-            measuring = _ref10[1];
+            var _ref11 = [measuring, this.measureRequests];
+            this.measureRequests = _ref11[0];
+            measuring = _ref11[1];
           }
           var measured = measuring.map(function (m) {
             try {
@@ -16054,7 +16070,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     if (options === void 0) {
       options = {};
     }
-    var _keys = keys[options.key || "Alt"],
+    var _keys = _slicedToArray(keys[options.key || "Alt"], 2),
       code2 = _keys[0],
       getter = _keys[1];
     var plugin = ViewPlugin.fromClass(function () {
@@ -16348,8 +16364,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           var tv = _this67.manager.tooltipViews[i2];
           return tv.getCoords ? tv.getCoords(t2.pos) : _this67.view.coordsAtPos(t2.pos);
         }),
-        size: this.manager.tooltipViews.map(function (_ref11) {
-          var dom = _ref11.dom;
+        size: this.manager.tooltipViews.map(function (_ref12) {
+          var dom = _ref12.dom;
           return dom.getBoundingClientRect();
         }),
         space: this.view.state.facet(tooltipConfig).tooltipSpace(this.view),
@@ -18205,12 +18221,12 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       pos = next.to;
     }
   }
-  function delimitedIndent(_ref12) {
-    var closing2 = _ref12.closing,
-      _ref12$align = _ref12.align,
-      align = _ref12$align === void 0 ? true : _ref12$align,
-      _ref12$units = _ref12.units,
-      units = _ref12$units === void 0 ? 1 : _ref12$units;
+  function delimitedIndent(_ref13) {
+    var closing2 = _ref13.closing,
+      _ref13$align = _ref13.align,
+      align = _ref13$align === void 0 ? true : _ref13$align,
+      _ref13$units = _ref13.units,
+      units = _ref13$units === void 0 ? 1 : _ref13$units;
     return function (context) {
       return delimitedStrategy(context, align, units, closing2);
     };
@@ -18227,10 +18243,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     return context.baseIndent;
   };
   function continuedIndent(_temp) {
-    var _ref13 = _temp === void 0 ? {} : _temp,
-      except = _ref13.except,
-      _ref13$units = _ref13.units,
-      units = _ref13$units === void 0 ? 1 : _ref13$units;
+    var _ref14 = _temp === void 0 ? {} : _temp,
+      except = _ref14.except,
+      _ref14$units = _ref14.units,
+      units = _ref14$units === void 0 ? 1 : _ref14$units;
     return function (context) {
       var matchExcept = except && except.test(context.textAfter);
       return context.baseIndent + (matchExcept ? 0 : units * context.unit);
@@ -19046,7 +19062,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var byTag = Object.create(null);
   var defaultTable = Object.create(null);
   for (var _i70 = 0, _arr2 = [["variable", "variableName"], ["variable-2", "variableName.special"], ["string-2", "string.special"], ["def", "variableName.definition"], ["tag", "tagName"], ["attribute", "attributeName"], ["type", "typeName"], ["builtin", "variableName.standard"], ["qualifier", "modifier"], ["error", "invalid"], ["header", "heading"], ["property", "propertyName"]]; _i70 < _arr2.length; _i70++) {
-    var _arr2$_i = _arr2[_i70],
+    var _arr2$_i = _slicedToArray(_arr2[_i70], 2),
       legacyName = _arr2$_i[0],
       _name7 = _arr2$_i[1];
     defaultTable[legacyName] = createTokenType(noTokens, _name7);
@@ -20107,11 +20123,12 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         label: o
       } : o;
     });
-    var _ref14 = options.every(function (o) {
+    var _ref15 = options.every(function (o) {
         return /^\w+$/.test(o.label);
       }) ? [/\w*$/, /\w+$/] : prefixMatch(options),
-      validFor = _ref14[0],
-      match = _ref14[1];
+      _ref16 = _slicedToArray(_ref15, 2),
+      validFor = _ref16[0],
+      match = _ref16[1];
     return function (context) {
       var token = context.matchBefore(match);
       return token || context.explicit ? {
@@ -20406,9 +20423,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         var _icon$classList;
         var icon = document.createElement("div");
         icon.classList.add("cm-completionIcon");
-        if (completion.type) (_icon$classList = icon.classList).add.apply(_icon$classList, completion.type.split(new RegExp("\\s+", "g")).map(function (cls) {
+        if (completion.type) (_icon$classList = icon.classList).add.apply(_icon$classList, _toConsumableArray(completion.type.split(new RegExp("\\s+", "g")).map(function (cls) {
           return "cm-completionIcon-" + cls;
-        }));
+        })));
         icon.setAttribute("aria-hidden", "true");
         return icon;
       },
@@ -21168,7 +21185,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           this.running.splice(_i81--, 1);
         } else {
           var _query$updates;
-          (_query$updates = query.updates).push.apply(_query$updates, _update20.transactions);
+          (_query$updates = query.updates).push.apply(_query$updates, _toConsumableArray(_update20.transactions));
         }
       }
       if (this.debounceUpdate > -1) clearTimeout(this.debounceUpdate);
@@ -21718,9 +21735,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     };
   }
   function moveField(dir) {
-    return function (_ref15) {
-      var state = _ref15.state,
-        dispatch = _ref15.dispatch;
+    return function (_ref17) {
+      var state = _ref17.state,
+        dispatch = _ref17.dispatch;
       var active = state.field(snippetState, false);
       if (!active || dir < 0 && active.active == 0) return false;
       var next = active.active + dir,
@@ -21735,9 +21752,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return true;
     };
   }
-  var clearSnippet = function clearSnippet(_ref16) {
-    var state = _ref16.state,
-      dispatch = _ref16.dispatch;
+  var clearSnippet = function clearSnippet(_ref18) {
+    var state = _ref18.state,
+      dispatch = _ref18.dispatch;
     var active = state.field(snippetState, false);
     if (!active) return false;
     dispatch(state.update({
@@ -21854,9 +21871,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     view.dispatch(tr);
     return true;
   });
-  var deleteBracketPair = function deleteBracketPair(_ref17) {
-    var state = _ref17.state,
-      dispatch = _ref17.dispatch;
+  var deleteBracketPair = function deleteBracketPair(_ref19) {
+    var state = _ref19.state,
+      dispatch = _ref19.dispatch;
     if (state.readOnly) return false;
     var conf = config(state, state.selection.main.head);
     var tokens = conf.brackets || defaults2.brackets;
@@ -23959,7 +23976,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (underline < 0) return false;
       var underlineMark = _elt(Type.HeaderMark, cx.lineStart + line.pos, cx.lineStart + underline);
       cx.nextLine();
-      cx.addLeafElement(leaf, _elt(next == 61 ? Type.SetextHeading1 : Type.SetextHeading2, leaf.start, cx.prevLineEnd(), [].concat(cx.parser.parseInline(leaf.content, leaf.start), [underlineMark])));
+      cx.addLeafElement(leaf, _elt(next == 61 ? Type.SetextHeading1 : Type.SetextHeading2, leaf.start, cx.prevLineEnd(), [].concat(_toConsumableArray(cx.parser.parseInline(leaf.content, leaf.start)), [underlineMark])));
       return true;
     };
     _proto155.finish = function finish() {
@@ -24328,13 +24345,13 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           styles;
         var _loop22 = function _loop22() {
           var s = _step244.value;
-          var _ref18 = typeof s == "string" ? {
+          var _ref20 = typeof s == "string" ? {
               name: s
             } : s,
-            name2 = _ref18.name,
-            block = _ref18.block,
-            composite = _ref18.composite,
-            style = _ref18.style;
+            name2 = _ref20.name,
+            block = _ref20.block,
+            composite = _ref20.composite,
+            style = _ref20.style;
           if (nodeTypes2.some(function (t2) {
             return t2.name == name2;
           })) return 1;
@@ -24359,7 +24376,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         nodeSet = new NodeSet(nodeTypes2);
         if (styles) nodeSet = nodeSet.extend(styleTags(styles));
       }
-      if (nonEmpty(config2.props)) nodeSet = (_nodeSet = nodeSet).extend.apply(_nodeSet, config2.props);
+      if (nonEmpty(config2.props)) nodeSet = (_nodeSet = nodeSet).extend.apply(_nodeSet, _toConsumableArray(config2.props));
       if (nonEmpty(config2.remove)) {
         for (var _iterator245 = _createForOfIteratorHelperLoose(config2.remove), _step245; !(_step245 = _iterator245()).done;) {
           var rm2 = _step245.value;
@@ -25190,7 +25207,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return false;
     };
     _proto164.finish = function finish(cx, leaf) {
-      cx.addLeafElement(leaf, cx.elt("Task", leaf.start, leaf.start + leaf.content.length, [cx.elt("TaskMarker", leaf.start, leaf.start + 3)].concat(cx.parser.parseInline(leaf.content.slice(3), leaf.start + 3))));
+      cx.addLeafElement(leaf, cx.elt("Task", leaf.start, leaf.start + leaf.content.length, [cx.elt("TaskMarker", leaf.start, leaf.start + 3)].concat(_toConsumableArray(cx.parser.parseInline(leaf.content.slice(3), leaf.start + 3)))));
       return true;
     };
     return TaskParser;
@@ -25520,9 +25537,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     if (config2 === void 0) {
       config2 = {};
     }
-    return function (_ref19) {
-      var state = _ref19.state,
-        dispatch = _ref19.dispatch;
+    return function (_ref21) {
+      var state = _ref21.state,
+        dispatch = _ref21.dispatch;
       var tree = syntaxTree(state),
         doc2 = state.doc;
       var dont = null,
@@ -25668,9 +25685,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }
     return node;
   }
-  var deleteMarkupBackward = function deleteMarkupBackward(_ref20) {
-    var state = _ref20.state,
-      dispatch = _ref20.dispatch;
+  var deleteMarkupBackward = function deleteMarkupBackward(_ref22) {
+    var state = _ref22.state,
+      dispatch = _ref22.dispatch;
     var tree = syntaxTree(state);
     var dont = null,
       changes = state.changeByRange(function (range) {
@@ -25986,9 +26003,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
   };
   function command(f, option) {
-    return function (_ref21) {
-      var state = _ref21.state,
-        dispatch = _ref21.dispatch;
+    return function (_ref23) {
+      var state = _ref23.state,
+        dispatch = _ref23.dispatch;
       if (state.readOnly) return false;
       var tr = f(option, state);
       if (!tr) return false;
@@ -26006,9 +26023,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     return data2.length ? data2[0] : {};
   }
   var SearchMargin = 50;
-  function findBlockComment(state, _ref22, from, to) {
-    var open = _ref22.open,
-      close = _ref22.close;
+  function findBlockComment(state, _ref24, from, to) {
+    var open = _ref24.open,
+      close = _ref24.close;
     var textBefore = state.sliceDoc(from - SearchMargin, from);
     var textAfter = state.sliceDoc(to, to + SearchMargin);
     var spaceBefore = /\s*$/.exec(textBefore)[0].length,
@@ -26277,9 +26294,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     })];
   }
   function cmd(side, selection2) {
-    return function (_ref23) {
-      var state = _ref23.state,
-        dispatch = _ref23.dispatch;
+    return function (_ref25) {
+      var state = _ref25.state,
+        dispatch = _ref25.dispatch;
       if (!selection2 && state.readOnly) return false;
       var historyState = state.field(historyField_, false);
       if (!historyState) return false;
@@ -26518,9 +26535,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       userEvent: "select"
     });
   }
-  function moveSel(_ref24, how) {
-    var state = _ref24.state,
-      dispatch = _ref24.dispatch;
+  function moveSel(_ref26, how) {
+    var state = _ref26.state,
+      dispatch = _ref26.dispatch;
     var selection2 = updateSel(state.selection, how);
     if (selection2.eq(state.selection, true)) return false;
     dispatch(setSel(state, selection2));
@@ -26704,9 +26721,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     dispatch(setSel(state, selection2));
     return true;
   }
-  var cursorMatchingBracket = function cursorMatchingBracket(_ref25) {
-    var state = _ref25.state,
-      dispatch = _ref25.dispatch;
+  var cursorMatchingBracket = function cursorMatchingBracket(_ref27) {
+    var state = _ref27.state,
+      dispatch = _ref27.dispatch;
     return toMatchingBracket(state, dispatch, false);
   };
   function extendSel(target, forward, how) {
@@ -26807,43 +26824,43 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return EditorSelection.cursor(view.lineBlockAt(range.head).to);
     });
   };
-  var cursorDocStart = function cursorDocStart(_ref26) {
-    var state = _ref26.state,
-      dispatch = _ref26.dispatch;
+  var cursorDocStart = function cursorDocStart(_ref28) {
+    var state = _ref28.state,
+      dispatch = _ref28.dispatch;
     dispatch(setSel(state, {
       anchor: 0
     }));
     return true;
   };
-  var cursorDocEnd = function cursorDocEnd(_ref27) {
-    var state = _ref27.state,
-      dispatch = _ref27.dispatch;
+  var cursorDocEnd = function cursorDocEnd(_ref29) {
+    var state = _ref29.state,
+      dispatch = _ref29.dispatch;
     dispatch(setSel(state, {
       anchor: state.doc.length
     }));
     return true;
   };
-  var selectDocStart = function selectDocStart(_ref28) {
-    var state = _ref28.state,
-      dispatch = _ref28.dispatch;
+  var selectDocStart = function selectDocStart(_ref30) {
+    var state = _ref30.state,
+      dispatch = _ref30.dispatch;
     dispatch(setSel(state, {
       anchor: state.selection.main.anchor,
       head: 0
     }));
     return true;
   };
-  var selectDocEnd = function selectDocEnd(_ref29) {
-    var state = _ref29.state,
-      dispatch = _ref29.dispatch;
+  var selectDocEnd = function selectDocEnd(_ref31) {
+    var state = _ref31.state,
+      dispatch = _ref31.dispatch;
     dispatch(setSel(state, {
       anchor: state.selection.main.anchor,
       head: state.doc.length
     }));
     return true;
   };
-  var selectAll = function selectAll(_ref30) {
-    var state = _ref30.state,
-      dispatch = _ref30.dispatch;
+  var selectAll = function selectAll(_ref32) {
+    var state = _ref32.state,
+      dispatch = _ref32.dispatch;
     dispatch(state.update({
       selection: {
         anchor: 0,
@@ -26853,12 +26870,12 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   };
-  var selectLine = function selectLine(_ref31) {
-    var state = _ref31.state,
-      dispatch = _ref31.dispatch;
-    var ranges = selectedLineBlocks(state).map(function (_ref32) {
-      var from = _ref32.from,
-        to = _ref32.to;
+  var selectLine = function selectLine(_ref33) {
+    var state = _ref33.state,
+      dispatch = _ref33.dispatch;
+    var ranges = selectedLineBlocks(state).map(function (_ref34) {
+      var from = _ref34.from,
+        to = _ref34.to;
       return EditorSelection.undirectionalRange(from, Math.min(to + 1, state.doc.length));
     });
     dispatch(state.update({
@@ -26867,9 +26884,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   };
-  var selectParentSyntax = function selectParentSyntax(_ref33) {
-    var state = _ref33.state,
-      dispatch = _ref33.dispatch;
+  var selectParentSyntax = function selectParentSyntax(_ref35) {
+    var state = _ref35.state,
+      dispatch = _ref35.dispatch;
     var selection2 = updateSel(state.selection, function (range) {
       var tree = syntaxTree(state),
         stack = tree.resolveStack(range.from, 1);
@@ -26929,9 +26946,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var addCursorBelow = function addCursorBelow(view) {
     return addCursorVertically(view, true);
   };
-  var simplifySelection = function simplifySelection(_ref34) {
-    var state = _ref34.state,
-      dispatch = _ref34.dispatch;
+  var simplifySelection = function simplifySelection(_ref36) {
+    var state = _ref36.state,
+      dispatch = _ref36.dispatch;
     var cur2 = state.selection,
       selection2 = null;
     if (cur2.ranges.length > 1) selection2 = EditorSelection.create([cur2.main]);else if (!cur2.main.empty) selection2 = EditorSelection.create([EditorSelection.cursor(cur2.main.head)]);
@@ -27063,9 +27080,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return range.head < lineStart ? lineStart : Math.min(view.state.doc.length, range.head + 1);
     });
   };
-  var splitLine = function splitLine(_ref35) {
-    var state = _ref35.state,
-      dispatch = _ref35.dispatch;
+  var splitLine = function splitLine(_ref37) {
+    var state = _ref37.state,
+      dispatch = _ref37.dispatch;
     if (state.readOnly) return false;
     var changes = state.changeByRange(function (range) {
       return {
@@ -27083,9 +27100,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   };
-  var transposeChars = function transposeChars(_ref36) {
-    var state = _ref36.state,
-      dispatch = _ref36.dispatch;
+  var transposeChars = function transposeChars(_ref38) {
+    var state = _ref38.state,
+      dispatch = _ref38.dispatch;
     if (state.readOnly) return false;
     var changes = state.changeByRange(function (range) {
       if (!range.empty || range.from == 0 || range.from == state.doc.length) return {
@@ -27178,14 +27195,14 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   }
-  var moveLineUp = function moveLineUp(_ref37) {
-    var state = _ref37.state,
-      dispatch = _ref37.dispatch;
+  var moveLineUp = function moveLineUp(_ref39) {
+    var state = _ref39.state,
+      dispatch = _ref39.dispatch;
     return moveLine(state, dispatch, false);
   };
-  var moveLineDown = function moveLineDown(_ref38) {
-    var state = _ref38.state,
-      dispatch = _ref38.dispatch;
+  var moveLineDown = function moveLineDown(_ref40) {
+    var state = _ref40.state,
+      dispatch = _ref40.dispatch;
     return moveLine(state, dispatch, true);
   };
   function copyLine(state, dispatch, forward) {
@@ -27210,22 +27227,22 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   }
-  var copyLineUp = function copyLineUp(_ref39) {
-    var state = _ref39.state,
-      dispatch = _ref39.dispatch;
+  var copyLineUp = function copyLineUp(_ref41) {
+    var state = _ref41.state,
+      dispatch = _ref41.dispatch;
     return copyLine(state, dispatch, false);
   };
-  var copyLineDown = function copyLineDown(_ref40) {
-    var state = _ref40.state,
-      dispatch = _ref40.dispatch;
+  var copyLineDown = function copyLineDown(_ref42) {
+    var state = _ref42.state,
+      dispatch = _ref42.dispatch;
     return copyLine(state, dispatch, true);
   };
   var deleteLine = function deleteLine(view) {
     if (view.state.readOnly) return false;
     var state = view.state,
-      changes = state.changes(selectedLineBlocks(state).map(function (_ref41) {
-        var from = _ref41.from,
-          to = _ref41.to;
+      changes = state.changes(selectedLineBlocks(state).map(function (_ref43) {
+        var from = _ref43.from,
+          to = _ref43.to;
         if (from > 0) from--;else if (to < state.doc.length) to++;
         return {
           from: from,
@@ -27267,9 +27284,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var insertNewlineAndIndent = newlineAndIndent(false);
   var insertBlankLine = newlineAndIndent(true);
   function newlineAndIndent(atEof) {
-    return function (_ref42) {
-      var state = _ref42.state,
-        dispatch = _ref42.dispatch;
+    return function (_ref44) {
+      var state = _ref44.state,
+        dispatch = _ref44.dispatch;
       if (state.readOnly) return false;
       var changes = state.changeByRange(function (range) {
         var from = range.from,
@@ -27325,9 +27342,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       };
     });
   }
-  var indentSelection = function indentSelection(_ref43) {
-    var state = _ref43.state,
-      dispatch = _ref43.dispatch;
+  var indentSelection = function indentSelection(_ref45) {
+    var state = _ref45.state,
+      dispatch = _ref45.dispatch;
     if (state.readOnly) return false;
     var updated = Object.create(null);
     var context = new IndentContext(state, {
@@ -27356,9 +27373,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   };
-  var indentMore = function indentMore(_ref44) {
-    var state = _ref44.state,
-      dispatch = _ref44.dispatch;
+  var indentMore = function indentMore(_ref46) {
+    var state = _ref46.state,
+      dispatch = _ref46.dispatch;
     if (state.readOnly) return false;
     dispatch(state.update(changeBySelectedLine(state, function (line, changes) {
       changes.push({
@@ -27370,9 +27387,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   };
-  var indentLess = function indentLess(_ref45) {
-    var state = _ref45.state,
-      dispatch = _ref45.dispatch;
+  var indentLess = function indentLess(_ref47) {
+    var state = _ref47.state,
+      dispatch = _ref47.dispatch;
     if (state.readOnly) return false;
     dispatch(state.update(changeBySelectedLine(state, function (line, changes) {
       var space4 = /^\s*/.exec(line.text)[0];
@@ -27937,10 +27954,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         return;
       }
       var startLine = state.doc.lineAt(state.selection.main.head);
-      var sign = match[1],
-        ln = match[2],
-        cl = match[3],
-        percent2 = match[4];
+      var _match = _slicedToArray(match, 5),
+        sign = _match[1],
+        ln = _match[2],
+        cl = _match[3],
+        percent2 = _match[4];
       var col = cl ? +cl.slice(1) : 0;
       var line2 = ln ? +ln : startLine.number;
       if (ln && percent2) {
@@ -28059,9 +28077,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       backgroundColor: "transparent"
     }
   });
-  var selectWord = function selectWord(_ref46) {
-    var state = _ref46.state,
-      dispatch = _ref46.dispatch;
+  var selectWord = function selectWord(_ref48) {
+    var state = _ref48.state,
+      dispatch = _ref48.dispatch;
     var selection2 = state.selection;
     var newSel = EditorSelection.create(selection2.ranges.map(function (range) {
       return state.wordAt(range.head) || EditorSelection.cursor(range.head);
@@ -28113,9 +28131,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (_ret4) return _ret4.v;
     }
   }
-  var selectNextOccurrence = function selectNextOccurrence(_ref47) {
-    var state = _ref47.state,
-      dispatch = _ref47.dispatch;
+  var selectNextOccurrence = function selectNextOccurrence(_ref49) {
+    var state = _ref49.state,
+      dispatch = _ref49.dispatch;
     var ranges = state.selection.ranges;
     if (ranges.some(function (sel) {
       return sel.from === sel.to;
@@ -28377,9 +28395,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       var state = _update22.state.field(searchState);
       if (state != _update22.startState.field(searchState) || _update22.docChanged || _update22.selectionSet || _update22.viewportChanged) this.decorations = this.highlight(state);
     };
-    _proto175.highlight = function highlight(_ref48) {
-      var query = _ref48.query,
-        panel = _ref48.panel;
+    _proto175.highlight = function highlight(_ref50) {
+      var query = _ref50.query,
+        panel = _ref50.panel;
       if (!panel || !query.spec.valid) return Decoration.none;
       var view = this.view;
       var builder = new RangeSetBuilder();
@@ -28409,8 +28427,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return state && state.query.spec.valid ? f(view, state) : openSearchPanel(view);
     };
   }
-  var findNext = searchCommand(function (view, _ref49) {
-    var query = _ref49.query;
+  var findNext = searchCommand(function (view, _ref51) {
+    var query = _ref51.query;
     var to = view.state.selection.main.to;
     var next = query.nextMatch(view.state, to, to);
     if (!next) return false;
@@ -28424,8 +28442,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     selectSearchInput(view);
     return true;
   });
-  var findPrevious = searchCommand(function (view, _ref50) {
-    var query = _ref50.query;
+  var findPrevious = searchCommand(function (view, _ref52) {
+    var query = _ref52.query;
     var state = view.state,
       from = state.selection.main.from;
     var prev = query.prevMatch(state, from, from);
@@ -28440,8 +28458,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     selectSearchInput(view);
     return true;
   });
-  var selectMatches = searchCommand(function (view, _ref51) {
-    var query = _ref51.query;
+  var selectMatches = searchCommand(function (view, _ref53) {
+    var query = _ref53.query;
     var ranges = query.matchAll(view.state, 1e3);
     if (!ranges || !ranges.length) return false;
     view.dispatch({
@@ -28452,9 +28470,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     });
     return true;
   });
-  var selectSelectionMatches = function selectSelectionMatches(_ref52) {
-    var state = _ref52.state,
-      dispatch = _ref52.dispatch;
+  var selectSelectionMatches = function selectSelectionMatches(_ref54) {
+    var state = _ref54.state,
+      dispatch = _ref54.dispatch;
     var sel = state.selection;
     if (sel.ranges.length > 1 || sel.main.empty) return false;
     var _sel$main = sel.main,
@@ -28473,8 +28491,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }));
     return true;
   };
-  var replaceNext = searchCommand(function (view, _ref53) {
-    var query = _ref53.query;
+  var replaceNext = searchCommand(function (view, _ref55) {
+    var query = _ref55.query;
     var state = view.state,
       _state$selection$main = state.selection.main,
       from = _state$selection$main.from,
@@ -28513,8 +28531,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     });
     return true;
   });
-  var replaceAll = searchCommand(function (view, _ref54) {
-    var query = _ref54.query;
+  var replaceAll = searchCommand(function (view, _ref56) {
+    var query = _ref56.query;
     if (view.state.readOnly) return false;
     var changes = [];
     for (var _iterator266 = _createForOfIteratorHelperLoose(query.matchAll(view.state, 1e9)), _step266; !(_step266 = _iterator266()).done;) {
@@ -28689,11 +28707,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         return findPrevious(view);
       }, [phrase(view, "previous")]), button("select", function () {
         return selectMatches(view);
-      }, [phrase(view, "all")]), crelt("label", null, [this.caseField, phrase(view, "match case")]), crelt("label", null, [this.reField, phrase(view, "regexp")]), crelt("label", null, [this.wordField, phrase(view, "by word")])].concat(view.state.readOnly ? [] : [crelt("br"), this.replaceField, button("replace", function () {
+      }, [phrase(view, "all")]), crelt("label", null, [this.caseField, phrase(view, "match case")]), crelt("label", null, [this.reField, phrase(view, "regexp")]), crelt("label", null, [this.wordField, phrase(view, "by word")])].concat(_toConsumableArray(view.state.readOnly ? [] : [crelt("br"), this.replaceField, button("replace", function () {
         return replaceNext(view);
       }, [phrase(view, "replace")]), button("replaceAll", function () {
         return replaceAll(view);
-      }, [phrase(view, "replace all")])], [crelt("button", {
+      }, [phrase(view, "replace all")])]), [crelt("button", {
         name: "close",
         onclick: function onclick() {
           return closeSearchPanel(view);
@@ -28766,9 +28784,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   }
   var AnnounceMargin = 30;
   var Break = /[\s\.,:;?!]/;
-  function announceMatch(view, _ref55) {
-    var from = _ref55.from,
-      to = _ref55.to;
+  function announceMatch(view, _ref57) {
+    var from = _ref57.from,
+      to = _ref57.to;
     var line = view.state.doc.lineAt(from),
       lineEnd2 = view.state.doc.lineAt(to).to;
     var start2 = Math.max(line.from, from - AnnounceMargin),
@@ -28890,7 +28908,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   });
   var editorSetup = [lineNumbers(), highlightActiveLineGutter(), history(), foldGutter(), dropCursor(), EditorState.allowMultipleSelections.of(true), indentOnInput(), syntaxHighlighting(defaultHighlightStyle, {
     fallback: true
-  }), bracketMatching(), closeBrackets(), autocompletion(), rectangularSelection(), crosshairCursor(), highlightActiveLine(), highlightSelectionMatches(), keymap.of([].concat(closeBracketsKeymap, defaultKeymap, searchKeymap, historyKeymap, foldKeymap, completionKeymap))];
+  }), bracketMatching(), closeBrackets(), autocompletion(), rectangularSelection(), crosshairCursor(), highlightActiveLine(), highlightSelectionMatches(), keymap.of([].concat(closeBracketsKeymap, _toConsumableArray(defaultKeymap), searchKeymap, historyKeymap, foldKeymap, completionKeymap))];
   function start(languages) {
     var parent = document.getElementById("editor");
     var language2 = new Compartment();

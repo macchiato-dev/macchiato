@@ -1,12 +1,20 @@
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 function _inheritsLoose(t, o) { t.prototype = Object.create(o.prototype), t.prototype.constructor = t, _setPrototypeOf(t, o); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (_r9) { o = !0, n = _r9; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 (function () {
   var rangeFrom = [];
   var rangeTo = [];
@@ -98,8 +106,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     };
     _proto.replace = function replace(from, to, text) {
       var _clip = clip(this, from, to);
-      from = _clip[0];
-      to = _clip[1];
+      var _clip2 = _slicedToArray(_clip, 2);
+      from = _clip2[0];
+      to = _clip2[1];
       var parts = [];
       this.decompose(0, from, parts, 2);
       if (text.length) text.decompose(0, text.length, parts, 1 | 2);
@@ -113,9 +122,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (to === void 0) {
         to = this.length;
       }
-      var _clip2 = clip(this, from, to);
-      from = _clip2[0];
-      to = _clip2[1];
+      var _clip3 = clip(this, from, to);
+      var _clip4 = _slicedToArray(_clip3, 2);
+      from = _clip4[0];
+      to = _clip4[1];
       var parts = [];
       this.decompose(from, to, parts, 0);
       return TextNode.from(parts, to - from);
@@ -213,9 +223,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     };
     _proto2.replace = function replace(from, to, text) {
       if (!(text instanceof _TextLeaf)) return _Text2.prototype.replace.call(this, from, to, text);
-      var _clip3 = clip(this, from, to);
-      from = _clip3[0];
-      to = _clip3[1];
+      var _clip5 = clip(this, from, to);
+      var _clip6 = _slicedToArray(_clip5, 2);
+      from = _clip6[0];
+      to = _clip6[1];
       var lines = appendText(this.text, appendText(text.text, sliceText(this.text, 0, from)), to);
       var newLen = this.length + text.length - (to - from);
       if (lines.length <= 32) return new _TextLeaf(lines, newLen);
@@ -228,9 +239,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip4 = clip(this, from, to);
-      from = _clip4[0];
-      to = _clip4[1];
+      var _clip7 = clip(this, from, to);
+      var _clip8 = _slicedToArray(_clip7, 2);
+      from = _clip8[0];
+      to = _clip8[1];
       var result = "";
       for (var pos = 0, i2 = 0; pos <= to && i2 < this.text.length; i2++) {
         var line = this.text[i2],
@@ -315,9 +327,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       }
     };
     _proto3.replace = function replace(from, to, text) {
-      var _clip5 = clip(this, from, to);
-      from = _clip5[0];
-      to = _clip5[1];
+      var _clip9 = clip(this, from, to);
+      var _clip0 = _slicedToArray(_clip9, 2);
+      from = _clip0[0];
+      to = _clip0[1];
       if (text.lines < this.lines) for (var i2 = 0, pos = 0; i2 < this.children.length; i2++) {
         var child = this.children[i2],
           end = pos + child.length;
@@ -342,9 +355,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip6 = clip(this, from, to);
-      from = _clip6[0];
-      to = _clip6[1];
+      var _clip1 = clip(this, from, to);
+      var _clip10 = _slicedToArray(_clip1, 2);
+      from = _clip10[0];
+      to = _clip10[1];
       var result = "";
       for (var i2 = 0, pos = 0; i2 < this.children.length && pos <= to; i2++) {
         var child = this.children[i2],
@@ -365,10 +379,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (!(other instanceof _TextNode)) return 0;
       var length = 0;
       var _ref = dir > 0 ? [0, 0, this.children.length, other.children.length] : [this.children.length - 1, other.children.length - 1, -1, -1],
-        iA = _ref[0],
-        iB = _ref[1],
-        eA = _ref[2],
-        eB = _ref[3];
+        _ref2 = _slicedToArray(_ref, 4),
+        iA = _ref2[0],
+        iB = _ref2[1],
+        eA = _ref2[2],
+        eB = _ref2[3];
       for (;; iA += dir, iB += dir) {
         if (iA == eA || iB == eB) return length;
         var chA = this.children[iA],
@@ -3197,8 +3212,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var StyleModule = function () {
     function StyleModule(spec, options) {
       this.rules = [];
-      var _ref2 = options || {},
-        finish = _ref2.finish;
+      var _ref3 = options || {},
+        finish = _ref3.finish;
       function splitSelector(selector) {
         return /^@/.test(selector) ? [selector] : selector.split(/,\s*/);
       }
@@ -3289,7 +3304,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         }
       }
       if (sheet) {
-        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(root.adoptedStyleSheets);
+        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(_toConsumableArray(root.adoptedStyleSheets));
       } else {
         var text = "";
         for (var _i4 = 0; _i4 < this.modules.length; _i4++) text += this.modules[_i4].getRules() + "\n";
@@ -4537,11 +4552,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       }));
     };
     _ViewPlugin.define = function define(create, spec) {
-      var _ref3 = spec || {},
-        eventHandlers = _ref3.eventHandlers,
-        eventObservers = _ref3.eventObservers,
-        provide = _ref3.provide,
-        deco = _ref3.decorations;
+      var _ref4 = spec || {},
+        eventHandlers = _ref4.eventHandlers,
+        eventObservers = _ref4.eventObservers,
+        provide = _ref4.provide,
+        deco = _ref4.decorations;
       return new _ViewPlugin(nextPluginID++, create, eventHandlers, eventObservers, function (plugin) {
         var ext = [];
         if (deco) ext.push(decorations.of(function (view) {
@@ -6063,9 +6078,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       var _a2;
       var changedRanges = _update2.changedRanges;
       if (this.minWidth > 0 && changedRanges.length) {
-        if (!changedRanges.every(function (_ref4) {
-          var fromA = _ref4.fromA,
-            toA = _ref4.toA;
+        if (!changedRanges.every(function (_ref5) {
+          var fromA = _ref5.fromA,
+            toA = _ref5.toA;
           return toA < _this23.minWidthFrom || fromA > _this23.minWidthTo;
         })) {
           this.minWidth = this.minWidthFrom = this.minWidthTo = 0;
@@ -6214,9 +6229,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
           } else {
             var range = document.createRange();
             if (main.anchor > main.head) {
-              var _ref5 = [head, anchor];
-              anchor = _ref5[0];
-              head = _ref5[1];
+              var _ref6 = [head, anchor];
+              anchor = _ref6[0];
+              head = _ref6[1];
             }
             range.setEnd(head.node, head.offset);
             range.setStart(anchor.node, anchor.offset);
@@ -6506,7 +6521,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         this.dynamicDecorationMap[i2++] = dynamicOuter;
         allDeco.push(RangeSet.join(outerDeco));
       }
-      this.decorations = [this.editContextFormatting].concat(allDeco, [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
+      this.decorations = [this.editContextFormatting].concat(_toConsumableArray(allDeco), [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
       while (i2 < this.decorations.length) this.dynamicDecorationMap[i2++] = false;
       this.blockWrappers = this.view.state.facet(blockWrappers).map(function (v) {
         return typeof v == "function" ? v(_this28.view) : v;
@@ -9226,9 +9241,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         main = this.state.selection.main;
       var _loop9 = function _loop9() {
         var pos = _i30 ? main.head : main.anchor;
-        if (!viewports.some(function (_ref6) {
-          var from = _ref6.from,
-            to = _ref6.to;
+        if (!viewports.some(function (_ref7) {
+          var from = _ref7.from,
+            to = _ref7.to;
           return pos >= from && pos <= to;
         })) {
           var _this39$lineBlockAt = _this39.lineBlockAt(pos),
@@ -9416,9 +9431,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         to = changes.mapPos(viewport.to, 1);
       return new Viewport(this.heightMap.lineAt(from, QueryType.ByPos, this.heightOracle, 0, 0).from, this.heightMap.lineAt(to, QueryType.ByPos, this.heightOracle, 0, 0).to);
     };
-    _proto75.viewportIsAppropriate = function viewportIsAppropriate(_ref7, bias) {
-      var from = _ref7.from,
-        to = _ref7.to;
+    _proto75.viewportIsAppropriate = function viewportIsAppropriate(_ref8, bias) {
+      var from = _ref8.from,
+        to = _ref8.to;
       if (bias === void 0) {
         bias = 0;
       }
@@ -9655,9 +9670,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       ranges: ranges
     };
   }
-  function findPosition(_ref8, ratio) {
-    var total = _ref8.total,
-      ranges = _ref8.ranges;
+  function findPosition(_ref9, ratio) {
+    var total = _ref9.total,
+      ranges = _ref9.ranges;
     if (ratio <= 0) return ranges[0].from;
     if (ratio >= 1) return ranges[ranges.length - 1].to;
     var dist2 = Math.floor(total * ratio);
@@ -9718,9 +9733,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       var vpHeight = 0,
         base2 = 0,
         domBase = 0;
-      this.viewports = viewports.map(function (_ref9) {
-        var from = _ref9.from,
-          to = _ref9.to;
+      this.viewports = viewports.map(function (_ref0) {
+        var from = _ref0.from,
+          to = _ref0.to;
         var top2 = heightMap.lineAt(from, QueryType.ByPos, oracle, 0, 0).top;
         var bottom = heightMap.lineAt(to, QueryType.ByPos, oracle, 0, 0).bottom;
         vpHeight += bottom - top2;
@@ -10527,11 +10542,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       focusOffset = range.endOffset;
     var curAnchor = view.docView.domAtPos(view.state.selection.main.anchor, 1);
     if (isEquivalentPosition(curAnchor.node, curAnchor.offset, focusNode, focusOffset)) {
-      var _ref0 = [focusNode, focusOffset, anchorNode, anchorOffset];
-      anchorNode = _ref0[0];
-      anchorOffset = _ref0[1];
-      focusNode = _ref0[2];
-      focusOffset = _ref0[3];
+      var _ref1 = [focusNode, focusOffset, anchorNode, anchorOffset];
+      anchorNode = _ref1[0];
+      anchorOffset = _ref1[1];
+      focusNode = _ref1[2];
+      focusOffset = _ref1[3];
     }
     return {
       anchorNode: anchorNode,
@@ -11052,9 +11067,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
           }
           var measuring = [];
           if (!(changed & 4)) {
-            var _ref1 = [measuring, this.measureRequests];
-            this.measureRequests = _ref1[0];
-            measuring = _ref1[1];
+            var _ref10 = [measuring, this.measureRequests];
+            this.measureRequests = _ref10[0];
+            measuring = _ref10[1];
           }
           var measured = measuring.map(function (m) {
             try {
@@ -12460,7 +12475,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (props && props.length) {
         this.props = Object.create(null);
         for (var _iterator116 = _createForOfIteratorHelperLoose(props), _step116; !(_step116 = _iterator116()).done;) {
-          var _step116$value = _step116.value,
+          var _step116$value = _slicedToArray(_step116.value, 2),
             prop = _step116$value[0],
             value = _step116$value[1];
           this.props[typeof prop == "number" ? prop : prop.id] = value;
@@ -13906,10 +13921,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         }
       }
     }
-    var _ref10 = options || {},
-      scope = _ref10.scope,
-      _ref10$all = _ref10.all,
-      all = _ref10$all === void 0 ? null : _ref10$all;
+    var _ref11 = options || {},
+      scope = _ref11.scope,
+      _ref11$all = _ref11.all,
+      all = _ref11$all === void 0 ? null : _ref11$all;
     return {
       style: function style(tags3) {
         var cls = all;
@@ -15075,7 +15090,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var byTag = Object.create(null);
   var defaultTable = Object.create(null);
   for (var _i64 = 0, _arr2 = [["variable", "variableName"], ["variable-2", "variableName.special"], ["string-2", "string.special"], ["def", "variableName.definition"], ["tag", "tagName"], ["attribute", "attributeName"], ["type", "typeName"], ["builtin", "variableName.standard"], ["qualifier", "modifier"], ["error", "invalid"], ["header", "heading"], ["property", "propertyName"]]; _i64 < _arr2.length; _i64++) {
-    var _arr2$_i = _arr2[_i64],
+    var _arr2$_i = _slicedToArray(_arr2[_i64], 2),
       legacyName = _arr2$_i[0],
       _name3 = _arr2$_i[1];
     defaultTable[legacyName] = createTokenType(noTokens, _name3);
@@ -15155,9 +15170,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     return config.line ? toggleLineComment(target) : config.block ? toggleBlockCommentByLine(target) : false;
   };
   function command(f, option) {
-    return function (_ref11) {
-      var state = _ref11.state,
-        dispatch = _ref11.dispatch;
+    return function (_ref12) {
+      var state = _ref12.state,
+        dispatch = _ref12.dispatch;
       if (state.readOnly) return false;
       var tr = f(option, state);
       if (!tr) return false;
@@ -15175,9 +15190,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     return data.length ? data[0] : {};
   }
   var SearchMargin = 50;
-  function findBlockComment(state, _ref12, from, to) {
-    var open = _ref12.open,
-      close = _ref12.close;
+  function findBlockComment(state, _ref13, from, to) {
+    var open = _ref13.open,
+      close = _ref13.close;
     var textBefore = state.sliceDoc(from - SearchMargin, from);
     var textAfter = state.sliceDoc(to, to + SearchMargin);
     var spaceBefore = /\s*$/.exec(textBefore)[0].length,
@@ -15446,9 +15461,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     })];
   }
   function cmd(side, selection) {
-    return function (_ref13) {
-      var state = _ref13.state,
-        dispatch = _ref13.dispatch;
+    return function (_ref14) {
+      var state = _ref14.state,
+        dispatch = _ref14.dispatch;
       if (!selection && state.readOnly) return false;
       var historyState = state.field(historyField_, false);
       if (!historyState) return false;
@@ -15687,9 +15702,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       userEvent: "select"
     });
   }
-  function moveSel(_ref14, how) {
-    var state = _ref14.state,
-      dispatch = _ref14.dispatch;
+  function moveSel(_ref15, how) {
+    var state = _ref15.state,
+      dispatch = _ref15.dispatch;
     var selection = updateSel(state.selection, how);
     if (selection.eq(state.selection, true)) return false;
     dispatch(setSel(state, selection));
@@ -15873,9 +15888,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     dispatch(setSel(state, selection));
     return true;
   }
-  var cursorMatchingBracket = function cursorMatchingBracket(_ref15) {
-    var state = _ref15.state,
-      dispatch = _ref15.dispatch;
+  var cursorMatchingBracket = function cursorMatchingBracket(_ref16) {
+    var state = _ref16.state,
+      dispatch = _ref16.dispatch;
     return toMatchingBracket(state, dispatch, false);
   };
   function extendSel(target, forward, how) {
@@ -15976,43 +15991,43 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       return EditorSelection.cursor(view.lineBlockAt(range.head).to);
     });
   };
-  var cursorDocStart = function cursorDocStart(_ref16) {
-    var state = _ref16.state,
-      dispatch = _ref16.dispatch;
+  var cursorDocStart = function cursorDocStart(_ref17) {
+    var state = _ref17.state,
+      dispatch = _ref17.dispatch;
     dispatch(setSel(state, {
       anchor: 0
     }));
     return true;
   };
-  var cursorDocEnd = function cursorDocEnd(_ref17) {
-    var state = _ref17.state,
-      dispatch = _ref17.dispatch;
+  var cursorDocEnd = function cursorDocEnd(_ref18) {
+    var state = _ref18.state,
+      dispatch = _ref18.dispatch;
     dispatch(setSel(state, {
       anchor: state.doc.length
     }));
     return true;
   };
-  var selectDocStart = function selectDocStart(_ref18) {
-    var state = _ref18.state,
-      dispatch = _ref18.dispatch;
+  var selectDocStart = function selectDocStart(_ref19) {
+    var state = _ref19.state,
+      dispatch = _ref19.dispatch;
     dispatch(setSel(state, {
       anchor: state.selection.main.anchor,
       head: 0
     }));
     return true;
   };
-  var selectDocEnd = function selectDocEnd(_ref19) {
-    var state = _ref19.state,
-      dispatch = _ref19.dispatch;
+  var selectDocEnd = function selectDocEnd(_ref20) {
+    var state = _ref20.state,
+      dispatch = _ref20.dispatch;
     dispatch(setSel(state, {
       anchor: state.selection.main.anchor,
       head: state.doc.length
     }));
     return true;
   };
-  var selectAll = function selectAll(_ref20) {
-    var state = _ref20.state,
-      dispatch = _ref20.dispatch;
+  var selectAll = function selectAll(_ref21) {
+    var state = _ref21.state,
+      dispatch = _ref21.dispatch;
     dispatch(state.update({
       selection: {
         anchor: 0,
@@ -16022,12 +16037,12 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var selectLine = function selectLine(_ref21) {
-    var state = _ref21.state,
-      dispatch = _ref21.dispatch;
-    var ranges = selectedLineBlocks(state).map(function (_ref22) {
-      var from = _ref22.from,
-        to = _ref22.to;
+  var selectLine = function selectLine(_ref22) {
+    var state = _ref22.state,
+      dispatch = _ref22.dispatch;
+    var ranges = selectedLineBlocks(state).map(function (_ref23) {
+      var from = _ref23.from,
+        to = _ref23.to;
       return EditorSelection.undirectionalRange(from, Math.min(to + 1, state.doc.length));
     });
     dispatch(state.update({
@@ -16036,9 +16051,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var selectParentSyntax = function selectParentSyntax(_ref23) {
-    var state = _ref23.state,
-      dispatch = _ref23.dispatch;
+  var selectParentSyntax = function selectParentSyntax(_ref24) {
+    var state = _ref24.state,
+      dispatch = _ref24.dispatch;
     var selection = updateSel(state.selection, function (range) {
       var tree = syntaxTree(state),
         stack = tree.resolveStack(range.from, 1);
@@ -16098,9 +16113,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var addCursorBelow = function addCursorBelow(view) {
     return addCursorVertically(view, true);
   };
-  var simplifySelection = function simplifySelection(_ref24) {
-    var state = _ref24.state,
-      dispatch = _ref24.dispatch;
+  var simplifySelection = function simplifySelection(_ref25) {
+    var state = _ref25.state,
+      dispatch = _ref25.dispatch;
     var cur = state.selection,
       selection = null;
     if (cur.ranges.length > 1) selection = EditorSelection.create([cur.main]);else if (!cur.main.empty) selection = EditorSelection.create([EditorSelection.cursor(cur.main.head)]);
@@ -16232,9 +16247,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       return range.head < lineStart ? lineStart : Math.min(view.state.doc.length, range.head + 1);
     });
   };
-  var splitLine = function splitLine(_ref25) {
-    var state = _ref25.state,
-      dispatch = _ref25.dispatch;
+  var splitLine = function splitLine(_ref26) {
+    var state = _ref26.state,
+      dispatch = _ref26.dispatch;
     if (state.readOnly) return false;
     var changes = state.changeByRange(function (range) {
       return {
@@ -16252,9 +16267,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var transposeChars = function transposeChars(_ref26) {
-    var state = _ref26.state,
-      dispatch = _ref26.dispatch;
+  var transposeChars = function transposeChars(_ref27) {
+    var state = _ref27.state,
+      dispatch = _ref27.dispatch;
     if (state.readOnly) return false;
     var changes = state.changeByRange(function (range) {
       if (!range.empty || range.from == 0 || range.from == state.doc.length) return {
@@ -16347,14 +16362,14 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   }
-  var moveLineUp = function moveLineUp(_ref27) {
-    var state = _ref27.state,
-      dispatch = _ref27.dispatch;
-    return moveLine(state, dispatch, false);
-  };
-  var moveLineDown = function moveLineDown(_ref28) {
+  var moveLineUp = function moveLineUp(_ref28) {
     var state = _ref28.state,
       dispatch = _ref28.dispatch;
+    return moveLine(state, dispatch, false);
+  };
+  var moveLineDown = function moveLineDown(_ref29) {
+    var state = _ref29.state,
+      dispatch = _ref29.dispatch;
     return moveLine(state, dispatch, true);
   };
   function copyLine(state, dispatch, forward) {
@@ -16379,22 +16394,22 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   }
-  var copyLineUp = function copyLineUp(_ref29) {
-    var state = _ref29.state,
-      dispatch = _ref29.dispatch;
-    return copyLine(state, dispatch, false);
-  };
-  var copyLineDown = function copyLineDown(_ref30) {
+  var copyLineUp = function copyLineUp(_ref30) {
     var state = _ref30.state,
       dispatch = _ref30.dispatch;
+    return copyLine(state, dispatch, false);
+  };
+  var copyLineDown = function copyLineDown(_ref31) {
+    var state = _ref31.state,
+      dispatch = _ref31.dispatch;
     return copyLine(state, dispatch, true);
   };
   var deleteLine = function deleteLine(view) {
     if (view.state.readOnly) return false;
     var state = view.state,
-      changes = state.changes(selectedLineBlocks(state).map(function (_ref31) {
-        var from = _ref31.from,
-          to = _ref31.to;
+      changes = state.changes(selectedLineBlocks(state).map(function (_ref32) {
+        var from = _ref32.from,
+          to = _ref32.to;
         if (from > 0) from--;else if (to < state.doc.length) to++;
         return {
           from: from,
@@ -16436,9 +16451,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var insertNewlineAndIndent = newlineAndIndent(false);
   var insertBlankLine = newlineAndIndent(true);
   function newlineAndIndent(atEof) {
-    return function (_ref32) {
-      var state = _ref32.state,
-        dispatch = _ref32.dispatch;
+    return function (_ref33) {
+      var state = _ref33.state,
+        dispatch = _ref33.dispatch;
       if (state.readOnly) return false;
       var changes = state.changeByRange(function (range) {
         var from = range.from,
@@ -16494,9 +16509,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       };
     });
   }
-  var indentSelection = function indentSelection(_ref33) {
-    var state = _ref33.state,
-      dispatch = _ref33.dispatch;
+  var indentSelection = function indentSelection(_ref34) {
+    var state = _ref34.state,
+      dispatch = _ref34.dispatch;
     if (state.readOnly) return false;
     var updated = Object.create(null);
     var context = new IndentContext(state, {
@@ -16525,9 +16540,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var indentMore = function indentMore(_ref34) {
-    var state = _ref34.state,
-      dispatch = _ref34.dispatch;
+  var indentMore = function indentMore(_ref35) {
+    var state = _ref35.state,
+      dispatch = _ref35.dispatch;
     if (state.readOnly) return false;
     dispatch(state.update(changeBySelectedLine(state, function (line, changes) {
       changes.push({
@@ -16539,9 +16554,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var indentLess = function indentLess(_ref35) {
-    var state = _ref35.state,
-      dispatch = _ref35.dispatch;
+  var indentLess = function indentLess(_ref36) {
+    var state = _ref36.state,
+      dispatch = _ref36.dispatch;
     if (state.readOnly) return false;
     dispatch(state.update(changeBySelectedLine(state, function (line, changes) {
       var space = /^\s*/.exec(line.text)[0];
@@ -17027,13 +17042,13 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       } else if (fence) {
         if (/^(js|javascript|ts|typescript)$/.test(fence.language)) {
           var result = javascriptScan(line, offset + at, fence.inner, emit);
-          if (tokens) tokens.push.apply(tokens, result.tokens);
+          if (tokens) tokens.push.apply(tokens, _toConsumableArray(result.tokens));
           fence.inner = result.state;
         } else if (fence.language === "css") {
           var _result = cssScan(line, offset + at, fence.inner, emit);
-          if (tokens) tokens.push.apply(tokens, _result.tokens);
+          if (tokens) tokens.push.apply(tokens, _toConsumableArray(_result.tokens));
           fence.inner = _result.state;
-        } else if (/^(html|xml)$/.test(fence.language) && tokens) tokens.push.apply(tokens, htmlTokens(line, offset + at));else add(tokens, offset + at, offset + end, "string");
+        } else if (/^(html|xml)$/.test(fence.language) && tokens) tokens.push.apply(tokens, _toConsumableArray(htmlTokens(line, offset + at)));else add(tokens, offset + at, offset + end, "string");
       } else {
         var heading2 = /^\s{0,3}#{1,6}\s/.exec(line);
         if (heading2) add(tokens, offset + at, offset + end, "heading");
@@ -17079,7 +17094,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         var close = lower.indexOf(state.mode === "javascript" ? "<\/script" : "</style", at);
         var _to3 = close < 0 ? text.length : close;
         var result = (state.mode === "javascript" ? javascriptScan : cssScan)(text.slice(at, _to3), offset + at, state.inner, emit);
-        if (tokens) tokens.push.apply(tokens, result.tokens);
+        if (tokens) tokens.push.apply(tokens, _toConsumableArray(result.tokens));
         state.inner = result.state;
         at = _to3;
         if (close >= 0) state = {
@@ -17210,7 +17225,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         var length = Math.min(line.length, HIGHLIGHT_LINE_LIMIT);
         var text = doc2.sliceString(line.from, line.from + length);
         var result = scanMode(mode, text, line.from, state);
-        tokens.push.apply(tokens, result.tokens);
+        tokens.push.apply(tokens, _toConsumableArray(result.tokens));
         state = result.state;
         parsedChars += text.length;
         if (line.length > length) {
@@ -17391,7 +17406,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     if (record.text === null) throw new Error(record.name + " fixture has not loaded");
     record.view = new EditorView({
       doc: record.text,
-      extensions: [lineNumbers(), history(), keymap.of([].concat(defaultKeymap, historyKeymap)), mobileSyntax(record.mode, function (stats) {
+      extensions: [lineNumbers(), history(), keymap.of([].concat(_toConsumableArray(defaultKeymap), historyKeymap)), mobileSyntax(record.mode, function (stats) {
         return showStats(record, stats);
       }), mobileSyntaxTheme, nativeCaret, EditorView.lineWrapping],
       parent: surface
@@ -17410,9 +17425,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     view.dom.removeAttribute("hidden");
     if (records[index].stats) showStats(records[index], records[index].stats);
   }
-  Object.entries(fixtureNames).forEach(function (_ref36, index) {
-    var mode = _ref36[0],
-      name2 = _ref36[1];
+  Object.entries(fixtureNames).forEach(function (_ref37, index) {
+    var _ref38 = _slicedToArray(_ref37, 2),
+      mode = _ref38[0],
+      name2 = _ref38[1];
     var button = document.createElement("button");
     button.type = "button";
     button.setAttribute("role", "tab");

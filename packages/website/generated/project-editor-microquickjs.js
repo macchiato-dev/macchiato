@@ -1,13 +1,21 @@
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
 function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
 function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
 function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 function _inheritsLoose(t, o) { t.prototype = Object.create(o.prototype), t.prototype.constructor = t, _setPrototypeOf(t, o); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (_r15) { o = !0, n = _r15; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 (function () {
   var __defProp = Object.defineProperty;
   var __export = function __export(target, all) {
@@ -352,8 +360,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     };
     _proto.replace = function replace(from, to, text) {
       var _clip = clip(this, from, to);
-      from = _clip[0];
-      to = _clip[1];
+      var _clip2 = _slicedToArray(_clip, 2);
+      from = _clip2[0];
+      to = _clip2[1];
       var parts = [];
       this.decompose(0, from, parts, 2);
       if (text.length) text.decompose(0, text.length, parts, 1 | 2);
@@ -367,9 +376,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (to === void 0) {
         to = this.length;
       }
-      var _clip2 = clip(this, from, to);
-      from = _clip2[0];
-      to = _clip2[1];
+      var _clip3 = clip(this, from, to);
+      var _clip4 = _slicedToArray(_clip3, 2);
+      from = _clip4[0];
+      to = _clip4[1];
       var parts = [];
       this.decompose(from, to, parts, 0);
       return TextNode.from(parts, to - from);
@@ -467,9 +477,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     };
     _proto2.replace = function replace(from, to, text) {
       if (!(text instanceof _TextLeaf)) return _Text3.prototype.replace.call(this, from, to, text);
-      var _clip3 = clip(this, from, to);
-      from = _clip3[0];
-      to = _clip3[1];
+      var _clip5 = clip(this, from, to);
+      var _clip6 = _slicedToArray(_clip5, 2);
+      from = _clip6[0];
+      to = _clip6[1];
       var lines = appendText(this.text, appendText(text.text, sliceText(this.text, 0, from)), to);
       var newLen = this.length + text.length - (to - from);
       if (lines.length <= 32) return new _TextLeaf(lines, newLen);
@@ -482,9 +493,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip4 = clip(this, from, to);
-      from = _clip4[0];
-      to = _clip4[1];
+      var _clip7 = clip(this, from, to);
+      var _clip8 = _slicedToArray(_clip7, 2);
+      from = _clip8[0];
+      to = _clip8[1];
       var result = "";
       for (var pos = 0, i2 = 0; pos <= to && i2 < this.text.length; i2++) {
         var line = this.text[i2],
@@ -569,9 +581,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       }
     };
     _proto3.replace = function replace(from, to, text) {
-      var _clip5 = clip(this, from, to);
-      from = _clip5[0];
-      to = _clip5[1];
+      var _clip9 = clip(this, from, to);
+      var _clip0 = _slicedToArray(_clip9, 2);
+      from = _clip0[0];
+      to = _clip0[1];
       if (text.lines < this.lines) for (var i2 = 0, pos = 0; i2 < this.children.length; i2++) {
         var child = this.children[i2],
           end = pos + child.length;
@@ -596,9 +609,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip6 = clip(this, from, to);
-      from = _clip6[0];
-      to = _clip6[1];
+      var _clip1 = clip(this, from, to);
+      var _clip10 = _slicedToArray(_clip1, 2);
+      from = _clip10[0];
+      to = _clip10[1];
       var result = "";
       for (var i2 = 0, pos = 0; i2 < this.children.length && pos <= to; i2++) {
         var child = this.children[i2],
@@ -619,10 +633,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (!(other instanceof _TextNode)) return 0;
       var length = 0;
       var _ref = dir > 0 ? [0, 0, this.children.length, other.children.length] : [this.children.length - 1, other.children.length - 1, -1, -1],
-        iA = _ref[0],
-        iB = _ref[1],
-        eA = _ref[2],
-        eB = _ref[3];
+        _ref2 = _slicedToArray(_ref, 4),
+        iA = _ref2[0],
+        iB = _ref2[1],
+        eA = _ref2[2],
+        eB = _ref2[3];
       for (;; iA += dir, iB += dir) {
         if (iA == eA || iB == eB) return length;
         var chA = this.children[iA],
@@ -3456,8 +3471,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var StyleModule = function () {
     function StyleModule(spec, options) {
       this.rules = [];
-      var _ref2 = options || {},
-        finish = _ref2.finish;
+      var _ref3 = options || {},
+        finish = _ref3.finish;
       function splitSelector(selector) {
         return /^@/.test(selector) ? [selector] : selector.split(/,\s*/);
       }
@@ -3548,7 +3563,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         }
       }
       if (sheet) {
-        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(root.adoptedStyleSheets);
+        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(_toConsumableArray(root.adoptedStyleSheets));
       } else {
         var text = "";
         for (var _i4 = 0; _i4 < this.modules.length; _i4++) text += this.modules[_i4].getRules() + "\n";
@@ -4822,11 +4837,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       }));
     };
     _ViewPlugin.define = function define(create, spec) {
-      var _ref3 = spec || {},
-        eventHandlers = _ref3.eventHandlers,
-        eventObservers = _ref3.eventObservers,
-        provide = _ref3.provide,
-        deco = _ref3.decorations;
+      var _ref4 = spec || {},
+        eventHandlers = _ref4.eventHandlers,
+        eventObservers = _ref4.eventObservers,
+        provide = _ref4.provide,
+        deco = _ref4.decorations;
       return new _ViewPlugin(nextPluginID++, create, eventHandlers, eventObservers, function (plugin2) {
         var ext = [];
         if (deco) ext.push(decorations.of(function (view) {
@@ -6348,9 +6363,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       var _a2;
       var changedRanges = _update2.changedRanges;
       if (this.minWidth > 0 && changedRanges.length) {
-        if (!changedRanges.every(function (_ref4) {
-          var fromA = _ref4.fromA,
-            toA = _ref4.toA;
+        if (!changedRanges.every(function (_ref5) {
+          var fromA = _ref5.fromA,
+            toA = _ref5.toA;
           return toA < _this23.minWidthFrom || fromA > _this23.minWidthTo;
         })) {
           this.minWidth = this.minWidthFrom = this.minWidthTo = 0;
@@ -6499,9 +6514,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
           } else {
             var range = document.createRange();
             if (main.anchor > main.head) {
-              var _ref5 = [head, anchor];
-              anchor = _ref5[0];
-              head = _ref5[1];
+              var _ref6 = [head, anchor];
+              anchor = _ref6[0];
+              head = _ref6[1];
             }
             range.setEnd(head.node, head.offset);
             range.setStart(anchor.node, anchor.offset);
@@ -6791,7 +6806,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         this.dynamicDecorationMap[i2++] = dynamicOuter;
         allDeco.push(_RangeSet2.join(outerDeco));
       }
-      this.decorations = [this.editContextFormatting].concat(allDeco, [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
+      this.decorations = [this.editContextFormatting].concat(_toConsumableArray(allDeco), [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
       while (i2 < this.decorations.length) this.dynamicDecorationMap[i2++] = false;
       this.blockWrappers = this.view.state.facet(blockWrappers).map(function (v) {
         return typeof v == "function" ? v(_this28.view) : v;
@@ -9511,9 +9526,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         main = this.state.selection.main;
       var _loop9 = function _loop9() {
         var pos = _i30 ? main.head : main.anchor;
-        if (!viewports.some(function (_ref6) {
-          var from = _ref6.from,
-            to = _ref6.to;
+        if (!viewports.some(function (_ref7) {
+          var from = _ref7.from,
+            to = _ref7.to;
           return pos >= from && pos <= to;
         })) {
           var _this39$lineBlockAt = _this39.lineBlockAt(pos),
@@ -9701,9 +9716,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         to = changes.mapPos(viewport.to, 1);
       return new Viewport(this.heightMap.lineAt(from, QueryType.ByPos, this.heightOracle, 0, 0).from, this.heightMap.lineAt(to, QueryType.ByPos, this.heightOracle, 0, 0).to);
     };
-    _proto75.viewportIsAppropriate = function viewportIsAppropriate(_ref7, bias) {
-      var from = _ref7.from,
-        to = _ref7.to;
+    _proto75.viewportIsAppropriate = function viewportIsAppropriate(_ref8, bias) {
+      var from = _ref8.from,
+        to = _ref8.to;
       if (bias === void 0) {
         bias = 0;
       }
@@ -9940,9 +9955,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       ranges: ranges
     };
   }
-  function findPosition(_ref8, ratio) {
-    var total = _ref8.total,
-      ranges = _ref8.ranges;
+  function findPosition(_ref9, ratio) {
+    var total = _ref9.total,
+      ranges = _ref9.ranges;
     if (ratio <= 0) return ranges[0].from;
     if (ratio >= 1) return ranges[ranges.length - 1].to;
     var dist2 = Math.floor(total * ratio);
@@ -10003,9 +10018,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       var vpHeight = 0,
         base2 = 0,
         domBase = 0;
-      this.viewports = viewports.map(function (_ref9) {
-        var from = _ref9.from,
-          to = _ref9.to;
+      this.viewports = viewports.map(function (_ref0) {
+        var from = _ref0.from,
+          to = _ref0.to;
         var top2 = heightMap.lineAt(from, QueryType.ByPos, oracle, 0, 0).top;
         var bottom = heightMap.lineAt(to, QueryType.ByPos, oracle, 0, 0).bottom;
         vpHeight += bottom - top2;
@@ -10812,11 +10827,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       focusOffset = range.endOffset;
     var curAnchor = view.docView.domAtPos(view.state.selection.main.anchor, 1);
     if (isEquivalentPosition(curAnchor.node, curAnchor.offset, focusNode, focusOffset)) {
-      var _ref0 = [focusNode, focusOffset, anchorNode, anchorOffset];
-      anchorNode = _ref0[0];
-      anchorOffset = _ref0[1];
-      focusNode = _ref0[2];
-      focusOffset = _ref0[3];
+      var _ref1 = [focusNode, focusOffset, anchorNode, anchorOffset];
+      anchorNode = _ref1[0];
+      anchorOffset = _ref1[1];
+      focusNode = _ref1[2];
+      focusOffset = _ref1[3];
     }
     return {
       anchorNode: anchorNode,
@@ -11337,9 +11352,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
           }
           var measuring = [];
           if (!(changed & 4)) {
-            var _ref1 = [measuring, this.measureRequests];
-            this.measureRequests = _ref1[0];
-            measuring = _ref1[1];
+            var _ref10 = [measuring, this.measureRequests];
+            this.measureRequests = _ref10[0];
+            measuring = _ref10[1];
           }
           var measured = measuring.map(function (m) {
             try {
@@ -12119,10 +12134,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     function piece(left, top2, right, bottom) {
       return new _RectangleMarker2(className, left - base2.left, top2 - base2.top, Math.max(0, right - left), bottom - top2);
     }
-    function pieces(_ref10) {
-      var top2 = _ref10.top,
-        bottom = _ref10.bottom,
-        horizontal = _ref10.horizontal;
+    function pieces(_ref11) {
+      var top2 = _ref11.top,
+        bottom = _ref11.bottom,
+        horizontal = _ref11.horizontal;
       var pieces2 = [];
       for (var _i45 = 0; _i45 < horizontal.length; _i45 += 2) pieces2.push(piece(horizontal[_i45], top2, horizontal[_i45 + 1], bottom));
       return pieces2;
@@ -12991,7 +13006,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     if (options === void 0) {
       options = {};
     }
-    var _keys = keys[options.key || "Alt"],
+    var _keys = _slicedToArray(keys[options.key || "Alt"], 2),
       code2 = _keys[0],
       getter = _keys[1];
     var plugin2 = _ViewPlugin2.fromClass(function () {
@@ -13291,8 +13306,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
           var tv = _this67.manager.tooltipViews[i2];
           return tv.getCoords ? tv.getCoords(t2.pos) : _this67.view.coordsAtPos(t2.pos);
         }),
-        size: this.manager.tooltipViews.map(function (_ref11) {
-          var dom = _ref11.dom;
+        size: this.manager.tooltipViews.map(function (_ref12) {
+          var dom = _ref12.dom;
           return dom.getBoundingClientRect();
         }),
         space: this.view.state.facet(tooltipConfig).tooltipSpace(this.view),
@@ -13562,13 +13577,13 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     var tooltips2 = state.facet(showHoverTooltip);
     if (tooltips2.length === 0) return null;
     return {
-      pos: Math.min.apply(Math, tooltips2.map(function (t2) {
+      pos: Math.min.apply(Math, _toConsumableArray(tooltips2.map(function (t2) {
         return t2.pos;
-      })),
-      end: Math.max.apply(Math, tooltips2.map(function (t2) {
+      }))),
+      end: Math.max.apply(Math, _toConsumableArray(tooltips2.map(function (t2) {
         var _a2;
         return (_a2 = t2.end) !== null && _a2 !== void 0 ? _a2 : t2.pos;
-      })),
+      }))),
       create: HoverTooltipHost.create,
       above: tooltips2[0].above,
       arrow: tooltips2.some(function (t2) {
@@ -13678,8 +13693,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       var active = this.active,
         tooltip = this.tooltip;
       if (active.length && !this.locked.has(active) && tooltip && !isInTooltip(tooltip.dom, event) || this.pending) {
-        var _ref12 = active[0] || this.pending,
-          pos = _ref12.pos,
+        var _ref13 = active[0] || this.pending,
+          pos = _ref13.pos,
           end = (_b = (_a2 = active[0]) === null || _a2 === void 0 ? void 0 : _a2.end) !== null && _b !== void 0 ? _b : pos;
         if (pos == end ? this.view.posAtCoords(this.lastMove) != pos : !isOverRange(this.view, pos, end, event.clientX, event.clientY)) {
           this.view.dispatch({
@@ -15157,7 +15172,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (props && props.length) {
         this.props = Object.create(null);
         for (var _iterator158 = _createForOfIteratorHelperLoose(props), _step158; !(_step158 = _iterator158()).done;) {
-          var _step158$value = _step158.value,
+          var _step158$value = _slicedToArray(_step158.value, 2),
             prop = _step158$value[0],
             value = _step158$value[1];
           this.props[typeof prop == "number" ? prop : prop.id] = value;
@@ -17055,10 +17070,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         }
       }
     }
-    var _ref13 = options || {},
-      scope = _ref13.scope,
-      _ref13$all = _ref13.all,
-      all = _ref13$all === void 0 ? null : _ref13$all;
+    var _ref14 = options || {},
+      scope = _ref14.scope,
+      _ref14$all = _ref14.all,
+      all = _ref14$all === void 0 ? null : _ref14$all;
     return {
       style: function style(tags3) {
         var cls = all;
@@ -18311,12 +18326,12 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       pos = next.to;
     }
   }
-  function _delimitedIndent(_ref14) {
-    var closing2 = _ref14.closing,
-      _ref14$align = _ref14.align,
-      align = _ref14$align === void 0 ? true : _ref14$align,
-      _ref14$units = _ref14.units,
-      units = _ref14$units === void 0 ? 1 : _ref14$units;
+  function _delimitedIndent(_ref15) {
+    var closing2 = _ref15.closing,
+      _ref15$align = _ref15.align,
+      align = _ref15$align === void 0 ? true : _ref15$align,
+      _ref15$units = _ref15.units,
+      units = _ref15$units === void 0 ? 1 : _ref15$units;
     return function (context) {
       return delimitedStrategy(context, align, units, closing2);
     };
@@ -18333,10 +18348,10 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     return context.baseIndent;
   };
   function _continuedIndent(_temp) {
-    var _ref15 = _temp === void 0 ? {} : _temp,
-      except = _ref15.except,
-      _ref15$units = _ref15.units,
-      units = _ref15$units === void 0 ? 1 : _ref15$units;
+    var _ref16 = _temp === void 0 ? {} : _temp,
+      except = _ref16.except,
+      _ref16$units = _ref16.units,
+      units = _ref16$units === void 0 ? 1 : _ref16$units;
     return function (context) {
       var matchExcept = except && except.test(context.textAfter);
       return context.baseIndent + (matchExcept ? 0 : units * context.unit);
@@ -19605,7 +19620,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var byTag = Object.create(null);
   var defaultTable = Object.create(null);
   for (var _i86 = 0, _arr2 = [["variable", "variableName"], ["variable-2", "variableName.special"], ["string-2", "string.special"], ["def", "variableName.definition"], ["tag", "tagName"], ["attribute", "attributeName"], ["type", "typeName"], ["builtin", "variableName.standard"], ["qualifier", "modifier"], ["error", "invalid"], ["header", "heading"], ["property", "propertyName"]]; _i86 < _arr2.length; _i86++) {
-    var _arr2$_i = _arr2[_i86],
+    var _arr2$_i = _slicedToArray(_arr2[_i86], 2),
       legacyName = _arr2$_i[0],
       _name3 = _arr2$_i[1];
     defaultTable[legacyName] = createTokenType(noTokens, _name3);
@@ -19823,9 +19838,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     return config2.line ? toggleLineComment(target) : config2.block ? toggleBlockCommentByLine(target) : false;
   };
   function command(f, option) {
-    return function (_ref16) {
-      var state = _ref16.state,
-        dispatch = _ref16.dispatch;
+    return function (_ref17) {
+      var state = _ref17.state,
+        dispatch = _ref17.dispatch;
       if (state.readOnly) return false;
       var tr = f(option, state);
       if (!tr) return false;
@@ -19843,9 +19858,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     return data.length ? data[0] : {};
   }
   var SearchMargin = 50;
-  function findBlockComment(state, _ref17, from, to) {
-    var open = _ref17.open,
-      close = _ref17.close;
+  function findBlockComment(state, _ref18, from, to) {
+    var open = _ref18.open,
+      close = _ref18.close;
     var textBefore = state.sliceDoc(from - SearchMargin, from);
     var textAfter = state.sliceDoc(to, to + SearchMargin);
     var spaceBefore = /\s*$/.exec(textBefore)[0].length,
@@ -20115,9 +20130,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   }
   var historyField = historyField_;
   function cmd(side, selection) {
-    return function (_ref18) {
-      var state = _ref18.state,
-        dispatch = _ref18.dispatch;
+    return function (_ref19) {
+      var state = _ref19.state,
+        dispatch = _ref19.dispatch;
       if (!selection && state.readOnly) return false;
       var historyState = state.field(historyField_, false);
       if (!historyState) return false;
@@ -20356,9 +20371,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       userEvent: "select"
     });
   }
-  function moveSel(_ref19, how) {
-    var state = _ref19.state,
-      dispatch = _ref19.dispatch;
+  function moveSel(_ref20, how) {
+    var state = _ref20.state,
+      dispatch = _ref20.dispatch;
     var selection = updateSel(state.selection, how);
     if (selection.eq(state.selection, true)) return false;
     dispatch(setSel(state, selection));
@@ -20542,9 +20557,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     dispatch(setSel(state, selection));
     return true;
   }
-  var cursorMatchingBracket = function cursorMatchingBracket(_ref20) {
-    var state = _ref20.state,
-      dispatch = _ref20.dispatch;
+  var cursorMatchingBracket = function cursorMatchingBracket(_ref21) {
+    var state = _ref21.state,
+      dispatch = _ref21.dispatch;
     return toMatchingBracket(state, dispatch, false);
   };
   function extendSel(target, forward, how) {
@@ -20645,43 +20660,43 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       return _EditorSelection2.cursor(view.lineBlockAt(range.head).to);
     });
   };
-  var cursorDocStart = function cursorDocStart(_ref21) {
-    var state = _ref21.state,
-      dispatch = _ref21.dispatch;
+  var cursorDocStart = function cursorDocStart(_ref22) {
+    var state = _ref22.state,
+      dispatch = _ref22.dispatch;
     dispatch(setSel(state, {
       anchor: 0
     }));
     return true;
   };
-  var cursorDocEnd = function cursorDocEnd(_ref22) {
-    var state = _ref22.state,
-      dispatch = _ref22.dispatch;
+  var cursorDocEnd = function cursorDocEnd(_ref23) {
+    var state = _ref23.state,
+      dispatch = _ref23.dispatch;
     dispatch(setSel(state, {
       anchor: state.doc.length
     }));
     return true;
   };
-  var selectDocStart = function selectDocStart(_ref23) {
-    var state = _ref23.state,
-      dispatch = _ref23.dispatch;
+  var selectDocStart = function selectDocStart(_ref24) {
+    var state = _ref24.state,
+      dispatch = _ref24.dispatch;
     dispatch(setSel(state, {
       anchor: state.selection.main.anchor,
       head: 0
     }));
     return true;
   };
-  var selectDocEnd = function selectDocEnd(_ref24) {
-    var state = _ref24.state,
-      dispatch = _ref24.dispatch;
+  var selectDocEnd = function selectDocEnd(_ref25) {
+    var state = _ref25.state,
+      dispatch = _ref25.dispatch;
     dispatch(setSel(state, {
       anchor: state.selection.main.anchor,
       head: state.doc.length
     }));
     return true;
   };
-  var selectAll = function selectAll(_ref25) {
-    var state = _ref25.state,
-      dispatch = _ref25.dispatch;
+  var selectAll = function selectAll(_ref26) {
+    var state = _ref26.state,
+      dispatch = _ref26.dispatch;
     dispatch(state.update({
       selection: {
         anchor: 0,
@@ -20691,12 +20706,12 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var selectLine = function selectLine(_ref26) {
-    var state = _ref26.state,
-      dispatch = _ref26.dispatch;
-    var ranges = selectedLineBlocks(state).map(function (_ref27) {
-      var from = _ref27.from,
-        to = _ref27.to;
+  var selectLine = function selectLine(_ref27) {
+    var state = _ref27.state,
+      dispatch = _ref27.dispatch;
+    var ranges = selectedLineBlocks(state).map(function (_ref28) {
+      var from = _ref28.from,
+        to = _ref28.to;
       return _EditorSelection2.undirectionalRange(from, Math.min(to + 1, state.doc.length));
     });
     dispatch(state.update({
@@ -20705,9 +20720,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var selectParentSyntax = function selectParentSyntax(_ref28) {
-    var state = _ref28.state,
-      dispatch = _ref28.dispatch;
+  var selectParentSyntax = function selectParentSyntax(_ref29) {
+    var state = _ref29.state,
+      dispatch = _ref29.dispatch;
     var selection = updateSel(state.selection, function (range) {
       var tree = _syntaxTree(state),
         stack = tree.resolveStack(range.from, 1);
@@ -20767,9 +20782,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var addCursorBelow = function addCursorBelow(view) {
     return addCursorVertically(view, true);
   };
-  var simplifySelection = function simplifySelection(_ref29) {
-    var state = _ref29.state,
-      dispatch = _ref29.dispatch;
+  var simplifySelection = function simplifySelection(_ref30) {
+    var state = _ref30.state,
+      dispatch = _ref30.dispatch;
     var cur2 = state.selection,
       selection = null;
     if (cur2.ranges.length > 1) selection = _EditorSelection2.create([cur2.main]);else if (!cur2.main.empty) selection = _EditorSelection2.create([_EditorSelection2.cursor(cur2.main.head)]);
@@ -20901,9 +20916,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       return range.head < lineStart ? lineStart : Math.min(view.state.doc.length, range.head + 1);
     });
   };
-  var splitLine = function splitLine(_ref30) {
-    var state = _ref30.state,
-      dispatch = _ref30.dispatch;
+  var splitLine = function splitLine(_ref31) {
+    var state = _ref31.state,
+      dispatch = _ref31.dispatch;
     if (state.readOnly) return false;
     var changes = state.changeByRange(function (range) {
       return {
@@ -20921,9 +20936,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var transposeChars = function transposeChars(_ref31) {
-    var state = _ref31.state,
-      dispatch = _ref31.dispatch;
+  var transposeChars = function transposeChars(_ref32) {
+    var state = _ref32.state,
+      dispatch = _ref32.dispatch;
     if (state.readOnly) return false;
     var changes = state.changeByRange(function (range) {
       if (!range.empty || range.from == 0 || range.from == state.doc.length) return {
@@ -21016,14 +21031,14 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   }
-  var moveLineUp = function moveLineUp(_ref32) {
-    var state = _ref32.state,
-      dispatch = _ref32.dispatch;
-    return moveLine(state, dispatch, false);
-  };
-  var moveLineDown = function moveLineDown(_ref33) {
+  var moveLineUp = function moveLineUp(_ref33) {
     var state = _ref33.state,
       dispatch = _ref33.dispatch;
+    return moveLine(state, dispatch, false);
+  };
+  var moveLineDown = function moveLineDown(_ref34) {
+    var state = _ref34.state,
+      dispatch = _ref34.dispatch;
     return moveLine(state, dispatch, true);
   };
   function copyLine(state, dispatch, forward) {
@@ -21048,22 +21063,22 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   }
-  var copyLineUp = function copyLineUp(_ref34) {
-    var state = _ref34.state,
-      dispatch = _ref34.dispatch;
-    return copyLine(state, dispatch, false);
-  };
-  var copyLineDown = function copyLineDown(_ref35) {
+  var copyLineUp = function copyLineUp(_ref35) {
     var state = _ref35.state,
       dispatch = _ref35.dispatch;
+    return copyLine(state, dispatch, false);
+  };
+  var copyLineDown = function copyLineDown(_ref36) {
+    var state = _ref36.state,
+      dispatch = _ref36.dispatch;
     return copyLine(state, dispatch, true);
   };
   var deleteLine = function deleteLine(view) {
     if (view.state.readOnly) return false;
     var state = view.state,
-      changes = state.changes(selectedLineBlocks(state).map(function (_ref36) {
-        var from = _ref36.from,
-          to = _ref36.to;
+      changes = state.changes(selectedLineBlocks(state).map(function (_ref37) {
+        var from = _ref37.from,
+          to = _ref37.to;
         if (from > 0) from--;else if (to < state.doc.length) to++;
         return {
           from: from,
@@ -21105,9 +21120,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var insertNewlineAndIndent = newlineAndIndent(false);
   var insertBlankLine = newlineAndIndent(true);
   function newlineAndIndent(atEof) {
-    return function (_ref37) {
-      var state = _ref37.state,
-        dispatch = _ref37.dispatch;
+    return function (_ref38) {
+      var state = _ref38.state,
+        dispatch = _ref38.dispatch;
       if (state.readOnly) return false;
       var changes = state.changeByRange(function (range) {
         var from = range.from,
@@ -21163,9 +21178,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       };
     });
   }
-  var indentSelection = function indentSelection(_ref38) {
-    var state = _ref38.state,
-      dispatch = _ref38.dispatch;
+  var indentSelection = function indentSelection(_ref39) {
+    var state = _ref39.state,
+      dispatch = _ref39.dispatch;
     if (state.readOnly) return false;
     var updated = Object.create(null);
     var context = new _IndentContext(state, {
@@ -21194,9 +21209,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var indentMore = function indentMore(_ref39) {
-    var state = _ref39.state,
-      dispatch = _ref39.dispatch;
+  var indentMore = function indentMore(_ref40) {
+    var state = _ref40.state,
+      dispatch = _ref40.dispatch;
     if (state.readOnly) return false;
     dispatch(state.update(changeBySelectedLine(state, function (line, changes) {
       changes.push({
@@ -21208,9 +21223,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var indentLess = function indentLess(_ref40) {
-    var state = _ref40.state,
-      dispatch = _ref40.dispatch;
+  var indentLess = function indentLess(_ref41) {
+    var state = _ref41.state,
+      dispatch = _ref41.dispatch;
     if (state.readOnly) return false;
     dispatch(state.update(changeBySelectedLine(state, function (line, changes) {
       var space = /^\s*/.exec(line.text)[0];
@@ -21775,10 +21790,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         return;
       }
       var startLine = state.doc.lineAt(state.selection.main.head);
-      var sign = match[1],
-        ln = match[2],
-        cl = match[3],
-        percent = match[4];
+      var _match2 = _slicedToArray(match, 5),
+        sign = _match2[1],
+        ln = _match2[2],
+        cl = _match2[3],
+        percent = _match2[4];
       var col = cl ? +cl.slice(1) : 0;
       var line2 = ln ? +ln : startLine.number;
       if (ln && percent) {
@@ -21897,9 +21913,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       backgroundColor: "transparent"
     }
   });
-  var selectWord = function selectWord(_ref41) {
-    var state = _ref41.state,
-      dispatch = _ref41.dispatch;
+  var selectWord = function selectWord(_ref42) {
+    var state = _ref42.state,
+      dispatch = _ref42.dispatch;
     var selection = state.selection;
     var newSel = _EditorSelection2.create(selection.ranges.map(function (range) {
       return state.wordAt(range.head) || _EditorSelection2.cursor(range.head);
@@ -21951,9 +21967,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       if (_ret3) return _ret3.v;
     }
   }
-  var selectNextOccurrence = function selectNextOccurrence(_ref42) {
-    var state = _ref42.state,
-      dispatch = _ref42.dispatch;
+  var selectNextOccurrence = function selectNextOccurrence(_ref43) {
+    var state = _ref43.state,
+      dispatch = _ref43.dispatch;
     var ranges = state.selection.ranges;
     if (ranges.some(function (sel) {
       return sel.from === sel.to;
@@ -22215,9 +22231,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       var state = _update28.state.field(searchState);
       if (state != _update28.startState.field(searchState) || _update28.docChanged || _update28.selectionSet || _update28.viewportChanged) this.decorations = this.highlight(state);
     };
-    _proto153.highlight = function highlight(_ref43) {
-      var query = _ref43.query,
-        panel = _ref43.panel;
+    _proto153.highlight = function highlight(_ref44) {
+      var query = _ref44.query,
+        panel = _ref44.panel;
       if (!panel || !query.spec.valid) return _Decoration.none;
       var view = this.view;
       var builder = new _RangeSetBuilder2();
@@ -22247,8 +22263,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       return state && state.query.spec.valid ? f(view, state) : openSearchPanel(view);
     };
   }
-  var findNext = searchCommand(function (view, _ref44) {
-    var query = _ref44.query;
+  var findNext = searchCommand(function (view, _ref45) {
+    var query = _ref45.query;
     var to = view.state.selection.main.to;
     var next = query.nextMatch(view.state, to, to);
     if (!next) return false;
@@ -22262,8 +22278,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     selectSearchInput(view);
     return true;
   });
-  var findPrevious = searchCommand(function (view, _ref45) {
-    var query = _ref45.query;
+  var findPrevious = searchCommand(function (view, _ref46) {
+    var query = _ref46.query;
     var state = view.state,
       from = state.selection.main.from;
     var prev = query.prevMatch(state, from, from);
@@ -22278,8 +22294,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     selectSearchInput(view);
     return true;
   });
-  var selectMatches = searchCommand(function (view, _ref46) {
-    var query = _ref46.query;
+  var selectMatches = searchCommand(function (view, _ref47) {
+    var query = _ref47.query;
     var ranges = query.matchAll(view.state, 1e3);
     if (!ranges || !ranges.length) return false;
     view.dispatch({
@@ -22290,9 +22306,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     });
     return true;
   });
-  var selectSelectionMatches = function selectSelectionMatches(_ref47) {
-    var state = _ref47.state,
-      dispatch = _ref47.dispatch;
+  var selectSelectionMatches = function selectSelectionMatches(_ref48) {
+    var state = _ref48.state,
+      dispatch = _ref48.dispatch;
     var sel = state.selection;
     if (sel.ranges.length > 1 || sel.main.empty) return false;
     var _sel$main = sel.main,
@@ -22311,8 +22327,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     }));
     return true;
   };
-  var replaceNext = searchCommand(function (view, _ref48) {
-    var query = _ref48.query;
+  var replaceNext = searchCommand(function (view, _ref49) {
+    var query = _ref49.query;
     var state = view.state,
       _state$selection$main = state.selection.main,
       from = _state$selection$main.from,
@@ -22351,8 +22367,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     });
     return true;
   });
-  var replaceAll = searchCommand(function (view, _ref49) {
-    var query = _ref49.query;
+  var replaceAll = searchCommand(function (view, _ref50) {
+    var query = _ref50.query;
     if (view.state.readOnly) return false;
     var changes = [];
     for (var _iterator221 = _createForOfIteratorHelperLoose(query.matchAll(view.state, 1e9)), _step221; !(_step221 = _iterator221()).done;) {
@@ -22527,11 +22543,11 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         return findPrevious(view);
       }, [phrase(view, "previous")]), button("select", function () {
         return selectMatches(view);
-      }, [phrase(view, "all")]), crelt("label", null, [this.caseField, phrase(view, "match case")]), crelt("label", null, [this.reField, phrase(view, "regexp")]), crelt("label", null, [this.wordField, phrase(view, "by word")])].concat(view.state.readOnly ? [] : [crelt("br"), this.replaceField, button("replace", function () {
+      }, [phrase(view, "all")]), crelt("label", null, [this.caseField, phrase(view, "match case")]), crelt("label", null, [this.reField, phrase(view, "regexp")]), crelt("label", null, [this.wordField, phrase(view, "by word")])].concat(_toConsumableArray(view.state.readOnly ? [] : [crelt("br"), this.replaceField, button("replace", function () {
         return replaceNext(view);
       }, [phrase(view, "replace")]), button("replaceAll", function () {
         return replaceAll(view);
-      }, [phrase(view, "replace all")])], [crelt("button", {
+      }, [phrase(view, "replace all")])]), [crelt("button", {
         name: "close",
         onclick: function onclick() {
           return closeSearchPanel(view);
@@ -22604,9 +22620,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   }
   var AnnounceMargin = 30;
   var Break = /[\s\.,:;?!]/;
-  function announceMatch(view, _ref50) {
-    var from = _ref50.from,
-      to = _ref50.to;
+  function announceMatch(view, _ref51) {
+    var from = _ref51.from,
+      to = _ref51.to;
     var line = view.state.doc.lineAt(from),
       lineEnd = view.state.doc.lineAt(to).to;
     var start = Math.max(line.from, from - AnnounceMargin),
@@ -22825,11 +22841,12 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         label: o
       } : o;
     });
-    var _ref51 = options.every(function (o) {
+    var _ref52 = options.every(function (o) {
         return /^\w+$/.test(o.label);
       }) ? [/\w*$/, /\w+$/] : prefixMatch(options),
-      validFor = _ref51[0],
-      match = _ref51[1];
+      _ref53 = _slicedToArray(_ref52, 2),
+      validFor = _ref53[0],
+      match = _ref53[1];
     return function (context) {
       var token = context.matchBefore(match);
       return token || context.explicit ? {
@@ -23133,9 +23150,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         var _icon$classList;
         var icon = document.createElement("div");
         icon.classList.add("cm-completionIcon");
-        if (completion2.type) (_icon$classList = icon.classList).add.apply(_icon$classList, completion2.type.split(new RegExp("\\s+", "g")).map(function (cls) {
+        if (completion2.type) (_icon$classList = icon.classList).add.apply(_icon$classList, _toConsumableArray(completion2.type.split(new RegExp("\\s+", "g")).map(function (cls) {
           return "cm-completionIcon-" + cls;
-        }));
+        })));
         icon.setAttribute("aria-hidden", "true");
         return icon;
       },
@@ -23895,7 +23912,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
           this.running.splice(_i103--, 1);
         } else {
           var _query$updates;
-          (_query$updates = query.updates).push.apply(_query$updates, _update31.transactions);
+          (_query$updates = query.updates).push.apply(_query$updates, _toConsumableArray(_update31.transactions));
         }
       }
       if (this.debounceUpdate > -1) clearTimeout(this.debounceUpdate);
@@ -24445,9 +24462,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     };
   }
   function moveField(dir) {
-    return function (_ref52) {
-      var state = _ref52.state,
-        dispatch = _ref52.dispatch;
+    return function (_ref54) {
+      var state = _ref54.state,
+        dispatch = _ref54.dispatch;
       var active = state.field(snippetState, false);
       if (!active || dir < 0 && active.active == 0) return false;
       var next = active.active + dir,
@@ -24462,9 +24479,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       return true;
     };
   }
-  var _clearSnippet = function _clearSnippet(_ref53) {
-    var state = _ref53.state,
-      dispatch = _ref53.dispatch;
+  var _clearSnippet = function _clearSnippet(_ref55) {
+    var state = _ref55.state,
+      dispatch = _ref55.dispatch;
     var active = state.field(snippetState, false);
     if (!active) return false;
     dispatch(state.update({
@@ -24671,9 +24688,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     view.dispatch(tr);
     return true;
   });
-  var _deleteBracketPair = function _deleteBracketPair(_ref54) {
-    var state = _ref54.state,
-      dispatch = _ref54.dispatch;
+  var _deleteBracketPair = function _deleteBracketPair(_ref56) {
+    var state = _ref56.state,
+      dispatch = _ref56.dispatch;
     if (state.readOnly) return false;
     var conf = config(state, state.selection.main.head);
     var tokens = conf.brackets || defaults2.brackets;
@@ -25081,8 +25098,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       after = 0;
     }
     var found = null;
-    diagnostics.between(after, 1e9, function (from, to, _ref55) {
-      var spec = _ref55.spec;
+    diagnostics.between(after, 1e9, function (from, to, _ref57) {
+      var spec = _ref57.spec;
       if (diagnostic && spec.diagnostics.indexOf(diagnostic) < 0) return;
       if (!found) found = new SelectedDiagnostic(from, to, diagnostic || spec.diagnostics[0]);else if (spec.diagnostics.indexOf(found.diagnostic) < 0) return false;else found = new SelectedDiagnostic(found.from, to, found.diagnostic);
     });
@@ -25150,8 +25167,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     var found,
       start = -1,
       end = -1;
-    diagnostics.between(pos - (side < 0 ? 1 : 0), pos + (side > 0 ? 1 : 0), function (from, to, _ref56) {
-      var spec = _ref56.spec;
+    diagnostics.between(pos - (side < 0 ? 1 : 0), pos + (side > 0 ? 1 : 0), function (from, to, _ref58) {
+      var spec = _ref58.spec;
       if (pos >= from && pos <= to && (from == to || (pos > from || side > 0) && (pos < to || side < 0))) {
         found = spec.diagnostics;
         start = from;
@@ -25417,8 +25434,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
         needsSync = false,
         newSelectedItem = null;
       var seen = new Set();
-      diagnostics.between(0, this.view.state.doc.length, function (_start, _end, _ref57) {
-        var spec = _ref57.spec;
+      diagnostics.between(0, this.view.state.doc.length, function (_start, _end, _ref59) {
+        var spec = _ref59.spec;
         for (var _iterator259 = _createForOfIteratorHelperLoose(spec.diagnostics), _step259; !(_step259 = _iterator259()).done;) {
           var diagnostic = _step259.value;
           if (seen.has(diagnostic)) continue;
@@ -25474,9 +25491,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
               panel: _this107.list.getBoundingClientRect()
             };
           },
-          write: function write(_ref58) {
-            var sel = _ref58.sel,
-              panel = _ref58.panel;
+          write: function write(_ref60) {
+            var sel = _ref60.sel,
+              panel = _ref60.panel;
             var scaleY = panel.height / _this107.list.offsetHeight;
             if (sel.top < panel.top) _this107.list.scrollTop -= (panel.top - sel.top) / scaleY;else if (sel.bottom > panel.bottom) _this107.list.scrollTop += (sel.bottom - panel.bottom) / scaleY;
           }
@@ -25695,7 +25712,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var basicSetup = function () {
     return [_lineNumbers(), _highlightActiveLineGutter(), _highlightSpecialChars(), history(), _foldGutter(), _drawSelection(), _dropCursor(), _EditorState2.allowMultipleSelections.of(true), _indentOnInput(), _syntaxHighlighting(_defaultHighlightStyle, {
       fallback: true
-    }), _bracketMatching(), _closeBrackets(), _autocompletion(), _rectangularSelection(), _crosshairCursor(), _highlightActiveLine(), highlightSelectionMatches(), _keymap.of([].concat(_closeBracketsKeymap, defaultKeymap, searchKeymap, historyKeymap, _foldKeymap, _completionKeymap, lintKeymap))];
+    }), _bracketMatching(), _closeBrackets(), _autocompletion(), _rectangularSelection(), _crosshairCursor(), _highlightActiveLine(), highlightSelectionMatches(), _keymap.of([].concat(_closeBracketsKeymap, _toConsumableArray(defaultKeymap), searchKeymap, historyKeymap, _foldKeymap, _completionKeymap, lintKeymap))];
   }();
   var dist_exports7 = {};
   __export(dist_exports7, {
@@ -26656,7 +26673,8 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       var newStacks = this.stacks = [];
       var stopped, stoppedTokens;
       if (this.bigReductionCount > 300 && stacks.length == 1) {
-        var s = stacks[0];
+        var _stacks = _slicedToArray(stacks, 1),
+          s = _stacks[0];
         while (s.forceReduce() && s.stack.length && s.stack[s.stack.length - 2] >= this.lastBigReductionStart) {}
         this.bigReductionCount = this.lastBigReductionSize = 0;
       }
@@ -26941,7 +26959,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
           skipped: spec.skippedNodes && spec.skippedNodes.indexOf(i2) > -1
         });
       }));
-      if (spec.propSources) _this109.nodeSet = (_this109$nodeSet = _this109.nodeSet).extend.apply(_this109$nodeSet, spec.propSources);
+      if (spec.propSources) _this109.nodeSet = (_this109$nodeSet = _this109.nodeSet).extend.apply(_this109$nodeSet, _toConsumableArray(spec.propSources));
       _this109.strict = false;
       _this109.bufferLength = _DefaultBufferLength;
       var tokenArray = decodeArray(spec.tokenData);
@@ -27052,7 +27070,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     _proto180.configure = function configure(config2) {
       var _this$nodeSet;
       var copy = Object.assign(Object.create(_LRParser.prototype), this);
-      if (config2.props) copy.nodeSet = (_this$nodeSet = this.nodeSet).extend.apply(_this$nodeSet, config2.props);
+      if (config2.props) copy.nodeSet = (_this$nodeSet = this.nodeSet).extend.apply(_this$nodeSet, _toConsumableArray(config2.props));
       if (config2.top) {
         var info = this.topRules[config2.top];
         if (!info) throw new RangeError("Invalid top rule name " + config2.top);
@@ -27288,7 +27306,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     maxLines: 500
   });
   function countCodePoints(value) {
-    return [].concat(value).length;
+    return _toConsumableArray(value).length;
   }
   function hardBreakChanges(value, width) {
     var changes = [];
@@ -27317,7 +27335,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     return {
       codePoints: countCodePoints(value),
       lines: lines.length,
-      longestLineCodePoints: Math.max.apply(Math, lines.map(countCodePoints))
+      longestLineCodePoints: Math.max.apply(Math, _toConsumableArray(lines.map(countCodePoints)))
     };
   }
   function createSourceEnvelopeExtension(options) {
@@ -27621,7 +27639,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     return true;
   }
   globalThis.__codeEditorSelect = function (json) {
-    var _positionFromLocation, _ref59, _selection$anchor;
+    var _positionFromLocation, _ref61, _selection$anchor;
     var selection = JSON.parse(json);
     var view = globalThis.__codeEditorView;
     var viewportLine = view.state.doc.lineAt(view.viewport.from).number;
@@ -27632,7 +27650,7 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
       return line.from + Math.max(0, Math.min(line.length, Number(location.lineOffset)));
     };
     var head = (_positionFromLocation = positionFromLocation(selection.headLocation)) != null ? _positionFromLocation : selection.head;
-    var anchor = (_ref59 = (_selection$anchor = selection.anchor) != null ? _selection$anchor : positionFromLocation(selection.anchorLocation)) != null ? _ref59 : head;
+    var anchor = (_ref61 = (_selection$anchor = selection.anchor) != null ? _selection$anchor : positionFromLocation(selection.anchorLocation)) != null ? _ref61 : head;
     return JSON.stringify(setSelection(anchor, head));
   };
   globalThis.__codeEditorGetSelection = function () {
@@ -27828,9 +27846,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   var searchQuery = "";
   var completion = null;
   function findSearchMatch(_temp2) {
-    var _ref60 = _temp2 === void 0 ? {} : _temp2,
-      _ref60$restart = _ref60.restart,
-      restart = _ref60$restart === void 0 ? false : _ref60$restart;
+    var _ref62 = _temp2 === void 0 ? {} : _temp2,
+      _ref62$restart = _ref62.restart,
+      restart = _ref62$restart === void 0 ? false : _ref62$restart;
     if (!searchQuery) return false;
     var view = globalThis.__codeEditorView;
     var text = view.state.doc.toString();

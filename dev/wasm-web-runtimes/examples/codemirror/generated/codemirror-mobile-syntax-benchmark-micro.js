@@ -1,6 +1,14 @@
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
+function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
+function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
 function _inheritsLoose(t, o) { t.prototype = Object.create(o.prototype), t.prototype.constructor = t, _setPrototypeOf(t, o); }
 function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function (t, e) { return t.__proto__ = e, t; }, _setPrototypeOf(t, e); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (_r7) { o = !0, n = _r7; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
@@ -212,7 +220,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (props && props.length) {
         this.props = Object.create(null);
         for (var _iterator5 = _createForOfIteratorHelperLoose(props), _step5; !(_step5 = _iterator5()).done;) {
-          var _step5$value = _step5.value,
+          var _step5$value = _slicedToArray(_step5.value, 2),
             prop = _step5$value[0],
             value = _step5$value[1];
           this.props[typeof prop == "number" ? prop : prop.id] = value;
@@ -2826,7 +2834,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       var newStacks = this.stacks = [];
       var stopped, stoppedTokens;
       if (this.bigReductionCount > 300 && stacks.length == 1) {
-        var s = stacks[0];
+        var _stacks = _slicedToArray(stacks, 1),
+          s = _stacks[0];
         while (s.forceReduce() && s.stack.length && s.stack[s.stack.length - 2] >= this.lastBigReductionStart) {}
         this.bigReductionCount = this.lastBigReductionSize = 0;
       }
@@ -3111,7 +3120,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           skipped: spec.skippedNodes && spec.skippedNodes.indexOf(i2) > -1
         });
       }));
-      if (spec.propSources) _this6.nodeSet = (_this6$nodeSet = _this6.nodeSet).extend.apply(_this6$nodeSet, spec.propSources);
+      if (spec.propSources) _this6.nodeSet = (_this6$nodeSet = _this6.nodeSet).extend.apply(_this6$nodeSet, _toConsumableArray(spec.propSources));
       _this6.strict = false;
       _this6.bufferLength = DefaultBufferLength;
       var tokenArray = decodeArray(spec.tokenData);
@@ -3222,7 +3231,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     _proto25.configure = function configure(config) {
       var _this$nodeSet;
       var copy = Object.assign(Object.create(_LRParser.prototype), this);
-      if (config.props) copy.nodeSet = (_this$nodeSet = this.nodeSet).extend.apply(_this$nodeSet, config.props);
+      if (config.props) copy.nodeSet = (_this$nodeSet = this.nodeSet).extend.apply(_this$nodeSet, _toConsumableArray(config.props));
       if (config.top) {
         var info = this.topRules[config.top];
         if (!info) throw new RangeError("Invalid top rule name " + config.top);
@@ -4133,8 +4142,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     };
     _proto29.replace = function replace(from, to, text) {
       var _clip = clip(this, from, to);
-      from = _clip[0];
-      to = _clip[1];
+      var _clip2 = _slicedToArray(_clip, 2);
+      from = _clip2[0];
+      to = _clip2[1];
       var parts = [];
       this.decompose(0, from, parts, 2);
       if (text.length) text.decompose(0, text.length, parts, 1 | 2);
@@ -4148,9 +4158,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (to === void 0) {
         to = this.length;
       }
-      var _clip2 = clip(this, from, to);
-      from = _clip2[0];
-      to = _clip2[1];
+      var _clip3 = clip(this, from, to);
+      var _clip4 = _slicedToArray(_clip3, 2);
+      from = _clip4[0];
+      to = _clip4[1];
       var parts = [];
       this.decompose(from, to, parts, 0);
       return TextNode.from(parts, to - from);
@@ -4248,9 +4259,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     };
     _proto30.replace = function replace(from, to, text) {
       if (!(text instanceof _TextLeaf)) return _Text2.prototype.replace.call(this, from, to, text);
-      var _clip3 = clip(this, from, to);
-      from = _clip3[0];
-      to = _clip3[1];
+      var _clip5 = clip(this, from, to);
+      var _clip6 = _slicedToArray(_clip5, 2);
+      from = _clip6[0];
+      to = _clip6[1];
       var lines = appendText(this.text, appendText(text.text, sliceText(this.text, 0, from)), to);
       var newLen = this.length + text.length - (to - from);
       if (lines.length <= 32) return new _TextLeaf(lines, newLen);
@@ -4263,9 +4275,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip4 = clip(this, from, to);
-      from = _clip4[0];
-      to = _clip4[1];
+      var _clip7 = clip(this, from, to);
+      var _clip8 = _slicedToArray(_clip7, 2);
+      from = _clip8[0];
+      to = _clip8[1];
       var result = "";
       for (var pos = 0, i2 = 0; pos <= to && i2 < this.text.length; i2++) {
         var line = this.text[i2],
@@ -4350,9 +4363,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       }
     };
     _proto31.replace = function replace(from, to, text) {
-      var _clip5 = clip(this, from, to);
-      from = _clip5[0];
-      to = _clip5[1];
+      var _clip9 = clip(this, from, to);
+      var _clip0 = _slicedToArray(_clip9, 2);
+      from = _clip0[0];
+      to = _clip0[1];
       if (text.lines < this.lines) for (var i2 = 0, pos = 0; i2 < this.children.length; i2++) {
         var child = this.children[i2],
           end = pos + child.length;
@@ -4377,9 +4391,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (lineSep === void 0) {
         lineSep = "\n";
       }
-      var _clip6 = clip(this, from, to);
-      from = _clip6[0];
-      to = _clip6[1];
+      var _clip1 = clip(this, from, to);
+      var _clip10 = _slicedToArray(_clip1, 2);
+      from = _clip10[0];
+      to = _clip10[1];
       var result = "";
       for (var i2 = 0, pos = 0; i2 < this.children.length && pos <= to; i2++) {
         var child = this.children[i2],
@@ -4400,10 +4415,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (!(other instanceof _TextNode)) return 0;
       var length = 0;
       var _ref2 = dir > 0 ? [0, 0, this.children.length, other.children.length] : [this.children.length - 1, other.children.length - 1, -1, -1],
-        iA = _ref2[0],
-        iB = _ref2[1],
-        eA = _ref2[2],
-        eB = _ref2[3];
+        _ref3 = _slicedToArray(_ref2, 4),
+        iA = _ref3[0],
+        iB = _ref3[1],
+        eA = _ref3[2],
+        eB = _ref3[3];
       for (;; iA += dir, iB += dir) {
         if (iA == eA || iB == eB) return length;
         var chA = this.children[iA],
@@ -7232,8 +7248,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var StyleModule = function () {
     function StyleModule(spec, options) {
       this.rules = [];
-      var _ref3 = options || {},
-        finish = _ref3.finish;
+      var _ref4 = options || {},
+        finish = _ref4.finish;
       function splitSelector(selector) {
         return /^@/.test(selector) ? [selector] : selector.split(/,\s*/);
       }
@@ -7324,7 +7340,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         }
       }
       if (sheet) {
-        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(root.adoptedStyleSheets);
+        if (root.adoptedStyleSheets.indexOf(this.sheet) < 0) root.adoptedStyleSheets = [this.sheet].concat(_toConsumableArray(root.adoptedStyleSheets));
       } else {
         var text = "";
         for (var _i13 = 0; _i13 < this.modules.length; _i13++) text += this.modules[_i13].getRules() + "\n";
@@ -8572,11 +8588,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       }));
     };
     _ViewPlugin.define = function define(create, spec) {
-      var _ref4 = spec || {},
-        eventHandlers = _ref4.eventHandlers,
-        eventObservers = _ref4.eventObservers,
-        provide = _ref4.provide,
-        deco = _ref4.decorations;
+      var _ref5 = spec || {},
+        eventHandlers = _ref5.eventHandlers,
+        eventObservers = _ref5.eventObservers,
+        provide = _ref5.provide,
+        deco = _ref5.decorations;
       return new _ViewPlugin(nextPluginID++, create, eventHandlers, eventObservers, function (plugin) {
         var ext = [];
         if (deco) ext.push(decorations.of(function (view2) {
@@ -10098,9 +10114,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       var _a2;
       var changedRanges = _update2.changedRanges;
       if (this.minWidth > 0 && changedRanges.length) {
-        if (!changedRanges.every(function (_ref5) {
-          var fromA = _ref5.fromA,
-            toA = _ref5.toA;
+        if (!changedRanges.every(function (_ref6) {
+          var fromA = _ref6.fromA,
+            toA = _ref6.toA;
           return toA < _this30.minWidthFrom || fromA > _this30.minWidthTo;
         })) {
           this.minWidth = this.minWidthFrom = this.minWidthTo = 0;
@@ -10249,9 +10265,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           } else {
             var range = document.createRange();
             if (main.anchor > main.head) {
-              var _ref6 = [head, anchor];
-              anchor = _ref6[0];
-              head = _ref6[1];
+              var _ref7 = [head, anchor];
+              anchor = _ref7[0];
+              head = _ref7[1];
             }
             range.setEnd(head.node, head.offset);
             range.setStart(anchor.node, anchor.offset);
@@ -10541,7 +10557,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         this.dynamicDecorationMap[i2++] = dynamicOuter;
         allDeco.push(RangeSet.join(outerDeco));
       }
-      this.decorations = [this.editContextFormatting].concat(allDeco, [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
+      this.decorations = [this.editContextFormatting].concat(_toConsumableArray(allDeco), [this.computeBlockGapDeco(), this.view.viewState.lineGapDeco]);
       while (i2 < this.decorations.length) this.dynamicDecorationMap[i2++] = false;
       this.blockWrappers = this.view.state.facet(blockWrappers).map(function (v) {
         return typeof v == "function" ? v(_this35.view) : v;
@@ -13261,9 +13277,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         main = this.state.selection.main;
       var _loop11 = function _loop11() {
         var pos = _i41 ? main.head : main.anchor;
-        if (!viewports.some(function (_ref7) {
-          var from = _ref7.from,
-            to = _ref7.to;
+        if (!viewports.some(function (_ref8) {
+          var from = _ref8.from,
+            to = _ref8.to;
           return pos >= from && pos <= to;
         })) {
           var _this46$lineBlockAt = _this46.lineBlockAt(pos),
@@ -13451,9 +13467,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         to = changes.mapPos(viewport.to, 1);
       return new Viewport(this.heightMap.lineAt(from, QueryType.ByPos, this.heightOracle, 0, 0).from, this.heightMap.lineAt(to, QueryType.ByPos, this.heightOracle, 0, 0).to);
     };
-    _proto105.viewportIsAppropriate = function viewportIsAppropriate(_ref8, bias) {
-      var from = _ref8.from,
-        to = _ref8.to;
+    _proto105.viewportIsAppropriate = function viewportIsAppropriate(_ref9, bias) {
+      var from = _ref9.from,
+        to = _ref9.to;
       if (bias === void 0) {
         bias = 0;
       }
@@ -13690,9 +13706,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       ranges: ranges
     };
   }
-  function findPosition(_ref9, ratio) {
-    var total = _ref9.total,
-      ranges = _ref9.ranges;
+  function findPosition(_ref0, ratio) {
+    var total = _ref0.total,
+      ranges = _ref0.ranges;
     if (ratio <= 0) return ranges[0].from;
     if (ratio >= 1) return ranges[ranges.length - 1].to;
     var dist2 = Math.floor(total * ratio);
@@ -13753,9 +13769,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       var vpHeight = 0,
         base2 = 0,
         domBase = 0;
-      this.viewports = viewports.map(function (_ref0) {
-        var from = _ref0.from,
-          to = _ref0.to;
+      this.viewports = viewports.map(function (_ref1) {
+        var from = _ref1.from,
+          to = _ref1.to;
         var top2 = heightMap.lineAt(from, QueryType.ByPos, oracle, 0, 0).top;
         var bottom = heightMap.lineAt(to, QueryType.ByPos, oracle, 0, 0).bottom;
         vpHeight += bottom - top2;
@@ -14562,11 +14578,11 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       focusOffset = range.endOffset;
     var curAnchor = view2.docView.domAtPos(view2.state.selection.main.anchor, 1);
     if (isEquivalentPosition(curAnchor.node, curAnchor.offset, focusNode, focusOffset)) {
-      var _ref1 = [focusNode, focusOffset, anchorNode, anchorOffset];
-      anchorNode = _ref1[0];
-      anchorOffset = _ref1[1];
-      focusNode = _ref1[2];
-      focusOffset = _ref1[3];
+      var _ref10 = [focusNode, focusOffset, anchorNode, anchorOffset];
+      anchorNode = _ref10[0];
+      anchorOffset = _ref10[1];
+      focusNode = _ref10[2];
+      focusOffset = _ref10[3];
     }
     return {
       anchorNode: anchorNode,
@@ -15087,9 +15103,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           }
           var measuring = [];
           if (!(changed & 4)) {
-            var _ref10 = [measuring, this.measureRequests];
-            this.measureRequests = _ref10[0];
-            measuring = _ref10[1];
+            var _ref11 = [measuring, this.measureRequests];
+            this.measureRequests = _ref11[0];
+            measuring = _ref11[1];
           }
           var measured = measuring.map(function (m) {
             try {
@@ -16969,12 +16985,12 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       pos = next.to;
     }
   }
-  function delimitedIndent(_ref11) {
-    var closing = _ref11.closing,
-      _ref11$align = _ref11.align,
-      align = _ref11$align === void 0 ? true : _ref11$align,
-      _ref11$units = _ref11.units,
-      units = _ref11$units === void 0 ? 1 : _ref11$units;
+  function delimitedIndent(_ref12) {
+    var closing = _ref12.closing,
+      _ref12$align = _ref12.align,
+      align = _ref12$align === void 0 ? true : _ref12$align,
+      _ref12$units = _ref12.units,
+      units = _ref12$units === void 0 ? 1 : _ref12$units;
     return function (context) {
       return delimitedStrategy(context, align, units, closing);
     };
@@ -16991,10 +17007,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     return context.baseIndent;
   };
   function continuedIndent(_temp) {
-    var _ref12 = _temp === void 0 ? {} : _temp,
-      except = _ref12.except,
-      _ref12$units = _ref12.units,
-      units = _ref12$units === void 0 ? 1 : _ref12$units;
+    var _ref13 = _temp === void 0 ? {} : _temp,
+      except = _ref13.except,
+      _ref13$units = _ref13.units,
+      units = _ref13$units === void 0 ? 1 : _ref13$units;
     return function (context) {
       var matchExcept = except && except.test(context.textAfter);
       return context.baseIndent + (matchExcept ? 0 : units * context.unit);
@@ -17178,7 +17194,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
   var byTag = Object.create(null);
   var defaultTable = Object.create(null);
   for (var _i61 = 0, _arr2 = [["variable", "variableName"], ["variable-2", "variableName.special"], ["string-2", "string.special"], ["def", "variableName.definition"], ["tag", "tagName"], ["attribute", "attributeName"], ["type", "typeName"], ["builtin", "variableName.standard"], ["qualifier", "modifier"], ["error", "invalid"], ["header", "heading"], ["property", "propertyName"]]; _i61 < _arr2.length; _i61++) {
-    var _arr2$_i = _arr2[_i61],
+    var _arr2$_i = _slicedToArray(_arr2[_i61], 2),
       legacyName = _arr2$_i[0],
       _name7 = _arr2$_i[1];
     defaultTable[legacyName] = createTokenType(noTokens, _name7);
@@ -18239,11 +18255,12 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         label: o
       } : o;
     });
-    var _ref13 = options.every(function (o) {
+    var _ref14 = options.every(function (o) {
         return /^\w+$/.test(o.label);
       }) ? [/\w*$/, /\w+$/] : prefixMatch(options),
-      validFor = _ref13[0],
-      match = _ref13[1];
+      _ref15 = _slicedToArray(_ref14, 2),
+      validFor = _ref15[0],
+      match = _ref15[1];
     return function (context) {
       var token = context.matchBefore(match);
       return token || context.explicit ? {
@@ -18652,9 +18669,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     };
   }
   function moveField(dir) {
-    return function (_ref14) {
-      var state = _ref14.state,
-        dispatch = _ref14.dispatch;
+    return function (_ref16) {
+      var state = _ref16.state,
+        dispatch = _ref16.dispatch;
       var active = state.field(snippetState, false);
       if (!active || dir < 0 && active.active == 0) return false;
       var next = active.active + dir,
@@ -18669,9 +18686,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return true;
     };
   }
-  var clearSnippet = function clearSnippet(_ref15) {
-    var state = _ref15.state,
-      dispatch = _ref15.dispatch;
+  var clearSnippet = function clearSnippet(_ref17) {
+    var state = _ref17.state,
+      dispatch = _ref17.dispatch;
     var active = state.field(snippetState, false);
     if (!active) return false;
     dispatch(state.update({
@@ -20533,7 +20550,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       if (underline < 0) return false;
       var underlineMark = _elt(Type.HeaderMark, cx.lineStart + line.pos, cx.lineStart + underline);
       cx.nextLine();
-      cx.addLeafElement(leaf, _elt(next == 61 ? Type.SetextHeading1 : Type.SetextHeading2, leaf.start, cx.prevLineEnd(), [].concat(cx.parser.parseInline(leaf.content, leaf.start), [underlineMark])));
+      cx.addLeafElement(leaf, _elt(next == 61 ? Type.SetextHeading1 : Type.SetextHeading2, leaf.start, cx.prevLineEnd(), [].concat(_toConsumableArray(cx.parser.parseInline(leaf.content, leaf.start)), [underlineMark])));
       return true;
     };
     _proto133.finish = function finish() {
@@ -20902,13 +20919,13 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
           styles;
         var _loop16 = function _loop16() {
           var s = _step192.value;
-          var _ref16 = typeof s == "string" ? {
+          var _ref18 = typeof s == "string" ? {
               name: s
             } : s,
-            name2 = _ref16.name,
-            block = _ref16.block,
-            composite = _ref16.composite,
-            style = _ref16.style;
+            name2 = _ref18.name,
+            block = _ref18.block,
+            composite = _ref18.composite,
+            style = _ref18.style;
           if (nodeTypes2.some(function (t2) {
             return t2.name == name2;
           })) return 1;
@@ -20933,7 +20950,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         nodeSet = new NodeSet(nodeTypes2);
         if (styles) nodeSet = nodeSet.extend(styleTags(styles));
       }
-      if (nonEmpty(config.props)) nodeSet = (_nodeSet = nodeSet).extend.apply(_nodeSet, config.props);
+      if (nonEmpty(config.props)) nodeSet = (_nodeSet = nodeSet).extend.apply(_nodeSet, _toConsumableArray(config.props));
       if (nonEmpty(config.remove)) {
         for (var _iterator193 = _createForOfIteratorHelperLoose(config.remove), _step193; !(_step193 = _iterator193()).done;) {
           var rm = _step193.value;
@@ -21764,7 +21781,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       return false;
     };
     _proto142.finish = function finish(cx, leaf) {
-      cx.addLeafElement(leaf, cx.elt("Task", leaf.start, leaf.start + leaf.content.length, [cx.elt("TaskMarker", leaf.start, leaf.start + 3)].concat(cx.parser.parseInline(leaf.content.slice(3), leaf.start + 3))));
+      cx.addLeafElement(leaf, cx.elt("Task", leaf.start, leaf.start + leaf.content.length, [cx.elt("TaskMarker", leaf.start, leaf.start + 3)].concat(_toConsumableArray(cx.parser.parseInline(leaf.content.slice(3), leaf.start + 3)))));
       return true;
     };
     return TaskParser;
@@ -22094,9 +22111,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     if (config === void 0) {
       config = {};
     }
-    return function (_ref17) {
-      var state = _ref17.state,
-        dispatch = _ref17.dispatch;
+    return function (_ref19) {
+      var state = _ref19.state,
+        dispatch = _ref19.dispatch;
       var tree = syntaxTree(state),
         doc2 = state.doc;
       var dont = null,
@@ -22242,9 +22259,9 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
     }
     return node;
   }
-  var deleteMarkupBackward = function deleteMarkupBackward(_ref18) {
-    var state = _ref18.state,
-      dispatch = _ref18.dispatch;
+  var deleteMarkupBackward = function deleteMarkupBackward(_ref20) {
+    var state = _ref20.state,
+      dispatch = _ref20.dispatch;
     var tree = syntaxTree(state);
     var dont = null,
       changes = state.changeByRange(function (range) {
@@ -22633,13 +22650,13 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       } else if (fence) {
         if (/^(js|javascript|ts|typescript)$/.test(fence.language)) {
           var result = javascriptScan(line, offset + at, fence.inner, emit);
-          if (tokens) tokens.push.apply(tokens, result.tokens);
+          if (tokens) tokens.push.apply(tokens, _toConsumableArray(result.tokens));
           fence.inner = result.state;
         } else if (fence.language === "css") {
           var _result2 = cssScan(line, offset + at, fence.inner, emit);
-          if (tokens) tokens.push.apply(tokens, _result2.tokens);
+          if (tokens) tokens.push.apply(tokens, _toConsumableArray(_result2.tokens));
           fence.inner = _result2.state;
-        } else if (/^(html|xml)$/.test(fence.language) && tokens) tokens.push.apply(tokens, htmlTokens(line, offset + at));else add(tokens, offset + at, offset + end, "string");
+        } else if (/^(html|xml)$/.test(fence.language) && tokens) tokens.push.apply(tokens, _toConsumableArray(htmlTokens(line, offset + at)));else add(tokens, offset + at, offset + end, "string");
       } else {
         var heading2 = /^\s{0,3}#{1,6}\s/.exec(line);
         if (heading2) add(tokens, offset + at, offset + end, "heading");
@@ -22685,7 +22702,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         var close = lower.indexOf(state.mode === "javascript" ? "<\/script" : "</style", at);
         var _to4 = close < 0 ? text.length : close;
         var result = (state.mode === "javascript" ? javascriptScan : cssScan)(text.slice(at, _to4), offset + at, state.inner, emit);
-        if (tokens) tokens.push.apply(tokens, result.tokens);
+        if (tokens) tokens.push.apply(tokens, _toConsumableArray(result.tokens));
         state.inner = result.state;
         at = _to4;
         if (close >= 0) state = {
@@ -22816,7 +22833,7 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
         var length = Math.min(line.length, HIGHLIGHT_LINE_LIMIT);
         var text = doc2.sliceString(line.from, line.from + length);
         var result = scanMode(mode, text, line.from, state);
-        tokens.push.apply(tokens, result.tokens);
+        tokens.push.apply(tokens, _toConsumableArray(result.tokens));
         state = result.state;
         parsedChars += text.length;
         if (line.length > length) {
@@ -22992,10 +23009,10 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
       sum += value;
     }
     return {
-      minimum: Math.min.apply(Math, values2),
+      minimum: Math.min.apply(Math, _toConsumableArray(values2)),
       median: percentile(values2, 0.5),
       p95: percentile(values2, 0.95),
-      maximum: Math.max.apply(Math, values2),
+      maximum: Math.max.apply(Math, _toConsumableArray(values2)),
       mean: sum / values2.length
     };
   }

@@ -498,6 +498,63 @@
   var nextSymbol;
   var symbolRegistry;
   var SymbolPonyfill;
+  if (!String.prototype[Symbol.iterator]) {
+    String.prototype[Symbol.iterator] = function () {
+      "use strict";
+
+      if (this == null) throw new TypeError("Invalid string iterator receiver");
+      var text = String(this),
+        offset = 0;
+      var iterator3 = {
+        next: function next() {
+          if (offset >= text.length) return {
+            value: void 0,
+            done: true
+          };
+          var start = offset++,
+            first = text.charCodeAt(start);
+          if (first >= 55296 && first <= 56319 && offset < text.length) {
+            var second = text.charCodeAt(offset);
+            if (second >= 56320 && second <= 57343) offset++;
+          }
+          return {
+            value: text.slice(start, offset),
+            done: false
+          };
+        }
+      };
+      iterator3[Symbol.iterator] = function () {
+        return this;
+      };
+      return iterator3;
+    };
+  }
+  if (!Array.from) {
+    Array.from = function (source, map, receiver) {
+      if (source == null || map !== void 0 && typeof map !== "function") throw new TypeError("Invalid Array.from input");
+      var result = [],
+        index = 0,
+        iterate = source[Symbol.iterator];
+      if (iterate != null) {
+        var iterator3 = iterate.call(source),
+          step;
+        try {
+          while (!(step = iterator3.next()).done) {
+            result.push(map === void 0 ? step.value : map.call(receiver, step.value, index));
+            index++;
+          }
+        } catch (_error) {
+          if (typeof iterator3.return === "function") iterator3.return();
+          throw _error;
+        }
+      } else {
+        if (source instanceof Map) source = source.entries();else if (source instanceof Set) source = source.values();
+        var length = Math.min(Math.max(Math.floor(Number(source.length)) || 0, 0), 9007199254740991);
+        for (; index < length; index++) result.push(map === void 0 ? source[index] : map.call(receiver, source[index], index));
+      }
+      return result;
+    };
+  }
   if (typeof WeakRef === "undefined") {
     globalThis.WeakRef = function WeakRefPonyfill(value) {
       this.value = value;
@@ -1023,8 +1080,8 @@ function parseCss(source) {
             important: important
           });
         });
-      } catch (_error) {
-        throw new SyntaxError(property + ": " + value + ": " + _error.message);
+      } catch (_error2) {
+        throw new SyntaxError(property + ": " + value + ": " + _error2.message);
       }
       if (source[at] === ";") at++;else {
         at++;
@@ -1671,8 +1728,8 @@ function encodeCss(source, includeFonts) {
     var result = new Uint8Array(writer.at - 4);
     for (var index = 4; index < writer.at; index++) result[index - 4] = writer.bytes[index];
     return result;
-  } catch (_error2) {
-    throw new SyntaxError("CSS " + phase + " failed: " + String(_error2));
+  } catch (_error3) {
+    throw new SyntaxError("CSS " + phase + " failed: " + String(_error3));
   }
 }
 GuestDocument.prototype.installStylesheet = function (source) {
@@ -3190,11 +3247,11 @@ function allocateElementCallback(callback, target) {
     if (!state.active || !current) return releaseCallback(index);
     try {
       current.call(target, event);
-    } catch (_error3) {
-      var message = String(_error3),
-        stack = _error3 && _error3.stack;
+    } catch (_error4) {
+      var message = String(_error4),
+        stack = _error4 && _error4.stack;
       globalThis.__wwcReportError(stack && stack.indexOf(message) < 0 ? message + "\n" + stack : stack || message);
-      throw _error3;
+      throw _error4;
     }
   };
   return index;
