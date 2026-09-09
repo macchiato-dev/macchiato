@@ -60,12 +60,32 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     var input = document.createElement('input');
     input.setAttribute('name', 'secret'); input.value = 'must-not-leave';
     button.textContent = 'Submit'; form.appendChild(input); form.appendChild(button);
-    form.addEventListener('submit', function () { button.textContent = 'Guest received submit'; });
+    form.addEventListener('submit', function (event) {
+      button.textContent = event.defaultPrevented ? 'Cancelled too early' : 'Guest received submit';
+    });
     document.body.appendChild(form);
   `));
   await page.getByRole("button", { name: "Submit", exact: true }).click();
   await page.getByRole("button", { name: "Guest received submit" }).waitFor();
   await page.locator('input[name="secret"]').press("Enter");
+  // Neither stopping propagation nor stopping other listeners grants native
+  // navigation; a delegated document handler must see the original event too.
+  await page.evaluate(() => run(`
+    document.addEventListener('submit', function (event) {
+      button.textContent = event.defaultPrevented ? 'Cancelled too early' : 'Document received submit';
+    });
+  `));
+  await page.getByRole("button", { name: "Guest received submit" }).click();
+  await page.getByRole("button", { name: "Document received submit" }).waitFor();
+  for (const method of ["stopPropagation", "stopImmediatePropagation"]) {
+    await page.evaluate(method => run(`
+      form.addEventListener('submit', function (event) {
+        event.${method}(); button.textContent = 'Stopped safely';
+      });
+    `), method);
+    await page.locator('input[name="secret"]').press("Enter");
+    await page.getByRole("button", { name: "Stopped safely" }).waitFor();
+  }
   for (const code of ["form.setAttribute('method', 'post')", "button.setAttribute('formmethod', 'get')",
     "form.setAttribute('action', 'https://outside.test/')", "form.submit()", "form.requestSubmit()"] ) {
     await assert.rejects(page.evaluate(code => run(code), code));
