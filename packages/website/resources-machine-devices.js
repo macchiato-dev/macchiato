@@ -371,7 +371,7 @@ export class ResourcesOutputDevice {
     else output = await createProjectOutputMachine({
       root: mount,
       scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
-      options: { environment: payload.environment || {} },
+      options: { environment: payload.environment || {}, files },
       onError: (error) => this.deliver({ type: "output-error", id, message: error?.message || String(error) }),
     });
     this.outputs.set(id, output);

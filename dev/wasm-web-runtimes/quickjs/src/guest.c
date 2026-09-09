@@ -194,6 +194,62 @@ static JSValue release_host_reference_token(JSContext *ctx,
     return JS_UNDEFINED;
 }
 
+/* Module source comes from guest JavaScript. This runtime has no filesystem
+   or network loader; the environment decides how to obtain a named source. */
+static JSModuleDef *load_guest_module(JSContext *ctx, const char *name, void *opaque)
+{
+    JSValue global, loader, argument, source, compiled;
+    const char *text;
+    size_t length;
+    JSModuleDef *module;
+    (void)opaque;
+    global = JS_GetGlobalObject(ctx);
+    loader = JS_GetPropertyStr(ctx, global, "__wwcModuleSource");
+    argument = JS_NewString(ctx, name);
+    source = JS_Call(ctx, loader, global, 1, &argument);
+    JS_FreeValue(ctx, argument);
+    JS_FreeValue(ctx, loader);
+    JS_FreeValue(ctx, global);
+    if (JS_IsException(source)) return NULL;
+    if (!JS_IsString(source)) {
+        JS_FreeValue(ctx, source);
+        JS_ThrowTypeError(ctx, "module source must be a string");
+        return NULL;
+    }
+    text = JS_ToCStringLen(ctx, &length, source);
+    JS_FreeValue(ctx, source);
+    if (!text) return NULL;
+    compiled = JS_Eval(ctx, text, length, name,
+                       JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+    JS_FreeCString(ctx, text);
+    if (JS_IsException(compiled)) return NULL;
+    /* The context's module registry retains the definition. */
+    module = JS_VALUE_GET_PTR(compiled);
+    JS_FreeValue(ctx, compiled);
+    return module;
+}
+
+static JSValue evaluate_guest_module(JSContext *ctx, JSValueConst self,
+                                    int argc, JSValueConst *argv)
+{
+    const char *source, *name;
+    size_t source_length, name_length;
+    JSValue result;
+    (void)self;
+    if (argc != 2 || !JS_IsString(argv[0]) || !JS_IsString(argv[1]))
+        return JS_ThrowTypeError(ctx, "module requires source and filename");
+    source = JS_ToCStringLen(ctx, &source_length, argv[0]);
+    if (!source) return JS_EXCEPTION;
+    name = JS_ToCStringLen(ctx, &name_length, argv[1]);
+    if (!name) { JS_FreeCString(ctx, source); return JS_EXCEPTION; }
+    if (!name_length || strlen(name) != name_length)
+        result = JS_ThrowTypeError(ctx, "invalid module filename");
+    else result = JS_Eval(ctx, source, source_length, name, JS_EVAL_TYPE_MODULE);
+    JS_FreeCString(ctx, name);
+    JS_FreeCString(ctx, source);
+    return result;
+}
+
 static int install_host_references(void)
 {
     JSClassDef definition = {
@@ -205,6 +261,10 @@ static int install_host_references(void)
     if (JS_NewClass(runtime, host_reference_class, &definition) < 0)
         return -1;
     global = JS_GetGlobalObject(context);
+    JS_SetModuleLoaderFunc(runtime, NULL, load_guest_module, NULL);
+    JS_SetPropertyStr(context, global, "__wwcEvaluateModule",
+                      JS_NewCFunction(context, evaluate_guest_module,
+                                      "__wwcEvaluateModule", 2));
     JS_SetPropertyStr(context, global, "hostReference",
                       JS_NewCFunction(context, make_host_reference,
                                       "hostReference", 1));

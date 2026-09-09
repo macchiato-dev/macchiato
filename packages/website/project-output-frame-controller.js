@@ -12,6 +12,9 @@ let fetchResourceImpl = null;
 let imageResolverImpl = (value) => value;
 let navigationPatterns = [];
 const routeListeners = new Set();
+let moduleFiles = new Map();
+const moduleRequests = new Map();
+let nextModuleRequest = 1;
 
 function taggedMessage(tag, value) {
   const bytes = encoder.encode(value);
@@ -82,6 +85,15 @@ function imageResolver(files) {
 
 async function evaluate(script, index) {
   reportedError = null;
+  if (script.module) {
+    const id = nextModuleRequest++;
+    let resolve, reject;
+    const complete = new Promise((yes, no) => { resolve = yes; reject = no; });
+    moduleRequests.set(id, { resolve, reject });
+    try { call("__resourcesOutputRunModule", { id, source: script.source, code: script.code }); }
+    catch (error) { moduleRequests.delete(id); reject(error); }
+    return complete;
+  }
   await machine.onmsg(taggedMessage(1, script.code));
   if (reportedError) throw new Error(`${script.source || `script ${index + 1}`}: ${reportedError.message}`);
 }
@@ -100,6 +112,7 @@ async function start(payload, port) {
   fetchResourceImpl = projectFetch(payload.files || [], payload.allowedFetchOrigins || []);
   imageResolverImpl = imageResolver(payload.files || []);
   navigationPatterns = payload.allowedLinkPatterns || [];
+  moduleFiles = new Map((payload.files || []).map(file => [file.path, file.content]));
   machine = new WasmWebMachine(runtime, document.getElementById("project-output-a"), {
     environment: payload.environment || {},
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
@@ -107,6 +120,10 @@ async function start(payload, port) {
     resolveImage: (value) => imageResolverImpl(value),
     allowNavigate: (url) => urlMatchesAllowedPatterns(url, navigationPatterns),
     services: {
+      call(name, path) {
+        if (name !== "module.source") throw new Error(`Project service is unavailable: ${name}`);
+        return JSON.stringify(moduleFiles.get(path) ?? null);
+      },
       route: {
         get: () => location.hash.slice(1) || "/", search: () => "",
         listen(listener) {
@@ -117,7 +134,14 @@ async function start(payload, port) {
       storage: { get: () => null, set() {}, delete() {}, listen() {} },
     },
     onMessage(text) {
-      if (text.startsWith("__wwcResponse:")) response = text.slice(14);
+      if (text.startsWith("__wwcModule:")) {
+        const result = JSON.parse(text.slice(12));
+        const pending = moduleRequests.get(result.id);
+        if (pending) {
+          moduleRequests.delete(result.id);
+          if (result.error) pending.reject(new Error(result.error)); else pending.resolve();
+        }
+      } else if (text.startsWith("__wwcResponse:")) response = text.slice(14);
       else if (text.startsWith("__wwcError:")) reportedError ||= new Error(text.slice(11));
       else {
         try {
@@ -141,6 +165,7 @@ async function operation(name, payload) {
     fetchResourceImpl = projectFetch(payload.project.files || [], payload.project.allowedFetchOrigins || []);
     imageResolverImpl = imageResolver(payload.project.files || []);
     navigationPatterns = payload.project.allowedLinkPatterns || [];
+    moduleFiles = new Map((payload.project.files || []).map(file => [file.path, file.content]));
     const value = call("__resourcesOutputLoad", { tree: payload.project.tree || [], stylesheets: payload.project.stylesheets || [] });
     machine.onmsg(0);
     for (let index = 0; index < (payload.project.scripts || []).length; index++) await evaluate(payload.project.scripts[index], index);
@@ -156,6 +181,9 @@ async function operation(name, payload) {
   if (name === "destroy") {
     for (const listener of routeListeners) removeEventListener("hashchange", listener);
     routeListeners.clear();
+    for (const pending of moduleRequests.values()) pending.reject(new Error("Project output was destroyed"));
+    moduleRequests.clear();
+    moduleFiles.clear();
     machine?.destroy(); machine = null;
     return null;
   }

@@ -5,6 +5,19 @@ import { compileProjectFiles, compileSingleFileProject, PROJECT_SOURCE_LIMITS } 
 const compile = (source) => compileProjectFiles([{ path: "index.html", content: source }], {},
   { limits: PROJECT_SOURCE_LIMITS });
 
+test("module scripts retain their source and distinct identities for native evaluation", () => {
+  const files = [
+    { path: "index.html", content: '<script>var classic = 1;</script><script type="module" src="./app.js"></script><script type="module">let x = 1;</script><script type="module">let x = 2;</script>' },
+    { path: "app.js", content: 'import { value } from "./data.js"; export { value };' },
+    { path: "data.js", content: "export const value = 42;" },
+  ];
+  const result = compileProjectFiles(files);
+  assert.deepEqual(result.scripts[0], { source: "index.html", code: "var classic = 1;" });
+  assert.deepEqual(result.scripts[1], { source: "app.js", code: files[1].content, module: true });
+  assert.equal(result.scripts[2].module, true);
+  assert.notEqual(result.scripts[2].source, result.scripts[3].source);
+});
+
 test("project compilation does not inherit playground authoring budgets", () => {
   const source = `${"\n".repeat(600)}<p>${"x".repeat(400)}</p>`;
   assert.throws(() => compileSingleFileProject(source), /budget/);
