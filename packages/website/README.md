@@ -532,6 +532,23 @@ For a reproducible local build:
 ./scripts/build-resources-bunny.sh
 ```
 
+Verify the resulting inventory and run the exported backend artifact in Deno
+before uploading. Substitute the build's seven-character revision below:
+
+```sh
+node scripts/verify-resources-bunny-build.js dist/resources-bunny
+node --test packages/website/test/*.test.js
+deno test --config packages/website/deno.json --allow-read \
+  packages/website/test/bunny-machine-artifact.test.ts -- \
+  dist/resources-bunny/site/resources-co-REVISION/machines/backend.bin
+```
+
+The Deno smoke test decompresses the actual upload, compiles both runtimes,
+executes routing and escaped document rendering, and checks SQL-policy
+rejection. It needs no database, deployment key, or network permission. These
+local checks do not establish Bunny's startup timing or replace a staging
+playtest against its database and Storage configuration.
+
 The build defaults `BLOG_EXAMPLES_ORIGIN` to
 `https://blog-examples.resources.co`. Set it explicitly only when building for
 another environment, such as staging.

@@ -17,6 +17,16 @@ saved Resources projects. The Resources build guest explicitly selects a
 retain their smaller default budget. Neither changes the machine's DOM or
 network authority.
 
+Source-limit accounting walks CodeMirror's immutable text tree and weakly
+caches each subtree's code-point count and longest line. Edits reuse unchanged
+subtrees; discarded history does not remain pinned by this cache. DOM,
+selection, and event state are not cached by this mechanism. Unicode pairs,
+unpaired surrogates, edits, restores, and paste rejection have regression tests.
+The MicroQuickJS source-accounting benchmark runs the old and new counters on
+identical 1,000-line documents, alternating their order and checking results
+after garbage collection. Its timings describe accounting, not total editor
+latency; the project-page browser test separately exercises the full editor.
+
 Inline SVG keeps its namespace and drawing attributes. An embedded SVG in a
 CSS background becomes a semantic SVG tree in the stylesheet wire message.
 The host validates and renders that tree before producing a base64 image URL;
