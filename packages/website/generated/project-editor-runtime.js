@@ -2489,6 +2489,9 @@ function createProjectImageResolver(files = []) {
 async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
   let reportedError = null, response, starting = true, destroyed = false, machine;
+  let moduleFiles = new Map((options.files || []).map((file) => [file.path, file.content]));
+  const moduleRequests = /* @__PURE__ */ new Map();
+  let nextModuleRequest = 1;
   async function answerFetch(request) {
     try {
       if (typeof options.fetchResource !== "function") throw new Error("Project network access is disabled");
@@ -2498,28 +2501,64 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
       if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message }));
     }
   }
-  machine = new WasmWebMachine(module, root, { ...options, onMessage(text) {
-    if (text.startsWith("__wwcResponse:")) {
-      response = text.slice(14);
-      return;
+  machine = new WasmWebMachine(module, root, {
+    ...options,
+    services: { ...options.services, call(name, path) {
+      if (name !== "module.source") {
+        if (typeof options.services?.call === "function") return options.services.call(name, path);
+        throw new Error(`Project service is unavailable: ${name}`);
+      }
+      return JSON.stringify(moduleFiles.get(path) ?? null);
+    } },
+    onMessage(text) {
+      if (text.startsWith("__wwcModule:")) {
+        const result = JSON.parse(text.slice(12));
+        const pending = moduleRequests.get(result.id);
+        if (pending) {
+          moduleRequests.delete(result.id);
+          if (result.error) pending.reject(new Error(result.error));
+          else pending.resolve();
+        }
+        return;
+      }
+      if (text.startsWith("__wwcResponse:")) {
+        response = text.slice(14);
+        return;
+      }
+      if (text.startsWith("__wwcError:") && !reportedError) {
+        reportedError = new Error(text.slice(11));
+        if (!starting) queueMicrotask(() => onError?.(reportedError));
+        return;
+      }
+      try {
+        const request = JSON.parse(text);
+        if (request.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string")
+          return void answerFetch(request);
+      } catch {
+      }
+      options.onMessage?.(text);
     }
-    if (text.startsWith("__wwcError:") && !reportedError) {
-      reportedError = new Error(text.slice(11));
-      if (!starting) queueMicrotask(() => onError?.(reportedError));
-      return;
-    }
-    try {
-      const request = JSON.parse(text);
-      if (request.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string")
-        return void answerFetch(request);
-    } catch {
-    }
-    options.onMessage?.(text);
-  } });
+  });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0);
   async function evaluate(script, index) {
     reportedError = null;
+    if (script.module) {
+      const id = nextModuleRequest++;
+      let resolve, reject;
+      const complete = new Promise((yes, no) => {
+        resolve = yes;
+        reject = no;
+      });
+      moduleRequests.set(id, { resolve, reject });
+      try {
+        call("__resourcesOutputRunModule", { id, source: script.source, code: script.code });
+      } catch (error) {
+        moduleRequests.delete(id);
+        reject(error);
+      }
+      return complete;
+    }
     await machine.onmsg(taggedMessage(1, script.code));
     if (!reportedError) return;
     const source = typeof script?.source === "string" && script.source ? script.source : `script ${index + 1}`;
@@ -2556,6 +2595,7 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
       programs += nextScripts.length;
     },
     async load(project) {
+      moduleFiles = new Map((project.files || []).map((file) => [file.path, file.content]));
       const result = call("__resourcesOutputLoad", {
         tree: project.tree || [],
         stylesheets: project.stylesheets || []
@@ -2568,6 +2608,9 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
     },
     destroy() {
       destroyed = true;
+      for (const pending of moduleRequests.values()) pending.reject(new Error("Project output was destroyed"));
+      moduleRequests.clear();
+      moduleFiles.clear();
       machine.destroy();
     },
     inspect() {

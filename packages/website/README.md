@@ -73,11 +73,19 @@ initial artifact includes only its small shared atom catalog. See the
 project-editor package's language-loading design.
 
 The project program is not executed in the editor runtime. Each executable
-output generation gets a disposable QuickJS context with its own DOM handle
+output gets a disposable QuickJS context with its own DOM handle
 table, timers, capabilities, and lifetime. The preview extracts inline and
 same-project scripts before projecting the declared container DOM; those
 scripts run only inside QuickJS. The guest's browser facade forwards admitted
 DOM and drawing operations through `wasm-web-machine`.
+
+Classic and module scripts execute inside that same output guest, including
+when the optional iframe is disabled. Module dependencies are read through a
+synchronous service limited to the current project's files; imports cannot
+fetch a URL or access server files. QuickJS owns module linking, live bindings,
+cycles, dynamic imports, and top-level `await`. Each output load uses new module
+identities so edited dependencies are evaluated again. Old module records are
+released when the output runtime is disposed, not on each refresh.
 
 Output mounts in one static iframe from the beginning, so initial rendering,
 ordinary refreshes, and future hot reload use the same surface semantics. A

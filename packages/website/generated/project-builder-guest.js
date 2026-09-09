@@ -11665,14 +11665,19 @@
       }
       for (const script of parsed.querySelectorAll("script")) {
         const src = script.getAttribute("src");
-        if (script.getAttribute("type") && script.getAttribute("type") !== "text/javascript") {
-          throw new Error("Only classic inline JavaScript is available in the playground");
+        const module = script.getAttribute("type") === "module";
+        if (script.getAttribute("type") && script.getAttribute("type") !== "text/javascript" && !module) {
+          throw new Error("Script type is not supported");
         }
         if (src) {
           const path2 = localResourcePath(src);
           if (!resources?.has(path2)) throw new Error(`Project script not found: ${path2}`);
-          scripts.push({ source: path2, code: resources.get(path2) });
-        } else if (script.textContent.trim()) scripts.push({ source: sourceName, code: script.textContent });
+          scripts.push({ source: path2, code: resources.get(path2), ...module ? { module: true } : {} });
+        } else if (script.textContent.trim()) scripts.push({
+          source: module ? `${sourceName}.inline-${scripts.length}.js` : sourceName,
+          code: script.textContent,
+          ...module ? { module: true } : {}
+        });
       }
       const nodes = (value) => {
         if (value.nodeType === 3) return [[0, value.textContent]];

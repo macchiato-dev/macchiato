@@ -50,6 +50,13 @@ The environment is evaluated first and supplies the DOM facade. The
 application is then evaluated unchanged inside QuickJS. Neither source runs in
 the browser realm.
 
+The runtime also provides `__wwcEvaluateModule(source, filename)`, returning
+QuickJS's module-evaluation promise. Its native module loader calls the guest's
+`__wwcModuleSource(normalizedName)` for dependency source. It has no built-in
+file or URL loader. The guest environment supplies that function and any
+resource policy; imports, cycles, live bindings, and top-level `await` are
+handled by QuickJS rather than a source-code rewrite.
+
 An application may define `globalThis.__wwcResult()` as a development-only
 acceptance probe. The runtime reports its result after successful evaluation;
 production applications can omit it and report `ready`.
