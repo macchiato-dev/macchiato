@@ -15,6 +15,13 @@ model: it names the palette tokens and supplies the brand defaults. A caller
 can provide a partial dark/light palette to `createResourcesArtifactSet()` or
 `exportResourcesSite()`; undeclared tokens and active CSS values are rejected.
 
+Every document resolves its saved appearance choice (System by default) in a
+small synchronous head script before content paints. Its exact CSP hash is
+checked in tests. This avoids a dark flash during initial loading and document
+navigation while the frontend machine starts. Theme controls and subsequent
+system appearance changes remain in the guest; unavailable browser storage
+falls back to System without writing a preference.
+
 The pieces compose in one direction:
 
 ```text
@@ -32,7 +39,8 @@ route/view models + theme + runtime profile
 
 [`runtime.js`](runtime.js) declares behavior differences. The `local` profile
 keeps the existing SQLite-backed site and its optional browser QuickJS WASM
-userbar. The `edge` profile emits inert documents. [`artifacts.js`](artifacts.js)
+userbar. The `edge` profile emits validated documents with the theme bootstrap
+in the head. [`artifacts.js`](artifacts.js)
 is the portable build boundary. Storage is supplied as `fetch`, so the same
 dependency-free handler can use [`adapters/memory-storage.js`](adapters/memory-storage.js)
 locally or the platform `fetch` against private Bunny Storage in production.

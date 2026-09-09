@@ -7,6 +7,7 @@ import { StyleUse } from "@macchiato-dev/style-use";
 import { createSafeTriangle, pointInSafeTriangle, userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
+import { themeBootstrapHtml } from "./theme-bootstrap.js";
 import { resourcesMenu, renderResourcesMobileMenu, renderResourcesPrimaryMenu } from "./components/menu.js";
 import { composeResourcesUserMenuDomSchema, renderResourcesEdgeStatus, renderResourcesUserMenu, RESOURCES_USER_MENU, resourcesUserMenuSandboxSource } from "./components/user-menu.js";
 import { commandPaletteClientPath } from "@macchiato-dev/command-palette-use";
@@ -1649,8 +1650,8 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
 }
 
 function headHtml({ runtime = "browser-use" } = {}) {
-  if (runtime === "document") return "";
-  return `<script type="importmap">
+  if (runtime === "document") return themeBootstrapHtml;
+  return `${themeBootstrapHtml}\n<script type="importmap">
 ${JSON.stringify({
   imports: {
     "@macchiato-dev/quickjs-emscripten-sandbox": "/-/quickjs-emscripten-sandbox/index.js",

@@ -1,3 +1,5 @@
+import { themeBootstrapCsp } from "../theme-bootstrap.js";
+
 const SAFE_SEGMENT = /^[A-Za-z0-9._~-]+$/;
 const CONTENT_TYPES = Object.freeze({
   ".html": "text/html; charset=utf-8",
@@ -143,7 +145,7 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   const embeddedRunner = key === "-/resources-site/project-output-frame.html";
   headers.set("content-security-policy", key.startsWith("-/blog-examples/")
     ? "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
-    : `default-src 'self'; script-src 'self' ${embeddedRunner ? "'unsafe-inline' " : ""}'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors ${embeddedRunner ? "'self'" : "'none'"}; form-action 'self'`);
+    : `default-src 'self'; script-src 'self' ${embeddedRunner ? "'unsafe-inline' " : `'${themeBootstrapCsp}' `}'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors ${embeddedRunner ? "'self'" : "'none'"}; form-action 'self'`);
   headers.set("cache-control", key.startsWith("-/resources-site/") ? "no-store" :
     key.endsWith(".html") ? "public, max-age=30, stale-while-revalidate=60" :
       "public, max-age=31536000, immutable");
