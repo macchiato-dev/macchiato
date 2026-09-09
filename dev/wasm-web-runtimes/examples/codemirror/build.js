@@ -271,5 +271,7 @@ const microEnvironment = (await readFile(ponyfills, "utf8")) + "\n" +
     .replace("var bridge = globalThis.bridge;", "var bridge = print;")
     .replaceAll("hostReference(", "new HostReference(") +
   "\nPromise._immediateFn = function(callback) { setTimeout(callback, 0); };\n" +
-  "\nload('application.bin');\ncloseGuest();\n";
+  // Editor guests may load another installed language module after startup.
+  // load() is still restricted to the immutable programs supplied in the stamp.
+  "\nload('application.bin');\n";
 await writeFile(microRuntime, await lowerForMicroQuickJS(microEnvironment));

@@ -2364,17 +2364,6 @@ var WasmWebMachine = class {
 var encoder2 = new TextEncoder();
 var decoder2 = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
-var EDITOR_LANGUAGES = /* @__PURE__ */ new Set([
-  "plain",
-  "javascript",
-  "typescript",
-  "html",
-  "css",
-  "json",
-  "vue",
-  "svelte",
-  "markdown"
-]);
 var nextMachine = 1;
 async function moduleFor(url) {
   if (!runtimeModules.has(url)) runtimeModules.set(url, fetch(url, { credentials: "same-origin" }).then((response) => {
@@ -2639,10 +2628,6 @@ async function createProjectEditorMachine({
   if (machineError) throw new Error(machineError);
   starting = false;
   machineStage = "idle";
-  const loadedLanguages = new Set([...EDITOR_LANGUAGES].filter((name) => name !== "plain"));
-  function ensureLanguage(name) {
-    if (!EDITOR_LANGUAGES.has(name)) throw new Error(`Unsupported editor language: ${name}`);
-  }
   function call(name, payload) {
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
     response = machineError = void 0;
@@ -2657,15 +2642,11 @@ async function createProjectEditorMachine({
   return Object.freeze({
     machineId,
     setContent(content, language = "plain", options = {}) {
-      ensureLanguage(language);
       return call("__codeEditorSetContent", { content, language, ...options });
     },
     command: (payload) => call("__codeEditorCommand", payload),
     callGuest: call,
-    inspect: () => ({
-      ...call("__codeEditorInspect", {}),
-      machine: { machineId, languages: [...loadedLanguages] }
-    }),
+    inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
     focus() {
       root.querySelector(".cm-content")?.focus();
     },

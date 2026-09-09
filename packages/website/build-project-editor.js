@@ -8,6 +8,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import microQuickJSSyntax from "../../dev/wasm-web-runtimes/examples/codemirror/babel-microquickjs.js";
 import lowerDatasetAccess from "./babel-resources-dataset.js";
+import { editorLanguages } from "../project-editor/src/languages.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const outputDirectory = join(directory, "generated");
@@ -38,10 +39,10 @@ await writeFile(join(outputDirectory, "framework-runtimes.js"),
   `export const FRAMEWORK_RUNTIMES = ${JSON.stringify({ vue: vueRuntime, svelte: svelteRuntime, three: threeRuntime })};\n`);
 const languageSources = {
   javascript: `import { javascript } from "@codemirror/lang-javascript";
-    var javascriptSupport = javascript({ typescript: false });
-    var typescriptSupport = javascript({ typescript: true });
-    globalThis.__codeEditorRegisterLanguage("javascript", function () { return javascriptSupport; });
-    globalThis.__codeEditorRegisterLanguage("typescript", function () { return typescriptSupport; });`,
+    globalThis.__codeEditorRegisterLanguage("javascript", function () { return javascript(); });
+    globalThis.__codeEditorRegisterLanguage("jsx", function () { return javascript({ jsx: true }); });
+    globalThis.__codeEditorRegisterLanguage("typescript", function () { return javascript({ typescript: true }); });
+    globalThis.__codeEditorRegisterLanguage("tsx", function () { return javascript({ typescript: true, jsx: true }); });`,
   html: `import { html } from "@codemirror/lang-html";
     globalThis.__codeEditorRegisterLanguage("html", html);`,
   css: `import { css } from "@codemirror/lang-css";
@@ -52,16 +53,22 @@ const languageSources = {
     globalThis.__codeEditorRegisterLanguage("vue", vue);`,
   svelte: `import { svelte } from "@replit/codemirror-lang-svelte";
     globalThis.__codeEditorRegisterLanguage("svelte", svelte);`,
+  python: `import { python } from "@codemirror/lang-python";
+    globalThis.__codeEditorRegisterLanguage("python", python);`,
+  rust: `import { rust } from "@codemirror/lang-rust";
+    globalThis.__codeEditorRegisterLanguage("rust", rust);`,
+  sql: `import { sql } from "@codemirror/lang-sql";
+    globalThis.__codeEditorRegisterLanguage("sql", sql);`,
+  yaml: `import { yaml } from "@codemirror/lang-yaml";
+    globalThis.__codeEditorRegisterLanguage("yaml", yaml);`,
+  cpp: `import { cpp } from "@codemirror/lang-cpp";
+    globalThis.__codeEditorRegisterLanguage("cpp", cpp);`,
   markdown: `import { markdown } from "@codemirror/lang-markdown";
     import { LanguageDescription } from "@codemirror/language";
-    var descriptions = [
-      ["JavaScript", ["javascript", "js", "jsx"], ["js", "jsx", "mjs", "cjs"]],
-      ["TypeScript", ["typescript", "ts", "tsx"], ["ts", "tsx", "mts", "cts"]],
-      ["HTML", ["html"], ["html", "htm"]], ["CSS", ["css"], ["css"]],
-      ["JSON", ["json"], ["json"]], ["Vue", ["vue"], ["vue"]],
-      ["Svelte", ["svelte"], ["svelte"]]
-    ].map(function (item) { return LanguageDescription.of({ name: item[0], alias: item[1], extensions: item[2],
-      load: function () { return Promise.resolve(globalThis.__codeEditorLoadedLanguage(item[1][0])); } }); });
+    var descriptions = ${JSON.stringify(editorLanguages.filter((item) => item.name !== "markdown"))}
+      .map(function (item) { return LanguageDescription.of({ name: item.title,
+        alias: [item.name].concat(item.aliases), extensions: item.extensions,
+        load: function () { return Promise.resolve(globalThis.__codeEditorLoadedLanguage(item.name)); } }); });
     globalThis.__codeEditorRegisterLanguage("markdown", function () { return markdown({ codeLanguages: descriptions }); });`,
 };
 const languageExternals = ["@codemirror/autocomplete", "@codemirror/language", "@codemirror/state",

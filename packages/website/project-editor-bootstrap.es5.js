@@ -16,21 +16,7 @@
   var initialWorkspace = JSON.parse(globalThis.__wwcServiceCall(
     "editor.workspace.initial", "{}"));
   var initialSnapshot = initialWorkspace.snapshot;
-  var neededLanguages = { json: true };
-  initialSnapshot.files.forEach(function (file) {
-    var path = String(file.path || "").toLowerCase();
-    if (/\.(?:js|mjs|cjs|jsx|ts|mts|cts|tsx)$/.test(path)) neededLanguages.javascript = true;
-    else if (/\.(?:html|htm|svg)$/.test(path)) neededLanguages.html = true;
-    else if (/\.css$/.test(path)) neededLanguages.css = true;
-    else if (/\.vue$/.test(path)) neededLanguages.vue = true;
-    else if (/\.svelte$/.test(path)) neededLanguages.svelte = true;
-    else if (/\.md$/.test(path)) {
-      ["javascript", "html", "css", "json", "vue", "svelte", "markdown"].forEach(function (name) {
-        neededLanguages[name] = true;
-      });
-    }
-  });
-  Object.keys(neededLanguages).forEach(function (name) { load("language-" + name + ".bin"); });
+  globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(load);
   var projectUiLoaded = false;
   function loadProjectUi() {
     if (projectUiLoaded) return;
@@ -81,12 +67,7 @@
   };
 
   function languageFor(path) {
-    if (/\.html?$/.test(path)) return "html";
-    if (/\.css$/.test(path)) return "css";
-    if (/\.(js|mjs|cjs)$/.test(path)) return "javascript";
-    if (/\.json$/.test(path)) return "json";
-    if (/\.md$/.test(path)) return "markdown";
-    return "plain";
+    return globalThis.__codeEditorLanguageForPath(path);
   }
   function editableFile(files) {
     var preferred = ["index.html", "main.js", "style.css", "README.md"];

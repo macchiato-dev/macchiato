@@ -26313,6 +26313,40 @@ function hasSyntaxErrors(state, language3) {
   return false;
 }
 
+// packages/project-editor/src/languages.js
+var editorLanguages = [
+  { name: "javascript", title: "JavaScript", extensions: ["js", "mjs", "cjs"], aliases: ["js"], package: "javascript" },
+  { name: "jsx", title: "JSX", extensions: ["jsx"], aliases: [], package: "javascript" },
+  { name: "typescript", title: "TypeScript", extensions: ["ts", "mts", "cts"], aliases: ["ts"], package: "javascript" },
+  { name: "tsx", title: "TSX", extensions: ["tsx"], aliases: [], package: "javascript" },
+  { name: "html", title: "HTML", extensions: ["html", "htm", "svg"], aliases: [], package: "html" },
+  { name: "css", title: "CSS", extensions: ["css"], aliases: [], package: "css" },
+  { name: "json", title: "JSON", extensions: ["json"], aliases: [], package: "json" },
+  { name: "vue", title: "Vue", extensions: ["vue"], aliases: [], package: "vue" },
+  { name: "svelte", title: "Svelte", extensions: ["svelte"], aliases: [], package: "svelte" },
+  { name: "markdown", title: "Markdown", extensions: ["md", "markdown"], aliases: ["md"], package: "markdown" },
+  { name: "python", title: "Python", extensions: ["py", "pyw", "pyi"], aliases: ["py"], package: "python" },
+  { name: "rust", title: "Rust", extensions: ["rs"], aliases: ["rs"], package: "rust" },
+  { name: "sql", title: "SQL", extensions: ["sql"], aliases: [], package: "sql" },
+  { name: "yaml", title: "YAML", extensions: ["yaml", "yml"], aliases: ["yml"], package: "yaml" },
+  { name: "cpp", title: "C/C++", extensions: ["c", "h", "cc", "cpp", "cxx", "hpp", "hxx"], aliases: ["c", "c++"], package: "cpp" }
+];
+function editorLanguageForPath(path) {
+  if (path === "config") return "json";
+  const extension = String(path).split("/").pop().split(".").pop().toLowerCase();
+  const entry = editorLanguages.find((language3) => language3.extensions.includes(extension));
+  return entry ? entry.name : "plain";
+}
+function createEditorLanguageLoader(load) {
+  const loaded = /* @__PURE__ */ new Set();
+  return (name2) => {
+    const entry = editorLanguages.find((language3) => language3.name === name2);
+    if (!entry || loaded.has(entry.package)) return;
+    load(`language-${entry.package}.bin`);
+    loaded.add(entry.package);
+  };
+}
+
 // packages/project-editor/src/source-envelope.js
 var isSafeInteger = (value) => typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
 var SOURCE_LIMITS = Object.freeze({
@@ -26381,6 +26415,9 @@ function createSourceEnvelopeExtension(options = {}) {
 }
 
 // packages/project-editor/src/guest.js
+globalThis.__codeEditorLanguages = editorLanguages;
+globalThis.__codeEditorLanguageForPath = editorLanguageForPath;
+globalThis.__codeEditorCreateLanguageLoader = createEditorLanguageLoader;
 var isSafeInteger2 = (value) => typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
 if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
   globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
@@ -26488,6 +26525,9 @@ globalThis.__codeEditorRegisterLanguage = (name2, factory) => {
 };
 var languageCache = /* @__PURE__ */ new Map();
 function loadedLanguage(name2) {
+  if (!dynamicLanguageFactories[name2] && globalThis.__codeEditorLoadLanguage) {
+    globalThis.__codeEditorLoadLanguage(name2);
+  }
   const factory = dynamicLanguageFactories[name2];
   if (!factory) return [];
   if (!languageCache.has(name2)) languageCache.set(name2, factory());
@@ -28194,15 +28234,7 @@ async function mountProjectRoot(root) {
     return selected.endsWith(".md") ? "markdown" : "code";
   }
   function language3() {
-    if (selected === "config") return "json";
-    if (selected.endsWith(".ts") || selected.endsWith(".tsx") || selected.endsWith(".mts") || selected.endsWith(".cts")) return "typescript";
-    if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".cjs") || selected.endsWith(".jsx")) return "javascript";
-    if (selected.endsWith(".vue")) return "vue";
-    if (selected.endsWith(".svelte")) return "svelte";
-    if (selected.endsWith(".html") || selected.endsWith(".htm") || selected.endsWith(".svg")) return "html";
-    if (selected.endsWith(".css")) return "css";
-    if (selected.endsWith(".md")) return "markdown";
-    return "plain";
+    return editorLanguageForPath(selected);
   }
   function sendContent({ resetHistoryOnEdit = false } = {}) {
     if (!ready || !editorController) return;

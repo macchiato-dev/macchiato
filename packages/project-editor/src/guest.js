@@ -14,6 +14,11 @@ import { historyField, redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 import { hasSyntaxErrors } from "./syntax.js";
+import { editorLanguages, editorLanguageForPath, createEditorLanguageLoader } from "./languages.js";
+
+globalThis.__codeEditorLanguages = editorLanguages;
+globalThis.__codeEditorLanguageForPath = editorLanguageForPath;
+globalThis.__codeEditorCreateLanguageLoader = createEditorLanguageLoader;
 import { createSourceEnvelopeExtension, sourceUsage } from "./source-envelope.js";
 
 const isSafeInteger = (value) => typeof value === "number" && value >= -2147483648 &&
@@ -117,6 +122,9 @@ globalThis.__codeEditorRegisterLanguage = (name, factory) => {
 };
 const languageCache = new Map();
 function loadedLanguage(name) {
+  if (!dynamicLanguageFactories[name] && globalThis.__codeEditorLoadLanguage) {
+    globalThis.__codeEditorLoadLanguage(name);
+  }
   const factory = dynamicLanguageFactories[name];
   if (!factory) return [];
   if (!languageCache.has(name)) languageCache.set(name, factory());

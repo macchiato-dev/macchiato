@@ -988,6 +988,105 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     if (stack.length !== 1) throw new SyntaxError("HTML element is not closed: " + stack.at(-1).localName);
     return document2;
   }
+  var editorLanguages = [{
+    name: "javascript",
+    title: "JavaScript",
+    extensions: ["js", "mjs", "cjs"],
+    aliases: ["js"],
+    package: "javascript"
+  }, {
+    name: "jsx",
+    title: "JSX",
+    extensions: ["jsx"],
+    aliases: [],
+    package: "javascript"
+  }, {
+    name: "typescript",
+    title: "TypeScript",
+    extensions: ["ts", "mts", "cts"],
+    aliases: ["ts"],
+    package: "javascript"
+  }, {
+    name: "tsx",
+    title: "TSX",
+    extensions: ["tsx"],
+    aliases: [],
+    package: "javascript"
+  }, {
+    name: "html",
+    title: "HTML",
+    extensions: ["html", "htm", "svg"],
+    aliases: [],
+    package: "html"
+  }, {
+    name: "css",
+    title: "CSS",
+    extensions: ["css"],
+    aliases: [],
+    package: "css"
+  }, {
+    name: "json",
+    title: "JSON",
+    extensions: ["json"],
+    aliases: [],
+    package: "json"
+  }, {
+    name: "vue",
+    title: "Vue",
+    extensions: ["vue"],
+    aliases: [],
+    package: "vue"
+  }, {
+    name: "svelte",
+    title: "Svelte",
+    extensions: ["svelte"],
+    aliases: [],
+    package: "svelte"
+  }, {
+    name: "markdown",
+    title: "Markdown",
+    extensions: ["md", "markdown"],
+    aliases: ["md"],
+    package: "markdown"
+  }, {
+    name: "python",
+    title: "Python",
+    extensions: ["py", "pyw", "pyi"],
+    aliases: ["py"],
+    package: "python"
+  }, {
+    name: "rust",
+    title: "Rust",
+    extensions: ["rs"],
+    aliases: ["rs"],
+    package: "rust"
+  }, {
+    name: "sql",
+    title: "SQL",
+    extensions: ["sql"],
+    aliases: [],
+    package: "sql"
+  }, {
+    name: "yaml",
+    title: "YAML",
+    extensions: ["yaml", "yml"],
+    aliases: ["yml"],
+    package: "yaml"
+  }, {
+    name: "cpp",
+    title: "C/C++",
+    extensions: ["c", "h", "cc", "cpp", "cxx", "hpp", "hxx"],
+    aliases: ["c", "c++"],
+    package: "cpp"
+  }];
+  function editorLanguageForPath(path) {
+    if (path === "config") return "json";
+    var extension = String(path).split("/").pop().split(".").pop().toLowerCase();
+    var entry = editorLanguages.find(function (language) {
+      return language.extensions.includes(extension);
+    });
+    return entry ? entry.name : "plain";
+  }
   var PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
   function isProjectImage(file) {
     var extension = String((file == null ? void 0 : file.path) || "").split(".").at(-1).toLowerCase();
@@ -3194,15 +3293,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               __resourcesDatasetDelete(root, "data-editor-loading");
             };
             language = function _language() {
-              if (selected === "config") return "json";
-              if (selected.endsWith(".ts") || selected.endsWith(".tsx") || selected.endsWith(".mts") || selected.endsWith(".cts")) return "typescript";
-              if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".cjs") || selected.endsWith(".jsx")) return "javascript";
-              if (selected.endsWith(".vue")) return "vue";
-              if (selected.endsWith(".svelte")) return "svelte";
-              if (selected.endsWith(".html") || selected.endsWith(".htm") || selected.endsWith(".svg")) return "html";
-              if (selected.endsWith(".css")) return "css";
-              if (selected.endsWith(".md")) return "markdown";
-              return "plain";
+              return editorLanguageForPath(selected);
             };
             mode = function _mode() {
               return selected.endsWith(".md") ? "markdown" : "code";

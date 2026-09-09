@@ -3504,4 +3504,3 @@ Promise._immediateFn = function (callback) {
   setTimeout(callback, 0);
 };
 load('application.bin');
-closeGuest();

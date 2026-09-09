@@ -3,6 +3,7 @@ import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resour
 import { containerElementNames } from "/-/resources-site/container-elements.js";
 import { buildProject as buildProjectInMachine, downloadProjectArchive, frontendTheme, importProjectArchive, mountResourcesProjectEditor, mountResourcesProjectPreview, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
 import { parseProjectHtml } from "./project-html-parser.js";
+import { editorLanguageForPath } from "../project-editor/src/languages.js";
 
 const PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
 function isProjectImage(file) {
@@ -608,15 +609,7 @@ async function mountProjectRoot(root) {
   }
 
   function language() {
-    if (selected === "config") return "json";
-    if (selected.endsWith(".ts") || selected.endsWith(".tsx") || selected.endsWith(".mts") || selected.endsWith(".cts")) return "typescript";
-    if (selected.endsWith(".js") || selected.endsWith(".mjs") || selected.endsWith(".cjs") || selected.endsWith(".jsx")) return "javascript";
-    if (selected.endsWith(".vue")) return "vue";
-    if (selected.endsWith(".svelte")) return "svelte";
-    if (selected.endsWith(".html") || selected.endsWith(".htm") || selected.endsWith(".svg")) return "html";
-    if (selected.endsWith(".css")) return "css";
-    if (selected.endsWith(".md")) return "markdown";
-    return "plain";
+    return editorLanguageForPath(selected);
   }
 
   function sendContent({ resetHistoryOnEdit = false } = {}) {

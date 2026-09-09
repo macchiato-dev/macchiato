@@ -657,6 +657,8 @@ void guest_onmsg(uint32_t minimum_length)
         }
         runtime_program = JS_LoadBytecode(context, runtime_bytecode);
         if (JS_IsException(runtime_program)) { report_guest_error(context, 5); return; }
+        /* MicroQuickJS must register ROM atoms before JavaScript creates RAM
+           atoms. Register every program now; load() executes only on demand. */
         for (uint32_t index = 0; index < program_count; index++) {
             GuestProgram *program = &programs[index];
             if (JS_RelocateBytecode(context, program->bytecode,

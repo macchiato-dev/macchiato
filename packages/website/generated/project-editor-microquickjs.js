@@ -27169,6 +27169,116 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     } while (cursor.next());
     return false;
   }
+  var editorLanguages = [{
+    name: "javascript",
+    title: "JavaScript",
+    extensions: ["js", "mjs", "cjs"],
+    aliases: ["js"],
+    package: "javascript"
+  }, {
+    name: "jsx",
+    title: "JSX",
+    extensions: ["jsx"],
+    aliases: [],
+    package: "javascript"
+  }, {
+    name: "typescript",
+    title: "TypeScript",
+    extensions: ["ts", "mts", "cts"],
+    aliases: ["ts"],
+    package: "javascript"
+  }, {
+    name: "tsx",
+    title: "TSX",
+    extensions: ["tsx"],
+    aliases: [],
+    package: "javascript"
+  }, {
+    name: "html",
+    title: "HTML",
+    extensions: ["html", "htm", "svg"],
+    aliases: [],
+    package: "html"
+  }, {
+    name: "css",
+    title: "CSS",
+    extensions: ["css"],
+    aliases: [],
+    package: "css"
+  }, {
+    name: "json",
+    title: "JSON",
+    extensions: ["json"],
+    aliases: [],
+    package: "json"
+  }, {
+    name: "vue",
+    title: "Vue",
+    extensions: ["vue"],
+    aliases: [],
+    package: "vue"
+  }, {
+    name: "svelte",
+    title: "Svelte",
+    extensions: ["svelte"],
+    aliases: [],
+    package: "svelte"
+  }, {
+    name: "markdown",
+    title: "Markdown",
+    extensions: ["md", "markdown"],
+    aliases: ["md"],
+    package: "markdown"
+  }, {
+    name: "python",
+    title: "Python",
+    extensions: ["py", "pyw", "pyi"],
+    aliases: ["py"],
+    package: "python"
+  }, {
+    name: "rust",
+    title: "Rust",
+    extensions: ["rs"],
+    aliases: ["rs"],
+    package: "rust"
+  }, {
+    name: "sql",
+    title: "SQL",
+    extensions: ["sql"],
+    aliases: [],
+    package: "sql"
+  }, {
+    name: "yaml",
+    title: "YAML",
+    extensions: ["yaml", "yml"],
+    aliases: ["yml"],
+    package: "yaml"
+  }, {
+    name: "cpp",
+    title: "C/C++",
+    extensions: ["c", "h", "cc", "cpp", "cxx", "hpp", "hxx"],
+    aliases: ["c", "c++"],
+    package: "cpp"
+  }];
+  function editorLanguageForPath(path) {
+    if (path === "config") return "json";
+    var extension = String(path).split("/").pop().split(".").pop().toLowerCase();
+    var entry = editorLanguages.find(function (language3) {
+      return language3.extensions.includes(extension);
+    });
+    return entry ? entry.name : "plain";
+  }
+  function createEditorLanguageLoader(load) {
+    var loaded = new Set();
+    return function (name2) {
+      var entry = editorLanguages.find(function (language3) {
+        return language3.name === name2;
+      });
+      if (!entry || loaded.has(entry.package)) return;
+      load("language-" + entry.package + ".bin");
+      loaded.add(entry.package);
+    };
+  }
   var isSafeInteger = function isSafeInteger(value) {
     return typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
   };
@@ -27248,6 +27358,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
     });
     return [hardWrap, limits];
   }
+  globalThis.__codeEditorLanguages = editorLanguages;
+  globalThis.__codeEditorLanguageForPath = editorLanguageForPath;
+  globalThis.__codeEditorCreateLanguageLoader = createEditorLanguageLoader;
   var isSafeInteger2 = function isSafeInteger2(value) {
     return typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
   };
@@ -27385,6 +27498,9 @@ function _setPrototypeOf(t, e) { return _setPrototypeOf = Object.setPrototypeOf 
   };
   var languageCache = new Map();
   function loadedLanguage(name2) {
+    if (!dynamicLanguageFactories[name2] && globalThis.__codeEditorLoadLanguage) {
+      globalThis.__codeEditorLoadLanguage(name2);
+    }
     var factory = dynamicLanguageFactories[name2];
     if (!factory) return [];
     if (!languageCache.has(name2)) languageCache.set(name2, factory());
