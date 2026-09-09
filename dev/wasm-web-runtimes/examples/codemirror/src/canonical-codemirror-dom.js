@@ -1275,16 +1275,20 @@ GuestEvent.prototype.composedPath = function () {
   return path;
 };
 
-// Window events are represented by the canonical document service. Keep
-// listener identity and removal in the guest so the host only needs to emit a
-// small, auditable set of ambient browser signals.
+// Window events use the document service, with listener identity in the guest
+// and real unsubscription in the host. Removed listeners release their callback
+// slots rather than leaving inactive callbacks attached to the browser window.
 var windowListeners = [];
 globalThis.addEventListener = function (type, callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
+  for (var i = 0; i < windowListeners.length; i++) {
+    if (windowListeners[i].type === type && windowListeners[i].callback === callback) return;
+  }
   var record = { type: type, callback: callback, active: true };
   var callbackIndex = allocateCallback(function (event) {
     if (record.active) record.callback(event || { type: type });
   }, false);
+  record.index = callbackIndex;
   immediate([3, document.reference, stringIndex("windowListen"), [
     encode(type), encode(callbackIndex)
   ]]);
@@ -1294,8 +1298,12 @@ globalThis.removeEventListener = function (type, callback) {
   for (var i = windowListeners.length - 1; i >= 0; i--) {
     var record = windowListeners[i];
     if (record.active && record.type === type && record.callback === callback) {
+      immediate([3, document.reference, stringIndex("windowUnlisten"), [
+        encode(type), encode(record.index)
+      ]]);
       record.active = false;
       windowListeners.splice(i, 1);
+      releaseCallback(record.index);
       return;
     }
   }
