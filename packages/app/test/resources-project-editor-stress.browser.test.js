@@ -76,6 +76,9 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   const errors = [];
   const oldEditorRequests = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
   page.on("request", (request) => {
     if (/code-editor-use/i.test(request.url())) oldEditorRequests.push(request.url());
   });
@@ -85,8 +88,19 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
   const editor = page.locator("[data-project-editor]");
   const content = editor.locator(".cm-content");
-  await content.waitFor();
+  await content.waitFor().catch(async (error) => {
+    t.diagnostic(JSON.stringify({ url: page.url(), errors,
+      page: (await page.locator("body").innerText()).slice(-1500) }));
+    throw error;
+  });
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
+  // The frontend is MicroQuickJS: this also catches guest-wrapper APIs that
+  // work in full QuickJS but are absent from the smaller engine.
+  for (const colorScheme of ["light", "dark", "light"]) {
+    await page.emulateMedia({ colorScheme });
+    await page.waitForFunction((expected) =>
+      document.documentElement.dataset.theme === expected, colorScheme);
+  }
   assert.ok(await editor.getAttribute("data-editor-machine-id"));
   await page.getByLabel("Title", { exact: true }).fill("Editing Marathon");
   await page.getByLabel("Name", { exact: true }).fill("editing-marathon");
@@ -124,7 +138,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     .map(Number).filter(Number.isFinite);
   assert.ok(Math.max(...renderedLineNumbers) > 170);
   assert.match(await content.innerText(), /revision 80/);
-  await page.screenshot({ path: "/tmp/resources-project-editor-stress.png" });
+  await page.screenshot({ path: join(dataDir, "editor-stress.png") });
 
   await page.getByRole("button", { name: "Create project" }).click();
   await page.getByRole("button", { name: "Save project" }).waitFor();
