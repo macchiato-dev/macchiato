@@ -27,10 +27,23 @@ export function editorLanguageForPath(path) {
 
 export function createEditorLanguageLoader(load) {
   const loaded = new Set();
+  const pending = new Map();
   return (name) => {
     const entry = editorLanguages.find((language) => language.name === name);
     if (!entry || loaded.has(entry.package)) return;
-    load(`language-${entry.package}.bin`);
+    if (pending.has(entry.package)) return pending.get(entry.package);
+    const result = load(`language-${entry.package}.bin`);
+    if (result && typeof result.then === "function") {
+      const promise = result.then(() => {
+        loaded.add(entry.package);
+        pending.delete(entry.package);
+      }, error => {
+        pending.delete(entry.package);
+        throw error;
+      });
+      pending.set(entry.package, promise);
+      return promise;
+    }
     loaded.add(entry.package);
   };
 }

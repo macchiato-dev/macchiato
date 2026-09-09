@@ -3,12 +3,13 @@ import { transformAsync } from "@babel/core";
 import presetEnv from "@babel/preset-env";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import microQuickJSSyntax from "../../dev/wasm-web-runtimes/examples/codemirror/babel-microquickjs.js";
 import lowerDatasetAccess from "./babel-resources-dataset.js";
 import { editorLanguages } from "../project-editor/src/languages.js";
+import { atomCatalogSource } from "../../dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/bytecode-atoms.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const outputDirectory = join(directory, "generated");
@@ -78,7 +79,7 @@ const languageSources = {
     var descriptions = ${JSON.stringify(editorLanguages.filter((item) => item.name !== "markdown"))}
       .map(function (item) { return LanguageDescription.of({ name: item.title,
         alias: [item.name].concat(item.aliases), extensions: item.extensions,
-        load: function () { return Promise.resolve(globalThis.__codeEditorLoadedLanguage(item.name)); } }); });
+        load: function () { return globalThis.__codeEditorEnsureLanguage(item.name); } }); });
     globalThis.__codeEditorRegisterLanguage("markdown", function () { return markdown({ codeLanguages: descriptions }); });`,
 };
 const languageExternals = ["@codemirror/autocomplete", "@codemirror/language", "@codemirror/state",
@@ -206,6 +207,12 @@ for (const [name, source] of Object.entries(languageChunks)) {
     ["-m32", "-o", bytecodeFile, sourceFile], { stdio: "inherit" });
   languageBytecodes.push([name, bytecodeFile]);
 }
+const atomSource = join(outputDirectory, "project-editor-language-atoms.js");
+const atomBytecode = join(outputDirectory, "project-editor-language-atoms.bin");
+await writeFile(atomSource, atomCatalogSource(await Promise.all(
+  languageBytecodes.map(([, file]) => readFile(file)))));
+execFileSync(join(microRuntime, "microquickjs", "mqjs"),
+  ["-m32", "-o", atomBytecode, atomSource], { stdio: "inherit" });
 const projectServicesSource = await build({
   entryPoints: [join(directory, "project-editor-ui.js")],
   bundle: true, format: "iife", platform: "neutral",
@@ -239,5 +246,5 @@ execFileSync(process.execPath, [
   `application.bin=${controllerBytecode}`,
   `editor.bin=${editorBytecode}`,
   `project.bin=${projectServicesBytecode}`,
-  ...languageBytecodes.map(([name, file]) => `language-${name}.bin=${file}`),
+  `language-atoms.bin=${atomBytecode}`,
 ], { stdio: "inherit" });

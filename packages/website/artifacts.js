@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
+import { editorLanguages } from "../project-editor/src/languages.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { renderSiteRoute } from "@macchiato-dev/site";
@@ -83,6 +84,10 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
   files.set("/-/resources-site/project-builder-quickjs-runtime.wasm", projectBuilder);
   files.set("/-/resources-site/project-editor-quickjs-runtime.wasm", editorMachine);
+  for (const name of new Set(editorLanguages.map(item => item.package))) {
+    files.set(`/-/resources-site/project-editor-language-${name}.bin`,
+      bytes(readFileSync(join(generatedDirectory, `project-editor-language-${name}.bin`))));
+  }
   for (const [slug, source] of [["vtv", vtvExampleDirectory], ["markdown-editor", markdownEditorExampleDirectory], ["dom-use-tour", codeTourExampleDirectory]]) {
     for (const name of readdirSync(source)) {
       files.set(`/-/blog-examples/${slug}/${name}`, bytes(readFileSync(join(source, name))));

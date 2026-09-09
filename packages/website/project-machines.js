@@ -1,5 +1,19 @@
 import WasmWebMachine from "../../dev/wasm-web-machine/dist/module/wasm-web-machine.js";
+import { editorLanguages } from "../project-editor/src/languages.js";
 const encoder = new TextEncoder(), decoder = new TextDecoder(), runtimeModules = new Map();
+const editorBytecodeNames = new Set(editorLanguages.map(item => `language-${item.package}.bin`));
+const editorBytecodes = new Map();
+function editorBytecode(name) {
+  if (!editorBytecodeNames.has(name)) throw new Error("Editor bytecode resource is not granted");
+  if (!editorBytecodes.has(name)) editorBytecodes.set(name,
+    fetch(`/-/resources-site/project-editor-${name}`, { credentials: "same-origin" }).then(async response => {
+      if (!response.ok) throw new Error(`Editor bytecode response ${response.status}`);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.length > 1_000_000) throw new Error("Editor bytecode exceeds its size limit");
+      return bytes;
+    }).catch(error => { editorBytecodes.delete(name); throw error; }));
+  return editorBytecodes.get(name);
+}
 let nextMachine = 1;
 async function moduleFor(url) {
   if (!runtimeModules.has(url)) runtimeModules.set(url, fetch(url, { credentials: "same-origin" }).then((response) => {
@@ -197,10 +211,26 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
   const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
   const machineId = `wasm-web-machine-${nextMachine++}`;
   let response, machineError, starting = true, machineStage = "startup";
+  let installedName, disposed = false;
+  const installedPrograms = new Map();
+  function installBytecode({ name }) {
+    if (!installedPrograms.has(name)) installedPrograms.set(name, editorBytecode(name).then(bytes => {
+      if (disposed) throw new Error("Editor was closed during bytecode loading");
+      const label = encoder.encode(name + "\0");
+      const packet = new Uint8Array(1 + label.length + bytes.length);
+      packet[0] = 3; packet.set(label, 1); packet.set(bytes, 1 + label.length);
+      installedName = undefined;
+      machine.onmsg(packet);
+      if (installedName !== name) throw new Error("Editor bytecode installation did not acknowledge");
+      return null;
+    }).catch(error => { installedPrograms.delete(name); throw error; }));
+    return installedPrograms.get(name);
+  }
   const machine = new WasmWebMachine(module, root, {
     stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
     services,
     onMessage(text) {
+    if (text.startsWith("__wwcBytecode:")) { installedName = text.slice(14); return; }
     if (text.startsWith("__wwcError:")) {
       machineError = `${machineStage}: ${text.slice(11)}`;
       if (!starting) queueMicrotask(() => onError?.(new Error(machineError)));
@@ -211,9 +241,10 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
     if (message.type === "editor-bytecode-started") root.dataset.editorBytecodeState = "started";
     if (message.type === "editor-application-ready") root.dataset.editorApplicationState = "ready";
       if (message.protocol === "resources-editor-v1") {
-        Promise.resolve().then(() => onRequest(message.name, message.payload || {})).then(
-        (value) => machine.onmsg(callMessage("__resourcesEditorReceive", { id: message.id, value })),
-        (error) => machine.onmsg(callMessage("__resourcesEditorReceive", {
+        Promise.resolve().then(() => message.name === "bytecode.load"
+          ? installBytecode(message.payload || {}) : onRequest(message.name, message.payload || {})).then(
+        (value) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", { id: message.id, value })),
+        (error) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", {
           id: message.id, error: error?.message || String(error),
         })),
       );
@@ -222,6 +253,7 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
     queueMicrotask(() => { if (message.type === "change") onChange(message.content, { syntaxErrors: message.syntaxErrors === true });
       else if (message.type === "ready") onReady?.(message);
       else if (message.type === "limit") onLimit?.(message);
+      else if (message.type === "language-error") onError?.(new Error(`Language ${message.language}: ${message.message}`));
     });
     },
   });
@@ -241,5 +273,5 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
     },
     command: (payload) => call("__codeEditorCommand", payload), callGuest: call,
     inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
-    focus() { root.querySelector(".cm-content")?.focus(); }, destroy() { machine.destroy(); root.replaceChildren(); } });
+    focus() { root.querySelector(".cm-content")?.focus(); }, destroy() { disposed = true; machine.destroy(); root.replaceChildren(); } });
 }

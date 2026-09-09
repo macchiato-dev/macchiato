@@ -121,16 +121,40 @@ globalThis.__codeEditorRegisterLanguage = (name, factory) => {
   dynamicLanguageFactories[name] = factory;
 };
 const languageCache = new Map();
-function loadedLanguage(name) {
-  if (!dynamicLanguageFactories[name] && globalThis.__codeEditorLoadLanguage) {
-    globalThis.__codeEditorLoadLanguage(name);
-  }
+const pendingLanguages = new Map();
+function languageSupport(name) {
   const factory = dynamicLanguageFactories[name];
   if (!factory) return [];
   if (!languageCache.has(name)) languageCache.set(name, factory());
   return languageCache.get(name);
 }
+function loadedLanguage(name) {
+  if (!dynamicLanguageFactories[name] && !pendingLanguages.has(name) && globalThis.__codeEditorLoadLanguage) {
+    const request = globalThis.__codeEditorLoadLanguage(name);
+    if (request && typeof request.then === "function") {
+      const pending = request.then(() => {
+        pendingLanguages.delete(name);
+        const support = languageSupport(name);
+        // Add the parser to the current state; don't replace the document,
+        // selection, undo history, or view while a download is in flight.
+        if (currentLanguage === name && globalThis.__codeEditorView) {
+          globalThis.__codeEditorView.dispatch({ effects: language.reconfigure(support) });
+        }
+        return support;
+      }, error => { pendingLanguages.delete(name); throw error; });
+      pendingLanguages.set(name, pending);
+      pending.catch(error => globalThis.__browserUseNotify(JSON.stringify({
+        type: "language-error", language: name, message: error.message || String(error),
+      })));
+    }
+  }
+  return languageSupport(name);
+}
 globalThis.__codeEditorLoadedLanguage = loadedLanguage;
+globalThis.__codeEditorEnsureLanguage = name => {
+  const support = loadedLanguage(name);
+  return pendingLanguages.get(name) || Promise.resolve(support);
+};
 function languageExtension(name) {
   return loadedLanguage(name);
 }

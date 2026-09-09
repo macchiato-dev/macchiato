@@ -16,7 +16,9 @@
   var initialWorkspace = JSON.parse(globalThis.__wwcServiceCall(
     "editor.workspace.initial", "{}"));
   var initialSnapshot = initialWorkspace.snapshot;
-  globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(load);
+  globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(function (name) {
+    return request("bytecode.load", { name: name }).then(function () { load(name); });
+  });
   var projectUiLoaded = false;
   function loadProjectUi() {
     if (projectUiLoaded) return;
@@ -233,9 +235,8 @@
     root.setAttribute("data-output-machine-stage", "snapshot");
     root.setAttribute("data-output-machine-stage", "editor");
     start({ snapshot: initialSnapshot });
-    // MicroQuickJS closes its bytecode-loading gate when this initial program
-    // returns. Load the project UI now; its asynchronous setup may continue
-    // while the output machine starts.
+    // The project UI is installed at startup. Language code remains on demand;
+    // this trusted editor intentionally leaves its bytecode gate open.
     loadProjectUi();
   } catch (error) {
     root.setAttribute("data-editor-machine-state", "failed");
