@@ -1,5 +1,6 @@
 import WasmWebMachine from "./machine.js";
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
+import { ProjectOutputStorage } from "./project-output-storage.js";
 
 const protocol = "resources-project-output-machine-v1";
 const encoder = new TextEncoder();
@@ -15,6 +16,7 @@ const routeListeners = new Set();
 let moduleFiles = new Map();
 const moduleRequests = new Map();
 let nextModuleRequest = 1;
+let storage;
 
 function taggedMessage(tag, value) {
   const bytes = encoder.encode(value);
@@ -113,6 +115,7 @@ async function start(payload, port) {
   imageResolverImpl = imageResolver(payload.files || []);
   navigationPatterns = payload.allowedLinkPatterns || [];
   moduleFiles = new Map((payload.files || []).map(file => [file.path, file.content]));
+  storage = new ProjectOutputStorage(window, payload.storageScope);
   machine = new WasmWebMachine(runtime, document.getElementById("project-output-a"), {
     environment: payload.environment || {},
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
@@ -131,7 +134,7 @@ async function start(payload, port) {
           addEventListener("hashchange", listener);
         },
       },
-      storage: { get: () => null, set() {}, delete() {}, listen() {} },
+      storage,
     },
     onMessage(text) {
       if (text.startsWith("__wwcModule:")) {
@@ -179,6 +182,7 @@ async function operation(name, payload) {
   }
   if (name === "inspect") return { runtime: "quickjs", programs, realm: "iframe" };
   if (name === "destroy") {
+    storage?.destroy(); storage = null;
     for (const listener of routeListeners) removeEventListener("hashchange", listener);
     routeListeners.clear();
     for (const pending of moduleRequests.values()) pending.reject(new Error("Project output was destroyed"));

@@ -51,7 +51,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
           if (data.error) operation.reject(new Error(data.error)); else operation.resolve(data.value);
         }
       };
-      frame.contentWindow.postMessage({ protocol, type: "connect", payload: { scripts: [], files: [] } },
+      frame.contentWindow.postMessage({ protocol, type: "connect", payload: { scripts: [], files: [], storageScope: "module-test" } },
         location.origin, [channel.port2]);
     });
     const request = (name, payload) => new Promise((resolve, reject) => {

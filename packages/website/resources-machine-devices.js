@@ -1,6 +1,7 @@
 import { createProjectBuildMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 import { decodeProjectArchive, encodeProjectArchive, projectArchiveFilename } from "../hub/src/project-archive.js";
+import { ProjectOutputStorage } from "./project-output-storage.js";
 
 const encoder = new TextEncoder();
 const allowedMethods = new Set(["GET", "POST", "DELETE"]);
@@ -347,7 +348,9 @@ export class ResourcesOutputDevice {
       frame = this.document.createElement("iframe");
       frame.className = "project-editor__output-frame";
       frame.title = "Project output";
-      frame.sandbox = "allow-scripts allow-same-origin";
+      // Native dialog forms need allow-forms. The machine prevents every
+      // network submission; no project JavaScript runs in the browser realm.
+      frame.sandbox = "allow-scripts allow-same-origin allow-forms";
       frame.allow = "fullscreen";
       frame.allowFullscreen = true;
       frame.src = "/-/resources-site/project-output-frame.html";
@@ -360,20 +363,30 @@ export class ResourcesOutputDevice {
     }
     const id = this.nextId++;
     const files = this.projectResources.hydrateFiles(payload.files);
+    const storageScope = mount.closest("[data-project-id]")?.dataset.projectId ||
+      this.document.location.pathname;
     let output;
     if (frame) output = await this.connectFrame(frame, {
+      storageScope,
       files,
       scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
       allowedFetchOrigins: Array.isArray(payload.allowedFetchOrigins) ? payload.allowedFetchOrigins : [],
       allowedLinkPatterns: Array.isArray(payload.allowedLinkPatterns) ? payload.allowedLinkPatterns : [],
       environment: payload.environment || {},
     }, id);
-    else output = await createProjectOutputMachine({
-      root: mount,
-      scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
-      options: { environment: payload.environment || {}, files },
-      onError: (error) => this.deliver({ type: "output-error", id, message: error?.message || String(error) }),
-    });
+    else {
+      const storage = new ProjectOutputStorage(this.document.defaultView, storageScope);
+      try {
+        output = await createProjectOutputMachine({
+          root: mount,
+          scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
+          options: { environment: payload.environment || {}, files, services: { storage } },
+          onError: (error) => this.deliver({ type: "output-error", id, message: error?.message || String(error) }),
+        });
+      } catch (error) { storage.destroy(); throw error; }
+      const destroy = output.destroy;
+      output = { ...output, destroy() { storage.destroy(); destroy(); } };
+    }
     this.outputs.set(id, output);
     return id;
   }
