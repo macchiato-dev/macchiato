@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -72,10 +72,15 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
 
   const browser = await chromium.launch();
   t.after(async () => browser.close());
-  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS || join(dataDir, "artifacts");
+  await mkdir(artifacts, { recursive: true });
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 },
+    ...(process.env.MACCHIATO_TEST_ARTIFACTS ? { recordVideo: { dir: artifacts,
+      size: { width: 1440, height: 900 } } } : {}),
+  });
   const errors = [];
   const oldEditorRequests = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("pageerror", (error) => errors.push(error.stack || error.message));
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
@@ -115,10 +120,12 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame");
   await assert.doesNotReject(output.locator("h1", { hasText: "Editing Marathon" }).waitFor());
   assert.equal(await output.locator("p", { hasText: /Editable row/ }).count(), 100);
+  await page.screenshot({ path: join(artifacts, "editor-light.png") });
 
   await page.keyboard.press("Control+z");
-  assert.notEqual((await content.innerText()).trim(), source.trim());
-  await page.keyboard.press("Control+Shift+z");
+  await page.waitForFunction(() => !document.querySelector(".cm-content").textContent.includes("Editable row 100"));
+  await page.keyboard.press("Control+y");
+  await page.waitForFunction(() => document.querySelector(".cm-content").textContent.includes("Editable row 100"));
   assert.equal((await content.innerText()).trim(), source.trim());
 
   await page.keyboard.press("Control+End");
@@ -128,6 +135,9 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     await page.keyboard.press("Enter");
   }
   await page.waitForTimeout(1_200);
+  const editedSnapshot = await page.locator("[data-project-snapshot]").inputValue();
+  assert.match(editedSnapshot, /<!-- typed correction -->/);
+  for (let index = 1; index <= 80; index++) assert.ok(editedSnapshot.includes(`<!-- revision ${index} -->`));
   assert.match(await content.innerText(), /revision 80/);
   const scroller = editor.locator(".cm-scroller");
   await scroller.evaluate((node) => { node.scrollTop = 0; node.dispatchEvent(new Event("scroll")); });
@@ -138,13 +148,18 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     .map(Number).filter(Number.isFinite);
   assert.ok(Math.max(...renderedLineNumbers) > 170);
   assert.match(await content.innerText(), /revision 80/);
-  await page.screenshot({ path: join(dataDir, "editor-stress.png") });
+  await page.screenshot({ path: join(artifacts, "editor-scrolled.png") });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
+  await page.screenshot({ path: join(artifacts, "editor-dark.png") });
 
   await page.getByRole("button", { name: "Create project" }).click();
   await page.getByRole("button", { name: "Save project" }).waitFor();
   assert.equal(new URL(page.url()).pathname, "/editor-stress/editing-marathon");
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   await page.reload({ waitUntil: "networkidle" });
   await page.locator(".cm-content").waitFor();
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   const restoredSnapshot = await page.locator("[data-project-snapshot]").inputValue();
   assert.match(restoredSnapshot, /Editable row 100/);
   assert.match(restoredSnapshot, /revision 80/);
