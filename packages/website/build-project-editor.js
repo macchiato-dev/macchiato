@@ -16,6 +16,14 @@ const workspace = join(directory, "..", "..");
 const rustupCargo = join(process.env.HOME || "", ".cargo", "bin", "cargo");
 const cargo = process.env.CARGO || (existsSync(rustupCargo) ? rustupCargo : "cargo");
 await mkdir(outputDirectory, { recursive: true });
+await build({
+  entryPoints: [join(directory, "project-output-frame-controller.js")],
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  external: ["./machine.js"],
+  outfile: join(outputDirectory, "project-output-frame-controller.js"),
+});
 const lowerForMicroQuickJS = async (source, plugins = []) => (await transformAsync(source, {
   comments: false,
   compact: false,

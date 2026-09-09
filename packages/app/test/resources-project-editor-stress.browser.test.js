@@ -107,6 +107,11 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       document.documentElement.dataset.theme === expected, colorScheme);
   }
   assert.ok(await editor.getAttribute("data-editor-machine-id"));
+  // The default article grants *.wikipedia.org without a path suffix. The
+  // iframe must enforce the same policy as the project configuration UI.
+  const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame");
+  await output.getByRole("heading", { name: "A small article" }).waitFor();
+  assert.equal(await output.locator('a[href^="https://en.wikipedia.org/"]').count(), 3);
   await page.getByLabel("Title", { exact: true }).fill("Editing Marathon");
   await page.getByLabel("Name", { exact: true }).fill("editing-marathon");
 
@@ -117,7 +122,6 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await content.fill(source);
   await page.waitForTimeout(1_200);
   assert.equal((await content.innerText()).trim(), source.trim());
-  const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame");
   try {
     await output.locator("h1", { hasText: "Editing Marathon" }).waitFor();
   } catch (cause) {

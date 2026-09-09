@@ -1,4 +1,5 @@
 import WasmWebMachine from "./machine.js";
+import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 
 const protocol = "resources-project-output-machine-v1";
 const encoder = new TextEncoder();
@@ -78,22 +79,6 @@ function imageResolver(files) {
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
 
-function allowsNavigation(value, patterns) {
-  if (String(value).length <= 2048 && /^#[^\u0000-\u001f\u007f]*$/.test(String(value))) return true;
-  return patterns.some((pattern) => {
-    if (pattern.startsWith("`") && pattern.endsWith("`")) return value === pattern.slice(1, -1);
-    const slash = pattern.indexOf("/");
-    if (slash < 0) return false;
-    try {
-      const url = new URL(value);
-      const host = pattern.slice(0, slash).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^.]+");
-      const path = pattern.slice(slash).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*");
-      return /^https?:$/.test(url.protocol) && new RegExp(`^${host}$`, "i").test(url.hostname) &&
-        new RegExp(`^${path}$`).test(`${url.pathname}${url.search}${url.hash}`);
-    } catch { return false; }
-  });
-}
-
 async function evaluate(script, index) {
   reportedError = null;
   await machine.onmsg(taggedMessage(1, script.code));
@@ -119,7 +104,7 @@ async function start(payload, port) {
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
     fetchResource: (value) => fetchResourceImpl(value),
     resolveImage: (value) => imageResolverImpl(value),
-    allowNavigate: (url) => allowsNavigation(url, navigationPatterns),
+    allowNavigate: (url) => urlMatchesAllowedPatterns(url, navigationPatterns),
     services: {
       route: { get: () => location.hash.slice(1) || "/", search: () => "", listen() {} },
       storage: { get: () => null, set() {}, delete() {}, listen() {} },

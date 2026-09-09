@@ -76,7 +76,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
       `/-/resources-site/resources-frontend-microquickjs.wasm?v=${version(frontendMachine)}`));
   files.set("/-/resources-site/controller.js", machineController);
   files.set("/-/resources-site/resources-frontend-microquickjs.wasm", frontendMachine);
-  const outputFrameController = readFileSync(join(directory, "project-output-frame-controller.js"), "utf8");
+  const outputFrameController = readFileSync(join(generatedDirectory, "project-output-frame-controller.js"), "utf8");
   const outputFrame = readFileSync(join(directory, "project-output-frame.html"), "utf8")
     .replace("/* PROJECT_OUTPUT_FRAME_CONTROLLER */", () => outputFrameController);
   files.set("/-/resources-site/project-output-frame.html", bytes(outputFrame));
