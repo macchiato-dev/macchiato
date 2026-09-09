@@ -1,0 +1,80 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { build } from "esbuild";
+import { chromium } from "playwright";
+import { compileProjectFiles } from "../src/single-file-compiler.js";
+
+test("native dialog forms close, but guest forms cannot submit to the network", async t => {
+  const runtime = await readFile(new URL("../../website/generated/project-quickjs-runtime.wasm", import.meta.url));
+  const machine = await build({
+    entryPoints: [new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname],
+    bundle: true, write: false, format: "esm", platform: "browser",
+  });
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const requests = [], errors = [];
+  page.on("request", request => requests.push(request.url()));
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("http://forms.test/**", route => {
+    const path = new URL(route.request().url()).pathname;
+    return route.fulfill(path === "/machine.js"
+      ? { contentType: "text/javascript", body: machine.outputFiles[0].text }
+      : path === "/runtime.wasm"
+      ? { contentType: "application/wasm", body: runtime }
+      : { contentType: "text/html", body: '<div id="guest"></div><form id="outside"></form>' });
+  });
+  await page.goto("http://forms.test/");
+  await page.evaluate(async () => {
+    const { default: Machine } = await import("/machine.js");
+    window.machine = new Machine(await WebAssembly.compileStreaming(fetch("/runtime.wasm")),
+      document.querySelector("#guest"), {});
+    await machine.onmsg(0);
+    window.run = async source => {
+      const text = new TextEncoder().encode(source), bytes = new Uint8Array(text.length + 1);
+      bytes[0] = 1; bytes.set(text, 1);
+      await machine.onmsg(bytes);
+    };
+  });
+  const html = '<dialog id="modal"><form method="dialog"><button value="cancel">Cancel</button></form></dialog>';
+  const project = compileProjectFiles([{ path: "index.html", content: html }]);
+  assert.deepEqual(project.tree[0][4][0][3], [["method", "dialog"]]);
+  await page.evaluate(tree => run(`
+    function node(tree) {
+      if (tree[0] === 0) return document.createTextNode(tree[1]);
+      var element = document.createElement(tree[1]);
+      tree[3].forEach(function (attribute) { element.setAttribute(attribute[0], attribute[1]); });
+      tree[4].forEach(function (child) { element.appendChild(node(child)); });
+      return element;
+    }
+    document.body.appendChild(node(${JSON.stringify(tree[0])}));
+    document.getElementById('modal').showModal();
+  `), project.tree);
+  await page.getByRole("button", { name: "Cancel" }).click();
+  assert.equal(await page.locator("dialog").evaluate(node => node.open), false);
+  const before = requests.length;
+  await page.evaluate(() => run(`
+    var form = document.createElement('form');
+    var button = document.createElement('button');
+    var input = document.createElement('input');
+    input.setAttribute('name', 'secret'); input.value = 'must-not-leave';
+    button.textContent = 'Submit'; form.appendChild(input); form.appendChild(button);
+    form.addEventListener('submit', function () { button.textContent = 'Guest received submit'; });
+    document.body.appendChild(form);
+  `));
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  await page.getByRole("button", { name: "Guest received submit" }).waitFor();
+  await page.locator("#guest input").press("Enter");
+  for (const code of ["form.setAttribute('method', 'post')", "button.setAttribute('formmethod', 'get')",
+    "form.setAttribute('action', 'https://outside.test/')", "form.submit()", "form.requestSubmit()"] ) {
+    await assert.rejects(page.evaluate(code => run(code), code));
+  }
+  await page.waitForTimeout(100);
+  assert.equal(requests.length, before);
+  assert.equal(page.url(), "http://forms.test/");
+  assert.equal(await page.locator("#outside").evaluate(form =>
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))), true);
+  await page.evaluate(() => machine.destroy());
+  assert.deepEqual(errors, []);
+});

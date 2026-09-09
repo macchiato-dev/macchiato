@@ -7,7 +7,7 @@ import { SOURCE_LIMITS, sourceUsage } from "./source-envelope.js";
 const WRAPPERS = new Set(["html", "head", "body"]);
 const OMITTED = new Set(["meta", "title", "style", "script", "link"]);
 const ELEMENTS = new Set([
-  "a", "article", "aside", "b", "br", "button", "canvas", "code", "div", "em", "footer", "form",
+  "a", "article", "aside", "b", "br", "button", "canvas", "code", "dialog", "div", "em", "footer", "form",
   "h1", "h2", "h3", "h4", "header", "i", "img", "input", "label", "li", "main", "nav", "ol",
   "option", "p", "section", "small", "span", "strong", "textarea", "ul",
 ]);
@@ -124,6 +124,9 @@ export class SingleFileProjectCompiler {
         .filter(([key, data]) => (ATTRIBUTES.has(key) || /^(aria|data)-[a-z][a-z0-9-]*$/.test(key) ||
           svg && SVG_ATTRIBUTES.has(key)) && data.length <= 2_000);
       const href = value.getAttribute("href") || "";
+      if (name === "form" && value.getAttribute("method") === "dialog") {
+        attributes.push(["method", "dialog"]);
+      }
       if (value.localName === "a" && href) {
         if (href.length > 2_048) throw new Error("Link URL is too long");
         attributes.push(["href", href]);
