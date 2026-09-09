@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,13 +31,16 @@ execFileSync(process.execPath, [
   "--output", join(here, "generated/microquickjs-server.wasm"),
   "--bytecode-dir", join(here, "generated/resources-document-bytecode"),
 ], { stdio: "inherit" });
+// SQL values can contain whole projects. Reuse the growable QuickJS runtime
+// rather than copying them through the routing runtime's fixed 1 MiB buffer.
+writeFileSync(join(here, "generated/resources-policy.js"), [
+  "generated/resources-policy-catalog.js", "resources-policy-guest.js",
+  "resources-policy-async.js",
+].map(name => readFileSync(join(here, name), "utf8")).join("\n"));
 execFileSync(process.execPath, [
-  join(here, "../wwm-js-runtimes/microquickjs-server/build.js"),
-  "--source-root", here,
-  "--application", join(here, "generated/resources-policy-catalog.js"),
-  "--application", join(here, "resources-policy-guest.js"),
-  "--output", join(here, "generated/microquickjs-server.wasm"),
-  "--bytecode-dir", join(here, "generated/resources-policy-bytecode"),
+  join(here, "../wwm-js-runtimes/quickjs-server/build.js"),
+  "--application", join(here, "generated/resources-policy.js"),
+  "--output-dir", join(here, "generated/resources-policy-machine"),
 ], { stdio: "inherit" });
 execFileSync(process.execPath, [
   join(here, "../wwm-js-runtimes/microquickjs-server/build.js"),

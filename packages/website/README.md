@@ -391,8 +391,8 @@ further per-file editor lifecycle refinements.
 The standalone file remains a design/prototype reference, not executable input
 to the server or a trusted bundle.
 
-The Bunny profile runs the QuickJS application and MicroQuickJS policy and
-document guests inside its V8 isolate. They communicate through constrained
+The Bunny profile runs separate QuickJS application and SQL-policy guests,
+and MicroQuickJS routing and document guests inside its V8 isolate. They communicate through constrained
 server devices. Immutable public artifacts are validated before publication;
 the backend runtimes and bytecode remain in the private Storage artifact.
 
@@ -578,10 +578,9 @@ Both runnable Edge forms embed the seven-character Git revision used by the
 Storage prefix. Bunny's current Set Code API accepts one code string, so
 `script.ts` is the reproducible bundle used by the official deployment action.
 The controller fetches one private, gzip-compressed `backend.bin` object. Its
-bounded resource table contains the QuickJS application runtime and bytecode,
-the shared MicroQuickJS policy/worker runtime, the SQL policy bytecode, and the
-disposable project-history worker bytecode. One shared promise performs that
-Storage read.
+bounded resource table contains one QuickJS runtime reused by the application
+and SQL-policy instances, their separate bytecode programs, and the MicroQuickJS
+routing/document runtime and bytecode. One shared promise performs that Storage read.
 
 The Resources application and its SQL policy run in separate Wasm machines.
 Application `sql` messages are forwarded to the policy machine, which owns the
@@ -632,10 +631,11 @@ delete ordering, and redirects. A request-scoped device keeps the large
 URL-encoded snapshot outside the guest arena and exposes only bounded fields;
 it does not collapse the workflow into one host-side application operation.
 The application machine receives database results only through the separate
-MicroQuickJS SQL-policy machine. Large snapshots currently cross its dedicated
-128 MiB wire arena; replacing that copy with bounded shared resources remains a
-performance refinement, while application authority already stays out of the
-host controller.
+QuickJS SQL-policy machine. Both use growable buffers with a 128 MiB wire-message
+ceiling, not a preallocated arena of that size. The routing runtime's 1 MiB
+transfer buffer and 4 MiB MicroQuickJS arena cannot carry large snapshots.
+Avoiding the remaining project-sized copies with bounded shared resources is
+a future performance refinement; SQL authority stays inside the policy guest.
 
 Build-published HTML and CSS remain ordinary immutable Storage objects. They
 have already passed `html-use`, `dom-use`, and `style-use`, so serving them does

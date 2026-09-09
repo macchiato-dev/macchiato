@@ -3,8 +3,19 @@
   var pending = new Map();
   var nextCall = 1;
 
-  function Writer() { this.bytes = []; }
-  Writer.prototype.byte = function (value) { this.bytes.push(value); };
+  // Byte storage must stay byte-sized even when a project contains megabytes
+  // of text or images. A JS number array multiplies that memory cost.
+  function Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }
+  Writer.prototype.reserve = function (length) {
+    if (length <= this.bytes.length - this.at) return;
+    var next = new Uint8Array(Math.max(this.at + length, this.bytes.length * 2));
+    next.set(this.bytes.subarray(0, this.at));
+    this.bytes = next;
+  };
+  Writer.prototype.byte = function (value) {
+    this.reserve(1);
+    this.bytes[this.at++] = value;
+  };
   Writer.prototype.uint = function (value) {
     if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("invalid integer");
     do {
@@ -16,7 +27,8 @@
   Writer.prototype.text = function (value) {
     var text = unescape(encodeURIComponent(value));
     this.uint(text.length);
-    for (var index = 0; index < text.length; index++) this.byte(text.charCodeAt(index));
+    this.reserve(text.length);
+    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
   };
   Writer.prototype.value = function (value, depth) {
     depth = depth || 0;
@@ -32,7 +44,9 @@
     if (typeof value === "string") { this.byte(5); return this.text(value); }
     if (value instanceof Uint8Array) {
       this.byte(6); this.uint(value.length);
-      for (var byte of value) this.byte(byte);
+      this.reserve(value.length);
+      this.bytes.set(value, this.at);
+      this.at += value.length;
       return;
     }
     if (Array.isArray(value)) {
@@ -71,9 +85,13 @@
     return value;
   };
   Reader.prototype.text = function () {
-    var bytes = this.take(this.uint()), text = "";
-    for (var index = 0; index < bytes.length; index++) text += String.fromCharCode(bytes[index]);
-    return decodeURIComponent(escape(text));
+    var bytes = this.take(this.uint()), chunks = [];
+    // Bounded native calls avoid repeated concatenation of a growing string
+    // and do not put a whole project on the interpreter's argument stack.
+    for (var index = 0; index < bytes.length; index += 2048) {
+      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
+    }
+    return decodeURIComponent(escape(chunks.join("")));
   };
   Reader.prototype.value = function (depth) {
     depth = depth || 0;
@@ -108,7 +126,7 @@
   function send(value) {
     var writer = new Writer();
     writer.value(value);
-    __hostSend(Uint8Array.from(writer.bytes));
+    __hostSend(writer.bytes.subarray(0, writer.at));
   }
   globalThis.hostCall = function (device, operation, input) {
     var id = nextCall++;

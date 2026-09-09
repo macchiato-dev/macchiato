@@ -15,7 +15,8 @@ function localBytecodes(directory) {
   return manifest.chunks.map(name => readFileSync(new URL(name, root)));
 }
 const serverBytecodes = localBytecodes("resources-server-bytecode");
-const policyBytecodes = localBytecodes("resources-policy-bytecode");
+const policyBytecodes = [readFileSync(new URL(
+  "./generated/resources-policy-machine/application.bin", import.meta.url))];
 const applicationModule = new WebAssembly.Module(readFileSync(new URL(
   "./generated/resources-application-machine/quickjs-server.wasm", import.meta.url)));
 const applicationBytecode = readFileSync(new URL(
@@ -38,8 +39,9 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
     return [columns, result.rows.map(row => columns.map(column => row[column])),
       Number(result.rowsAffected) || 0];
   };
-  const policy = client ? new ServerMachineController(serverModule, {
-    bytecodes: policyBytecodes, devices: { database: databaseDevice },
+  const policy = client ? new ServerMachineController(applicationModule, {
+    bytecodes: policyBytecodes, maxMessageBytes: 128 * 1024 * 1024,
+    devices: { database: databaseDevice },
   }) : null;
   const policyRequest = async (input) => {
     const result = await policy.request(input);

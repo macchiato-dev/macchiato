@@ -1,16 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 import { accountSqlOperations } from "../account-sql-policy.js";
-
-const generated = new URL("../generated/", import.meta.url);
-const module = await WebAssembly.compile(await readFile(new URL(
-  "microquickjs-server.wasm", generated)));
-const bytecodeDirectory = new URL("resources-policy-bytecode/", generated);
-const bytecodes = await Promise.all((await readdir(bytecodeDirectory))
-  .filter(name => name.endsWith(".bin")).sort()
-  .map(name => readFile(new URL(name, bytecodeDirectory))));
+import { CONTENT_QUERIES } from "../../hub/src/content.js";
+import { policyModule as module, policyBytecodes as bytecodes } from "./server-machine-assets.js";
 
 test("the policy machine owns SQL selection and result shaping", async () => {
   const calls = [];
@@ -42,6 +35,22 @@ test("compatibility stores cross the same policy machine", async () => {
     [["u1", "Example", "example"]], 0]]);
   const rejected = await policy.request(["database-client", "execute",
     ["SELECT secret FROM nowhere", []]]);
+  assert.equal(rejected[0], 500);
+  assert.match(rejected[2], /not allowed/);
+});
+
+test("SQL policy carries multi-megabyte projects without a fixed routing-buffer limit", async () => {
+  const snapshot = "猫 🀄\n".repeat(600_000);
+  const row = [["snapshot_json"], [[snapshot]], 0];
+  const policy = new ServerMachineController(module, {
+    bytecodes, maxMessageBytes: 128 * 1024 * 1024,
+    devices: { database: async () => row },
+  });
+  const result = await policy.request(["database-client", "execute",
+    [CONTENT_QUERIES.ownedWorkspace, ["owner", "tour", "user-id"]]]);
+  assert.deepEqual(result, ["ok", row]);
+  // A large delivery must not corrupt the next request or weaken SQL checks.
+  const rejected = await policy.request(["database-client", "execute", ["DROP TABLE users", []]]);
   assert.equal(rejected[0], 500);
   assert.match(rejected[2], /not allowed/);
 });

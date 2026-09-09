@@ -12,7 +12,7 @@ import { ServerMachineController } from "../../server-use/src/machine-controller
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "../project-version-machine.js";
 import { validateProjectUrlPatterns } from "../project-snapshot-validation.js";
-import { policyBytecodes, projectVersionBytecodes, serverBytecodes,
+import { policyModule, policyBytecodes, projectVersionBytecodes, serverBytecodes,
   serverModule } from "./server-machine-assets.js";
 
 const secret = "resources-server-machine-test-secret-value";
@@ -77,7 +77,7 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
     publicOrigin: "http://resources-edge.localhost", sessionSecret: secret,
     secureCookies: false,
   };
-  const policy = new ServerMachineController(serverModule, {
+  const policy = new ServerMachineController(policyModule, {
     bytecodes: policyBytecodes,
     devices: { database: async (operation, input) => {
       if (operation === "batch") {

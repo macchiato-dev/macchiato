@@ -13,8 +13,10 @@ files.set("application-runtime.wasm", new Uint8Array(await readFile(join(generat
   "resources-application-machine/quickjs-server.wasm"))));
 files.set("resources-application/application.bin", new Uint8Array(await readFile(join(generated,
   "resources-application-machine/application.bin"))));
+files.set("resources-policy/application.bin", new Uint8Array(await readFile(join(generated,
+  "resources-policy-machine/application.bin"))));
 
-for (const name of ["resources-server", "resources-policy", "resources-document"]) {
+for (const name of ["resources-server", "resources-document"]) {
   const directory = join(generated, `${name}-bytecode`);
   for (const entry of await readdir(directory)) {
     files.set(`${name}/${entry}`, new Uint8Array(await readFile(join(directory, entry))));

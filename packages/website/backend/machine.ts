@@ -107,10 +107,15 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
   let policyMachinePromise;
   function policyMachine() {
     if (!policyMachinePromise) policyMachinePromise = Promise.all([
-      runtimeModule(), bytecodeSet("resources-policy"),
-    ]).then(([module, bytecodes]) => new ServerMachineController(module, {
-      bytecodes, devices: { database: databaseDevice },
-    })).catch((error) => {
+      applicationRuntimeModule(), backendAssets(),
+    ]).then(([module, assets]) => {
+      const bytecode = assets.get("resources-policy/application.bin");
+      if (!bytecode) throw new Error("Backend artifact lacks resources-policy/application.bin");
+      return new ServerMachineController(module, {
+        bytecodes: [bytecode], maxMessageBytes: 128 * 1024 * 1024,
+        devices: { database: databaseDevice },
+      });
+    }).catch((error) => {
       policyMachinePromise = null;
       throw error;
     });

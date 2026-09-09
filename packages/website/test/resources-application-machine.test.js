@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 import { ServerMachineController } from "../../server-use/src/machine-controller.js";
 import { createNodeSqliteClient } from "../adapters/node-sqlite-client.js";
+import { policyModule, policyBytecodes } from "./server-machine-assets.js";
 
 const generated = new URL("../generated/", import.meta.url);
 
@@ -27,12 +28,6 @@ async function withTimeout(promise) {
 test("the application machine initializes stores through the SQL policy machine", async () => {
   const database = createNodeSqliteClient(new DatabaseSync(":memory:"));
   const calls = [];
-  const policyModule = await WebAssembly.compile(await readFile(new URL(
-    "microquickjs-server.wasm", generated)));
-  const policyDirectory = new URL("resources-policy-bytecode/", generated);
-  const policyBytecodes = await Promise.all((await readdir(policyDirectory))
-    .filter(name => name.endsWith(".bin")).sort()
-    .map(name => readFile(new URL(name, policyDirectory))));
   const policy = new ServerMachineController(policyModule, {
     bytecodes: policyBytecodes,
     devices: { database: async (operation, input) => {

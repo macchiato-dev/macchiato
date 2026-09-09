@@ -24,7 +24,7 @@ Deno.test("Bunny's compressed backend artifact runs its routing and document gue
     return chunks;
   }
   const module = await WebAssembly.compile(file("runtime.wasm"));
-  await WebAssembly.compile(file("application-runtime.wasm"));
+  const applicationModule = await WebAssembly.compile(file("application-runtime.wasm"));
   const routing = new ServerMachineController(module, { bytecodes: bytecodes("resources-server") });
   const result = await routing.request(["document.unsupported"]);
   if (!Array.isArray(result) || result[0] !== 405 || result[2] !== "Method not allowed") {
@@ -38,7 +38,9 @@ Deno.test("Bunny's compressed backend artifact runs its routing and document gue
       !rendered.includes("owner/demo") || rendered.includes("A <safe> project")) {
     throw new Error("Document guest did not render and escape the project");
   }
-  const policy = new ServerMachineController(module, { bytecodes: bytecodes("resources-policy") });
+  const policy = new ServerMachineController(applicationModule, {
+    bytecodes: [file("resources-policy/application.bin")],
+  });
   const denied = await policy.request(["sql", "not-an-installed-operation", []]);
   if (!Array.isArray(denied) || denied[0] !== 500 ||
       !String(denied[2]).includes("SQL operation not-an-installed-operation is not allowed")) {

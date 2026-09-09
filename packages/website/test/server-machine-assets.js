@@ -10,5 +10,8 @@ function bytecodes(directory) {
 }
 
 export const serverBytecodes = bytecodes("resources-server-bytecode");
-export const policyBytecodes = bytecodes("resources-policy-bytecode");
+export const policyModule = new WebAssembly.Module(readFileSync(new URL(
+  "../generated/resources-application-machine/quickjs-server.wasm", import.meta.url)));
+export const policyBytecodes = [readFileSync(new URL(
+  "../generated/resources-policy-machine/application.bin", import.meta.url))];
 export const projectVersionBytecodes = bytecodes("resources-project-version-bytecode");
