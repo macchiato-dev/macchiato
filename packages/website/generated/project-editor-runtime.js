@@ -994,10 +994,18 @@ var WasmWebBridge = class {
       if (form instanceof HTMLFormElement && insideDocument(form)) {
         const submitter = event.submitter;
         const method = submitter?.getAttribute("formmethod")?.toLowerCase() ?? form.method;
-        if (method !== "dialog") event.preventDefault();
+        const action = submitter?.getAttribute("formaction") ?? form.action;
+        let sameOrigin = false;
+        if (options.allowNavigate === "self") {
+          try {
+            sameOrigin = new URL(action, hostDocument.baseURI).origin === realm.location.origin;
+          } catch {
+          }
+        }
+        if (method !== "dialog" && !sameOrigin) event.preventDefault();
       }
     };
-    if (!messagesOnly) hostDocument.addEventListener("submit", guardSubmit, true);
+    if (!messagesOnly) realm.addEventListener("submit", guardSubmit);
     function get(object, name) {
       if ((object instanceof MediaQueryList || object instanceof MediaQueryListEvent) && (name === "matches" || name === "media")) return object[name];
       if (object === hostDocument && name === "profiling" && options.development === true) {
@@ -1955,7 +1963,11 @@ var WasmWebBridge = class {
       const mediaEvent = object instanceof MediaQueryList && type === "change";
       if (!elementEvent && !documentEvent && !mediaEvent || !Number.isInteger(callback)) fail(`event listener ${type} is not allowed`);
       const listener = (event) => {
-        deliver(callback, event);
+        try {
+          deliver(callback, event);
+        } finally {
+          if (type === "submit" && event.cancelBubble) guardSubmit(event);
+        }
       };
       object.addEventListener(type, listener, { capture });
       const records = eventListeners.get(object) || [];
@@ -2319,7 +2331,7 @@ var WasmWebBridge = class {
       }
     };
     this.destroy = () => {
-      if (!messagesOnly) hostDocument.removeEventListener("submit", guardSubmit, true);
+      if (!messagesOnly) realm.removeEventListener("submit", guardSubmit);
       for (const object of listenedObjects) {
         for (const record of eventListeners.get(object) || []) {
           object.removeEventListener(record.type, record.listener, { capture: record.capture });
@@ -2680,7 +2692,8 @@ async function createProjectEditorMachine({
   onError,
   onRequest,
   services,
-  limits
+  limits,
+  allowNavigate = false
 }) {
   const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
   const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
@@ -2707,6 +2720,7 @@ async function createProjectEditorMachine({
     return installedPrograms.get(name);
   }
   const machine = new WasmWebMachine(module, root, {
+    allowNavigate,
     stamp: sections.length === 1 ? new Uint8Array(sections[0]) : void 0,
     services,
     onMessage(text) {
