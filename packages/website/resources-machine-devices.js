@@ -225,6 +225,7 @@ export class ResourcesEditorDevice {
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     this.editor = await createProjectEditorMachine({
       root,
+      allowNavigate: "self",
       limits: false,
       onChange: (content, details) => this.deliver({ type: "editor-change", content,
         syntaxErrors: details.syntaxErrors }),

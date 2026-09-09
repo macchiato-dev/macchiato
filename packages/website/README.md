@@ -96,8 +96,11 @@ same-origin contexts without exposing other projects' keys. Removing an output
 removes its listeners, but does not erase its saved notes or preferences.
 
 Native `dialog` elements and `form method="dialog"` work in output. The machine
-cancels all network form submissions, including submission to the current URL
-when no action is specified. Guest submit handlers still receive the event.
+cancels network form submissions by default, including submission to the current
+URL when no action is specified. Guest submit handlers still receive the event.
+The trusted website and editor receive the broad `allowNavigate: "self"` grant
+for same-origin native forms such as Create project. The output's link-pattern
+callback does not grant native form submission or access to website storage.
 
 Output mounts in one static iframe from the beginning, so initial rendering,
 ordinary refreshes, and future hot reload use the same surface semantics. A

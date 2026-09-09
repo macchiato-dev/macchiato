@@ -105,6 +105,7 @@ export async function startResourcesMachineController() {
   }
 
   machine = new WasmWebMachine(module, document, {
+    allowNavigate: "self",
     stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
     services: {
       call(name, payloadText) {

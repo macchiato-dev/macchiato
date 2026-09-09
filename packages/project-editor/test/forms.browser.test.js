@@ -97,4 +97,19 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))), !documentMode);
   await page.evaluate(() => machine.destroy());
   assert.deepEqual(errors, []);
+  // Server-rendered website forms use an explicit same-origin grant, unlike
+  // a project output's link-pattern callback.
+  await page.evaluate(async () => {
+    const { default: Machine } = await import("/machine.js");
+    window.machine = new Machine(await WebAssembly.compileStreaming(fetch("/runtime.wasm")),
+      document, { allowNavigate: "self" });
+    await machine.onmsg(0);
+    document.body.innerHTML = '<form method="post" action="/accepted"><input name="title" value="Saved"><button>Create project</button></form>';
+  });
+  const submission = page.waitForRequest(request => request.url() === "http://forms.test/accepted");
+  await page.getByRole("button", { name: "Create project" }).click();
+  const request = await submission;
+  assert.equal(request.method(), "POST");
+  assert.equal(request.postData(), "title=Saved");
+  await page.waitForURL("http://forms.test/accepted");
 });

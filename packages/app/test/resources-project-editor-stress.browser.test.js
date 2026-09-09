@@ -176,7 +176,11 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.screenshot({ path: join(artifacts, "editor-dark.png") });
 
   await page.getByRole("button", { name: "Create project" }).click();
-  await page.getByRole("button", { name: "Save project" }).waitFor();
+  await page.getByRole("button", { name: "Save project" }).waitFor().catch(async cause => {
+    await page.screenshot({ path: join(artifacts, "save-failed.png") });
+    throw new Error(JSON.stringify({ errors, url: page.url(),
+      page: (await page.locator("body").innerText()).slice(-1500) }), { cause });
+  });
   assert.equal(new URL(page.url()).pathname, "/editor-stress/editing-marathon");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   await page.reload({ waitUntil: "networkidle" });
