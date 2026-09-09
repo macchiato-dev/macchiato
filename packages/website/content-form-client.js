@@ -1415,7 +1415,9 @@ async function mountProjectRoot(root) {
           ? () => editorController?.renderSnapshot()
           : renderPreview, debounceMs);
       }
-    } catch {}
+    } catch (error) {
+      setStatus(`Editor update failed: ${error.message || String(error)}`, "error", null, "editor");
+    }
   }
   function selectProjectFile(event) {
     let target = event.target;

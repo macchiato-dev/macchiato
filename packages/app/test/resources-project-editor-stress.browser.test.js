@@ -118,7 +118,18 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.waitForTimeout(1_200);
   assert.equal((await content.innerText()).trim(), source.trim());
   const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame");
-  await assert.doesNotReject(output.locator("h1", { hasText: "Editing Marathon" }).waitFor());
+  try {
+    await output.locator("h1", { hasText: "Editing Marathon" }).waitFor();
+  } catch (cause) {
+    await page.screenshot({ path: join(artifacts, "output-failed.png") });
+    throw new Error(JSON.stringify({ errors, state: await page.evaluate(() => ({
+      root: { ...document.querySelector("[data-project-editor]").dataset },
+      snapshot: document.querySelector("[data-project-snapshot]").value.slice(0, 300),
+      frames: [...document.querySelectorAll("iframe")].map(frame => ({
+        src: frame.src, connected: frame.isConnected, text: frame.contentDocument?.body?.innerText?.slice(0, 300),
+      })),
+    })) }), { cause });
+  }
   assert.equal(await output.locator("p", { hasText: /Editable row/ }).count(), 100);
   await page.screenshot({ path: join(artifacts, "editor-light.png") });
 
