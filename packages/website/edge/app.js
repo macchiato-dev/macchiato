@@ -283,7 +283,7 @@ function projectViewHtml(project, messages, workspace, csrf, owner, session, con
 
 function projectFormHtml(session, content, token, messages, url) {
   const snapshot = initialProjectSnapshot();
-  return `<div class="account-dashboard project-create">
+  return `<div class="account-dashboard project-create project-view project-workspace">
     ${formError(url, messages)}
     <form class="create-form" method="post" action="/projects">
       <input type="hidden" name="csrf" value="${escapeHtml(token)}">

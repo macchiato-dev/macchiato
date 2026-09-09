@@ -112,7 +112,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await content.fill(source);
   await page.waitForTimeout(1_200);
   assert.equal((await content.innerText()).trim(), source.trim());
-  const output = page.frameLocator("[data-project-preview] iframe.project-editor__preview-surface");
+  const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame");
   await assert.doesNotReject(output.locator("h1", { hasText: "Editing Marathon" }).waitFor());
   assert.equal(await output.locator("p", { hasText: /Editable row/ }).count(), 100);
 
