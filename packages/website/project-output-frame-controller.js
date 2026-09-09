@@ -11,6 +11,7 @@ let programs = 0;
 let fetchResourceImpl = null;
 let imageResolverImpl = (value) => value;
 let navigationPatterns = [];
+const routeListeners = new Set();
 
 function taggedMessage(tag, value) {
   const bytes = encoder.encode(value);
@@ -106,7 +107,13 @@ async function start(payload, port) {
     resolveImage: (value) => imageResolverImpl(value),
     allowNavigate: (url) => urlMatchesAllowedPatterns(url, navigationPatterns),
     services: {
-      route: { get: () => location.hash.slice(1) || "/", search: () => "", listen() {} },
+      route: {
+        get: () => location.hash.slice(1) || "/", search: () => "",
+        listen(listener) {
+          routeListeners.add(listener);
+          addEventListener("hashchange", listener);
+        },
+      },
       storage: { get: () => null, set() {}, delete() {}, listen() {} },
     },
     onMessage(text) {
@@ -146,7 +153,12 @@ async function operation(name, payload) {
     return null;
   }
   if (name === "inspect") return { runtime: "quickjs", programs, realm: "iframe" };
-  if (name === "destroy") { machine?.destroy(); machine = null; return null; }
+  if (name === "destroy") {
+    for (const listener of routeListeners) removeEventListener("hashchange", listener);
+    routeListeners.clear();
+    machine?.destroy(); machine = null;
+    return null;
+  }
   throw new Error(`Unknown project output operation: ${name}`);
 }
 

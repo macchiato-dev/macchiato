@@ -60,6 +60,7 @@ var programs = 0;
 var fetchResourceImpl = null;
 var imageResolverImpl = (value) => value;
 var navigationPatterns = [];
+var routeListeners = /* @__PURE__ */ new Set();
 function taggedMessage(tag, value) {
   const bytes = encoder.encode(value);
   const message = new Uint8Array(bytes.length + 1);
@@ -155,8 +156,14 @@ async function start(payload, port) {
     resolveImage: (value) => imageResolverImpl(value),
     allowNavigate: (url) => urlMatchesAllowedPatterns(url, navigationPatterns),
     services: {
-      route: { get: () => location.hash.slice(1) || "/", search: () => "", listen() {
-      } },
+      route: {
+        get: () => location.hash.slice(1) || "/",
+        search: () => "",
+        listen(listener) {
+          routeListeners.add(listener);
+          addEventListener("hashchange", listener);
+        }
+      },
       storage: { get: () => null, set() {
       }, delete() {
       }, listen() {
@@ -202,6 +209,8 @@ async function operation(name, payload) {
   }
   if (name === "inspect") return { runtime: "quickjs", programs, realm: "iframe" };
   if (name === "destroy") {
+    for (const listener of routeListeners) removeEventListener("hashchange", listener);
+    routeListeners.clear();
     machine?.destroy();
     machine = null;
     return null;
