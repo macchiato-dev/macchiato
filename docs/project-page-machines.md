@@ -760,17 +760,17 @@ Nothing was deployed to Bunny. The next performance comparison should match
 the native control's surrounding layout to the workspace before attributing
 the remaining difference to the interpreter.
 
-### September 10 synchronous sibling reads
+### September 10 sibling-read experiments
 
 The guest's `nextSibling` and `previousSibling` getters scanned its cached
 child array. Besides a linear search on each traversal step, this returned
 stale siblings after native changes and before MutationObserver delivery.
-They now read the native properties through the existing host reference ABI.
-Returned nodes must pass the same subtree/ownership check as parent reads.
-No event scheduling, editing commands, or reference lifetime rules change.
+The first experiment read the native properties through the existing host
+reference ABI. Returned nodes passed the same subtree/ownership check as
+parent reads. It did not change event scheduling or reference lifetime rules.
 
-A browser regression fails on the old implementation and passes with both
-stamped and downloaded language bytecode after the change. It reorders native
+A browser regression failed on the old implementation and passed with both
+stamped and downloaded language bytecode in that experiment. It reordered native
 children and reads siblings synchronously, checks identity, detaches the owned
 parent, removes a child, and checks that siblings outside the granted root are
 not exposed. Large-file timing is a separate gate, not implied by this test.
@@ -792,6 +792,22 @@ The sibling tests now explicitly wait for native observer delivery and also
 exercise synchronous guest moves. A new experiment caches a child index only
 as a hint, verifying `siblings[index] === node` before every use and searching
 again when that condition fails. This does not claim to fix pre-observer reads.
+
+The updated regression found that the host rejected zero optional observer
+flags, although `childList: true` is always set by this ABI. Zero now correctly
+means child-list-only observation, without attributes, character data, or
+subtree observation. Both language-loading variants exercise this case.
+
+With validated child-index hints and the bounded integer/operation loops, two
+uninstrumented live-owner runs inserted the same 109,485-character fixture in
+26.7 and 25.5 seconds, compared with approximately 63 seconds before these
+experiments. The first-page type/backspace medians were 230 and 232 ms, broadly
+unchanged from the earlier 223 ms sample. Every run verified exact source and
+no page errors; all real-project writes were intercepted. The matched native
+workspace control remains approximately 17 seconds. This is a substantial
+bulk-input improvement, not a claim that large native insertion is now fast
+or that every editor interaction accelerated. No profiling was enabled during
+these measurements, and no build or other test ran concurrently.
 
 ### September 10 native layout comparison and tab stops
 

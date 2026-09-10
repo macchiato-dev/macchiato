@@ -1524,7 +1524,7 @@ var WasmWebBridge = class {
       }
       if (object === hostDocument && name === "mutationObserve" && args.length === 3 && args[0] instanceof Node && Number.isInteger(args[1]) && Number.isInteger(args[2])) {
         const flags = args[1];
-        if (flags < 1 || flags > 31) fail("mutation observer flags are not allowed");
+        if (flags < 0 || flags > 31) fail("mutation observer flags are not allowed");
         const observer = new MutationObserver((records) => deliver(args[2], records));
         mutationObservers.add(observer);
         observer.observe(args[0], {
