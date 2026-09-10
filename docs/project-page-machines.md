@@ -852,6 +852,14 @@ This preserves native editing lifetimes rather than treating removal as immediat
 revocation. It is not a blanket claim that all remaining event, graphics, and
 service surfaces have been audited.
 
+Export `fe6bcae` passed all 67 regression checks, live-owner edit/error recovery,
+the four-project exported-browser checks, the compressed backend test, and its
+151-file manifest. The tour passed 50 successive slides plus keyboard input;
+SQLite fragment navigation and theme switching remained functional. Live checks
+intercepted project writes. In the stress run, 109 KB clipboard paste took
+1.27 seconds and native insertion took 28.7 seconds; the latter remains slow.
+No Bunny deployment was performed.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices

@@ -951,6 +951,7 @@ var WasmWebBridge = class {
       if (typeof value2 !== "object" && typeof value2 !== "function" || value2 === null) {
         return value2;
       }
+      if (value2 instanceof Node && value2 !== hostDocument && insideDocument(value2)) ownedNodes.add(value2);
       const known = reverse.get(value2);
       if (known !== void 0) {
         leases[known]++;
@@ -994,8 +995,22 @@ var WasmWebBridge = class {
     function insideDocument(node) {
       if (node === hostDocument) return true;
       if (!(node instanceof Node)) return false;
-      if (documentTarget) return node === hostDocument.head || node === hostDocument.body || hostDocument.documentElement.contains(node);
-      return ownedNodes.has(node) || roots.some((root) => node === root || root.contains(node));
+      if (ownedNodes.has(node)) return true;
+      if (documentTarget ? hostDocument.documentElement.contains(node) : roots.some((root) => node === root || root.contains(node))) return true;
+      for (let parent = node.parentNode; parent; parent = parent.parentNode) {
+        if (ownedNodes.has(parent)) return true;
+      }
+      return false;
+    }
+    function accessibleNode(node) {
+      return node === hostDocument ? documentTarget : insideDocument(node);
+    }
+    function requireNode(node) {
+      if (!accessibleNode(node)) fail("node is outside the granted roots");
+    }
+    function requireRange(range) {
+      requireNode(range.startContainer);
+      requireNode(range.endContainer);
     }
     const guardSubmit = (event) => {
       const form = event.target;
@@ -1015,6 +1030,7 @@ var WasmWebBridge = class {
     };
     if (!messagesOnly) realm.addEventListener("submit", guardSubmit);
     function get(object, name) {
+      if (object instanceof Node && object !== hostDocument && name !== "nodeType" && name !== "nodeName" && name !== "parentNode" && name !== "parentElement") requireNode(object);
       if ((object instanceof MediaQueryList || object instanceof MediaQueryListEvent) && (name === "matches" || name === "media")) return object[name];
       if (object === hostDocument && name === "profiling" && options.development === true) {
         return options.profiling === true;
@@ -1049,6 +1065,7 @@ var WasmWebBridge = class {
       if (object instanceof MutationRecord && ["attributeName", "oldValue", "type"].includes(name)) return object[name];
       if (object instanceof MutationRecord && ["nextSibling", "previousSibling", "target"].includes(name)) {
         const node = object[name];
+        if (name === "target") return reference(ownNode(node));
         return node && insideDocument(node) ? reference(node) : null;
       }
       if (object instanceof MutationRecord && ["addedNodeCount", "removedNodeCount"].includes(name)) {
@@ -1141,6 +1158,7 @@ var WasmWebBridge = class {
       fail(`property get ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
     function set(object, name, next) {
+      if (object instanceof Node) requireNode(object);
       if (object instanceof HTMLElement && name === "innerHTML" && typeof next === "string" && next.length <= 256 * 1024) {
         const template = hostDocument.createElement("template");
         template.innerHTML = next;
@@ -1253,6 +1271,7 @@ var WasmWebBridge = class {
       frames.delete(id);
     }
     function call(object, name, args) {
+      if (object instanceof Node && object !== hostDocument && name !== "contains" && name !== "closest") requireNode(object);
       if (object instanceof Element && ["setPointerCapture", "releasePointerCapture", "hasPointerCapture"].includes(name)) {
         if (args.length !== 1 || !Number.isInteger(args[0])) fail("pointer ID must be an integer");
         return object[name](args[0]) ?? null;
@@ -1474,6 +1493,7 @@ var WasmWebBridge = class {
         return reference(getComputedStyle(args[0]));
       }
       if (object === hostDocument && ["measureRect", "measureClientRects"].includes(name) && args.length === 1 && (args[0] instanceof Range || args[0] instanceof Element && (insideDocument(args[0]) || ownedNodes.has(args[0])))) {
+        if (args[0] instanceof Range) requireRange(args[0]);
         const rects = name === "measureRect" ? [args[0].getBoundingClientRect()] : Array.from(args[0].getClientRects());
         const bytes = new Uint8Array(4 + rects.length * 32);
         const view = new DataView(bytes.buffer);
@@ -1618,13 +1638,13 @@ var WasmWebBridge = class {
       if (object instanceof Node && name === "contains" && args.length === 1 && (args[0] === null || args[0] instanceof Node)) {
         return object.contains(args[0]);
       }
-      if (object instanceof Node && name === "cloneNode" && args.length === 1 && typeof args[0] === "boolean" && insideDocument(object)) {
+      if (object instanceof Node && name === "cloneNode" && args.length === 1 && typeof args[0] === "boolean" && accessibleNode(object)) {
         return reference(ownNode(object.cloneNode(args[0])));
       }
-      if (object instanceof Node && name === "childNodes" && args.length === 0 && insideDocument(object)) {
+      if (object instanceof Node && name === "childNodes" && args.length === 0 && accessibleNode(object)) {
         return reference(Array.from(object.childNodes));
       }
-      if (object instanceof Node && name === "childNodeReferences" && args.length === 0 && insideDocument(object)) {
+      if (object instanceof Node && name === "childNodeReferences" && args.length === 0 && accessibleNode(object)) {
         const children = Array.from(object.childNodes);
         const bytes = new Uint8Array(4 + children.length * 4);
         const view = new DataView(bytes.buffer);
@@ -1641,7 +1661,7 @@ var WasmWebBridge = class {
       if (object instanceof MutationRecord && ["addedNodeAt", "removedNodeAt"].includes(name) && args.length === 1 && Number.isInteger(args[0])) {
         const nodes = object[name === "addedNodeAt" ? "addedNodes" : "removedNodes"];
         if (args[0] < 0 || args[0] >= nodes.length) fail("mutation node index is invalid");
-        return reference(nodes[args[0]]);
+        return reference(ownNode(nodes[args[0]]));
       }
       if (object instanceof Element && name === "getAttribute" && args.length === 1 && typeof args[0] === "string" && (isAllowedAttribute(args[0]) || args[0] === "style")) {
         return object.getAttribute(args[0]);
@@ -1665,6 +1685,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof Selection && name === "addRange" && args.length === 1 && args[0] instanceof Range) {
+        requireRange(args[0]);
         object.addRange(args[0]);
         return null;
       }
@@ -1672,6 +1693,7 @@ var WasmWebBridge = class {
         return reference(object.getRangeAt(0));
       }
       if (object instanceof Range && ["setStart", "setEnd"].includes(name) && args.length === 2 && args[0] instanceof Node && (insideDocument(args[0]) || ownedNodes.has(args[0])) && Number.isInteger(args[1]) && args[1] >= 0) {
+        requireNode(args[0]);
         object[name](args[0], args[1]);
         return null;
       }
@@ -1915,12 +1937,16 @@ var WasmWebBridge = class {
         return object.hasAttribute(args[0]);
       }
       if ((object instanceof Element || object instanceof Range) && name === "getClientRects" && args.length === 0) {
+        if (object instanceof Range) requireRange(object);
         return reference(Array.from(object.getClientRects()));
       }
       if (object instanceof Range && name === "getBoundingClientRect" && args.length === 0) {
+        requireRange(object);
         return reference(object.getBoundingClientRect());
       }
       if (object instanceof Node && ["append", "appendChild", "replaceChildren"].includes(name)) {
+        requireNode(object);
+        for (const node of args) if (node instanceof Node) requireNode(node);
         if (object === logicalHead && documentTarget && args.some((node) => !(node instanceof HTMLMetaElement || node instanceof HTMLTitleElement || node instanceof Comment))) {
           fail("only viewport meta and title elements may enter the logical head");
         }
@@ -1928,15 +1954,22 @@ var WasmWebBridge = class {
         return name === "appendChild" ? reference(args[0]) : null;
       }
       if (object instanceof Node && name === "insertBefore" && args.length === 2 && args[0] instanceof Node && (args[1] === null || args[1] instanceof Node)) {
+        requireNode(object);
+        requireNode(args[0]);
+        if (args[1]) requireNode(args[1]);
         const next = args[1] !== null && args[1].parentNode === object ? args[1] : null;
         object.insertBefore(args[0], next);
         return reference(args[0]);
       }
       if (object instanceof Node && name === "removeChild" && args.length === 1 && args[0] instanceof Node && args[0].parentNode === object) {
+        requireNode(object);
+        requireNode(args[0]);
         object.removeChild(args[0]);
         return reference(args[0]);
       }
       if (object instanceof Node && name === "removeChild" && args.length === 1 && args[0] instanceof Node && args[0].parentNode === null) {
+        requireNode(object);
+        requireNode(args[0]);
         return reference(args[0]);
       }
       if (object instanceof Node && "remove" in object && typeof object.remove === "function" && name === "remove") {
@@ -1946,6 +1979,7 @@ var WasmWebBridge = class {
       fail(`method ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
     function listen(object, type, callback, capture = false) {
+      if (object instanceof Node && object !== hostDocument) requireNode(object);
       const elementEventName = [
         "auxclick",
         "beforeinput",
@@ -2011,6 +2045,10 @@ var WasmWebBridge = class {
         "submit"
       ].includes(type);
       const listener = (event) => {
+        const target2 = event.target;
+        if (target2 instanceof Node && target2 !== hostDocument && !ownedNodes.has(target2) && (documentTarget || insideDocument(target2) || event.composedPath().some((node) => roots.includes(node)))) {
+          ownedNodes.add(target2);
+        }
         if (scopedInput && !insideDocument(event.target) && !event.composedPath().some((node) => roots.includes(node))) return;
         try {
           deliver(callback, event);
