@@ -598,14 +598,15 @@ memories without retaining disposed instances; no profiler was added to the
 production controller. Desktop Chromium with a phone viewport does not
 establish memory limits or performance on physical phones.
 
-Export `f3b8129` includes these responsive fixes. Its 151-file manifest and
+Export `f4c9a5a` includes these responsive fixes and viewport-first parsing.
+Its 151-file manifest and
 compressed backend test passed; the four owner-project browser checks also
 passed narrow/desktop pane switching with assets served from this export.
 The tour's 50-slide/keyboard check and SQLite's iframe-only fragment navigation
 remain covered. The local deployment archive was refreshed; Bunny deployment
 and its real cold-start behavior are still untested.
 
-The next editor checkpoint limits synchronous `forceParsing` to CodeMirror's
+The editor now limits synchronous `forceParsing` to CodeMirror's
 default viewport target and budget, instead of requesting the entire document
 for 250 ms. Guest mount measurements on real 109 KB JavaScript and 26 KB Rust
 files dropped from roughly 342–384 ms to 89–132 ms. Tests require parsing to
