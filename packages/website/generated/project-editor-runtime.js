@@ -1037,6 +1037,7 @@ var WasmWebBridge = class {
     function requireRange(range) {
       requireNode(range.startContainer);
       requireNode(range.endContainer);
+      requireNode(range.commonAncestorContainer);
     }
     function contentElement(element) {
       if (element.namespaceURI === "http://www.w3.org/2000/svg") {
@@ -1804,6 +1805,13 @@ var WasmWebBridge = class {
         return reference(object.takeRecords());
       }
       if (object instanceof Selection && ["collapse", "extend"].includes(name) && args.length === 2 && args[0] instanceof Node && (insideDocument(args[0]) || ownedNodes.has(args[0])) && Number.isInteger(args[1]) && args[1] >= 0) {
+        requireNode(args[0]);
+        if (name === "extend" && object.anchorNode) {
+          requireNode(object.anchorNode);
+          let common = object.anchorNode;
+          while (common && !common.contains(args[0])) common = common.parentNode;
+          requireNode(common);
+        }
         object[name](args[0], args[1]);
         return null;
       }
