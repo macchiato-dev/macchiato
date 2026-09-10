@@ -1495,6 +1495,14 @@ export; `cd6acdb` was archived under `/root/archive/2026/09/10/`. This is an
 updated development artifact, not clearance of the selector release gate or a
 Bunny deployment.
 
+The live recovery screenshot also prompted a split-layout measurement. Both
+dividers move and retain the same `--source-width` after editing; the toolbar is
+not frozen. At a 1170 px workspace width and 56.5812% split, its divider is at
+662 px while the workspace divider is at 663.984 px. The workspace's explicit
+`calc(var(--source-width, 50%) + 2px)` is absent from the toolbar. Add an alignment
+assertion across initial layout, pointer/keyboard resizing, and output refresh,
+then use the same column definition rather than another compensating offset.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
