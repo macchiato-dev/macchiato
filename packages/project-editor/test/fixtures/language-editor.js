@@ -181,6 +181,8 @@ function startMutationProbe() {
   root.setAttribute("id", "mutation-probe");
   mutationLeft = document.createElement("div");
   mutationRight = document.createElement("div");
+  mutationLeft.setAttribute("data-name", "left");
+  mutationRight.setAttribute("data-name", "right");
   root.appendChild(mutationLeft); root.appendChild(mutationRight);
   var nodes = ["a", "b", "c", "d", "e"].map(function (name, index) {
     var node = document.createElement("span");

@@ -1306,6 +1306,22 @@ compressed backend execution, and the four-project exported browser checks
 server and `/root/resources-bunny.tar.gz` now use this build. The prior archive
 is retained under `/root/archive/2026/09/10/`; nothing was deployed to Bunny.
 
+### September 10 grouped mutation-record reads
+
+The guest reads MutationRecord metadata through the existing multi-operation
+wire format. Adjacent `type`/`target`, added/removed counts, and previous/next
+sibling reads each share an exchange. They are fixed native fields, not
+arbitrary guest-defined getters. The flush after detached-node callbacks is
+preserved before reading siblings; event delivery is not deferred or merged.
+No host API, permission, wire encoding, or CodeMirror behavior was added.
+
+The expanded browser probe compares the complete native and guest record
+sequences, including identified left/right parents, intermediate siblings,
+added/removed nodes, repeated character-data changes, and attribute old values.
+It passes before and after grouping, for both stamped and downloaded language
+bytecode. Timing the large input separately is required before calling this
+a performance improvement.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

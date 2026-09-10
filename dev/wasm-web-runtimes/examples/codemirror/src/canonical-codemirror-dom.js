@@ -1016,8 +1016,8 @@ function readMutationBatch(batchReference, batchToken) {
     var reference = result[1], header = hostGetMany(reference, ["type", "target"]);
     var type = header[0], record = { type: type, target: nodeForReference(header[1][1]) };
     if (type === "childList") {
-      var children = hostGetMany(reference, ["addedNodeCount", "removedNodeCount", "previousSibling", "nextSibling"]);
-      var added = children[0], removed = children[1];
+      var counts = hostGetMany(reference, ["addedNodeCount", "removedNodeCount"]);
+      var added = counts[0], removed = counts[1];
       record.addedNodes = [];
       record.removedNodes = [];
       for (var add = 0; add < added; add++) {
@@ -1028,7 +1028,9 @@ function readMutationBatch(batchReference, batchToken) {
         record.removedNodes.push(removedNode);
         detachGuestNode(removedNode);
       }
-      var previous = children[2], next = children[3];
+      // Preserve the flush after detached-node callbacks before reading siblings.
+      var siblings = hostGetMany(reference, ["previousSibling", "nextSibling"]);
+      var previous = siblings[0], next = siblings[1];
       record.previousSibling = previous === null ? null : nodeForReference(previous[1]);
       record.nextSibling = next === null ? null : nodeForReference(next[1]);
       if (changedParents.indexOf(record.target) < 0) changedParents.push(record.target);
