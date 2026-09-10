@@ -33,6 +33,8 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   let fetchArrived;
   const nextFetch = () => new Promise(resolve => { fetchArrived = resolve; });
   await page.route("https://resource.test/**", route => { heldFetches.push(route); fetchArrived(); });
+  // Record attempted exfiltration, but never send test traffic to an external server.
+  await page.route("https://outside.test/**", route => route.abort());
   page.on("pageerror", error => errors.push(error.message));
   page.on("request", request => network.push(request.url()));
   await page.route("http://modules.test/**", route => {
@@ -91,7 +93,9 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     { path: "app.js", content: 'import { value, increment } from "./lib/value.js"; increment(); await Promise.resolve(); globalThis.onlyInGuest = true; document.querySelector("main").textContent = String(value);' },
     { path: "lib/value.js", content: "export let value = 41; export function increment() { value++; }" },
   ];
-  const load = files => page.evaluate(project => window.output.load(project), { ...compileProjectFiles(files), files });
+  const load = (files, permissions = {}) => page.evaluate(project => window.output.load(project), {
+    ...compileProjectFiles(files), files, ...permissions,
+  });
   await load(files);
   const surface = iframe ? page.frameLocator("iframe").locator("main") : page.locator("#guest main");
   assert.equal(await surface.innerText(), "42");
@@ -108,6 +112,62 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   files[1].content = 'import { result } from "./lib/a.js"; const loaded = await import("./lib/value.js"); await new Promise(resolve => setTimeout(resolve, 5)); document.querySelector("main").textContent = result + loaded.value;';
   await load(files);
   assert.equal(await surface.innerText(), "AB70");
+  // Exercise the shipped guest's DOM calls, not just the HTML compiler. These
+  // attempts must fail inside both integrations and leave the active output intact.
+  const boundaryFiles = [
+    { path: "index.html", content: '<main></main><script src="boundary.js"></script>' },
+    { path: "boundary.js", content: "" },
+  ];
+  for (const source of [
+    ...["script", "link", "iframe", "object", "embed", "base"].map(tag =>
+      `document.body.appendChild(document.createElement(${JSON.stringify(tag)}));`),
+    'var image = document.createElement("img"); image.src = "https://outside.test/image.png"; document.body.appendChild(image);',
+    'var link = document.createElement("a"); link.setAttribute("href", "https://outside.test/page"); document.body.appendChild(link);',
+    'var meta = document.createElement("meta"); meta.setAttribute("http-equiv", "refresh"); document.body.appendChild(meta);',
+    'document.querySelector("main").style.setProperty("background-image", "url(https://outside.test/background.png)");',
+    'document.querySelector("main").innerHTML = \'<img src="https://outside.test/inner.png">\';',
+    'document.querySelector("main").innerHTML = \'<svg><image href="https://outside.test/svg.png" /></svg>\';',
+  ]) {
+    boundaryFiles[1].content = source;
+    await assert.rejects(load(boundaryFiles), undefined, source);
+    assert.equal(await surface.innerText(), "AB70", "denied replacements preserve the active application");
+  }
+  const outputDocument = iframe ? page.frames().find(frame => frame !== page.mainFrame()) : page;
+  await outputDocument.evaluate(() => {
+    document.body.id = "outside-ancestor";
+    const sibling = document.createElement("div");
+    sibling.id = "outside-secret";
+    sibling.textContent = "Private host content";
+    document.body.appendChild(sibling);
+  });
+  boundaryFiles[1].content = `
+    var root = document.body;
+    document.querySelector("main").textContent = JSON.stringify([
+      document.querySelector("#outside-secret") === null,
+      root.parentElement === null,
+      root.closest("#outside-ancestor") === null
+    ]);
+  `;
+  await load(boundaryFiles);
+  assert.equal(await surface.innerText(), "[true,true,true]", "queries and traversal stay within the output root");
+  assert.equal(await outputDocument.locator("#outside-secret").innerText(), "Private host content");
+  boundaryFiles[1].content = `
+    var main = document.querySelector("main");
+    main.style.setProperty("color", "rebeccapurple");
+    var link = document.createElement("a");
+    link.setAttribute("href", "#local-section");
+    link.textContent = "Local section";
+    main.appendChild(link);
+  `;
+  await load(boundaryFiles);
+  assert.equal(await surface.locator("a").getAttribute("href"), "#local-section");
+  assert.equal(await surface.evaluate(node => getComputedStyle(node).color), "rgb(102, 51, 153)");
+  boundaryFiles[1].content = boundaryFiles[1].content.replace("#local-section", "https://outside.test/permitted");
+  await load(boundaryFiles, { allowedLinkPatterns: ["outside.test/permitted"] });
+  assert.equal(await surface.locator("a").getAttribute("href"), "https://outside.test/permitted");
+  await assert.rejects(load(boundaryFiles), /navigation policy/, "a previous session's link grant must not survive replacement");
+  assert.equal(network.some(url => url.startsWith("https://outside.test/")), false);
+  assert.equal(page.url(), "http://modules.test/");
   // Classic-script declarations, timers, and CSS belong to one load too.
   const classic = [
     { path: "index.html", content: '<style>main { color: rebeccapurple; }</style><main></main><script src="app.js"></script>' },

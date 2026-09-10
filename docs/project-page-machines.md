@@ -543,6 +543,16 @@ Browser coverage checks behavior and ownership, not IDs alone:
   undo/redo, versions, themes, responsive pane changes, output debounce,
   failures, save/reload, and repeated machine replacement.
 
+`packages/project-editor/test/modules.browser.test.js` exercises the generated
+output Wasm through both the direct integration and the generated iframe
+controller. Its guest scripts attempt network-capable element creation,
+external image/link attributes, refresh metadata, CSS image URLs, and embedded
+HTML/SVG URLs. Denied replacements must preserve the visible application and
+must not produce external requests. The test also checks subtree query and
+parent/closest boundaries, safe inline styling and fragment links, and removal
+of a previous load's navigation grant. This is regression coverage of these
+paths, not a substitute for auditing the full host protocol and its renderers.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
