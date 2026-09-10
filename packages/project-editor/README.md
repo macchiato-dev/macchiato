@@ -35,6 +35,16 @@ identical 1,000-line documents, alternating their order and checking results
 after garbage collection. Its timings describe accounting, not total editor
 latency; the project-page browser test separately exercises the full editor.
 
+JavaScript syntax validation belongs to the debounced QuickJS output load, not
+the MicroQuickJS editor's `Function` constructor. Recompiling on every edit
+both wastes work and rejects valid modern project syntax. Invalid replacements
+leave the last successful output visible; the output error is delayed while
+the user types. HTML and CSS likewise use the output compiler and renderer.
+For optional large-file keyboard timings, run the language browser test with
+`MACCHIATO_EDITOR_TIMINGS=1`. It edits the actual workspace form source at the
+beginning, middle, and end, checks the resulting document, and reports keyboard
+round-trip timings (including Playwright overhead) without a fixed CI threshold.
+
 Inline SVG keeps its namespace and drawing attributes. An embedded SVG in a
 CSS background becomes a semantic SVG tree in the stylesheet wire message.
 The host validates and renders that tree before producing a base64 image URL;

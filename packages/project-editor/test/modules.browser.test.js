@@ -182,6 +182,14 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   await assert.rejects(load(classic), /New code failed/);
   assert.equal(await surface.innerText(), "Fresh", "failed preparation keeps the visible application");
   assert.equal(await documentFrame.locator('style').count(), 1);
+  classic[1].content = 'const broken = ;';
+  await assert.rejects(load(classic), /SyntaxError/);
+  assert.equal(await surface.innerText(), "Fresh", "the output runtime rejects malformed JavaScript without replacing the current application");
+  classic[1].content = 'const greet = (name = "World") => `Hello ${name}`; document.querySelector("main").textContent = greet();';
+  await load(classic);
+  assert.equal(await surface.innerText(), "Hello World", "modern JavaScript is validated by the project runtime");
+  classic[1].content = 'document.querySelector("main").textContent = "Fresh";';
+  await load(classic);
   const slowFiles = [
     { path: "index.html", content: '<main>Preparing</main><script type="module" src="slow.js"></script>' },
     { path: "slow.js", content: 'await new Promise(resolve => setTimeout(resolve, 60000));' },
