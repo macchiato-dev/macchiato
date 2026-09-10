@@ -13,8 +13,15 @@ test("project editor embeds bytecode compiled from the current guest runtime", a
   t.after(() => rm(directory, { recursive: true, force: true }));
   const examples = join(root, "dev/wasm-web-runtimes/examples");
   const bytecode = join(directory, "runtime.bin");
+  const editorBytecode = join(directory, "editor.bin");
+  const editorSource = join(root, "packages/website/generated/project-editor-microquickjs.js");
+  const source = await readFile(editorSource, "utf8");
+  assert.match(source, /records\.length > 128 \? new Map\(\) : null/,
+    "the editor build must include the guarded large-mutation optimization");
   execFileSync(join(examples, "microquickjs-suite/microquickjs-guest-runtime/microquickjs/mqjs"),
     ["-m32", "-o", bytecode, join(examples, "codemirror/generated/microquickjs-runtime.js")]);
+  execFileSync(join(examples, "microquickjs-suite/microquickjs-guest-runtime/microquickjs/mqjs"),
+    ["-m32", "-o", editorBytecode, editorSource]);
 
   // Inspect the actual shipped artifact, not an independently rebuilt test VM.
   const module = await WebAssembly.compile(await readFile(join(root,
@@ -26,15 +33,20 @@ test("project editor embeds bytecode compiled from the current guest runtime", a
   assert.ok(headerEnd > 0);
   let offset = headerEnd + 1;
   let runtime;
+  let editor;
   for (const entry of new TextDecoder().decode(stamp.subarray(0, headerEnd)).split(",")) {
     const [name, size] = entry.split(":");
     const length = Number(size);
     assert.ok(Number.isSafeInteger(length) && length >= 0 && offset + length <= stamp.length);
     if (name === "runtime.bin") runtime = stamp.slice(offset, offset + length);
+    if (name === "editor.bin") editor = stamp.slice(offset, offset + length);
     offset += length;
   }
   assert.equal(offset, stamp.length);
   assert.ok(runtime, "runtime.bin is present in the editor stamp");
   assert.ok(Buffer.from(runtime).equals(await readFile(bytecode)),
     "embedded editor runtime is stale: rebuild its bytecode before stamping the WASM");
+  assert.ok(editor, "editor.bin is present in the editor stamp");
+  assert.ok(Buffer.from(editor).equals(await readFile(editorBytecode)),
+    "embedded CodeMirror is stale: rebuild its bytecode before stamping the WASM");
 });

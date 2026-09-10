@@ -10683,13 +10683,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
     _proto77.processRecords = function processRecords() {
       var records = this.pendingRecords();
+      var childScanCache = records.length > 128 ? new Map() : null;
       if (records.length) this.queue = [];
       var from = -1,
         to = -1,
         typeOver = false;
       for (var _iterator75 = _createForOfIteratorHelperLoose(records), _step75; !(_step75 = _iterator75()).done;) {
         var record = _step75.value;
-        var range = this.readMutation(record);
+        var range = this.readMutation(record, childScanCache);
         if (!range) continue;
         if (range.typeOver) typeOver = true;
         if (from == -1) {
@@ -10738,13 +10739,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (this.view.state == startState && (domChange.domChanged || domChange.newSel && !sameSelPos(this.view.state.selection, domChange.newSel.main))) this.view.update([]);
       return handled;
     };
-    _proto77.readMutation = function readMutation(rec) {
+    _proto77.readMutation = function readMutation(rec, childScanCache) {
       var tile = this.view.docView.tile.nearest(rec.target);
       if (!tile || tile.isWidget()) return null;
       tile.markDirty(rec.type == "attributes");
       if (rec.type == "childList") {
-        var childBefore = findChild(tile, rec.previousSibling || rec.target.previousSibling, -1);
-        var childAfter = findChild(tile, rec.nextSibling || rec.target.nextSibling, 1);
+        var childBefore = findChild(tile, rec.previousSibling || rec.target.previousSibling, -1, childScanCache);
+        var childAfter = findChild(tile, rec.nextSibling || rec.target.nextSibling, 1, childScanCache);
         return {
           from: childBefore ? tile.posAfter(childBefore) : tile.posAtStart,
           to: childAfter ? tile.posBefore(childAfter) : tile.posAtEnd,
@@ -10811,7 +10812,35 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
     return DOMObserver;
   }();
-  function findChild(tile, dom, dir) {
+  function findChildInMutationBatch(tile, dom, dir, cache, getTile) {
+    var sides = cache.get(tile);
+    if (!sides) cache.set(tile, sides = [new Map(), new Map()]);
+    var results = sides[dir > 0 ? 1 : 0];
+    var path = [];
+    var found = null;
+    while (dom) {
+      var known = results.get(dom);
+      if (known !== void 0) {
+        found = known;
+        break;
+      }
+      path.push(dom);
+      var candidate = getTile(dom);
+      if (candidate && candidate.parent === tile) {
+        found = candidate;
+        break;
+      }
+      var parent2 = dom.parentNode;
+      dom = parent2 !== tile.dom ? parent2 : dir > 0 ? dom.nextSibling : dom.previousSibling;
+    }
+    for (var _i36 = 0, _path = path; _i36 < _path.length; _i36++) {
+      var node = _path[_i36];
+      results.set(node, found);
+    }
+    return found;
+  }
+  function findChild(tile, dom, dir, cache) {
+    if (cache) return findChildInMutationBatch(tile, dom, dir, cache, Tile.get);
     while (dom) {
       var curTile = Tile.get(dom);
       if (curTile && curTile.parent == tile) return curTile;
@@ -10916,8 +10945,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       this.handlers.characterboundsupdate = function (e) {
         var rects = [],
           prev = null;
-        for (var _i36 = _this48.toEditorPos(e.rangeStart), end = _this48.toEditorPos(e.rangeEnd); _i36 < end; _i36++) {
-          var rect = view.coordsForChar(_i36);
+        for (var _i37 = _this48.toEditorPos(e.rangeStart), end = _this48.toEditorPos(e.rangeEnd); _i37 < end; _i37++) {
+          var rect = view.coordsForChar(_i37);
           prev = rect && new DOMRect(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top) || prev || new DOMRect();
           rects.push(prev);
         }
@@ -11293,7 +11322,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           _p.mustUpdate = update;
         }
       }
-      for (var _i37 = 0; _i37 < this.plugins.length; _i37++) this.plugins[_i37].update(this);
+      for (var _i38 = 0; _i38 < this.plugins.length; _i38++) this.plugins[_i38].update(this);
       if (prevSpecs != specs) this.inputState.ensureHandlers(this.plugins);
     };
     _proto79.docViewUpdate = function docViewUpdate() {
@@ -11332,7 +11361,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (Math.abs(scrollOffset - this.viewState.scrollOffset) > 1) scrollAnchorHeight = -1;
       this.viewState.scrollAnchorHeight = -1;
       try {
-        for (var _i38 = 0;; _i38++) {
+        for (var _i39 = 0;; _i39++) {
           if (scrollAnchorHeight < 0) {
             if (isScrolledToBottom(scroll || this.win)) {
               scrollAnchorPos = -1;
@@ -11346,7 +11375,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           this.updateState = 1;
           var changed = this.viewState.measure();
           if (!changed && !this.measureRequests.length && this.viewState.scrollTarget == null) break;
-          if (_i38 > 5) {
+          if (_i39 > 5) {
             console.warn(this.measureRequests.length ? "Measure loop restarted more than 5 times" : "Viewport failed to stabilize");
             break;
           }
@@ -11478,9 +11507,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       });
       if (request) {
         if (this.measureRequests.indexOf(request) > -1) return;
-        if (request.key != null) for (var _i39 = 0; _i39 < this.measureRequests.length; _i39++) {
-          if (this.measureRequests[_i39].key === request.key) {
-            this.measureRequests[_i39] = request;
+        if (request.key != null) for (var _i40 = 0; _i40 < this.measureRequests.length; _i40++) {
+          if (this.measureRequests[_i40].key === request.key) {
+            this.measureRequests[_i40] = request;
             return;
           }
         }
@@ -11792,10 +11821,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var x = 5,
         y = 5;
       for (var _iterator94 = _createForOfIteratorHelperLoose(inputs), _step94; !(_step94 = _iterator94()).done;) {
-        var _i40 = _step94.value;
-        if (typeof _i40 == "number") x = y = _i40;else {
-          x = _i40.x;
-          y = _i40.y;
+        var _i41 = _step94.value;
+        if (typeof _i41 == "number") x = y = _i41;else {
+          x = _i41.x;
+          y = _i41.y;
         }
       }
       return {
@@ -11834,8 +11863,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       })) return cache;
       var result = [],
         lastDir = cache.length ? cache[cache.length - 1].dir : _Direction.LTR;
-      for (var _i41 = Math.max(0, cache.length - 10); _i41 < cache.length; _i41++) {
-        var entry = cache[_i41];
+      for (var _i42 = Math.max(0, cache.length - 10); _i42 < cache.length; _i42++) {
+        var entry = cache[_i42];
         if (entry.dir == lastDir && !changes.touchesRange(entry.from, entry.to)) result.push(new _CachedOrder(changes.mapPos(entry.from, 1), changes.mapPos(entry.to, -1), entry.dir, entry.isolates, false, entry.order));
       }
       return result;
@@ -11843,8 +11872,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return _CachedOrder;
   }();
   function attrsFromFacet(view, facet, base2) {
-    for (var sources = view.state.facet(facet), _i42 = sources.length - 1; _i42 >= 0; _i42--) {
-      var source = sources[_i42],
+    for (var sources = view.state.facet(facet), _i43 = sources.length - 1; _i43 >= 0; _i43--) {
+      var source = sources[_i43],
         value = typeof source == "function" ? source(view) : source;
       if (value) combineAttrs(value, base2);
     }
@@ -11856,8 +11885,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     var result = parts[parts.length - 1];
     if (result == "Space") result = " ";
     var alt, ctrl, shift2, meta2;
-    for (var _i43 = 0; _i43 < parts.length - 1; ++_i43) {
-      var mod = parts[_i43];
+    for (var _i44 = 0; _i44 < parts.length - 1; ++_i44) {
+      var mod = parts[_i44];
       if (new RegExp("^(cmd|meta|m)$", "i").test(mod)) meta2 = true;else if (new RegExp("^a(lt)?$", "i").test(mod)) alt = true;else if (new RegExp("^(c|ctrl|control)$", "i").test(mod)) ctrl = true;else if (new RegExp("^s(hift)?$", "i").test(mod)) shift2 = true;else if (new RegExp("^mod$", "i").test(mod)) {
         if (platform == "mac") meta2 = true;else ctrl = true;
       } else throw new Error("Unrecognized modifier name: " + mod);
@@ -11914,7 +11943,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         return normalizeKeyName(k, platform);
       });
       var _loop0 = function _loop0() {
-        var prefix = parts.slice(0, _i44).join(" ");
+        var prefix = parts.slice(0, _i45).join(" ");
         checkPrefix(prefix, true);
         if (!scopeObj[prefix]) scopeObj[prefix] = {
           preventDefault: true,
@@ -11932,7 +11961,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           }]
         };
       };
-      for (var _i44 = 1; _i44 < parts.length; _i44++) {
+      for (var _i45 = 1; _i45 < parts.length; _i45++) {
         _loop0();
       }
       var full = parts.join(" ");
@@ -12139,7 +12168,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         bottom = _ref11.bottom,
         horizontal = _ref11.horizontal;
       var pieces2 = [];
-      for (var _i45 = 0; _i45 < horizontal.length; _i45 += 2) pieces2.push(piece(horizontal[_i45], top2, horizontal[_i45 + 1], bottom));
+      for (var _i46 = 0; _i46 < horizontal.length; _i46 += 2) pieces2.push(piece(horizontal[_i46], top2, horizontal[_i46 + 1], bottom));
       return pieces2;
     }
     function drawForLine(from2, to2, line) {
@@ -12913,15 +12942,15 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     if (a.off > MaxOff || b.off > MaxOff || a.col < 0 || b.col < 0) {
       var startOff = Math.min(a.off, b.off),
         endOff = Math.max(a.off, b.off);
-      for (var _i46 = startLine; _i46 <= endLine; _i46++) {
-        var line = state.doc.line(_i46);
+      for (var _i47 = startLine; _i47 <= endLine; _i47++) {
+        var line = state.doc.line(_i47);
         if (line.length <= endOff) ranges.push(_EditorSelection2.range(line.from + startOff, line.to + endOff));
       }
     } else {
       var startCol = Math.min(a.col, b.col),
         endCol = Math.max(a.col, b.col);
-      for (var _i47 = startLine; _i47 <= endLine; _i47++) {
-        var _line2 = state.doc.line(_i47);
+      for (var _i48 = startLine; _i48 <= endLine; _i48++) {
+        var _line2 = state.doc.line(_i48);
         var start = _findColumn(_line2.text, startCol, state.tabSize, true);
         if (start < 0) {
           ranges.push(_EditorSelection2.cursor(_line2.to));
@@ -13071,8 +13100,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       }
       var tooltipViews = [],
         newAbove = above ? [] : null;
-      for (var _i48 = 0; _i48 < tooltips2.length; _i48++) {
-        var tip = tooltips2[_i48],
+      for (var _i49 = 0; _i49 < tooltips2.length; _i49++) {
+        var tip = tooltips2[_i49],
           known = -1;
         if (!tip) continue;
         for (var i3 = 0; i3 < this.tooltips.length; i3++) {
@@ -13080,11 +13109,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           if (other && other.create == tip.create) known = i3;
         }
         if (known < 0) {
-          tooltipViews[_i48] = this.createTooltipView(tip, _i48 ? tooltipViews[_i48 - 1] : null);
-          if (newAbove) newAbove[_i48] = !!tip.above;
+          tooltipViews[_i49] = this.createTooltipView(tip, _i49 ? tooltipViews[_i49 - 1] : null);
+          if (newAbove) newAbove[_i49] = !!tip.above;
         } else {
-          var tooltipView = tooltipViews[_i48] = this.tooltipViews[known];
-          if (newAbove) newAbove[_i48] = above[known];
+          var tooltipView = tooltipViews[_i49] = this.tooltipViews[known];
+          if (newAbove) newAbove[_i49] = above[known];
           if (tooltipView.update) tooltipView.update(_update15);
         }
       }
@@ -13331,12 +13360,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         scaleX = measured.scaleX,
         scaleY = measured.scaleY;
       var others = [];
-      for (var _i49 = 0; _i49 < this.manager.tooltips.length; _i49++) {
-        var tooltip = this.manager.tooltips[_i49],
-          tView = this.manager.tooltipViews[_i49],
+      for (var _i50 = 0; _i50 < this.manager.tooltips.length; _i50++) {
+        var tooltip = this.manager.tooltips[_i50],
+          tView = this.manager.tooltipViews[_i50],
           dom = tView.dom;
-        var pos = measured.pos[_i49],
-          size = measured.size[_i49];
+        var pos = measured.pos[_i50],
+          size = measured.size[_i50];
         if (!pos || tooltip.clip !== false && (pos.bottom <= Math.max(visible.top, space.top) || pos.top >= Math.min(visible.bottom, space.bottom) || pos.right < Math.max(visible.left, space.left) - 0.1 || pos.left > Math.min(visible.right, space.right) + 0.1)) {
           dom.style.top = Outside;
           continue;
@@ -13348,8 +13377,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         var offset = tView.offset || noOffset,
           ltr = this.view.textDirection == _Direction.LTR;
         var left = size.width > space.right - space.left ? ltr ? space.left : space.right - size.width : ltr ? Math.max(space.left, Math.min(pos.left - (arrow ? 14 : 0) + offset.x, space.right - width)) : Math.min(Math.max(space.left, pos.left - width + (arrow ? 14 : 0) - offset.x), space.right - width);
-        var above = this.above[_i49];
-        if (!tooltip.strictSide && (above ? pos.top - height - arrowHeight - offset.y < space.top : pos.bottom + height + arrowHeight + offset.y > space.bottom) && above == space.bottom - pos.bottom > pos.top - space.top) above = this.above[_i49] = !above;
+        var above = this.above[_i50];
+        if (!tooltip.strictSide && (above ? pos.top - height - arrowHeight - offset.y < space.top : pos.bottom + height + arrowHeight + offset.y > space.bottom) && above == space.bottom - pos.bottom > pos.top - space.top) above = this.above[_i50] = !above;
         var spaceVert = (above ? pos.top - space.top : space.bottom - pos.bottom) - arrowHeight;
         if (spaceVert < height && tView.resize !== false) {
           if (spaceVert < this.view.defaultLineHeight) {
@@ -13957,8 +13986,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         this.panels = panels2;
         this.top.sync(top2);
         this.bottom.sync(bottom);
-        for (var _i50 = 0, _mount = mount; _i50 < _mount.length; _i50++) {
-          var _p3 = _mount[_i50];
+        for (var _i51 = 0, _mount = mount; _i51 < _mount.length; _i51++) {
+          var _p3 = _mount[_i51];
           _p3.dom.classList.add("cm-panel");
           if (_p3.mount) _p3.mount();
         }
@@ -14144,7 +14173,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     }
     var forms = content2.nodeName == "FORM" ? [content2] : content2.querySelectorAll("form");
     var _loop12 = function _loop12() {
-      var form = forms[_i51];
+      var form = forms[_i52];
       form.addEventListener("keydown", function (event) {
         if (event.keyCode == 27) {
           event.preventDefault();
@@ -14159,7 +14188,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         done(form);
       });
     };
-    for (var _i51 = 0; _i51 < forms.length; _i51++) {
+    for (var _i52 = 0; _i52 < forms.length; _i52++) {
       _loop12();
     }
     var panel = crelt("div", content2, crelt("button", {
@@ -14381,8 +14410,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           _g.dom.remove();
           if (gutters2.indexOf(_g) < 0) _g.destroy();
         }
-        for (var _i52 = 0, _gutters2 = gutters2; _i52 < _gutters2.length; _i52++) {
-          var g = _gutters2[_i52];
+        for (var _i53 = 0, _gutters2 = gutters2; _i53 < _gutters2.length; _i53++) {
+          var g = _gutters2[_i53];
           if (g.config.side == "after") this.getDOMAfter().appendChild(g.dom);else this.dom.appendChild(g.dom);
         }
         this.gutters = gutters2;
@@ -14557,8 +14586,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (marker) {
           var c = marker.elementClass;
           if (c) cls += " " + c;
-          for (var _i53 = iOld; _i53 < this.markers.length; _i53++) if (this.markers[_i53].compare(marker)) {
-            skipTo = _i53;
+          for (var _i54 = iOld; _i54 < this.markers.length; _i54++) if (this.markers[_i54].compare(marker)) {
+            skipTo = _i54;
             matched = true;
             break;
           }
@@ -14590,7 +14619,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }();
   function sameMarkers(a, b) {
     if (a.length != b.length) return false;
-    for (var _i54 = 0; _i54 < a.length; _i54++) if (!a[_i54].compare(b[_i54])) return false;
+    for (var _i55 = 0; _i55 < a.length; _i55++) if (!a[_i55].compare(b[_i55])) return false;
     return true;
   }
   var _lineNumberMarkers = _Facet2.define();
@@ -15092,8 +15121,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         }
       }
       return function (node) {
-        for (var groups = node.prop(_NodeProp.group), _i55 = -1; _i55 < (groups ? groups.length : 0); _i55++) {
-          var found = direct[_i55 < 0 ? node.name : groups[_i55]];
+        for (var groups = node.prop(_NodeProp.group), _i56 = -1; _i56 < (groups ? groups.length : 0); _i56++) {
+          var found = direct[_i56 < 0 ? node.name : groups[_i56]];
           if (found) return found;
         }
       };
@@ -15124,7 +15153,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var _NodeSet2 = function () {
     function _NodeSet(types2) {
       this.types = types2;
-      for (var _i56 = 0; _i56 < types2.length; _i56++) if (types2[_i56].id != _i56) throw new RangeError("Node type ids should correspond to array positions when creating a node set");
+      for (var _i57 = 0; _i57 < types2.length; _i57++) if (types2[_i57].id != _i57) throw new RangeError("Node type ids should correspond to array positions when creating a node set");
     }
     var _proto105 = _NodeSet.prototype;
     _proto105.extend = function extend() {
@@ -15362,9 +15391,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     _proto108.findChild = function findChild(startIndex, endIndex, dir, pos, side) {
       var buffer = this.buffer,
         pick = -1;
-      for (var _i57 = startIndex; _i57 != endIndex; _i57 = buffer[_i57 + 3]) {
-        if (checkSide(side, pos, buffer[_i57 + 1], buffer[_i57 + 2])) {
-          pick = _i57;
+      for (var _i58 = startIndex; _i58 != endIndex; _i58 = buffer[_i58 + 3]) {
+        if (checkSide(side, pos, buffer[_i58 + 1], buffer[_i58 + 2])) {
+          pick = _i58;
           if (dir > 0) break;
         }
       }
@@ -15374,11 +15403,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var b = this.buffer;
       var copy = new Uint16Array(endI - startI),
         len = 0;
-      for (var _i58 = startI, j = 0; _i58 < endI;) {
-        copy[j++] = b[_i58++];
-        copy[j++] = b[_i58++] - from;
-        var to = copy[j++] = b[_i58++] - from;
-        copy[j++] = b[_i58++] - startI;
+      for (var _i59 = startI, j = 0; _i59 < endI;) {
+        copy[j++] = b[_i59++];
+        copy[j++] = b[_i59++] - from;
+        var to = copy[j++] = b[_i59++] - from;
+        copy[j++] = b[_i59++] - startI;
         len = Math.max(len, to);
       }
       return new _TreeBuffer(copy, len, this.set);
@@ -15760,11 +15789,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     if (!heads.length) return null;
     var pick = 0,
       picked = heads[0];
-    for (var _i59 = 1; _i59 < heads.length; _i59++) {
-      var node = heads[_i59];
+    for (var _i60 = 1; _i60 < heads.length; _i60++) {
+      var node = heads[_i60];
       if (node.from > picked.from || node.to < picked.to) {
         picked = node;
-        pick = _i59;
+        pick = _i60;
       }
     }
     var next = picked instanceof TreeNode && picked.index < 0 ? null : picked.parent;
@@ -15914,7 +15943,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (dir > 0) {
           if (this.index < buffer.buffer.buffer.length) return false;
         } else {
-          for (var _i60 = 0; _i60 < this.index; _i60++) if (buffer.buffer.buffer[_i60 + 3] < this.index) return false;
+          for (var _i61 = 0; _i61 < this.index; _i61++) if (buffer.buffer.buffer[_i61 + 3] < this.index) return false;
         }
         index = buffer.index;
         parent2 = buffer.parent;
@@ -15925,8 +15954,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       }
       for (; parent2; _parent3 = parent2, index = _parent3.index, parent2 = _parent3._parent, _parent3) {
         var _parent3;
-        if (index > -1) for (var _i61 = index + dir, e = dir < 0 ? -1 : parent2._tree.children.length; _i61 != e; _i61 += dir) {
-          var child = parent2._tree.children[_i61];
+        if (index > -1) for (var _i62 = index + dir, e = dir < 0 ? -1 : parent2._tree.children.length; _i62 != e; _i62 += dir) {
+          var child = parent2._tree.children[_i62];
           if (this.mode & _IterMode.IncludeAnonymous || child instanceof _TreeBuffer2 || !child.type.isAnonymous || hasChild(child)) return false;
         }
       }
@@ -15984,12 +16013,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (!this.buffer) return matchNodeContext(this.node.parent, context);
       var buffer = this.buffer.buffer,
         types2 = buffer.set.types;
-      for (var _i62 = context.length - 1, d = this.stack.length - 1; _i62 >= 0; d--) {
-        if (d < 0) return matchNodeContext(this._tree, context, _i62);
+      for (var _i63 = context.length - 1, d = this.stack.length - 1; _i63 >= 0; d--) {
+        if (d < 0) return matchNodeContext(this._tree, context, _i63);
         var type = types2[buffer.buffer[this.stack[d]]];
         if (!type.isAnonymous) {
-          if (context[_i62] && context[_i62] != type.name) return false;
-          _i62--;
+          if (context[_i63] && context[_i63] != type.name) return false;
+          _i63--;
         }
       }
       return true;
@@ -16017,7 +16046,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             index = this.stack[--d];
           }
         }
-        for (var _i63 = depth; _i63 < this.stack.length; _i63++) result = new BufferNode(this.buffer, result, this.stack[_i63]);
+        for (var _i64 = depth; _i64 < this.stack.length; _i64++) result = new BufferNode(this.buffer, result, this.stack[_i64]);
         return this.bufferNode = new BufferNode(this.buffer, result, this.index);
       }
     }, {
@@ -16139,10 +16168,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (nodeCount) {
         var buffer2 = new Uint16Array(nodeCount * 4);
         var _start3 = nodes[nodes.length - 2];
-        for (var _i64 = nodes.length - 3, j = 0; _i64 >= 0; _i64 -= 3) {
-          buffer2[j++] = nodes[_i64];
-          buffer2[j++] = nodes[_i64 + 1] - _start3;
-          buffer2[j++] = nodes[_i64 + 2] - _start3;
+        for (var _i65 = nodes.length - 3, j = 0; _i65 >= 0; _i65 -= 3) {
+          buffer2[j++] = nodes[_i65];
+          buffer2[j++] = nodes[_i65 + 1] - _start3;
+          buffer2[j++] = nodes[_i65 + 2] - _start3;
           buffer2[j++] = j;
         }
         children2.push(new _TreeBuffer2(buffer2, nodes[2] - _start3, nodeSet2));
@@ -16278,22 +16307,22 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   function balanceRange(balanceType, children, positions, from, to, start, length, mkTop, mkTree) {
     var total = 0;
-    for (var _i65 = from; _i65 < to; _i65++) total += nodeSize(balanceType, children[_i65]);
+    for (var _i66 = from; _i66 < to; _i66++) total += nodeSize(balanceType, children[_i66]);
     var maxChild = Math.ceil(total * 1.5 / 8);
     var localChildren = [],
       localPositions = [];
     function divide(children2, positions2, from2, to2, offset) {
-      for (var _i66 = from2; _i66 < to2;) {
-        var groupFrom = _i66,
-          groupStart = positions2[_i66],
-          groupSize = nodeSize(balanceType, children2[_i66]);
-        _i66++;
-        for (; _i66 < to2; _i66++) {
-          var nextSize = nodeSize(balanceType, children2[_i66]);
+      for (var _i67 = from2; _i67 < to2;) {
+        var groupFrom = _i67,
+          groupStart = positions2[_i67],
+          groupSize = nodeSize(balanceType, children2[_i67]);
+        _i67++;
+        for (; _i67 < to2; _i67++) {
+          var nextSize = nodeSize(balanceType, children2[_i67]);
           if (groupSize + nextSize >= maxChild) break;
           groupSize += nextSize;
         }
-        if (_i66 == groupFrom + 1) {
+        if (_i67 == groupFrom + 1) {
           if (groupSize > maxChild) {
             var only = children2[groupFrom];
             divide(only.children, only.positions, 0, only.children.length, positions2[groupFrom] + offset);
@@ -16301,8 +16330,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           }
           localChildren.push(children2[groupFrom]);
         } else {
-          var length2 = positions2[_i66 - 1] + children2[_i66 - 1].length - groupStart;
-          localChildren.push(balanceRange(balanceType, children2, positions2, groupFrom, _i66, groupStart, length2, null, mkTree));
+          var length2 = positions2[_i67 - 1] + children2[_i67 - 1].length - groupStart;
+          localChildren.push(balanceRange(balanceType, children2, positions2, groupFrom, _i67, groupStart, length2, null, mkTree));
         }
         localPositions.push(groupStart + offset - start);
       }
@@ -16525,7 +16554,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
     _proto116.stopAt = function stopAt(pos) {
       this.stoppedAt = pos;
-      if (this.baseParse) this.baseParse.stopAt(pos);else for (var _i67 = this.innerDone; _i67 < this.inner.length; _i67++) this.inner[_i67].parse.stopAt(pos);
+      if (this.baseParse) this.baseParse.stopAt(pos);else for (var _i68 = this.innerDone; _i68 < this.inner.length; _i68++) this.inner[_i68].parse.stopAt(pos);
     };
     _proto116.startInner = function startInner() {
       var fragmentCursor = new FragmentCursor(this.fragments);
@@ -16620,8 +16649,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       get: function get() {
         if (this.baseParse) return 0;
         var pos = this.input.length;
-        for (var _i68 = this.innerDone; _i68 < this.inner.length; _i68++) {
-          if (this.inner[_i68].from < pos) pos = Math.min(pos, this.inner[_i68].parse.parsedPos);
+        for (var _i69 = this.innerDone; _i69 < this.inner.length; _i69++) {
+          if (this.inner[_i69].from < pos) pos = Math.min(pos, this.inner[_i69].parse.parsedPos);
         }
         return pos;
       }
@@ -16670,8 +16699,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return new _Tree2(type, children, positions, length);
     }
     base2.children[i2] = split(0, b.length, _NodeType2.none, 0, buf.length, stack.length - 1);
-    for (var _i69 = 0, _newStack = newStack; _i69 < _newStack.length; _i69++) {
-      var index = _newStack[_i69];
+    for (var _i70 = 0, _newStack = newStack; _i70 < _newStack.length; _i70++) {
+      var index = _newStack[_i70];
       var tree = cursor.tree.children[index],
         pos = cursor.tree.positions[index];
       cursor.yield(new TreeNode(tree, pos + cursor.from, index, cursor._tree));
@@ -16745,8 +16774,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         for (var pos2 = this.inner.cursor.node; pos2; pos2 = pos2.parent) {
           var mount = (_a2 = pos2.tree) === null || _a2 === void 0 ? void 0 : _a2.prop(_NodeProp.mounted);
           if (mount && mount.parser == parser) {
-            for (var _i70 = this.fragI; _i70 < this.fragments.length; _i70++) {
-              var frag = this.fragments[_i70];
+            for (var _i71 = this.fragI; _i71 < this.fragments.length; _i71++) {
+              var frag = this.fragments[_i71];
               if (frag.from >= pos2.to) break;
               if (frag.tree == this.curFrag.tree) result.push({
                 frag: frag,
@@ -16764,9 +16793,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   function punchRanges(outer, ranges) {
     var copy = null,
       current = ranges;
-    for (var _i71 = 1, j = 0; _i71 < outer.length; _i71++) {
-      var gapFrom = outer[_i71 - 1].to,
-        gapTo = outer[_i71].from;
+    for (var _i72 = 1, j = 0; _i72 < outer.length; _i72++) {
+      var gapFrom = outer[_i72 - 1].to,
+        gapTo = outer[_i72].from;
       for (; j < current.length; j++) {
         var _r7 = current[j];
         if (_r7.from >= gapTo) break;
@@ -16832,12 +16861,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           return new Range2(r.from + pos, r.to + pos);
         });
         var changes = findCoverChanges(ranges, overlay, from, to);
-        for (var _i72 = 0, pos2 = from;; _i72++) {
-          var last = _i72 == changes.length,
-            end = last ? to : changes[_i72].from;
+        for (var _i73 = 0, pos2 = from;; _i73++) {
+          var last = _i73 == changes.length,
+            end = last ? to : changes[_i73].from;
           if (end > pos2) result.push(new _TreeFragment2(pos2, end, mount.tree, -startPos, frag.from >= pos2 || frag.openStart, frag.to <= end || frag.openEnd));
           if (last) break;
-          pos2 = changes[_i72].to;
+          pos2 = changes[_i73].to;
         }
       } else {
         result.push(new _TreeFragment2(from, to, mount.tree, -startPos, frag.from >= startPos || frag.openStart, frag.to <= endPos || frag.openEnd));
@@ -16958,9 +16987,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   function powerSet(array) {
     var sets = [[]];
-    for (var _i73 = 0; _i73 < array.length; _i73++) {
+    for (var _i74 = 0; _i74 < array.length; _i74++) {
       for (var j = 0, e = sets.length; j < e; j++) {
-        sets.push(sets[j].concat(array[_i73]));
+        sets.push(sets[j].concat(array[_i74]));
       }
     }
     return sets.sort(function (a, b) {
@@ -17123,13 +17152,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     var pos = from;
     function writeTo(p, classes) {
       if (p <= pos) return;
-      for (var text = code2.slice(pos, p), _i74 = 0;;) {
-        var nextBreak = text.indexOf("\n", _i74);
+      for (var text = code2.slice(pos, p), _i75 = 0;;) {
+        var nextBreak = text.indexOf("\n", _i75);
         var upto = nextBreak < 0 ? text.length : nextBreak;
-        if (upto > _i74) putText(text.slice(_i74, upto), classes);
+        if (upto > _i75) putText(text.slice(_i75, upto), classes);
         if (nextBreak < 0) break;
         putBreak();
-        _i74 = nextBreak + 1;
+        _i75 = nextBreak + 1;
       }
       pos = p;
     }
@@ -17182,8 +17211,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           return !h.scope || h.scope(mounted.tree.type);
         });
         var hasChild2 = cursor.firstChild();
-        for (var _i75 = 0, pos = start;; _i75++) {
-          var next = _i75 < mounted.overlay.length ? mounted.overlay[_i75] : null;
+        for (var _i76 = 0, pos = start;; _i76++) {
+          var next = _i76 < mounted.overlay.length ? mounted.overlay[_i76] : null;
           var nextPos = next ? next.from + start : end;
           var rangeFrom2 = Math.max(from, pos),
             rangeTo2 = Math.min(to, nextPos);
@@ -17507,9 +17536,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             if (result.length > size) return;
           }
         }
-        for (var _i76 = 0; _i76 < tree.children.length; _i76++) {
-          var ch = tree.children[_i76];
-          if (ch instanceof _Tree2) _explore(ch, tree.positions[_i76] + from);
+        for (var _i77 = 0; _i77 < tree.children.length; _i77++) {
+          var ch = tree.children[_i77];
+          if (ch instanceof _Tree2) _explore(ch, tree.positions[_i77] + from);
         }
       };
       _explore(_syntaxTree(state), 0);
@@ -17757,13 +17786,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (this.viewport.from == viewport.from && this.viewport.to == viewport.to) return false;
       this.viewport = viewport;
       var startLen = this.skipped.length;
-      for (var _i77 = 0; _i77 < this.skipped.length; _i77++) {
-        var _this$skipped$_i = this.skipped[_i77],
+      for (var _i78 = 0; _i78 < this.skipped.length; _i78++) {
+        var _this$skipped$_i = this.skipped[_i78],
           from = _this$skipped$_i.from,
           to = _this$skipped$_i.to;
         if (from < viewport.to && to > viewport.from) {
           this.fragments = cutFragments(this.fragments, from, to);
-          this.skipped.splice(_i77--, 1);
+          this.skipped.splice(_i78--, 1);
         }
       }
       if (this.skipped.length >= startLen) return false;
@@ -18093,7 +18122,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       }
       ch = " ";
     }
-    for (var _i78 = 0; _i78 < cols; _i78++) result += ch;
+    for (var _i79 = 0; _i79 < cols; _i79++) result += ch;
     return result;
   }
   function _getIndentation(context, pos) {
@@ -18222,8 +18251,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     if (inner != stack.node) {
       var add2 = [];
       for (var cur2 = inner; cur2 && !(cur2.from < stack.node.from || cur2.to > stack.node.to || cur2.from == stack.node.from && cur2.type == stack.node.type); cur2 = cur2.parent) add2.push(cur2);
-      for (var _i79 = add2.length - 1; _i79 >= 0; _i79--) stack = {
-        node: add2[_i79],
+      for (var _i80 = add2.length - 1; _i80 >= 0; _i80--) stack = {
+        node: add2[_i80],
         next: stack
       };
     }
@@ -18518,9 +18547,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     fromJSON: function fromJSON(value) {
       if (!Array.isArray(value) || value.length % 2) throw new RangeError("Invalid JSON for fold state");
       var ranges = [];
-      for (var _i80 = 0; _i80 < value.length;) {
-        var from = value[_i80++],
-          to = value[_i80++];
+      for (var _i81 = 0; _i81 < value.length;) {
+        var from = value[_i81++],
+          to = value[_i81++];
         if (typeof from != "number" || typeof to != "number") throw new RangeError("Invalid JSON for fold state");
         ranges.push(foldWidget.range(from, to));
       }
@@ -19215,8 +19244,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (end == -1) end = string2.length;
     }
     var n = startValue;
-    for (var _i81 = startIndex; _i81 < end; _i81++) {
-      if (string2.charCodeAt(_i81) == 9) n += tabSize - n % tabSize;else n++;
+    for (var _i82 = startIndex; _i82 < end; _i82++) {
+      if (string2.charCodeAt(_i82) == 9) n += tabSize - n % tabSize;else n++;
     }
     return n;
   }
@@ -19416,9 +19445,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       state: lang.streamParser.copyState(state),
       pos: off + tree.length
     };
-    for (var _i82 = tree.children.length - 1; _i82 >= 0; _i82--) {
-      var child = tree.children[_i82],
-        pos = off + tree.positions[_i82];
+    for (var _i83 = tree.children.length - 1; _i83 >= 0; _i83--) {
+      var child = tree.children[_i83],
+        pos = off + tree.positions[_i83];
       var found = child instanceof _Tree2 && pos < before && findState(lang, child, pos, startPos, before);
       if (found) return found;
     }
@@ -19427,13 +19456,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   function cutTree(lang, tree, from, to, inside) {
     if (inside && from <= 0 && to >= tree.length) return tree;
     if (!inside && from == 0 && tree.type == lang.topNode) inside = true;
-    for (var _i83 = tree.children.length - 1; _i83 >= 0; _i83--) {
-      var pos = tree.positions[_i83],
-        child = tree.children[_i83],
+    for (var _i84 = tree.children.length - 1; _i84 >= 0; _i84--) {
+      var pos = tree.positions[_i84],
+        child = tree.children[_i84],
         inner = void 0;
       if (pos < to && child instanceof _Tree2) {
         if (!(inner = cutTree(lang, child, from - pos, to - pos, inside))) break;
-        return !inside ? inner : new _Tree2(tree.type, tree.children.slice(0, _i83).concat(inner), tree.positions.slice(0, _i83 + 1), pos + inner.length);
+        return !inside ? inner : new _Tree2(tree.type, tree.children.slice(0, _i84).concat(inner), tree.positions.slice(0, _i84 + 1), pos + inner.length);
       }
     }
     return null;
@@ -19475,9 +19504,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         tree = _findStartInFragments.tree;
       this.state = state;
       this.parsedPos = this.chunkStart = from + tree.length;
-      for (var _i84 = 0; _i84 < tree.children.length; _i84++) {
-        this.chunks.push(tree.children[_i84]);
-        this.chunkPos.push(tree.positions[_i84]);
+      for (var _i85 = 0; _i85 < tree.children.length; _i85++) {
+        this.chunks.push(tree.children[_i85]);
+        this.chunkPos.push(tree.positions[_i85]);
       }
       if (context && this.parsedPos < context.viewport.from - 1e5 && ranges.some(function (r) {
         return r.from <= context.viewport.from && r.to >= context.viewport.from;
@@ -19607,7 +19636,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }();
   function readToken(token, stream, state) {
     stream.start = stream.pos;
-    for (var _i85 = 0; _i85 < 10; _i85++) {
+    for (var _i86 = 0; _i86 < 10; _i86++) {
       var result = token(stream, state);
       if (stream.pos > stream.start) return result;
     }
@@ -19619,8 +19648,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var warned = [];
   var byTag = Object.create(null);
   var defaultTable = Object.create(null);
-  for (var _i86 = 0, _arr2 = [["variable", "variableName"], ["variable-2", "variableName.special"], ["string-2", "string.special"], ["def", "variableName.definition"], ["tag", "tagName"], ["attribute", "attributeName"], ["type", "typeName"], ["builtin", "variableName.standard"], ["qualifier", "modifier"], ["error", "invalid"], ["header", "heading"], ["property", "propertyName"]]; _i86 < _arr2.length; _i86++) {
-    var _arr2$_i = _slicedToArray(_arr2[_i86], 2),
+  for (var _i87 = 0, _arr2 = [["variable", "variableName"], ["variable-2", "variableName.special"], ["string-2", "string.special"], ["def", "variableName.definition"], ["tag", "tagName"], ["attribute", "attributeName"], ["type", "typeName"], ["builtin", "variableName.standard"], ["qualifier", "modifier"], ["error", "invalid"], ["header", "heading"], ["property", "propertyName"]]; _i87 < _arr2.length; _i87++) {
+    var _arr2$_i = _slicedToArray(_arr2[_i87], 2),
       legacyName = _arr2$_i[0],
       _name3 = _arr2$_i[1];
     defaultTable[legacyName] = createTokenType(noTokens, _name3);
@@ -19699,7 +19728,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return line.length <= 4096 && /[\u0590-\u05f4\u0600-\u06ff\u0700-\u08ac\ufb50-\ufdff]/.test(line);
   }
   function textHasRTL(text) {
-    for (var _i87 = text.iter(); !_i87.next().done;) if (buildForLine(_i87.value)) return true;
+    for (var _i88 = text.iter(); !_i88.next().done;) if (buildForLine(_i88.value)) return true;
     return false;
   }
   function changeAddsRTL(change) {
@@ -19949,8 +19978,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return c;
     })) {
       var changes = [];
-      for (var _i88 = 0, comment2; _i88 < comments.length; _i88++) if (comment2 = comments[_i88]) {
-        var token = tokens[_i88],
+      for (var _i89 = 0, comment2; _i89 < comments.length; _i89++) if (comment2 = comments[_i89]) {
+        var token = tokens[_i89],
           _comment = comment2,
           open = _comment.open,
           close = _comment.close;
@@ -20005,7 +20034,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         pos = _line5.to + 1;
       }
       if (minIndent < 1e9) {
-        for (var _i89 = startI; _i89 < lines.length; _i89++) if (lines[_i89].indent < lines[_i89].line.text.length) lines[_i89].indent = minIndent;
+        for (var _i90 = startI; _i90 < lines.length; _i90++) if (lines[_i90].indent < lines[_i90].line.text.length) lines[_i90].indent = minIndent;
       }
       if (lines.length == startI + 1) lines[startI].single = true;
     }
@@ -20200,9 +20229,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return ranges.push(f, t2);
     });
     b.iterChangedRanges(function (_f, _t, f, t2) {
-      for (var _i90 = 0; _i90 < ranges.length;) {
-        var from = ranges[_i90++],
-          to = ranges[_i90++];
+      for (var _i91 = 0; _i91 < ranges.length;) {
+        var from = ranges[_i91++],
+          to = ranges[_i91++];
         if (t2 >= from && f <= to) isAdjacent2 = true;
       }
     });
@@ -20856,7 +20885,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (before[before.length - 1] == "	") return pos - 1;
         var col = _countColumn(before, state.tabSize),
           drop = col % _getIndentUnit(state) || _getIndentUnit(state);
-        for (var _i91 = 0; _i91 < drop && before[before.length - 1 - _i91] == " "; _i91++) pos--;
+        for (var _i92 = 0; _i92 < drop && before[before.length - 1 - _i92] == " "; _i92++) pos--;
         targetPos = pos;
       } else {
         targetPos = findClusterBreak2(line.text, pos - line.from, forward, forward) + line.from;
@@ -21545,22 +21574,22 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           start = this.bufferStart + this.bufferPos;
         this.bufferPos += codePointSize2(next);
         var norm = this.normalize(str);
-        if (norm.length) for (var _i92 = 0, pos = start, posPrecise = true;; _i92++) {
-          var code2 = norm.charCodeAt(_i92);
-          var match = this.match(code2, pos, posPrecise, this.bufferPos + this.bufferStart, _i92 == norm.length - 1);
+        if (norm.length) for (var _i93 = 0, pos = start, posPrecise = true;; _i93++) {
+          var code2 = norm.charCodeAt(_i93);
+          var match = this.match(code2, pos, posPrecise, this.bufferPos + this.bufferStart, _i93 == norm.length - 1);
           if (match) {
             this.value = match;
             return this;
           }
-          if (_i92 == norm.length - 1) break;
-          if (posPrecise && _i92 < str.length && str.charCodeAt(_i92) == code2) pos++;else posPrecise = false;
+          if (_i93 == norm.length - 1) break;
+          if (posPrecise && _i93 < str.length && str.charCodeAt(_i93) == code2) pos++;else posPrecise = false;
         }
       }
     };
     _proto146.match = function match(code2, pos, posPrecise, end, endPrecise) {
       var match = null;
-      for (var _i93 = 0; _i93 < this.matches.length;) {
-        var partial = this.matches[_i93],
+      for (var _i94 = 0; _i94 < this.matches.length;) {
+        var partial = this.matches[_i94],
           keep = false;
         if (this.query.charCodeAt(partial.index) == code2) {
           if (partial.index == this.query.length - 1) {
@@ -21574,7 +21603,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             keep = true;
           }
         }
-        if (keep) _i93++;else this.matches.splice(_i93, 1);
+        if (keep) _i94++;else this.matches.splice(_i94, 1);
       }
       if (this.query.charCodeAt(0) == code2) {
         if (this.query.length == 1) match = {
@@ -22237,11 +22266,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (!panel || !query.spec.valid) return _Decoration.none;
       var view = this.view;
       var builder = new _RangeSetBuilder2();
-      for (var _i94 = 0, ranges = view.visibleRanges, _l3 = ranges.length; _i94 < _l3; _i94++) {
-        var _ranges$_i2 = ranges[_i94],
+      for (var _i95 = 0, ranges = view.visibleRanges, _l3 = ranges.length; _i95 < _l3; _i95++) {
+        var _ranges$_i2 = ranges[_i95],
           from = _ranges$_i2.from,
           to = _ranges$_i2.to;
-        while (_i94 < _l3 - 1 && to > ranges[_i94 + 1].from - 2 * 250) to = ranges[++_i94].to;
+        while (_i95 < _l3 - 1 && to > ranges[_i95 + 1].from - 2 * 250) to = ranges[++_i95].to;
         query.highlight(view.state, from, to, function (from2, to2) {
           var selected = view.state.selection.ranges.some(function (r) {
             return r.from == from2 && r.to == to2;
@@ -22629,14 +22658,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       end = Math.min(lineEnd, to + AnnounceMargin);
     var text = view.state.sliceDoc(start, end);
     if (start != line.from) {
-      for (var _i95 = 0; _i95 < AnnounceMargin; _i95++) if (!Break.test(text[_i95 + 1]) && Break.test(text[_i95])) {
-        text = text.slice(_i95);
+      for (var _i96 = 0; _i96 < AnnounceMargin; _i96++) if (!Break.test(text[_i96 + 1]) && Break.test(text[_i96])) {
+        text = text.slice(_i96);
         break;
       }
     }
     if (end != lineEnd) {
-      for (var _i96 = text.length - 1; _i96 > text.length - AnnounceMargin; _i96--) if (!Break.test(text[_i96 - 1]) && Break.test(text[_i96])) {
-        text = text.slice(0, _i96);
+      for (var _i97 = text.length - 1; _i97 > text.length - AnnounceMargin; _i97--) if (!Break.test(text[_i97 - 1]) && Break.test(text[_i97])) {
+        text = text.slice(0, _i97);
         break;
       }
     }
@@ -22830,7 +22859,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     for (var _iterator224 = _createForOfIteratorHelperLoose(options), _step224; !(_step224 = _iterator224()).done;) {
       var label = _step224.value.label;
       first[label[0]] = true;
-      for (var _i97 = 1; _i97 < label.length; _i97++) rest[label[_i97]] = true;
+      for (var _i98 = 1; _i98 < label.length; _i98++) rest[label[_i98]] = true;
     }
     var source = toSet(first) + toSet(rest) + "*$";
     return [new RegExp("^" + source), new RegExp(source)];
@@ -22970,10 +22999,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var len = chars.length,
         anyTo = 0;
       if (direct < 0) {
-        for (var _i98 = 0, e = Math.min(word.length, 200); _i98 < e && anyTo < len;) {
-          var next = codePointAt2(word, _i98);
-          if (next == chars[anyTo] || next == folded[anyTo]) any[anyTo++] = _i98;
-          _i98 += codePointSize2(next);
+        for (var _i99 = 0, e = Math.min(word.length, 200); _i99 < e && anyTo < len;) {
+          var next = codePointAt2(word, _i99);
+          if (next == chars[anyTo] || next == folded[anyTo]) any[anyTo++] = _i99;
+          _i99 += codePointSize2(next);
         }
         if (anyTo < len) return null;
       }
@@ -22985,14 +23014,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         adjacentEnd = -1;
       var hasLower = /[a-z]/.test(word),
         wordAdjacent = true;
-      for (var _i99 = 0, _e10 = Math.min(word.length, 200), prevType = 0; _i99 < _e10 && byWordTo < len;) {
-        var _next4 = codePointAt2(word, _i99);
+      for (var _i100 = 0, _e10 = Math.min(word.length, 200), prevType = 0; _i100 < _e10 && byWordTo < len;) {
+        var _next4 = codePointAt2(word, _i100);
         if (direct < 0) {
-          if (preciseTo < len && _next4 == chars[preciseTo]) precise[preciseTo++] = _i99;
+          if (preciseTo < len && _next4 == chars[preciseTo]) precise[preciseTo++] = _i100;
           if (adjacentTo < len) {
             if (_next4 == chars[adjacentTo] || _next4 == folded[adjacentTo]) {
-              if (adjacentTo == 0) adjacentStart = _i99;
-              adjacentEnd = _i99 + 1;
+              if (adjacentTo == 0) adjacentStart = _i100;
+              adjacentEnd = _i100 + 1;
               adjacentTo++;
             } else {
               adjacentTo = 0;
@@ -23001,11 +23030,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         }
         var ch = void 0,
           type = _next4 < 255 ? _next4 >= 48 && _next4 <= 57 || _next4 >= 97 && _next4 <= 122 ? 2 : _next4 >= 65 && _next4 <= 90 ? 1 : 0 : (ch = _fromCodePoint(_next4)) != ch.toLowerCase() ? 1 : ch != ch.toUpperCase() ? 2 : 0;
-        if (!_i99 || type == 1 && hasLower || prevType == 0 && type != 0) {
-          if (chars[byWordTo] == _next4 || folded[byWordTo] == _next4 && (byWordFolded = true)) byWord[byWordTo++] = _i99;else if (byWord.length) wordAdjacent = false;
+        if (!_i100 || type == 1 && hasLower || prevType == 0 && type != 0) {
+          if (chars[byWordTo] == _next4 || folded[byWordTo] == _next4 && (byWordFolded = true)) byWord[byWordTo++] = _i100;else if (byWord.length) wordAdjacent = false;
         }
         prevType = type;
-        _i99 += codePointSize2(_next4);
+        _i100 += codePointSize2(_next4);
       }
       if (byWordTo == len && byWord[0] == 0 && wordAdjacent) return this.result(-100 + (byWordFolded ? -200 : 0), byWord, word);
       if (adjacentTo == len && adjacentStart == 0) return this.ret(-200 - word.length + (adjacentEnd == word.length ? 0 : -100), [0, adjacentEnd]);
@@ -23365,10 +23394,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
     _proto158.updateSelectedOption = function updateSelectedOption(selected) {
       var set = null;
-      for (var opt = this.list.firstChild, _i100 = this.range.from; opt; opt = opt.nextSibling, _i100++) {
+      for (var opt = this.list.firstChild, _i101 = this.range.from; opt; opt = opt.nextSibling, _i101++) {
         if (opt.nodeName != "LI" || !opt.id) {
-          _i100--;
-        } else if (_i100 == selected) {
+          _i101--;
+        } else if (_i101 == selected) {
           if (!opt.hasAttribute("aria-selected")) {
             opt.setAttribute("aria-selected", "true");
             set = opt;
@@ -23422,14 +23451,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (e.target == ul) e.preventDefault();
       });
       var curSection = null;
-      for (var _i101 = range.from; _i101 < range.to; _i101++) {
-        var _options$_i = options[_i101],
+      for (var _i102 = range.from; _i102 < range.to; _i102++) {
+        var _options$_i = options[_i102],
           completion2 = _options$_i.completion,
           match = _options$_i.match,
           section = completion2.section;
         if (section) {
           var _name4 = typeof section == "string" ? section : section.name;
-          if (_name4 != curSection && (_i101 > range.from || range.from == 0)) {
+          if (_name4 != curSection && (_i102 > range.from || range.from == 0)) {
             curSection = _name4;
             if (typeof section != "string" && section.header) {
               ul.appendChild(section.header(section));
@@ -23440,7 +23469,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           }
         }
         var li = ul.appendChild(document.createElement("li"));
-        li.id = id2 + "-" + _i101;
+        li.id = id2 + "-" + _i102;
         li.setAttribute("role", "option");
         var cls = this.optionClass(completion2);
         if (cls) li.className = cls;
@@ -23581,8 +23610,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var selected = state.facet(completionConfig).selectOnOpen ? 0 : -1;
       if (prev && prev.selected != selected && prev.selected != -1) {
         var selectedValue = prev.options[prev.selected].completion;
-        for (var _i102 = 0; _i102 < options.length; _i102++) if (options[_i102].completion == selectedValue) {
-          selected = _i102;
+        for (var _i103 = 0; _i103 < options.length; _i103++) if (options[_i103].completion == selectedValue) {
+          selected = _i103;
           break;
         }
       }
@@ -23897,8 +23926,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         var type = getUpdateType(tr, conf);
         return type & 8 || (tr.selection || tr.docChanged) && !(type & 3);
       });
-      for (var _i103 = 0; _i103 < this.running.length; _i103++) {
-        var query = this.running[_i103];
+      for (var _i104 = 0; _i104 < this.running.length; _i104++) {
+        var query = this.running[_i104];
         if (doesReset || query.context.abortOnDocChange && _update31.docChanged || query.updates.length + _update31.transactions.length > MaxUpdateCount && Date.now() - query.time > MinAbortTime) {
           for (var _iterator239 = _createForOfIteratorHelperLoose(query.context.abortListeners), _step239; !(_step239 = _iterator239()).done;) {
             var handler = _step239.value;
@@ -23909,7 +23938,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             }
           }
           query.context.abortListeners = null;
-          this.running.splice(_i103--, 1);
+          this.running.splice(_i104--, 1);
         } else {
           var _query$updates;
           (_query$updates = query.updates).push.apply(_query$updates, _toConsumableArray(_update31.transactions));
@@ -23990,13 +24019,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var updated = [];
       var conf = this.view.state.facet(completionConfig),
         cState = this.view.state.field(completionState);
-      var _loop22 = function _loop22(_i105) {
-          var query = _this101.running[_i105];
+      var _loop22 = function _loop22(_i106) {
+          var query = _this101.running[_i106];
           if (query.done === void 0) {
-            _i104 = _i105;
+            _i105 = _i106;
             return 0;
           }
-          _this101.running.splice(_i105--, 1);
+          _this101.running.splice(_i106--, 1);
           if (query.done) {
             var pos = cur(query.updates.length ? query.updates[0].startState : _this101.view.state);
             var limit = Math.min(pos, query.done.from + (query.active.explicit ? 0 : 1));
@@ -24007,7 +24036,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             }
             if (active.hasResult()) {
               updated.push(active);
-              _i104 = _i105;
+              _i105 = _i106;
               return 0;
             }
           }
@@ -24026,11 +24055,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               _this101.startQuery(current);
             }
           }
-          _i104 = _i105;
+          _i105 = _i106;
         },
         _ret4;
-      for (var _i104 = 0; _i104 < this.running.length; _i104++) {
-        _ret4 = _loop22(_i104);
+      for (var _i105 = 0; _i105 < this.running.length; _i105++) {
+        _ret4 = _loop22(_i105);
         if (_ret4 === 0) continue;
       }
       if (updated.length || cState.open && cState.open.disabled) this.view.dispatch({
@@ -24278,7 +24307,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (text.length) {
           var indent = baseIndent,
             tabs = /^\t*/.exec(line)[0].length;
-          for (var _i106 = 0; _i106 < tabs; _i106++) indent += state.facet(_indentUnit);
+          for (var _i107 = 0; _i107 < tabs; _i107++) indent += state.facet(_indentUnit);
           lineStart.push(pos + indent.length - tabs);
           line = indent + line.slice(tabs);
         }
@@ -24308,17 +24337,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           var _name7 = rawName.replace(new RegExp("\\\\[{}]", "g"), function (m2) {
             return m2[1];
           });
-          for (var _i107 = 0; _i107 < fields.length; _i107++) {
-            if (seq != null ? fields[_i107].seq == seq : _name7 ? fields[_i107].name == _name7 : false) found = _i107;
+          for (var _i108 = 0; _i108 < fields.length; _i108++) {
+            if (seq != null ? fields[_i108].seq == seq : _name7 ? fields[_i108].name == _name7 : false) found = _i108;
           }
           if (found < 0) {
-            var _i108 = 0;
-            while (_i108 < fields.length && (seq == null || fields[_i108].seq != null && fields[_i108].seq < seq)) _i108++;
-            fields.splice(_i108, 0, {
+            var _i109 = 0;
+            while (_i109 < fields.length && (seq == null || fields[_i109].seq != null && fields[_i109].seq < seq)) _i109++;
+            fields.splice(_i109, 0, {
               seq: seq,
               name: _name7
             });
-            found = _i108;
+            found = _i109;
             for (var _iterator246 = _createForOfIteratorHelperLoose(positions), _step246; !(_step246 = _iterator246()).done;) {
               var pos = _step246.value;
               if (pos.field >= found) pos.field++;
@@ -24672,7 +24701,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   var definedClosing = "()[]{}<>\xAB\xBB\xBB\xAB\uFF3B\uFF3D\uFF5B\uFF5D";
   function closing(ch) {
-    for (var _i109 = 0; _i109 < definedClosing.length; _i109 += 2) if (definedClosing.charCodeAt(_i109) == ch) return definedClosing.charAt(_i109 + 1);
+    for (var _i110 = 0; _i110 < definedClosing.length; _i110 += 2) if (definedClosing.charCodeAt(_i110) == ch) return definedClosing.charAt(_i110 + 1);
     return _fromCodePoint(ch < 128 ? ch : ch + 1);
   }
   function config(state, pos) {
@@ -24878,7 +24907,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     var maxPrefix = prefixes.reduce(function (m, p) {
       return Math.max(m, p.length);
     }, 0);
-    for (var _i110 = 0; _i110 < 5; _i110++) {
+    for (var _i111 = 0; _i111 < 5; _i111++) {
       var start = state.sliceDoc(node.from, Math.min(node.to, node.from + quoteToken.length + maxPrefix));
       var quotePos = start.indexOf(quoteToken);
       if (!quotePos || quotePos > -1 && prefixes.indexOf(start.slice(0, quotePos)) > -1) {
@@ -24997,10 +25026,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var scan = state.doc.iter(),
         scanPos = 0,
         docLen = state.doc.length;
-      var _loop23 = function _loop23(_i112) {
-          var next = _i112 == sorted.length ? null : sorted[_i112];
+      var _loop23 = function _loop23(_i113) {
+          var next = _i113 == sorted.length ? null : sorted[_i113];
           if (!next && !active.length) {
-            _i111 = _i112;
+            _i112 = _i113;
             return 0;
           }
           var from, to;
@@ -25012,18 +25041,18 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           } else {
             from = next.from;
             if (from > docLen) {
-              _i111 = _i112;
+              _i112 = _i113;
               return 0;
             }
             to = next.to;
             active.push(next);
-            _i112++;
+            _i113++;
           }
-          while (_i112 < sorted.length) {
-            var next2 = sorted[_i112];
+          while (_i113 < sorted.length) {
+            var next2 = sorted[_i113];
             if (next2.from == from && (next2.to > next2.from || next2.to == from)) {
               active.push(next2);
-              _i112++;
+              _i113++;
               to = Math.min(next2.to, to);
             } else {
               to = Math.min(next2.from, to);
@@ -25074,15 +25103,15 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           }
           pos = to;
           if (pos == docLen) {
-            _i111 = _i112;
+            _i112 = _i113;
             return 0;
           }
           for (var i3 = 0; i3 < active.length; i3++) if (active[i3].to <= pos) active.splice(i3--, 1);
-          _i111 = _i112;
+          _i112 = _i113;
         },
         _ret5;
-      for (var _i111 = 0;;) {
-        _ret5 = _loop23(_i111);
+      for (var _i112 = 0;;) {
+        _ret5 = _loop23(_i112);
         if (_ret5 === 0) break;
       }
       var set = deco.finish();
@@ -25295,7 +25324,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       actions: for (var _iterator258 = _createForOfIteratorHelperLoose(actions), _step258; !(_step258 = _iterator258()).done;) {
         var _name8 = _step258.value.name;
         var _loop24 = function _loop24() {
-          var ch = _name8[_i113];
+          var ch = _name8[_i114];
           if (/[a-zA-Z]/.test(ch) && !assigned.some(function (c) {
             return c.toLowerCase() == ch.toLowerCase();
           })) {
@@ -25303,7 +25332,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             return 1;
           }
         };
-        for (var _i113 = 0; _i113 < _name8.length; _i113++) {
+        for (var _i114 = 0; _i114 < _name8.length; _i114++) {
           if (_loop24()) continue actions;
         }
         assigned.push("");
@@ -25391,9 +25420,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         } else if (event.keyCode >= 65 && event.keyCode <= 90 && _this106.selectedIndex >= 0) {
           var diagnostic = _this106.items[_this106.selectedIndex].diagnostic,
             keys2 = assignKeys(diagnostic.actions);
-          for (var _i114 = 0; _i114 < keys2.length; _i114++) if (keys2[_i114].toUpperCase().charCodeAt(0) == event.keyCode) {
+          for (var _i115 = 0; _i115 < keys2.length; _i115++) if (keys2[_i115].toUpperCase().charCodeAt(0) == event.keyCode) {
             var found = findDiagnostic(_this106.view.state.field(lintState).diagnostics, diagnostic);
-            if (found) diagnostic.actions[_i114].apply(view, found.from, found.to);
+            if (found) diagnostic.actions[_i115].apply(view, found.from, found.to);
           }
         } else {
           return;
@@ -25401,8 +25430,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         event.preventDefault();
       };
       var onclick = function onclick(event) {
-        for (var _i115 = 0; _i115 < _this106.items.length; _i115++) {
-          if (_this106.items[_i115].dom.contains(event.target)) _this106.moveSelection(_i115);
+        for (var _i116 = 0; _i116 < _this106.items.length; _i116++) {
+          if (_this106.items[_i116].dom.contains(event.target)) _this106.moveSelection(_i116);
         }
       };
       this.list = crelt("ul", {
@@ -25543,7 +25572,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       get: function get() {
         var selected = this.view.state.field(lintState).selected;
         if (!selected) return -1;
-        for (var _i116 = 0; _i116 < this.items.length; _i116++) if (this.items[_i116].diagnostic == selected.diagnostic) return _i116;
+        for (var _i117 = 0; _i117 < this.items.length; _i117++) if (this.items[_i117].diagnostic == selected.diagnostic) return _i117;
         return -1;
       }
     }]);
@@ -25920,30 +25949,30 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var nextStates = this.p.parser.nextStates(this.state);
       if (nextStates.length > 4 << 1 || this.stack.length >= 120) {
         var best = [];
-        for (var _i117 = 0, s; _i117 < nextStates.length; _i117 += 2) {
-          if ((s = nextStates[_i117 + 1]) != this.state && this.p.parser.hasAction(s, next)) best.push(nextStates[_i117], s);
+        for (var _i118 = 0, s; _i118 < nextStates.length; _i118 += 2) {
+          if ((s = nextStates[_i118 + 1]) != this.state && this.p.parser.hasAction(s, next)) best.push(nextStates[_i118], s);
         }
         if (this.stack.length < 120) {
           var _loop25 = function _loop25() {
-            var s = nextStates[_i118 + 1];
+            var s = nextStates[_i119 + 1];
             if (!best.some(function (v, i3) {
               return i3 & 1 && v == s;
-            })) best.push(nextStates[_i118], s);
+            })) best.push(nextStates[_i119], s);
           };
-          for (var _i118 = 0; best.length < 4 << 1 && _i118 < nextStates.length; _i118 += 2) {
+          for (var _i119 = 0; best.length < 4 << 1 && _i119 < nextStates.length; _i119 += 2) {
             _loop25();
           }
         }
         nextStates = best;
       }
       var result = [];
-      for (var _i119 = 0; _i119 < nextStates.length && result.length < 4; _i119 += 2) {
-        var _s2 = nextStates[_i119 + 1];
+      for (var _i120 = 0; _i120 < nextStates.length && result.length < 4; _i120 += 2) {
+        var _s2 = nextStates[_i120 + 1];
         if (_s2 == this.state) continue;
         var stack = this.split();
         stack.pushState(_s2, this.pos);
         stack.storeNode(0, stack.pos, stack.pos, 4, true);
-        stack.shiftContext(nextStates[_i119], this.pos);
+        stack.shiftContext(nextStates[_i120], this.pos);
         stack.reducePos = this.pos;
         stack.score -= 200;
         result.push(stack);
@@ -26009,7 +26038,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     };
     _proto170.sameState = function sameState(other) {
       if (this.state != other.state || this.stack.length != other.stack.length) return false;
-      for (var _i120 = 0; _i120 < this.stack.length; _i120 += 3) if (this.stack[_i120] != other.stack[_i120]) return false;
+      for (var _i121 = 0; _i121 < this.stack.length; _i121 += 3) if (this.stack[_i121] != other.stack[_i121]) return false;
       return true;
     };
     _proto170.dialectEnabled = function dialectEnabled(dialectID) {
@@ -26243,9 +26272,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         if (pos >= this.chunk2Pos && pos < this.chunk2Pos + this.chunk2.length) {
           result = this.chunk2.charCodeAt(pos - this.chunk2Pos);
         } else {
-          var _i121 = this.rangeIndex,
+          var _i122 = this.rangeIndex,
             range = this.range;
-          while (range.to <= pos) range = this.ranges[++_i121];
+          while (range.to <= pos) range = this.ranges[++_i122];
           this.chunk2 = this.input.chunk(this.chunk2Pos = pos);
           if (pos + this.chunk2.length > range.to) this.chunk2 = this.chunk2.slice(0, range.to - pos);
           result = this.chunk2.charCodeAt(0);
@@ -26412,8 +26441,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     scan: for (;;) {
       if ((groupMask & data[state]) == 0) break;
       var accEnd = data[state + 1];
-      for (var _i122 = state + 3; _i122 < accEnd; _i122 += 2) if ((data[_i122 + 1] & groupMask) > 0) {
-        var term = data[_i122];
+      for (var _i123 = state + 3; _i123 < accEnd; _i123 += 2) if ((data[_i123 + 1] & groupMask) > 0) {
+        var term = data[_i123];
         if (dialect.allows(term) && (input.token.value == -1 || input.token.value == term || overrides(term, input.token.value, precTable, precOffset))) {
           input.acceptToken(term);
           break;
@@ -26441,7 +26470,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     }
   }
   function findOffset(data, start, term) {
-    for (var _i123 = start, next; (next = data[_i123]) != 65535; _i123++) if (next == term) return _i123 - start;
+    for (var _i124 = start, next; (next = data[_i124]) != 65535; _i124++) if (next == term) return _i124 - start;
     return -1;
   }
   function overrides(token, prev, tableData, tableOffset) {
@@ -26559,10 +26588,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       var mask = parser.stateSlot(stack.state, 3);
       var context = stack.curContext ? stack.curContext.hash : 0;
       var lookAhead = 0;
-      for (var _i124 = 0; _i124 < tokenizers.length; _i124++) {
-        if ((1 << _i124 & mask) == 0) continue;
-        var tokenizer = tokenizers[_i124],
-          token = this.tokens[_i124];
+      for (var _i125 = 0; _i125 < tokenizers.length; _i125++) {
+        if ((1 << _i125 & mask) == 0) continue;
+        var tokenizer = tokenizers[_i125],
+          token = this.tokens[_i125];
         if (main && !tokenizer.fallback) continue;
         if (tokenizer.contextual || token.start != stack.pos || token.mask != mask || token.context != context) {
           this.updateCachedToken(token, tokenizer, stack);
@@ -26606,8 +26635,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       tokenizer.token(this.stream.reset(start, token), stack);
       if (token.value > -1) {
         var parser = stack.p.parser;
-        for (var _i125 = 0; _i125 < parser.specialized.length; _i125++) if (parser.specialized[_i125] == token.value) {
-          var result = parser.specializers[_i125](this.stream.read(token.start, token.end), stack);
+        for (var _i126 = 0; _i126 < parser.specialized.length; _i126++) if (parser.specialized[_i126] == token.value) {
+          var result = parser.specializers[_i126](this.stream.read(token.start, token.end), stack);
           if (result >= 0 && stack.p.parser.dialect.allows(result >> 1)) {
             if ((result & 1) == 0) token.value = result >> 1;else token.extended = result >> 1;
             break;
@@ -26619,7 +26648,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       }
     };
     _proto177.putAction = function putAction(action, token, end, index) {
-      for (var _i126 = 0; _i126 < index; _i126 += 3) if (this.actions[_i126] == action) return index;
+      for (var _i127 = 0; _i127 < index; _i127 += 3) if (this.actions[_i127] == action) return index;
       this.actions[index++] = action;
       this.actions[index++] = token;
       this.actions[index++] = end;
@@ -26630,16 +26659,16 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         parser = stack.p.parser,
         data = parser.data;
       for (var set = 0; set < 2; set++) {
-        for (var _i127 = parser.stateSlot(state, set ? 2 : 1);; _i127 += 3) {
-          if (data[_i127] == 65535) {
-            if (data[_i127 + 1] == 1) {
-              _i127 = pair(data, _i127 + 2);
+        for (var _i128 = parser.stateSlot(state, set ? 2 : 1);; _i128 += 3) {
+          if (data[_i128] == 65535) {
+            if (data[_i128 + 1] == 1) {
+              _i128 = pair(data, _i128 + 2);
             } else {
-              if (index == 0 && data[_i127 + 1] == 2) index = this.putAction(pair(data, _i127 + 2), token, end, index);
+              if (index == 0 && data[_i128 + 1] == 2) index = this.putAction(pair(data, _i128 + 2), token, end, index);
               break;
             }
           }
-          if (data[_i127] == token) index = this.putAction(pair(data, _i127 + 1), token, end, index);
+          if (data[_i128] == token) index = this.putAction(pair(data, _i128 + 1), token, end, index);
         }
       }
       return index;
@@ -26678,8 +26707,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         while (s.forceReduce() && s.stack.length && s.stack[s.stack.length - 2] >= this.lastBigReductionStart) {}
         this.bigReductionCount = this.lastBigReductionSize = 0;
       }
-      for (var _i128 = 0; _i128 < stacks.length; _i128++) {
-        var stack = stacks[_i128];
+      for (var _i129 = 0; _i129 < stacks.length; _i129++) {
+        var stack = stacks[_i129];
         for (;;) {
           this.tokens.mainToken = null;
           if (stack.pos > pos) {
@@ -26729,15 +26758,15 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           return s.reducePos > pos;
         })) this.recovering--;
       } else if (newStacks.length > 1) {
-        outer: for (var _i129 = 0; _i129 < newStacks.length - 1; _i129++) {
-          var _stack = newStacks[_i129];
-          for (var j = _i129 + 1; j < newStacks.length; j++) {
+        outer: for (var _i130 = 0; _i130 < newStacks.length - 1; _i130++) {
+          var _stack = newStacks[_i130];
+          for (var j = _i130 + 1; j < newStacks.length; j++) {
             var other = newStacks[j];
             if (_stack.sameState(other) || _stack.buffer.length > 500 && other.buffer.length > 500) {
               if ((_stack.score - other.score || _stack.buffer.length - other.buffer.length) > 0) {
                 newStacks.splice(j--, 1);
               } else {
-                newStacks.splice(_i129--, 1);
+                newStacks.splice(_i130--, 1);
                 continue outer;
               }
             }
@@ -26751,7 +26780,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         }
       }
       this.minStackPos = newStacks[0].pos;
-      for (var _i130 = 1; _i130 < newStacks.length; _i130++) if (newStacks[_i130].pos < this.minStackPos) this.minStackPos = newStacks[_i130].pos;
+      for (var _i131 = 1; _i131 < newStacks.length; _i131++) if (newStacks[_i131].pos < this.minStackPos) this.minStackPos = newStacks[_i131].pos;
       return null;
     };
     _proto178.stopAt = function stopAt(pos) {
@@ -26788,11 +26817,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         while (stack.stack.length > 6e3 && stack.forceReduce()) {}
       }
       var actions = this.tokens.getActions(stack);
-      for (var _i131 = 0; _i131 < actions.length;) {
-        var action = actions[_i131++],
-          term = actions[_i131++],
-          end = actions[_i131++];
-        var last = _i131 == actions.length || !split;
+      for (var _i132 = 0; _i132 < actions.length;) {
+        var action = actions[_i132++],
+          term = actions[_i132++],
+          end = actions[_i132++];
+        var last = _i132 == actions.length || !split;
         var localStack = last ? stack : stack.split();
         var main = this.tokens.mainToken;
         localStack.apply(action, term, main ? main.start : localStack.pos, end);
@@ -26814,10 +26843,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     _proto178.runRecovery = function runRecovery(stacks, tokens, newStacks) {
       var finished = null,
         restarted = false;
-      for (var _i132 = 0; _i132 < stacks.length; _i132++) {
-        var stack = stacks[_i132],
-          token = tokens[_i132 << 1],
-          tokenEnd = tokens[(_i132 << 1) + 1];
+      for (var _i133 = 0; _i133 < stacks.length; _i133++) {
+        var stack = stacks[_i133],
+          token = tokens[_i133 << 1],
+          tokenEnd = tokens[(_i133 << 1) + 1];
         var base2 = verbose ? this.stackID(stack) + " -> " : "";
         if (stack.deadEnd) {
           if (restarted) continue;
@@ -26880,10 +26909,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     }]);
   }();
   function pushStackDedup(stack, newStacks) {
-    for (var _i133 = 0; _i133 < newStacks.length; _i133++) {
-      var other = newStacks[_i133];
+    for (var _i134 = 0; _i134 < newStacks.length; _i134++) {
+      var other = newStacks[_i134];
       if (other.pos == stack.pos && other.sameState(stack)) {
-        if (newStacks[_i133].score < stack.score) newStacks[_i133] = stack;
+        if (newStacks[_i134].score < stack.score) newStacks[_i134] = stack;
         return;
       }
     }
@@ -26923,12 +26952,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (spec.version != 14) throw new RangeError("Parser version (" + spec.version + ") doesn't match runtime version (" + 14 + ")");
       var nodeNames = spec.nodeNames.split(" ");
       _this109.minRepeatTerm = nodeNames.length;
-      for (var _i134 = 0; _i134 < spec.repeatNodeCount; _i134++) nodeNames.push("");
+      for (var _i135 = 0; _i135 < spec.repeatNodeCount; _i135++) nodeNames.push("");
       var topTerms = Object.keys(spec.topRules).map(function (r) {
         return spec.topRules[r][1];
       });
       var nodeProps = [];
-      for (var _i135 = 0; _i135 < nodeNames.length; _i135++) nodeProps.push([]);
+      for (var _i136 = 0; _i136 < nodeNames.length; _i136++) nodeProps.push([]);
       function setProp(nodeID, prop, value) {
         nodeProps[nodeID].push([prop, prop.deserialize(String(value))]);
       }
@@ -26937,14 +26966,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           var propSpec = _step265.value;
           var prop = propSpec[0];
           if (typeof prop == "string") prop = _NodeProp[prop];
-          for (var _i136 = 1; _i136 < propSpec.length;) {
-            var next = propSpec[_i136++];
+          for (var _i137 = 1; _i137 < propSpec.length;) {
+            var next = propSpec[_i137++];
             if (next >= 0) {
-              setProp(next, prop, propSpec[_i136++]);
+              setProp(next, prop, propSpec[_i137++]);
             } else {
-              var value = propSpec[_i136 + -next];
-              for (var j = -next; j > 0; j--) setProp(propSpec[_i136++], prop, value);
-              _i136++;
+              var value = propSpec[_i137 + -next];
+              for (var j = -next; j > 0; j--) setProp(propSpec[_i137++], prop, value);
+              _i137++;
             }
           }
         }
@@ -26966,7 +26995,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       _this109.context = spec.context;
       _this109.specializerSpecs = spec.specialized || [];
       _this109.specialized = new Uint16Array(_this109.specializerSpecs.length);
-      for (var _i137 = 0; _i137 < _this109.specializerSpecs.length; _i137++) _this109.specialized[_i137] = _this109.specializerSpecs[_i137].term;
+      for (var _i138 = 0; _i138 < _this109.specializerSpecs.length; _i138++) _this109.specialized[_i138] = _this109.specializerSpecs[_i138].term;
       _this109.specializers = _this109.specializerSpecs.map(getSpecializer);
       _this109.states = decodeArray(spec.states, Uint32Array);
       _this109.data = decodeArray(spec.stateData);
@@ -27013,11 +27042,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     _proto180.hasAction = function hasAction(state, terminal) {
       var data = this.data;
       for (var set = 0; set < 2; set++) {
-        for (var _i138 = this.stateSlot(state, set ? 2 : 1), next;; _i138 += 3) {
-          if ((next = data[_i138]) == 65535) {
-            if (data[_i138 + 1] == 1) next = data[_i138 = pair(data, _i138 + 2)];else if (data[_i138 + 1] == 2) return pair(data, _i138 + 2);else break;
+        for (var _i139 = this.stateSlot(state, set ? 2 : 1), next;; _i139 += 3) {
+          if ((next = data[_i139]) == 65535) {
+            if (data[_i139 + 1] == 1) next = data[_i139 = pair(data, _i139 + 2)];else if (data[_i139 + 1] == 2) return pair(data, _i139 + 2);else break;
           }
-          if (next == terminal || next == 0) return pair(data, _i138 + 1);
+          if (next == terminal || next == 0) return pair(data, _i139 + 1);
         }
       }
       return 0;
@@ -27036,34 +27065,34 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     _proto180.allActions = function allActions(state, action) {
       var deflt = this.stateSlot(state, 4);
       var result = deflt ? action(deflt) : void 0;
-      for (var _i139 = this.stateSlot(state, 1); result == null; _i139 += 3) {
-        if (this.data[_i139] == 65535) {
-          if (this.data[_i139 + 1] == 1) _i139 = pair(this.data, _i139 + 2);else break;
+      for (var _i140 = this.stateSlot(state, 1); result == null; _i140 += 3) {
+        if (this.data[_i140] == 65535) {
+          if (this.data[_i140 + 1] == 1) _i140 = pair(this.data, _i140 + 2);else break;
         }
-        result = action(pair(this.data, _i139 + 1));
+        result = action(pair(this.data, _i140 + 1));
       }
       return result;
     };
     _proto180.nextStates = function nextStates(state) {
       var _this110 = this;
       var result = [];
-      var _loop26 = function _loop26(_i141) {
-        if (_this110.data[_i141] == 65535) {
-          if (_this110.data[_i141 + 1] == 1) _i141 = pair(_this110.data, _i141 + 2);else {
-            _i140 = _i141;
+      var _loop26 = function _loop26(_i142) {
+        if (_this110.data[_i142] == 65535) {
+          if (_this110.data[_i142 + 1] == 1) _i142 = pair(_this110.data, _i142 + 2);else {
+            _i141 = _i142;
             return 1;
           }
         }
-        if ((_this110.data[_i141 + 2] & 65536 >> 16) == 0) {
-          var value = _this110.data[_i141 + 1];
+        if ((_this110.data[_i142 + 2] & 65536 >> 16) == 0) {
+          var value = _this110.data[_i142 + 1];
           if (!result.some(function (v, i3) {
             return i3 & 1 && v == value;
-          })) result.push(_this110.data[_i141], value);
+          })) result.push(_this110.data[_i142], value);
         }
-        _i140 = _i141;
+        _i141 = _i142;
       };
-      for (var _i140 = this.stateSlot(state, 1);; _i140 += 3) {
-        if (_loop26(_i140)) break;
+      for (var _i141 = this.stateSlot(state, 1);; _i141 += 3) {
+        if (_loop26(_i141)) break;
       }
       return result;
     };
@@ -27126,8 +27155,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         }
       }
       var disabled = null;
-      for (var _i142 = 0; _i142 < values.length; _i142++) if (!flags[_i142]) {
-        for (var j = this.dialects[values[_i142]], _id; (_id = this.data[j++]) != 65535;) (disabled || (disabled = new Uint8Array(this.maxTerm + 1)))[_id] = 1;
+      for (var _i143 = 0; _i143 < values.length; _i143++) if (!flags[_i143]) {
+        for (var j = this.dialects[values[_i143]], _id; (_id = this.data[j++]) != 65535;) (disabled || (disabled = new Uint8Array(this.maxTerm + 1)))[_id] = 1;
       }
       return new Dialect(dialect, flags, disabled);
     };
@@ -27841,8 +27870,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         lines: 0
       }));
     }
-    for (var _i143 = 0, _arr3 = ["maxLines", "maxCharacters"]; _i143 < _arr3.length; _i143++) {
-      var _name9 = _arr3[_i143];
+    for (var _i144 = 0, _arr3 = ["maxLines", "maxCharacters"]; _i144 < _arr3.length; _i144++) {
+      var _name9 = _arr3[_i144];
       if (!isSafeInteger2(request[_name9]) || request[_name9] < 1) throw new TypeError(_name9 + " must be a positive integer");
     }
     var maxCodePoints = (_request$maxCodePoint = request.maxCodePoints) != null ? _request$maxCodePoint : request.maxCharacters;

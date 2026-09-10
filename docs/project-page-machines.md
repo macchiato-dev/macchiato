@@ -1335,6 +1335,44 @@ byte-for-byte identical to the already verified `1b5e535` export. The local
 server and existing deployment archive therefore need no replacement for
 this test/documentation checkpoint. The experiment remains visible in Git.
 
+### September 10 repeated sibling searches in large mutation batches
+
+A more focused guest-only probe attributed 5.47 seconds of a 5.76-second
+record-processing pass to 16,180 `findChild` searches. These repeatedly walk
+runs of native-inserted siblings that have no CodeMirror tile yet. The mirror
+and the record decoder were not the principal cost in this pass.
+
+The Resources editor build now keeps a fresh path-result cache for a synchronous
+record scan containing more than 128 records. It separates results by container
+tile and traversal direction, including unsuccessful searches. Smaller scans
+use the original search. Nothing survives into a view update or later batch;
+there is no new host method, event suppression, or delayed observer delivery.
+The build adaptation retains CodeMirror's MIT license and rejects changed
+upstream search/call sites rather than silently adapting unknown internals.
+
+In the disposable probe, record processing fell from 5.76 seconds to 0.55
+seconds, and sibling searching from 5.47 seconds to 0.33 seconds. These are
+instrumented component timings, not a claimed whole-editor speedup. Native
+insertion still spends substantial time in browser layout and input processing.
+The regression checks identical search results, linear lookup counts across
+2,000 siblings, multiple containers/directions, and changed mappings in a new
+batch. The shipped-artifact test recompiles both runtime and editor bytecode
+and compares them with their actual Wasm sections.
+
+Focused browser tests and the full project editing regression pass. The latter
+checks pointer capture, theme changes, syntax/output recovery, saved versions,
+and large insertion undo/redo. Its 110 KB paste took 1.02 seconds and native
+insertion took 37.4 seconds. Screenshots were inspected in both themes. The
+diagnostic runs do not persist edits to the real owner's projects.
+
+An unprofiled old/new/new/old comparison inserted the same 109,485-character
+source in 33.0/30.3/25.9/29.7 seconds. Subsequent first-page insert/backspace
+pair medians were 171/196/152/178 ms. Each run checked exact document contents
+and no page errors, with no overlapping build or browser test. Both adjacent
+comparisons favor the large-scan optimization, but ordinary typing varies and
+shows no consistent improvement or regression. The large browser-native
+insertion cost remains an open performance issue.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
