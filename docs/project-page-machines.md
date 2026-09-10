@@ -779,6 +779,21 @@ scheme inheritance. Separate direct/iframe QuickJS tests repeatedly switch
 appearance, check both CSS colors and guest `matchMedia` notifications, and
 assert that the Wasm instance count does not change.
 
+The live owner check sampled appearance across loading and repeated selection
+changes with native browser media behavior (no forced media override). The
+iframe scheme, its media query, and Cat Memory's palette agreed at every sampled
+state after frame creation. A flipped card and the original board node survived
+all switches. Recordings, startup frames, and ready-state light/dark screenshots
+were reviewed; no live project writes were permitted.
+
+The combined 46-case regression run passed. Export `a1d1e13` also passed its
+151-file manifest check, compressed Deno backend execution, and all four stored
+owner-project browser checks. `/root/resources-bunny.tar.gz` contains this
+verified export, with the previous `b22d700` archive retained under
+`/root/archive/2026/09/10/`. Nothing was deployed to Bunny. These checks do not
+resolve the remaining large native-input latency or pre-observer DOM parity
+gap described below.
+
 ### September 10 sibling-read experiments
 
 The guest's `nextSibling` and `previousSibling` getters scanned its cached
