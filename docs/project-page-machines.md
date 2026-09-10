@@ -576,6 +576,28 @@ first-paint test now also runs the actual server document renderer for the
 project form, with frontend code withheld, checking both pane loaders and the
 details background for all seven appearance-preference cases.
 
+The responsive follow-up runs those seven first-paint cases at both 1440×900
+and 390×844. The narrow initial split renders as output-only before guest
+startup, matching the guest's responsive view, with no unusable Split button.
+The owner stress test also crosses that breakpoint in both directions,
+switches editor/output repeatedly, opens and closes Details, and checks that
+the editor content node and output heading retain their identities. This
+caught an invalid `insertBefore` in the UI's toolbar relocation: its Close
+button must return to the destination before it can serve as an anchor.
+Touch taps no longer leave mouse/focus tooltips covering project content.
+
+A separate Chromium touch-viewport diagnostic of the existing owner Mahjong
+project recorded three exported Wasm memories: 40,960,000 bytes each for the
+frontend and editor, and 12,976,128 bytes in the output iframe after layout.
+Their count and sizes stayed unchanged across five editor/output cycles.
+CDP reported approximately 5.9–6.0 MB of used JavaScript heap during those
+cycles, following explicit collection between interactions. These are
+allocated linear-memory sizes and a separate host-heap measurement, not live
+guest allocations or total process memory. Weak references observed the
+memories without retaining disposed instances; no profiler was added to the
+production controller. Desktop Chromium with a phone viewport does not
+establish memory limits or performance on physical phones.
+
 This is not a completed performance or deployment audit. The unprofiled
 2,020-line editing diagnostic still measured median insert/delete round trips
 of roughly 91–163 ms, including Playwright overhead. Real Bunny cold starts,
