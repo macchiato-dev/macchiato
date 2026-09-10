@@ -1300,6 +1300,12 @@ immediate Unicode recovery, undo/redo, saved versions, and bytecode/source
 parity. Its 110 KB paste took 0.99 seconds; native insertion took 47 seconds,
 again demonstrating that bulk native insertion is not solved by this change.
 
+Export `1b5e535` passes the 151-file manifest verification after extraction,
+compressed backend execution, and the four-project exported browser checks
+(including 50 tour slides, SQLite navigation, and theme changes). The local
+server and `/root/resources-bunny.tar.gz` now use this build. The prior archive
+is retained under `/root/archive/2026/09/10/`; nothing was deployed to Bunny.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
