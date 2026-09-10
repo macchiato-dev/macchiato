@@ -87,6 +87,14 @@ that does **not** make repeated loads equivalent to fresh contexts. Clean
 context replacement, including rejecting late fetch/module replies from a
 previous context, remains required before this lifecycle design is complete.
 
+The September 2026 browser verification also found an intermittent
+`event callback ... is unavailable` during repeated editor input. The native
+CodeMirror input path passed the full edit/save/error/recovery test, but a
+repeat run delivered a browser timeout after its guest callback slot had been
+released. This still needs a deterministic callback-lifetime regression and
+fix; a successful build or one passing editing run is not deployment-readiness
+evidence for it. Do not hide the error by ignoring missing callback indices.
+
 ## DOM authority
 
 The browser host retains the real document. Each role receives a distinct root
