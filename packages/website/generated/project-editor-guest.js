@@ -26293,17 +26293,7 @@ function getSpecializer(spec) {
 
 // packages/project-editor/src/syntax.js
 function hasSyntaxErrors(state, language3) {
-  const source = state.doc.toString();
-  if (language3 === "javascript") {
-    try {
-      Function(source);
-      return false;
-    } catch (error) {
-      if (error instanceof SyntaxError) return true;
-      throw error;
-    }
-  }
-  if (language3 === "html" || language3 === "css") {
+  if (language3 === "javascript" || language3 === "html" || language3 === "css") {
     return false;
   }
   const cursor = syntaxTree(state).cursor();

@@ -27168,17 +27168,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return spec.get;
   }
   function hasSyntaxErrors(state, language3) {
-    var source = state.doc.toString();
-    if (language3 === "javascript") {
-      try {
-        Function(source);
-        return false;
-      } catch (_error) {
-        if (_error instanceof SyntaxError) return true;
-        throw _error;
-      }
-    }
-    if (language3 === "html" || language3 === "css") {
+    if (language3 === "javascript" || language3 === "html" || language3 === "css") {
       return false;
     }
     var cursor = _syntaxTree(state).cursor();
