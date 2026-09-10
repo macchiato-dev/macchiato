@@ -9,16 +9,43 @@ extern uint32_t msg(uint32_t offset, uint32_t length);
 __attribute__((import_module("host"), import_name("now")))
 extern double host_now(void);
 
-static JSRuntime *runtime;
-static JSContext *context;
 static char transfer[256];
 static JSClassID host_reference_class;
+#ifdef WWC_MULTICONTEXT
+/* Sessions share this Wasm instance and allocator, not QuickJS job queues or
+   object graphs. A separate JSRuntime per session makes disposal independent
+   even when a previous application has unresolved promises or retained roots. */
+typedef struct GuestSession {
+    uint32_t id;
+    JSRuntime *rt;
+    JSContext *ctx;
+    uint8_t *input;
+    uint32_t input_capacity;
+    uint32_t *releases;
+    uint32_t release_count;
+    uint32_t release_capacity;
+    struct GuestSession *next;
+} GuestSession;
+static GuestSession *sessions, *active_session;
+#define runtime (active_session->rt)
+#define context (active_session->ctx)
+#define host_message (active_session->input)
+#define host_message_capacity (active_session->input_capacity)
+#define pending_releases (active_session->releases)
+#define pending_release_count (active_session->release_count)
+#define pending_release_capacity (active_session->release_capacity)
+#else
+static JSRuntime *runtime;
+static JSContext *context;
 static uint8_t *host_message;
 static uint32_t host_message_capacity;
 #ifdef WWC_CANONICAL_HOST
 static uint32_t *pending_releases;
 static uint32_t pending_release_count;
 static uint32_t pending_release_capacity;
+#endif
+#endif
+#ifdef WWC_CANONICAL_HOST
 
 static void flush_pending_releases(void)
 {
@@ -257,7 +284,7 @@ static int install_host_references(void)
         .finalizer = release_host_reference,
     };
     JSValue global;
-    JS_NewClassID(&host_reference_class);
+    if (host_reference_class == 0) JS_NewClassID(&host_reference_class);
     if (JS_NewClass(runtime, host_reference_class, &definition) < 0)
         return -1;
     global = JS_GetGlobalObject(context);
@@ -517,7 +544,7 @@ static void flush_guest_operations(void)
     JS_FreeValue(context, result);
 }
 
-void quickjs_guest_onmsg(uint32_t minimum_length)
+static void run_session(uint32_t minimum_length)
 {
     JSValue result;
     if (runtime != NULL) {
@@ -597,5 +624,44 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
     report_snapshot();
     JS_RunGC(runtime);
     report_memory();
+#endif
+}
+
+void quickjs_guest_onmsg(uint32_t minimum_length)
+{
+#ifdef WWC_MULTICONTEXT
+    /* The runtime adapter supplies three little-endian words, then forwards
+       the existing machine ABI unchanged: session ID, message length, action
+       (0: deliver, 1: dispose). No additional Wasm exports are required. */
+    uint32_t control[3];
+    GuestSession **link, *selected, *previous;
+    if (minimum_length != sizeof(control) ||
+        msg((uint32_t)(uintptr_t)control, sizeof(control)) != sizeof(control) ||
+        control[0] == 0 || control[2] > 1) return;
+    link = &sessions;
+    while (*link != NULL && (*link)->id != control[0]) link = &(*link)->next;
+    if (*link == NULL) {
+        if (control[2] != 0 || control[1] != 0) return;
+        *link = calloc(1, sizeof(**link));
+        if (*link == NULL) return;
+        (*link)->id = control[0];
+    }
+    selected = *link;
+    previous = active_session;
+    active_session = selected;
+    if (control[2] == 0) {
+        run_session(control[1]);
+    } else {
+        if (context != NULL) JS_FreeContext(context);
+        if (runtime != NULL) JS_FreeRuntime(runtime);
+        flush_pending_releases();
+        free(pending_releases);
+        free(host_message);
+        *link = selected->next;
+        free(selected);
+    }
+    active_session = previous;
+#else
+    run_session(minimum_length);
 #endif
 }
