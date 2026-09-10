@@ -187,7 +187,7 @@ function inspectMutationProbe() {
   flush();
 }
 
-var siblingNodes, siblingParent;
+var siblingNodes, siblingParent, siblingObserver;
 function startSiblingProbe() {
   siblingParent = document.createElement("div");
   siblingParent.setAttribute("id", "sibling-probe");
@@ -198,6 +198,13 @@ function startSiblingProbe() {
     return node;
   });
   document.body.appendChild(siblingParent);
+  siblingObserver = new MutationObserver(function () {});
+  siblingObserver.observe(siblingParent, { childList: true });
+  inspectSiblingProbe();
+}
+function moveSiblingProbe() {
+  siblingParent.appendChild(siblingNodes[1]);
+  siblingParent.appendChild(siblingNodes[2]);
   inspectSiblingProbe();
 }
 function inspectSiblingProbe() {

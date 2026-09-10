@@ -783,6 +783,16 @@ A follow-up experiment reduces interpreted calls in the integer codec and
 operation encoder without changing the wire format or host permissions.
 Keep the known-good deployment archive until the experiment is resolved.
 
+Even after the integer/operation-loop optimization, the uninstrumented native
+insertion took 91.9 seconds (first-page edit/backspace median 230 ms). Direct
+sibling forwarding was therefore backed out, including its host permission.
+The synchronous pre-observer parity issue remains open; do not describe the
+current child mirror as immediately reflecting arbitrary native changes.
+The sibling tests now explicitly wait for native observer delivery and also
+exercise synchronous guest moves. A new experiment caches a child index only
+as a hint, verifying `siblings[index] === node` before every use and searching
+again when that condition fails. This does not claim to fix pre-observer reads.
+
 ### September 10 native layout comparison and tab stops
 
 A diagnostic copies the live workspace's layout and active CSS, removes its
