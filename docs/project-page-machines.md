@@ -1310,9 +1310,9 @@ is retained under `/root/archive/2026/09/10/`; nothing was deployed to Bunny.
 
 An experiment read MutationRecord metadata through the existing multi-operation
 wire format. Adjacent `type`/`target`, added/removed counts, and previous/next
-sibling reads each share an exchange. They are fixed native fields, not
-arbitrary guest-defined getters. The flush after detached-node callbacks is
-preserved before reading siblings; event delivery is not deferred or merged.
+sibling reads each shared an exchange. They are fixed native fields, not
+arbitrary guest-defined getters. The flush after detached-node callbacks was
+preserved before reading siblings; event delivery was not deferred or merged.
 No host API, permission, wire encoding, or CodeMirror behavior was added.
 
 The expanded browser probe compares the complete native and guest record
@@ -1329,6 +1329,11 @@ The grouping was backed out because it did not demonstrate a meaningful
 improvement. The stronger native-record parity tests remain. No probing code
 was added to the host or production guests. Timing scripts and disposable
 stamped guests are in `/root/macchiato-work/`; live-owner writes were intercepted.
+After rebuilding the original implementation, both expanded language tests and
+the bytecode/source parity test pass. The editor and output Wasm files are
+byte-for-byte identical to the already verified `1b5e535` export. The local
+server and existing deployment archive therefore need no replacement for
+this test/documentation checkpoint. The experiment remains visible in Git.
 
 ### Standalone compiler parity
 
