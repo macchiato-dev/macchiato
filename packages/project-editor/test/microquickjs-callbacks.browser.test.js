@@ -6,6 +6,7 @@ import test from "node:test";
 import { chromium } from "playwright";
 
 for (const [fixture, expected] of [
+  ["browser-timers", ["argument", "immediate", "interval", "timeout"]],
   ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
@@ -24,15 +25,20 @@ for (const [fixture, expected] of [
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", application,
     new URL(`fixtures/${fixture}.js`, import.meta.url).pathname]);
   const output = resolve(directory, "callbacks.wasm");
+  const environment = resolve(directory, "runtime.bin");
+  execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", environment,
+    resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
     resolve(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
-    output, `runtime.bin=${resolve(examples, "codemirror/generated/microquickjs-runtime.bin")}`,
+    output, `runtime.bin=${environment}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);
   const machine = await readFile(resolve(root, "dev/wasm-web-machine/dist/module/machine.js"));
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
   await page.route("http://callbacks.test/**", (route) => {
     const path = new URL(route.request().url()).pathname;
     return route.fulfill(path === "/machine.js"
@@ -50,8 +56,14 @@ for (const [fixture, expected] of [
     const machine = new WasmWebMachine(module, document.querySelector("#guest"),
       { stamp, onMessage: (message) => result.push(message) });
     await machine.onmsg(0);
+    // Let actual browser timers deliver their guest callbacks before disposal.
+    const deadline = performance.now() + 3000;
+    while (!result.length && performance.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
     machine.destroy();
     return result;
   });
   assert.deepEqual(messages.map((message) => JSON.parse(message)), [expected]);
+  assert.deepEqual(errors, []);
 });

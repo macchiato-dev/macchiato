@@ -1137,7 +1137,8 @@ function createTimer(callback, delay, repeat, args) {
   var handle;
   var index = allocateCallback(function () {
     if (!repeat) delete timerCallbacks[handle];
-    callback.apply(globalThis, args);
+    if (args) callback.apply(globalThis, args);
+    else callback.call(globalThis);
   }, !repeat);
   handle = hostCall(document.reference, repeat ? "timer" : "timerOnce", [delay, index]);
   timerCallbacks[handle] = index;

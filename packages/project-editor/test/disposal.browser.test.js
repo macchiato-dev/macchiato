@@ -109,9 +109,32 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     Object.assign(window, { setTimeout: timeout, clearTimeout: clear,
       requestAnimationFrame: frame, cancelAnimationFrame: cancel,
       addEventListener: add, removeEventListener: remove });
+    window.timerMachine = new Machine(module, document.getElementById('guest'), {
+      onMessage: message => messages.push(message),
+    });
+    await timerMachine.onmsg(0);
+    const timers = new TextEncoder().encode(`
+      var cancelled = setTimeout(function () { __wwcPostMessage('cancelled'); }, 40);
+      clearTimeout(String(cancelled));
+      setTimeout(function () {
+        __wwcPostMessage(this === globalThis ? 'no arguments OK' : 'wrong receiver');
+      }, 1);
+      setTimeout(function (value) {
+        __wwcPostMessage(this === globalThis && value === 7 ? 'timeout OK' : 'timeout failed');
+      }, 1, 7);
+      var repeating = setInterval(function (value) {
+        clearTimeout(repeating);
+        __wwcPostMessage(this === globalThis && value === 9 ? 'interval OK' : 'interval failed');
+      }, 1, 9);
+    `);
+    const timerMessage = new Uint8Array(timers.length + 1);
+    timerMessage[0] = 1; timerMessage.set(timers, 1);
+    timerMachine.onmsg(timerMessage);
   });
   await page.emulateMedia({ colorScheme: "dark" });
   await page.waitForTimeout(120);
-  assert.deepEqual(await page.evaluate(() => messages), ['live callback']);
+  assert.deepEqual((await page.evaluate(() => messages)).sort(),
+    ['interval OK', 'live callback', 'no arguments OK', 'timeout OK']);
+  await page.evaluate(() => timerMachine.destroy());
   assert.deepEqual(errors, []);
 });
