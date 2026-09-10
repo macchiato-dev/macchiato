@@ -643,6 +643,43 @@ This is not a completed performance or deployment audit. The unprofiled
 of roughly 91–163 ms, including Playwright overhead. Real Bunny cold starts,
 mobile memory, and full protocol review are not established by these results.
 
+### September 10 snapshot comparison and remaining paste latency
+
+The editor's change path used to construct a complete patch merely to ask
+whether anything changed, discarding the splice immediately. It now uses
+`projectSnapshotsEqual`. This still validates and normalizes both snapshots,
+but compares file paths/content and canonical configuration without scanning
+the unchanged prefix and suffix in JavaScript. Actual history checkpoints
+still construct patches. Tests compare equality with empty-patch results for
+reordering, additions, deletions, renames, edits, and nested configuration.
+
+A read-only live-owner diagnostic inserted the first 400 lines of
+`content-form-client.js` from commit `28d2874` into a disposable browser
+session. On this 33,176-character fixture, first-page insert/backspace round
+trips measured a median of 187 ms before and 172 ms after. Each run discarded
+two warm-up pairs and measured ten pairs, with no build or profiler running.
+These include Playwright overhead and are a small sample, not a general
+latency guarantee. All writes to the real project were intercepted.
+
+The same diagnostic exposed unresolved bulk-replacement latency: inserting
+the whole 109 KB file stalled the renderer, and replacing the 33 KB content
+again also exceeded the diagnostic deadline. Do not extrapolate the
+standalone editor's mount measurements to this full workspace operation.
+Investigate the native-input/guest-update path separately from typing and
+output debouncing; no runtime instrumentation was added to production.
+The reproducer is `/root/macchiato-work/workspace-typing.js`, with
+`SOURCE_LINES=2024` selecting the larger case. Sixteen regression tests passed
+after the equality change, covering history, owner editing/save/reload,
+responsive panes, lazy grammars, compiler failures, and direct/iframe output.
+
+Export `7e4c04f` passed the 151-file manifest verification, compressed backend
+execution in Deno, and browser checks for all four stored owner projects.
+Those include 50 tour slides, SQLite fragment navigation, theme switches,
+and narrow/desktop pane changes using the exported assets. The deployment
+tarball at `/root/resources-bunny.tar.gz` contains this export; the previous
+archive is retained under `/root/archive/2026/09/10/`. It has not been deployed
+to Bunny, so real edge cold starts remain unverified.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
