@@ -680,6 +680,41 @@ tarball at `/root/resources-bunny.tar.gz` contains this export; the previous
 archive is retained under `/root/archive/2026/09/10/`. It has not been deployed
 to Bunny, so real edge cold starts remain unverified.
 
+### September 10 input layout and listener lifetimes
+
+The reported divider crash was a missing `hasPointerCapture` guest method.
+The facade now forwards all three pointer-capture methods to the native
+element. A live-owner Playwright check dragged the divider, edited modern
+JavaScript, then changed invalid font CSS back to valid CSS. The iframe
+recovered all 144 Mahjong tiles without reloading or retaining an error.
+All project writes, including autosaves, were intercepted in that check.
+The redundant `allowfullscreen` attribute was removed; the trusted iframe's
+`allow-scripts`/`allow-same-origin` warning is separate from the guest exception.
+
+Tracing the 33 KB native-insertion stall attributed about 33 seconds to 1,656
+browser layouts, mostly rooted at the full document. Size containment on the
+already-sized editor mount prevents its content from contributing to ancestor
+intrinsic sizing. Only `contain: size` was added to the website's CSS policy;
+paint containment remains disallowed. A repeat measured roughly two seconds,
+not 35 seconds. These are diagnostic samples, not latency guarantees.
+
+Element listener registration also bypassed the existing free-callback list.
+It now reuses retired slots, unregistering the host listener synchronously
+before making its ID reusable. Tests cycle 5,000 registrations/removals, check
+bounded slot use, and dispatch real events to prove only the current listener
+runs. Both stamped and downloaded language builds pass. Quotas are unchanged.
+
+The expanded owner test covers a 109 KB clipboard paste, 400 lines of native
+insertion, stable mount dimensions, and whole-operation undo/redo. Linux redo
+uses the same `Control+y` shortcut as the existing test. All sixteen regression
+cases pass with this coverage. A separate 109 KB native `insertText` diagnostic
+still takes about a minute and exhausts the general callback allocator, even
+after listener-slot reuse. It is not the same operation as clipboard paste,
+which took about 1.2 seconds. That larger native case remains unresolved; it
+has not been reclassified as a passing test. Extra layout containment did not
+help and was not retained. The installed native CodeMirror enables EditContext
+only on Android, so that is not an explanation for the desktop comparison.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
