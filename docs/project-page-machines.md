@@ -809,6 +809,20 @@ bulk-input improvement, not a claim that large native insertion is now fast
 or that every editor interaction accelerated. No profiling was enabled during
 these measurements, and no build or other test ran concurrently.
 
+The final 27-case regression run passed, including owner editing/save/reload,
+undo/redo, invalid-output recovery, native input and clipboard paste, responsive
+panes, lazy languages, reference/callback lifetimes, and the wire codec. Its
+109 KB paste took 1.24 seconds and native insertion 29.0 seconds. Desktop light,
+desktop dark, and phone editor screenshots were reviewed.
+
+Export `b22d700` passed its 151-file manifest check, compressed backend execution
+in Deno, and all four stored owner-project browser checks: Mahjong, Cat Memory,
+50 tour slides, and SQLite fragment navigation, including theme switches and
+responsive panes. `/root/resources-bunny.tar.gz` now contains that verified
+export; the previous `250cf75` archive is retained under
+`/root/archive/2026/09/10/`. Nothing was deployed to Bunny. Large native insertion
+latency and the pre-observer child-mirror parity gap remain open.
+
 ### September 10 native layout comparison and tab stops
 
 A diagnostic copies the live workspace's layout and active CSS, removes its
