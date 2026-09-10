@@ -1043,7 +1043,9 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor:has(.project-editor__workspace[data-view="editor"]) .project-editor__preview-toolbar > [data-preview-title] { visibility: hidden; }
 .project-editor__source, .project-editor__preview { position: relative; min-width: 0; min-height: 0; overflow: auto; }
 .project-editor__source { display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 0; overflow: hidden; }
-.project-editor__source > .project-editor__mount { min-height: 0; overflow: hidden; }
+/* The grid assigns this mount its size. Editor content must not participate
+   in ancestor intrinsic sizing on every native input/line insertion. */
+.project-editor__source > .project-editor__mount { min-height: 0; overflow: hidden; contain: size; }
 .project-editor__preview { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
 .project-editor__preview > [data-project-preview] { min-height: 0; overflow: auto; }
 .project-editor__preview-surface, [data-project-output-mount], .project-editor__output-frame { width: 100%; height: 100%; min-height: 0; }

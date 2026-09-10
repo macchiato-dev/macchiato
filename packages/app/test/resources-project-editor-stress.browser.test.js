@@ -275,6 +275,44 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await content.waitFor({ state: "visible" });
   assert.ok(errors.every(error => /output timer regression/.test(error)), JSON.stringify(errors));
 
+  // Exercise both CodeMirror's paste handler and native bulk text insertion.
+  // The latter exposed repeated full-page grid sizing, despite normal typing
+  // and direct editor mounts passing. Keep the large source inert in output.
+  const moduleSource = await readFile(join(root, "packages/website/content-form-client.js"), "utf8");
+  const large = `<!--\n${moduleSource.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
+  const mount = editor.locator(".project-editor__source > .project-editor__mount");
+  assert.equal(await mount.evaluate(node => getComputedStyle(node).contain), "size");
+  const originalSize = await mount.boundingBox();
+  for (const native of [false, true]) {
+    const text = large + (native ? "\n<!-- native insertion -->" : "");
+    const before = JSON.parse(await page.locator("[data-project-snapshot]").inputValue()).files[0].content;
+    await content.click();
+    await page.keyboard.press("Control+a");
+    const started = performance.now();
+    if (native) await page.keyboard.insertText(text);
+    else await content.evaluate((node, value) => {
+      const data = new DataTransfer();
+      data.setData("text/plain", value);
+      const event = new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true });
+      node.dispatchEvent(event);
+      if (!event.defaultPrevented) throw new Error("Paste was not handled");
+    }, text);
+    t.diagnostic(`${native ? "native insertion" : "paste"}: ${text.length} characters in ${Math.round(performance.now() - started)} ms`);
+    const snapshotText = () => page.locator("[data-project-snapshot]").inputValue()
+      .then(value => JSON.parse(value).files[0].content);
+    assert.equal(await snapshotText(), text);
+    await output.getByRole("heading", { name: "Large input", exact: true }).waitFor();
+    const size = await mount.boundingBox();
+    assert.ok(Math.abs(size.width - originalSize.width) < 1 && Math.abs(size.height - originalSize.height) < 1);
+    await content.click();
+    await page.keyboard.press("Control+z");
+    assert.equal(await snapshotText(), before, "undo restores the whole pre-insertion document");
+    await page.keyboard.press("Control+Shift+z");
+    assert.equal(await snapshotText(), text, "redo restores the whole insertion");
+  }
+  await page.screenshot({ path: join(artifacts, "large-input.png") });
+  assert.ok(errors.every(error => /output timer regression/.test(error)), JSON.stringify(errors));
+
   const [guest, runtime] = await Promise.all([
     readFile(join(root, "packages/website/generated/project-editor-guest.js"), "utf8"),
     readFile(join(root, "packages/website/generated/project-editor-runtime.js"), "utf8"),
