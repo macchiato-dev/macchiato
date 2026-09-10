@@ -1440,6 +1440,18 @@ explicitly leaves non-subject selector context unrestricted. This must be
 resolved without treating a returned in-scope node as proof of complete query
 isolation or quietly moving guest selector parsing into a large host parser.
 
+The rebuilt `cd6acdb` export passed all 151 manifest entries, compressed backend
+execution, and browser checks for all four stored owner projects (including 50
+tour slides and SQLite fragment navigation). Post-build language/artifact tests
+and the large-input workspace test also pass. The local server now serves this
+build. A read-only owner Playwright session verified divider dragging and
+invalid-to-valid font CSS recovery with 144 Mahjong tiles and no page errors;
+all three autosaves were intercepted. Desktop/light and phone screenshots were
+reviewed. `/root/resources-bunny.tar.gz` contains the verified export, with its
+predecessor archived under `/root/archive/2026/09/10/`. Nothing was deployed to
+Bunny. Large native insertion remains slow (about 43 seconds for 110 KB in this
+stress run), and the broader containment audit remains open.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
