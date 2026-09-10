@@ -32,6 +32,7 @@ const parent = document.getElementById("editor");
 const editorSetup = new Compartment();
 const language = new Compartment();
 const editability = new Compartment();
+const themeMode = new Compartment();
 const editorTheme = EditorView.theme({
   "&": { color: "var(--resources-editor-fg)",
     backgroundColor: "var(--resources-editor-bg)" },
@@ -39,6 +40,8 @@ const editorTheme = EditorView.theme({
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--resources-editor-caret)" },
   ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": {
     backgroundColor: "var(--resources-editor-selection) !important" },
+  ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+    backgroundColor: "var(--resources-editor-selection)" },
   ".cm-activeLine": { backgroundColor: "var(--resources-editor-active)" },
   ".cm-gutters": { color: "var(--resources-editor-gutter-fg)",
     backgroundColor: "var(--resources-editor-gutter-bg)",
@@ -166,6 +169,7 @@ function editorExtensions() {
       EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" }),
     ]),
     editorTheme,
+    themeMode.of(EditorView.darkTheme.of(currentTheme === "dark")),
     syntaxHighlighting(editorHighlightStyle),
     EditorView.lineWrapping,
     sourceEnvelope,
@@ -353,6 +357,7 @@ globalThis.__codeEditorSetTheme = (json) => {
   const view = globalThis.__codeEditorView;
   if (requested === currentTheme) return JSON.stringify({ theme: currentTheme });
   currentTheme = requested;
+  if (view) view.dispatch({ effects: themeMode.reconfigure(EditorView.darkTheme.of(currentTheme === "dark")) });
   return JSON.stringify({ theme: currentTheme });
 };
 globalThis.__codeEditorFocus = () => {

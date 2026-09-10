@@ -24,3 +24,8 @@ function selectPosition(json) {
   globalThis.__codeEditorFocus();
   inspectEditor();
 }
+
+function selectTheme(json) {
+  globalThis.__codeEditorSetTheme(json);
+  inspectEditor();
+}

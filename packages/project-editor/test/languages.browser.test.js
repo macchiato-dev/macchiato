@@ -228,6 +228,28 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   }).filter(message => message?.type === "change").at(-1));
   assert.equal(change.content, "// comment\n" + modern);
   assert.equal(change.syntaxErrors, false, "valid project JavaScript must not be classified as invalid ES5");
+  for (const theme of ["dark", "light", "dark"]) {
+    const expected = theme === "dark" ? "rgb(62, 82, 111)" : "rgb(185, 180, 220)";
+    await page.evaluate(({ theme, color }) => {
+      document.querySelector("#guest").style.setProperty("--resources-editor-selection", color);
+      window.callGuest("selectTheme", { theme });
+    }, { theme, color: expected });
+    for (const [path, source] of [["selection.html", "<h1>First</h1>\n<p>Second</p>\n<p>Third</p>"],
+      ["selection.css", "h1 { color: red; }\np { color: blue; }\n"]]) {
+      await select(path, source, path.endsWith("html") ? "html" : "css");
+      const first = await page.locator(".cm-line").nth(0).boundingBox();
+      const second = await page.locator(".cm-line").nth(1).boundingBox();
+      await page.mouse.move(first.x + 12, first.y + first.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(second.x + 40, second.y + second.height / 2, { steps: 6 });
+      await page.mouse.up();
+      await page.locator(".cm-selectionBackground").first().waitFor({ state: "attached" });
+      assert.equal(await page.locator(".cm-selectionBackground").first().evaluate(node =>
+        getComputedStyle(node).backgroundColor), expected, `${theme}: first selection after opening ${path}`);
+      assert.equal(await page.locator(".cm-line").first().evaluate(node =>
+        getComputedStyle(node, "::selection").backgroundColor), expected, `${theme}: native selection agrees`);
+    }
+  }
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });
