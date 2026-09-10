@@ -830,6 +830,28 @@ test, and its 151-file manifest. The corrected build is live locally. No
 project writes were persisted by the live checks, and no Bunny deployment was
 performed. Earlier exports from the failed media/focus checks were not promoted.
 
+### September 10 node-reference authority
+
+Raw-ABI tests reproduced reads and writes through an unrelated pointer target,
+including moving that node into a grant before reading it. They also reproduced
+real-document child enumeration and reading private selection text. A returned
+reference now preserves identity without automatically granting these operations.
+Node reads/writes, method receivers, and mutation arguments require node authority;
+scoped parent/closest and node-type/name inspection remain available. A container's
+document capability exposes its explicit services, not generic native child-list
+or document mutation access. Range measurement and insertion into a selection
+check both endpoint nodes.
+
+Native nodes acquired within a grant keep their authority after detachment.
+Their detached descendants inherit that grant; references and ownership tracking
+do not add strong retention beyond the existing reference leases. Native scoped
+observer records and original event dispatch paths establish authority for nodes
+removed before delivery. Tests include retained nodes across guest GC, removal
+by an earlier native capture listener, and querying a retained detached subtree.
+This preserves native editing lifetimes rather than treating removal as immediate
+revocation. It is not a blanket claim that all remaining event, graphics, and
+service surfaces have been audited.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices
