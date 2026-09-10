@@ -122,7 +122,7 @@ function bubbleProbe(event) {
 function startEventBurst() {
   burstCount = 0;
   burstTarget = document.createElement("button");
-  burstTarget.id = "event-burst";
+  burstTarget.setAttribute("id", "event-burst");
   burstTarget.textContent = "Event test";
   burstTarget.addEventListener("change", function (event) {
     event.probe = ++burstCount;
@@ -136,7 +136,7 @@ function startEventBurst() {
 function inspectEventBurst() {
   __wwcPostMessage("__wwcResponse:" + JSON.stringify({
     count: burstCount, slots: callbacks.length,
-    retainedType: burstRetained.type, retainedTarget: burstRetained.target.id,
+    retainedType: burstRetained.type, retainedTarget: burstRetained.target.getAttribute("id"),
     retainedProbe: burstRetained.probe
   }));
   flush();

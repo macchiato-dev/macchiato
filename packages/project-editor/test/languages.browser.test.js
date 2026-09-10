@@ -325,7 +325,7 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   assert.equal((await page.evaluate(() => window.callGuest("inspectListeners", {}))).hits, received.hits,
     "the removed host listener cannot dispatch into a reused slot");
   const beforeBurst = await page.evaluate(() => window.callGuest("startEventBurst", {}));
-  await page.locator("#event-burst").evaluate(node => {
+  await page.getByRole("button", { name: "Event test", exact: true }).evaluate(node => {
     for (let index = 0; index < 5000; index++) node.dispatchEvent(new Event("change", { bubbles: true }));
   });
   // Wait for the guest's cache-retirement task, then read the retained event
