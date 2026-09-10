@@ -170,6 +170,9 @@
       root.removeAttribute("data-output-machine-error");
       root.setAttribute("data-output-machine-stage", "ready");
       root.setAttribute("data-output-machine-state", "ready");
+      if (globalThis.__resourcesEditorLocalReceive) {
+        globalThis.__resourcesEditorLocalReceive({ type: "output-ready" });
+      }
       loadProjectUi();
     }, function (error) {
       if (generation !== outputGeneration) return;

@@ -173,6 +173,7 @@ export class ResourcesEditorDevice {
     this.initialSnapshot = null;
     this.initialOutputId = null;
     this.outputIds = new Set();
+    this.outputErrors = new Map();
     this.operations = Object.freeze({
       "editor.command": (payload) => this.editor.command(payload),
       "editor.destroy": () => this.destroy(),
@@ -247,7 +248,14 @@ export class ResourcesEditorDevice {
         storage: this.storageDevice,
       },
     });
+    for (const message of this.outputErrors.values()) this.receiveOutput(message);
+    this.outputErrors.clear();
     return { machineId: this.editor.machineId };
+  }
+  receiveOutput(message) {
+    if (!this.outputIds.has(message.id)) return;
+    if (this.editor) this.editor.callGuest("__resourcesEditorReceive", message);
+    else this.outputErrors.set(message.id, message);
   }
   getInitialSnapshot() {
     if (!this.initialSnapshot) throw new Error("Initial project snapshot is unavailable");
@@ -311,6 +319,7 @@ export class ResourcesEditorDevice {
   destroy() {
     for (const id of this.outputIds) this.outputDevice.destroyOutput(id);
     this.outputIds.clear();
+    this.outputErrors.clear();
     this.editor?.destroy();
     this.editor = null;
     this.initialSnapshot = null;

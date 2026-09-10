@@ -205,7 +205,11 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await editor.getAttribute("data-editor-machine-state"), "ready");
   assert.equal(await editor.getAttribute("data-output-machine-state"), "failed");
   await page.screenshot({ path: join(artifacts, "output-timer-error.png") });
-  assert.ok(errors.every(error => /output timer regression/.test(error)));
+  assert.ok(errors.every(error => /output timer regression/.test(error)), JSON.stringify(errors));
+  await page.locator(".cm-content").fill("<h1>Recovered output</h1>");
+  await output.getByRole("heading", { name: "Recovered output" }).waitFor();
+  await errorMessage.waitFor({ state: "hidden" });
+  assert.equal(await editor.getAttribute("data-output-machine-state"), "ready");
 
   const [guest, runtime] = await Promise.all([
     readFile(join(root, "packages/website/generated/project-editor-guest.js"), "utf8"),

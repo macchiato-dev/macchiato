@@ -986,6 +986,12 @@ async function mountProjectRoot(root) {
         onOutputError(error) {
           setStatus(`Output stopped: ${error.message}`, "error", null, "output");
         },
+        onOutputReady() {
+          if (activeStatusSurface !== "output") return;
+          activeError = "";
+          activeErrorAction = null;
+          renderStatusState();
+        },
         onViolation(error) {
           setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor }, "editor");
         },
@@ -1007,6 +1013,9 @@ async function mountProjectRoot(root) {
       root.dataset.editorMachineStage = "content";
       sendContent();
       root.dataset.editorMachineStage = "ready";
+      if (root.dataset.outputMachineError) {
+        setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
+      }
       if (!previewController) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
