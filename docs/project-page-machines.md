@@ -1503,6 +1503,38 @@ not frozen. At a 1170 px workspace width and 56.5812% split, its divider is at
 assertion across initial layout, pointer/keyboard resizing, and output refresh,
 then use the same column definition rather than another compensating offset.
 
+That alignment regression is now covered and fixed: toolbar and workspace use
+one grouped `grid-template-columns` declaration. The new test first failed at
+585/587 px, then passed initial layout, mouse resizing in both directions,
+keyboard resizing in both directions, output refresh, and expanded-view return.
+The whole workspace stress test and all 20 appearance tests pass. Desktop/light
+and phone screenshots were reviewed. Read-only live measurements put both
+dividers at exactly 660 px after dragging and after subsequent CSS edits, with
+all 144 Mahjong tiles recovered and no page errors. The large native insertion
+is still slow (49.6 seconds for 110 KB in this run); this layout fix makes no
+performance claim about that operation.
+
+### Semantic selector prototype
+
+The new, unconnected `selector-renderer.ts` in the machine's DOM device area
+accepts semantic parts instead of parsing selector text. It constrains every
+compound and nested predicate, not only the final matched node. Scope guards
+are zero-specificity; internal sibling relationships remain native, while roots
+cannot inspect host siblings or their own host-relative child position. Mixed
+`:has` alternatives retain legal descendant branches. Twenty browser tests
+cover the known context probes, valid alternatives, document mode, positional
+rules, pseudo-elements, quoting, malformed data, and bounds. The TypeScript
+machine build passes.
+
+This renderer is not imported by the live DOM device yet and therefore does
+not add production execution overhead or close the four live TODO cases. Next
+comes guest-side source parsing/caching, a bounded selector wire format, and
+using the same semantic renderer for stylesheet and DOM-query calls. Raw guest
+calls must not retain a bypass around those checks. Run the existing selector
+corpus and native/guest parity tests before switching the live path; do not
+replace accurate browser behavior with cloned trees or a large host-side source
+parser just to make the new tests pass.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
