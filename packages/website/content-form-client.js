@@ -470,6 +470,7 @@ async function mountProjectRoot(root) {
     throw new Error(`Project snapshot JSON is invalid: ${error?.message || error}`);
   }
   let state = normalizeProjectSnapshot(parsedSnapshot);
+  const initialOutputSnapshot = state;
   // Keep very large project history on the host. Mirroring multi-megabyte
   // snapshots into the editor VM delays (and can prevent) the first render,
   // while the existing host history path has the same observable behavior.
@@ -1024,8 +1025,10 @@ async function mountProjectRoot(root) {
       if (root.dataset.outputMachineError) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
-      // The editor bootstrap has already mounted its initial output.
-      if (!previewController && root.dataset.outputOwner !== "editor") renderPreview();
+      // Bootstrap mounted the server snapshot. Recovered drafts or a chosen
+      // template can replace it during UI startup and must reach output too.
+      if (!previewController && (root.dataset.outputOwner !== "editor" ||
+          !projectSnapshotsEqual(initialOutputSnapshot, state))) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
@@ -1395,7 +1398,7 @@ async function mountProjectRoot(root) {
       button.addEventListener("click", async () => {
         clearNotice();
         await save();
-        currentSnapshot = state;
+        if (!viewingHistorical) currentSnapshot = state;
         const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/versions/${version.sequence}`);
         if (!response.ok) { setStatus("Version unavailable", true); return; }
         const result = await response.json();

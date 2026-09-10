@@ -274,15 +274,30 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   // Reading history changes both the code and output, without requiring an
   // edit to trigger the output scheduler. Returning to current restores both.
   await page.waitForTimeout(1_700);
-  const historyButton = page.locator('[data-project-versions]');
+  const historyButton = page.locator('[data-project-versions-proxy]');
   await historyButton.click();
   await page.locator('[data-project-history] [data-version-sequence="1"]').click();
   await output.getByRole('heading', { name: 'Editing Marathon', exact: true }).waitFor();
   assert.match(await page.locator('[data-project-snapshot]').inputValue(), /Editable row 100/);
   await historyButton.click();
+  const storedChoices = page.locator('[data-project-history] [data-version-sequence]');
+  assert.ok(await storedChoices.count() >= 2, 'there are multiple saved versions to browse');
+  await storedChoices.first().click();
+  await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
+  await historyButton.click();
   await page.locator('[data-project-history] [aria-current="true"]').click();
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
   assert.match(await content.innerText(), /Recovered output/);
+
+  await page.evaluate(() => {
+    const root = document.querySelector('[data-project-editor]');
+    const snapshot = JSON.parse(root.querySelector('[data-project-snapshot]').value);
+    snapshot.files[0].content = '<h1>Recovered session draft</h1>';
+    sessionStorage.setItem('resources_project_pending_v1:' + root.dataset.projectId, JSON.stringify(snapshot));
+  });
+  await page.reload();
+  await output.getByRole('heading', { name: 'Recovered session draft', exact: true }).waitFor();
+  assert.match(await content.innerText(), /Recovered session draft/);
 
   // A phone has one content pane at a time. Resizing and toggling must not
   // recreate either machine or leave the output iframe at zero width.

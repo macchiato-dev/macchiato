@@ -1226,8 +1226,6 @@ that distinct performance gap remains open. The local server and refreshed
 The prior archive is retained under `/root/archive/2026/09/10/`. No live project
 data was saved and no Bunny deployment was performed.
 
-### Standalone compiler parity
-
 ### September 10 output scheduling
 
 A live one-burst typing probe and a new browser assertion both found two
@@ -1238,7 +1236,11 @@ Explicit history/import/configuration actions send their current snapshot and
 render it directly. Previously that editor-owned output path returned early,
 so selecting a version could leave the output showing another version.
 The initial output is already mounted by bootstrap and needs no second UI
-mount. Verification of the rebuilt scheduling and version behavior is pending.
+mount unless UI startup recovers a different draft or chooses another template.
+The first rebuilt stress run passed the single-build assertion and verified
+switching to a saved version and back with matching output. Further coverage
+visits multiple saved versions before returning and reloads a session draft.
+Browsing another old version must not replace the retained current snapshot.
 
 ### Standalone compiler parity
 

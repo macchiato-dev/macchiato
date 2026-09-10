@@ -28152,6 +28152,7 @@ async function mountProjectRoot(root) {
     throw new Error(`Project snapshot JSON is invalid: ${error?.message || error}`);
   }
   let state = normalizeProjectSnapshot(parsedSnapshot);
+  const initialOutputSnapshot = state;
   const historyInEditorMachine = snapshotField.value.length <= 256e3;
   let recoveredPendingSnapshot = false;
   if (!readOnly2 && !draft && !memoryOnly && pendingSnapshotKey) {
@@ -28307,9 +28308,13 @@ async function mountProjectRoot(root) {
     delete root.dataset.editorLoading;
   }
   async function renderPreview() {
-    if (root.dataset.outputOwner === "editor") return;
     clearTimeout(editorPreviewTimer);
     editorPreviewTimer = 0;
+    if (root.dataset.outputOwner === "editor") {
+      editorController?.setSnapshot(state);
+      editorController?.renderSnapshot();
+      return;
+    }
     const generation = ++previewGeneration;
     root.dataset.outputMachineState = "starting";
     activeError = "";
@@ -28718,7 +28723,7 @@ ${bundleProjectModule(entry, script.textContent)}
       if (root.dataset.outputMachineError) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
-      if (!previewController) renderPreview();
+      if (!previewController && (root.dataset.outputOwner !== "editor" || !projectSnapshotsEqual(initialOutputSnapshot, state))) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";

@@ -1825,7 +1825,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee10(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, presentButton, presentClose, previewSection, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, projectContentBlock, closeOutputOverflow, closePresentation, openPresentation, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, positionHistory, openVersionHistory, _t0, _t1;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, presentButton, presentClose, previewSection, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, projectContentBlock, closeOutputOverflow, closePresentation, openPresentation, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, positionHistory, openVersionHistory, _t0, _t1;
       return _regenerator().w(function (_context14) {
         while (1) switch (_context14.p = _context14.n) {
           case 0:
@@ -2667,7 +2667,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             _mountEditorMachine = function _mountEditorMachine3() {
               _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee8(reason) {
-                var _editorController6;
+                var _editorController8;
                 var generation, _controller$inspect, controller, _t7;
                 return _regenerator().w(function (_context9) {
                   while (1) switch (_context9.p = _context9.n) {
@@ -2677,7 +2677,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       }
                       generation = ++editorGeneration;
                       ready = false;
-                      (_editorController6 = editorController) == null || _editorController6.destroy();
+                      (_editorController8 = editorController) == null || _editorController8.destroy();
                       editorController = null;
                       __resourcesDatasetDelete(root, "data-editor-machine-id");
                       __resourcesDatasetSet(root, "data-editor-machine-state", "starting");
@@ -2729,7 +2729,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       if (__resourcesDatasetGet(root, "data-output-machine-error")) {
                         setStatus("Output stopped: " + __resourcesDatasetGet(root, "data-output-machine-error"), "error", null, "output");
                       }
-                      if (!previewController) renderPreview();
+                      if (!previewController && (__resourcesDatasetGet(root, "data-output-owner") !== "editor" || !projectSnapshotsEqual(initialOutputSnapshot, state))) renderPreview();
                       _context9.n = 6;
                       break;
                     case 4:
@@ -2781,7 +2781,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             _renderPreview = function _renderPreview3() {
               _renderPreview = _asyncToGenerator(_regenerator().m(function _callee7() {
                 var _state$config8, _previewState$config, _previewState$files$f, _exec2, _previewState$config2, _previewState$config9;
-                var generation, _editorController5, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator28, _step28, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator32, _step32, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator34, _step34, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t5, _t6;
+                var _editorController5, _editorController6, generation, _editorController7, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator28, _step28, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator32, _step32, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator34, _step34, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t5, _t6;
                 return _regenerator().w(function (_context8) {
                   while (1) switch (_context8.p = _context8.n) {
                     case 0:
@@ -2845,20 +2845,22 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         }
                         parent2.append(element);
                       };
+                      clearTimeout(editorPreviewTimer);
+                      editorPreviewTimer = 0;
                       if (!(__resourcesDatasetGet(root, "data-output-owner") === "editor")) {
                         _context8.n = 1;
                         break;
                       }
+                      (_editorController5 = editorController) == null || _editorController5.setSnapshot(state);
+                      (_editorController6 = editorController) == null || _editorController6.renderSnapshot();
                       return _context8.a(2);
                     case 1:
-                      clearTimeout(editorPreviewTimer);
-                      editorPreviewTimer = 0;
                       generation = ++previewGeneration;
                       __resourcesDatasetSet(root, "data-output-machine-state", "starting");
                       activeError = "";
                       renderStatusState();
                       try {
-                        (_editorController5 = editorController) == null || _editorController5.projectStatus.begin(generation);
+                        (_editorController7 = editorController) == null || _editorController7.projectStatus.begin(generation);
                       } catch (_error19) {
                         setStatus("Editor status bridge failed: " + _error19.message, "error", null, "editor");
                       }
@@ -3454,6 +3456,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             throw new Error("Project snapshot JSON is invalid: " + ((_t1 == null ? void 0 : _t1.message) || _t1));
           case 9:
             state = normalizeProjectSnapshot(parsedSnapshot);
+            initialOutputSnapshot = state;
             historyInEditorMachine = snapshotField.value.length <= 256e3;
             recoveredPendingSnapshot = false;
             if (!readOnly && !draft && !memoryOnly && pendingSnapshotKey) {
@@ -3894,7 +3897,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   case 0:
                     button = _step22.value;
                     button.addEventListener("click", function () {
-                      var _editorController7;
+                      var _editorController9;
                       var detailsButton = projectDetails;
                       if (__resourcesDatasetGet(button, "data-project-view") === "details") {
                         if (narrowWorkspace.matches) {
@@ -3918,7 +3921,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
                       }
                       renderStatusState();
-                      if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController7 = editorController) == null || _editorController7.focus();
+                      if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController9 = editorController) == null || _editorController9.focus();
                     });
                   case 1:
                     return _context12.a(2);
