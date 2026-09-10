@@ -403,6 +403,10 @@ export class ResourcesOutputDevice {
       };
       channel.port1.onmessage = ({ data }) => {
         if (data?.protocol !== protocol) return;
+        if (data.type === "error") {
+          this.deliver({ type: "output-error", id: outputId, message: String(data.error) });
+          return;
+        }
         if (data.type === "failed") return fail(data.error || "Project output frame failed");
         if (data.type === "ready") return resolve(Object.freeze({
           destroy() { request("destroy", {}).catch(() => {}); channel.port1.close(); frame.remove(); },

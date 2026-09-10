@@ -17,6 +17,11 @@ let moduleFiles = new Map();
 const moduleRequests = new Map();
 let nextModuleRequest = 1;
 let storage;
+let ownerPort;
+
+function reportError(error) {
+  ownerPort?.postMessage({ protocol, type: "error", error: error?.message || String(error) });
+}
 
 function taggedMessage(tag, value) {
   const bytes = encoder.encode(value);
@@ -122,6 +127,7 @@ async function start(payload, port) {
     fetchResource: (value) => fetchResourceImpl(value),
     resolveImage: (value) => imageResolverImpl(value),
     allowNavigate: (url) => urlMatchesAllowedPatterns(url, navigationPatterns),
+    onError: reportError,
     services: {
       call(name, path) {
         if (name !== "module.source") throw new Error(`Project service is unavailable: ${name}`);
@@ -145,7 +151,10 @@ async function start(payload, port) {
           if (result.error) pending.reject(new Error(result.error)); else pending.resolve();
         }
       } else if (text.startsWith("__wwcResponse:")) response = text.slice(14);
-      else if (text.startsWith("__wwcError:")) reportedError ||= new Error(text.slice(11));
+      else if (text.startsWith("__wwcError:")) {
+        reportedError ||= new Error(text.slice(11));
+        reportError(reportedError);
+      }
       else {
         try {
           const request = JSON.parse(text);
@@ -189,14 +198,16 @@ async function operation(name, payload) {
     moduleRequests.clear();
     moduleFiles.clear();
     machine?.destroy(); machine = null;
+    ownerPort = null;
     return null;
   }
   throw new Error(`Unknown project output operation: ${name}`);
 }
 
 addEventListener("message", (event) => {
-  if (event.origin !== location.origin || event.data?.protocol !== protocol || event.data.type !== "connect" || !event.ports[0]) return;
+  if (ownerPort || event.source !== parent || event.origin !== location.origin || event.data?.protocol !== protocol || event.data.type !== "connect" || !event.ports[0]) return;
   const port = event.ports[0];
+  ownerPort = port;
   port.onmessage = async ({ data }) => {
     if (data?.protocol !== protocol || data.type !== "request") return;
     try { port.postMessage({ protocol, type: "response", id: data.id, value: await operation(data.name, data.payload || {}) }); }

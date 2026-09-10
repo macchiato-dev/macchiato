@@ -983,6 +983,9 @@ async function mountProjectRoot(root) {
         root: editorMount,
         limits: false,
         onChange: receiveEditorChange,
+        onOutputError(error) {
+          setStatus(`Output stopped: ${error.message}`, "error", null, "output");
+        },
         onViolation(error) {
           setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor }, "editor");
         },

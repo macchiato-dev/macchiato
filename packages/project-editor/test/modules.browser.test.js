@@ -30,9 +30,11 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   });
   await page.goto("http://modules.test/");
   await page.evaluate(async iframe => {
+    window.outputErrors = [];
     if (!iframe) {
       const { createProjectOutputMachine } = await import("/direct.js");
-      window.output = await createProjectOutputMachine({ root: document.getElementById("guest"), scripts: [] });
+      window.output = await createProjectOutputMachine({ root: document.getElementById("guest"), scripts: [],
+        onError: error => outputErrors.push(error.message) });
       return;
     }
     const frame = document.createElement("iframe");
@@ -44,6 +46,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     let nextId = 1;
     await new Promise((resolve, reject) => {
       channel.port1.onmessage = ({ data }) => {
+        if (data.type === "error") { outputErrors.push(data.error); return; }
         if (data.type === "ready") return resolve();
         if (data.type === "failed") return reject(new Error(data.error));
         const operation = pending.get(data.id);
@@ -97,7 +100,14 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     await page.frameLocator("iframe").getByRole("button", { name: "Cancel", exact: true }).click();
     assert.equal(await page.frameLocator("iframe").locator("dialog").evaluate(node => node.open), false);
   }
+  // A callback runs after load() has resolved. Its error must cross back to
+  // the owning editor even though there is no pending load request to reject.
+  files[1].content = 'setTimeout(() => { throw new Error("late output failure"); }, 10);';
+  await load(files);
+  await page.waitForFunction(() => outputErrors.length > 0);
+  assert.match((await page.evaluate(() => outputErrors))[0], /late output failure/);
   assert.ok(network.every(url => url.startsWith("http://modules.test/")));
   await page.evaluate(() => window.output.destroy());
-  assert.deepEqual(errors, []);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /late output failure/);
 });

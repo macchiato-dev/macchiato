@@ -97,7 +97,7 @@ export async function createProjectOutputMachine({ root, scripts, options = {}, 
       if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", reply));
     } catch (error) { if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message })); }
   }
-  machine = new WasmWebMachine(module, root, { ...options,
+  machine = new WasmWebMachine(module, root, { ...options, onError,
     services: { ...options.services, call(name, path) {
       if (name !== "module.source") {
         if (typeof options.services?.call === "function") return options.services.call(name, path);

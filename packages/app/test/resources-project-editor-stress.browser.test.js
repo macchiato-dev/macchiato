@@ -192,6 +192,21 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.deepEqual(oldEditorRequests, []);
   assert.deepEqual(errors, []);
 
+  // The output's asynchronous failures belong beneath the output, not just
+  // in its iframe's console or in the CodeMirror error channel.
+  await page.locator(".cm-content").fill('<button id="fail">Fail later</button><script>' +
+    'document.getElementById("fail").addEventListener("click", function () {' +
+    'setTimeout(function () { throw new Error("output timer regression"); }, 10);' +
+    '});</script>');
+  await output.getByRole("button", { name: "Fail later" }).click();
+  const errorMessage = page.getByText(/Output stopped:.*output timer regression/);
+  await errorMessage.waitFor();
+  assert.ok(await errorMessage.evaluate(node => Boolean(node.closest(".project-editor__preview"))));
+  assert.equal(await editor.getAttribute("data-editor-machine-state"), "ready");
+  assert.equal(await editor.getAttribute("data-output-machine-state"), "failed");
+  await page.screenshot({ path: join(artifacts, "output-timer-error.png") });
+  assert.ok(errors.every(error => /output timer regression/.test(error)));
+
   const [guest, runtime] = await Promise.all([
     readFile(join(root, "packages/website/generated/project-editor-guest.js"), "utf8"),
     readFile(join(root, "packages/website/generated/project-editor-runtime.js"), "utf8"),

@@ -57,6 +57,13 @@
   var receiveEditorApplicationResponse = globalThis.__resourcesEditorReceive;
   globalThis.__resourcesEditorReceive = function (json) {
     var message = JSON.parse(json);
+    if (message.type === "output-error") {
+      if (message.id !== outputId) return "null";
+      root.setAttribute("data-output-machine-state", "failed");
+      root.setAttribute("data-output-machine-error", message.message);
+      if (globalThis.__resourcesEditorLocalReceive) globalThis.__resourcesEditorLocalReceive(message);
+      return "null";
+    }
     var operation = requests[message.id];
     if (!operation) return receiveEditorApplicationResponse ?
       receiveEditorApplicationResponse(json) : "null";

@@ -28,7 +28,9 @@ const previousEditorReceive = globalThis.__resourcesEditorReceive;
 globalThis.__resourcesEditorReceive = (json) => {
   const message = JSON.parse(json);
   if (message.type === "output-error") {
-    outputListeners.get(message.id)?.(new Error(message.message));
+    const listener = outputListeners.get(message.id);
+    if (listener) listener(new Error(message.message));
+    else if (previousEditorReceive) return previousEditorReceive(json);
     return "null";
   }
   const operation = pending.get(message.id);
@@ -44,6 +46,7 @@ globalThis.__resourcesEditorLocalReceive = (message) => {
     { syntaxErrors: message.syntaxErrors === true });
   else if (message.type === "ready") listeners?.onReady?.(message);
   else if (message.type === "limit") listeners?.onLimit?.(message);
+  else if (message.type === "output-error") listeners?.onOutputError?.(new Error(message.message));
 };
 
 class EditorResponse {
