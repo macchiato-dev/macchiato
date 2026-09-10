@@ -80,6 +80,13 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     ...(process.env.MACCHIATO_TEST_ARTIFACTS ? { recordVideo: { dir: artifacts,
       size: { width: 1440, height: 900 } } } : {}),
   });
+  // Diagnostic A/B runs can substitute a prior host without rebuilding guests
+  // or changing the workspace actions. The ordinary regression uses the build.
+  if (process.env.MACCHIATO_TEST_MACHINE_FILE) {
+    const body = await readFile(process.env.MACCHIATO_TEST_MACHINE_FILE);
+    await page.route("**/-/resources-site/machine.js*", route =>
+      route.fulfill({ body, contentType: "text/javascript" }));
+  }
   const languageDownloads = [];
   page.on("request", request => {
     const name = new URL(request.url()).pathname.split("/").pop();

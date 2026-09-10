@@ -642,9 +642,13 @@ var ELEMENTS = /* @__PURE__ */ new Set([
   "button",
   "canvas",
   "code",
+  "details",
   "dialog",
   "div",
   "em",
+  "fieldset",
+  "figcaption",
+  "figure",
   "footer",
   "form",
   "h1",
@@ -655,23 +659,28 @@ var ELEMENTS = /* @__PURE__ */ new Set([
   "i",
   "img",
   "input",
+  "kbd",
   "label",
+  "legend",
   "li",
   "main",
   "meta",
   "nav",
   "ol",
   "option",
+  "output",
   "p",
   "section",
   "small",
   "span",
   "strong",
+  "summary",
   "template",
   "textarea",
   "title",
   "ul"
 ]);
+var CONTENT_ELEMENTS = /* @__PURE__ */ new Set([...ELEMENTS, "html", "head", "body", "select", "optgroup"]);
 var ATTRIBUTES = /* @__PURE__ */ new Set([
   "aria-autocomplete",
   "aria-expanded",
@@ -1012,6 +1021,39 @@ var WasmWebBridge = class {
       requireNode(range.startContainer);
       requireNode(range.endContainer);
     }
+    function contentElement(element) {
+      if (element.namespaceURI === "http://www.w3.org/2000/svg") {
+        return SVG_ELEMENTS.has(element.localName);
+      }
+      if (element.namespaceURI !== "http://www.w3.org/1999/xhtml") return false;
+      return CONTENT_ELEMENTS.has(element.localName) || /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(element.localName) && !customElements.get(element.localName);
+    }
+    function requireContentTarget(node) {
+      for (let element = node instanceof Element ? node : node.parentElement; element; element = element.parentElement) {
+        if (!contentElement(element)) fail(`content mutation of ${element.localName} is not allowed`);
+        if (roots.includes(element)) break;
+      }
+    }
+    function requireContentTree(node) {
+      const pending = [node];
+      function check(element) {
+        if (!contentElement(element)) {
+          fail(`inserting or cloning ${element.localName} is not allowed`);
+        }
+        if (element instanceof HTMLTemplateElement) pending.push(element.content);
+      }
+      while (pending.length) {
+        const root = pending.pop();
+        if (root instanceof Element) check(root);
+        if (!root.hasChildNodes()) continue;
+        const walker = hostDocument.createTreeWalker(
+          root,
+          1
+          /* SHOW_ELEMENT */
+        );
+        for (let child = walker.nextNode(); child; child = walker.nextNode()) check(child);
+      }
+    }
     const guardSubmit = (event) => {
       const form = event.target;
       if (form instanceof HTMLFormElement && insideDocument(form)) {
@@ -1158,11 +1200,18 @@ var WasmWebBridge = class {
       fail(`property get ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
     function set(object, name, next) {
-      if (object instanceof Node) requireNode(object);
+      if (object instanceof Node) {
+        requireNode(object);
+        requireContentTarget(object);
+      }
       if (object instanceof HTMLElement && name === "innerHTML" && typeof next === "string" && next.length <= 256 * 1024) {
         const template = hostDocument.createElement("template");
         template.innerHTML = next;
-        for (const element of template.content.querySelectorAll("*")) {
+        const elements = Array.from(template.content.querySelectorAll("*"));
+        for (const element of elements) {
+          if (element instanceof HTMLTemplateElement) {
+            elements.push(...Array.from(element.content.querySelectorAll("*")));
+          }
           const svg = element instanceof SVGElement;
           if (!(svg ? SVG_ELEMENTS : ELEMENTS).has(element.localName)) {
             fail(`innerHTML element ${element.localName} is not allowed`);
@@ -1176,6 +1225,7 @@ var WasmWebBridge = class {
             if (!svg && attribute.name === "src") {
               if (!(element instanceof HTMLImageElement)) fail("innerHTML src is not allowed on this element");
               element.setAttribute("src", embeddedImage(attribute.value));
+              continue;
             }
             if (!svg && attribute.name === "target" && (!(element instanceof HTMLAnchorElement) || attribute.value !== "_blank")) {
               fail("innerHTML target is only allowed as _blank on links");
@@ -1188,8 +1238,7 @@ var WasmWebBridge = class {
             }
           }
         }
-        if (object instanceof HTMLTemplateElement) object.innerHTML = next;
-        else object.replaceChildren(template.content);
+        (object instanceof HTMLTemplateElement ? object.content : object).replaceChildren(template.content);
         return null;
       }
       if (object instanceof CanvasRenderingContext2D && ["fillStyle", "strokeStyle"].includes(name) && typeof next === "string" && /^(?:#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|[a-z]+)$/i.test(next)) {
@@ -1639,6 +1688,10 @@ var WasmWebBridge = class {
         return object.contains(args[0]);
       }
       if (object instanceof Node && name === "cloneNode" && args.length === 1 && typeof args[0] === "boolean" && accessibleNode(object)) {
+        if (args[0]) requireContentTree(object);
+        else if (object instanceof Element && !contentElement(object)) {
+          fail(`cloning ${object.localName} is not allowed`);
+        }
         return reference(ownNode(object.cloneNode(args[0])));
       }
       if (object instanceof Node && name === "childNodes" && args.length === 0 && accessibleNode(object)) {
@@ -1799,6 +1852,7 @@ var WasmWebBridge = class {
         return found && insideDocument(found) ? reference(found) : null;
       }
       if (object instanceof Element && name === "setAttribute") {
+        requireContentTarget(object);
         if (!isAllowedAttribute(args[0]) || typeof args[1] !== "string") {
           fail(`attribute ${args[0]} is not allowed`);
         }
@@ -1863,6 +1917,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof Element && name === "removeAttribute") {
+        requireContentTarget(object);
         if (args.length !== 1 || typeof args[0] !== "string") {
           fail(`attribute removal is not allowed: ${String(args[0])}`);
         }
@@ -1946,7 +2001,12 @@ var WasmWebBridge = class {
       }
       if (object instanceof Node && ["append", "appendChild", "replaceChildren"].includes(name)) {
         requireNode(object);
-        for (const node of args) if (node instanceof Node) requireNode(node);
+        requireContentTarget(object);
+        for (const node of args) if (node instanceof Node) {
+          requireNode(node);
+          if (node.parentNode) requireContentTarget(node.parentNode);
+          requireContentTree(node);
+        }
         if (object === logicalHead && documentTarget && args.some((node) => !(node instanceof HTMLMetaElement || node instanceof HTMLTitleElement || node instanceof Comment))) {
           fail("only viewport meta and title elements may enter the logical head");
         }
@@ -1955,7 +2015,10 @@ var WasmWebBridge = class {
       }
       if (object instanceof Node && name === "insertBefore" && args.length === 2 && args[0] instanceof Node && (args[1] === null || args[1] instanceof Node)) {
         requireNode(object);
+        requireContentTarget(object);
         requireNode(args[0]);
+        if (args[0].parentNode) requireContentTarget(args[0].parentNode);
+        requireContentTree(args[0]);
         if (args[1]) requireNode(args[1]);
         const next = args[1] !== null && args[1].parentNode === object ? args[1] : null;
         object.insertBefore(args[0], next);
@@ -1963,16 +2026,19 @@ var WasmWebBridge = class {
       }
       if (object instanceof Node && name === "removeChild" && args.length === 1 && args[0] instanceof Node && args[0].parentNode === object) {
         requireNode(object);
+        requireContentTarget(object);
         requireNode(args[0]);
         object.removeChild(args[0]);
         return reference(args[0]);
       }
       if (object instanceof Node && name === "removeChild" && args.length === 1 && args[0] instanceof Node && args[0].parentNode === null) {
         requireNode(object);
+        requireContentTarget(object);
         requireNode(args[0]);
         return reference(args[0]);
       }
       if (object instanceof Node && "remove" in object && typeof object.remove === "function" && name === "remove") {
+        if (object.parentNode) requireContentTarget(object.parentNode);
         object.remove();
         return null;
       }

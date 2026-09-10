@@ -935,6 +935,21 @@ to the new guards or establish a speedup. The new profile still spent about 90%
 in guest delivery. Repeat performance measurements under stable conditions;
 do not remove containment checks to fit these samples.
 
+Final verification of export `283bdb0`: 111 checks passed in the combined run,
+while the native-insertion stress case timed out at three minutes. An isolated
+old-host control then passed in 106 seconds (52 seconds native insertion); the
+current-host retry passed in 96 seconds (41 seconds native insertion), with
+unchanged actions, text/undo assertions, and recording enabled. Thus all 112
+checks passed across the run and retry, not in one uninterrupted green run.
+The 151-file manifest, compressed backend, and all four exported owner projects
+also passed. The local server and refreshed `/root/resources-bunny.tar.gz` use
+this export; prior archives remain under `/root/archive/2026/09/10/`. Live checks
+saved no project data, and no Bunny deployment was performed.
+
+Further raw-ABI coverage is still needed for attribute/value restrictions on
+inherited nodes and HTML-assignment paths, including form associations and
+navigation. Creation and content-element checks alone do not prove those cases.
+
 ### September 10 binary reply copies
 
 A fresh DevTools sample of the 109 KB native insertion spent about 69% outside
