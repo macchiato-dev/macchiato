@@ -747,6 +747,11 @@ not the repeated browser layout. Real clipboard paste remains a separate,
 much faster path. The owner regression now exercises the full file in both
 paths instead of restricting native input to 400 lines.
 
+The expanded owner test and four editor/runtime browser cases passed. In that
+test, 109 KB clipboard paste took 1.25 seconds and native insertion took 68.6
+seconds; both preserved exact source through undo and redo. The increased
+test timeout accommodates the known latency rather than treating it as fast.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
