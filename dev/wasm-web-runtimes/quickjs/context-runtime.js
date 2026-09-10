@@ -6,6 +6,7 @@ export class QuickJSRuntime {
   #active;
   #sessions = new Set();
   #nextId = 1;
+  #destroyed = false;
 
   constructor(module) {
     this.#instance = new WebAssembly.Instance(module, { host: {
@@ -30,10 +31,12 @@ export class QuickJSRuntime {
   }
 
   createSession() {
+    if (this.#destroyed) throw new Error("QuickJS runtime is disposed");
     if (this.#nextId > 0xffffffff) throw new RangeError("QuickJS session IDs exhausted");
     const session = { id: this.#nextId++, imports: null, disposed: false, disposing: false, depth: 0 };
     return Object.freeze({
       instantiate: imports => {
+        if (this.#destroyed) throw new Error("QuickJS runtime is disposed");
         if (session.imports || session.disposed) throw new Error("QuickJS session was already attached");
         session.imports = imports;
         this.#sessions.add(session);
@@ -71,13 +74,28 @@ export class QuickJSRuntime {
     if (session.disposed) return;
     if (session.depth) throw new Error("Cannot dispose a running QuickJS session");
     session.disposing = true;
-    this.#call(session, 0, 1);
-    session.disposed = true;
-    session.imports = null;
-    this.#sessions.delete(session);
+    try { this.#call(session, 0, 1); }
+    finally {
+      // Native disposal unlinks the session before calling finalizers. A host
+      // finalizer error must not leave an attachable JS handle to freed state.
+      session.disposed = true;
+      session.imports = null;
+      this.#sessions.delete(session);
+    }
   }
 
   destroy() {
-    for (const session of this.#sessions) this.#dispose(session);
+    if (this.#destroyed) return;
+    for (const session of this.#sessions) {
+      if (session.depth) throw new Error("Cannot dispose a running QuickJS runtime");
+    }
+    this.#destroyed = true;
+    let failure;
+    for (const session of this.#sessions) {
+      try { this.#dispose(session); }
+      catch (error) { failure ||= error; }
+    }
+    this.#instance = undefined;
+    if (failure) throw failure;
   }
 }

@@ -47,7 +47,9 @@ export class ProjectOutputStorage {
   delete(kind, key) { this.area(kind).removeItem(this.key(key)); }
   listen(kind, key, listener) {
     this.area(kind); this.key(key);
-    this.listeners.add({ kind, key, listener });
+    const entry = { kind, key, listener };
+    this.listeners.add(entry);
+    return () => this.listeners.delete(entry);
   }
   destroy() {
     this.window.removeEventListener("storage", this.changed);

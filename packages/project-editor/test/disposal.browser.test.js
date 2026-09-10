@@ -28,6 +28,11 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
     window.messages = [];
     const pendingTimers = new Set(), pendingFrames = new Set(), listeners = new Map();
+    const subscriptions = new Set();
+    const subscribe = callback => {
+      subscriptions.add(callback);
+      return () => subscriptions.delete(callback);
+    };
     const timeout = window.setTimeout, clear = window.clearTimeout;
     const frame = window.requestAnimationFrame, cancel = window.cancelAnimationFrame;
     const add = window.addEventListener, remove = window.removeEventListener;
@@ -47,10 +52,20 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     window.removeEventListener = function (type, callback, options) {
       listeners.delete(callback); remove.call(this, type, callback, options);
     };
+    try {
+      new Machine({ instantiate() { throw Error('Unavailable runtime'); } }, document.getElementById('guest'));
+    } catch (error) {
+      if (error.message !== 'Unavailable runtime') throw error;
+    }
+    if (listeners.size) throw Error('Failed construction retained its submission guard');
     for (let index = 0; index < 10; index++) {
       const machine = new Machine(module, document.getElementById("guest"), {
         frameInterval: index % 2 ? 30 : 0,
         onMessage: message => messages.push(message),
+        services: {
+          route: { get: () => '/', listen: subscribe },
+          storage: { listen: (_kind, _key, callback) => subscribe(callback) },
+        },
       });
       await machine.onmsg(0);
       const code = new TextEncoder().encode(`
@@ -64,15 +79,23 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
         addEventListener('keydown', unexpected);
         document.addEventListener('click', unexpected);
         matchMedia('(prefers-color-scheme: dark)').addEventListener('change', unexpected);
+        addEventListener('hashchange', unexpected);
+        localStorage.listen('configuration', unexpected);
+        // Exercise the routing service directly; this guest's window events
+        // otherwise use native windowListen rather than a controller route.
+        immediate([3, document.reference, stringIndex('routeListen'), [
+          encode(allocateCallback(unexpected, false))
+        ]]);
       `);
       const message = new Uint8Array(code.length + 1);
       message[0] = 1; message.set(code, 1);
       machine.onmsg(message);
       machine.destroy();
       machine.destroy();
-      if (pendingTimers.size || pendingFrames.size || listeners.size) {
+      if (pendingTimers.size || pendingFrames.size || listeners.size || subscriptions.size) {
         throw new Error('Native work retained after disposal: ' + JSON.stringify({
           timers: pendingTimers.size, frames: pendingFrames.size, listeners: listeners.size,
+          subscriptions: subscriptions.size,
         }));
       }
     }

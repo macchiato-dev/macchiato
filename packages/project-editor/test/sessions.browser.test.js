@@ -47,11 +47,15 @@ test("QuickJS sessions share a Wasm instance but not globals, callbacks, or leas
         return instance;
       },
     });
-    const engine = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/runtime.wasm")));
+    const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
+    const engine = new QuickJSRuntime(module);
     const calls = [], leases = new Map();
+    let runningDisposalBlocked = false;
     const first = new Machine(engine.createSession(), document.querySelector("#first"), {
       onMessage: value => {
         if (value === "nested") {
+          try { engine.destroy(); }
+          catch (error) { runningDisposalBlocked = /running/.test(error.message); }
           try { evaluate(second, "throw Error('Nested failure');"); }
           catch (error) { calls.push(["caught", /Nested failure/.test(error.message)]); }
         } else calls.push(["first", value]);
@@ -97,14 +101,49 @@ test("QuickJS sessions share a Wasm instance but not globals, callbacks, or leas
     await new Promise(resolve => setTimeout(resolve, 200));
     document.querySelector("#second button").click();
     second.destroy();
+    const unattached = engine.createSession();
     engine.destroy();
-    return { instances, calls, blocked, leasesBefore, leasesAfter, sizes };
+    engine.destroy();
+    let newSessionBlocked = false, attachmentBlocked = false;
+    try { engine.createSession(); }
+    catch (error) { newSessionBlocked = /disposed/.test(error.message); }
+    try { new Machine(unattached, document.querySelector('#first')).onmsg(0); }
+    catch (error) { attachmentBlocked = /disposed/.test(error.message); }
+    const sharedInstances = instances;
+    const closing = new QuickJSRuntime(module), owners = [], released = [0, 0];
+    let failRelease = false;
+    for (let index = 0; index < 2; index++) {
+      const owner = new Machine(closing.createSession(), document.querySelector('#first'), {
+        onReferenceLease: (_id, count) => {
+          if (count === 0) {
+            released[index]++;
+            if (failRelease && index === 0) throw Error('Release observer failed');
+          }
+        },
+      });
+      owners.push(owner);
+      await owner.onmsg(0);
+      evaluate(owner, "globalThis.heldNode = document.createElement('div');");
+    }
+    failRelease = true;
+    let finalizerErrorReported = false;
+    try { closing.destroy(); }
+    catch (error) { finalizerErrorReported = error.message === 'Release observer failed'; }
+    for (const owner of owners) owner.destroy();
+    closing.destroy();
+    return { instances: sharedInstances, calls, blocked, leasesBefore, leasesAfter, sizes,
+      runningDisposalBlocked, newSessionBlocked, attachmentBlocked, released, finalizerErrorReported };
   });
   t.diagnostic(JSON.stringify(result));
   assert.equal(result.instances, 1);
   assert.deepEqual(result.calls, [["first", "first"], ["second", "second"], ["caught", true],
     ["first", "first-resumed"], ["second", "second-recovered"], ["second", "second"], ["second", "second"]]);
   assert.equal(result.blocked, true);
+  assert.equal(result.runningDisposalBlocked, true);
+  assert.equal(result.newSessionBlocked, true);
+  assert.equal(result.attachmentBlocked, true);
+  assert.equal(result.finalizerErrorReported, true);
+  assert.ok(result.released.every(count => count > 0), "a failing finalizer observer does not skip sibling disposal");
   assert.ok(result.leasesBefore > 0);
   assert.equal(result.leasesAfter, 0);
   assert.ok(Math.max(...result.sizes.slice(12)) <= Math.max(...result.sizes.slice(0, 12)) + 65536,

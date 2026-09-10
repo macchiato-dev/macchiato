@@ -154,6 +154,10 @@ async function start(payload, port) {
         listen(listener) {
           routeListeners.add(listener);
           addEventListener("hashchange", listener);
+          return () => {
+            routeListeners.delete(listener);
+            removeEventListener("hashchange", listener);
+          };
         },
       },
       storage,

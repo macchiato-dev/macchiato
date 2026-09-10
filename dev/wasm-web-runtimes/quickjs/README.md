@@ -87,6 +87,9 @@ sessions; owners must still destroy their machines to detach browser services.
 Do not destroy a session from inside one of its active host callbacks. Prepare
 a replacement against a separate hidden root, then swap roots and dispose the
 old machine after the call has returned.
+Disposal is terminal: neither a new session nor an unattached session adapter
+can attach after its runtime is destroyed. A finalizer-reporting error still
+releases sibling sessions before it is rethrown, and repeated disposal is safe.
 
 Browser exceptions must not unwind live interpreter C frames. The adapter
 returns an error sentinel for rejected host operations; the native bridge
