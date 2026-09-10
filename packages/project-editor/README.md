@@ -9,6 +9,14 @@ that decides which material is open, whether it is being read or edited, and
 how that work participates in project history. The retired `code-editor-use`
 prototype is not part of the runtime path.
 
+Browser input goes to CodeMirror's own handlers inside the guest. Do not
+intercept `beforeinput` and rebuild edits from `view.state.selection`: the
+browser selection may already have changed before CodeMirror receives its
+selection-change notification. That shortcut inserted replacement text beside
+the old document instead of replacing it. The browser regression keeps the
+full-document replacement, native undo/redo, and ordinary typing paths under
+test; selecting a version must not implicitly clear undo history on first edit.
+
 ## Compilation limits and embedded images
 
 The playground's short-source limits are an authoring policy, not limits on

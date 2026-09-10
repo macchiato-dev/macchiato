@@ -254,7 +254,7 @@ export class ResourcesEditorDevice {
   }
   receiveOutput(message) {
     if (!this.outputIds.has(message.id)) return;
-    if (this.editor) this.editor.callGuest("__resourcesEditorReceive", message);
+    if (this.editor) this.editor.receive(message);
     else this.outputErrors.set(message.id, message);
   }
   getInitialSnapshot() {

@@ -307,6 +307,9 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
       return call("__codeEditorSetContent", { content, language, ...options });
     },
     command: (payload) => call("__codeEditorCommand", payload), callGuest: call,
+    receive(message) {
+      if (!disposed) machine.onmsg(callMessage("__resourcesEditorReceive", message));
+    },
     inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
     focus() { root.querySelector(".cm-content")?.focus(); }, destroy() { disposed = true; machine.destroy(); root.replaceChildren(); } });
 }
