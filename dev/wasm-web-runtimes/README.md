@@ -29,6 +29,22 @@ a named global with a UTF-8 string argument and reports its string result. A
 bytecode tag can be added without changing the machine or its two-function
 `msg`/`onmsg` ABI.
 
+## MicroQuickJS builds
+
+The canonical example's `guest-runtime.js` is compiled directly by `mqjs`,
+without the CodeMirror environment's Babel pass. Keep it in the supported
+syntax subset: variadic helpers use `arguments`, not rest parameters. The
+project-editor source-compilation test requires newly produced bytecode,
+because this compiler can report a parse error while returning status zero.
+
+For a clean interpreter build, run Cargo from
+`examples/microquickjs-suite/microquickjs-guest-runtime` with a fresh
+`CARGO_TARGET_DIR` outside the repository. Do not rely exclusively on cached
+targets when checking release reproducibility. A diagnostic build may set
+`CARGO_PROFILE_RELEASE_STRIP=false` to retain function names. Before mapping
+DevTools' numbered Wasm frames through that build, compare its code section
+with the profiled artifact; a different function layout invalidates the map.
+
 ## MicroQuickJS callback depth
 
 The browser build bounds nested native-to-JavaScript calls at 64, rather than

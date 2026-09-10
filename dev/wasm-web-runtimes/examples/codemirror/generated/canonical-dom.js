@@ -700,15 +700,15 @@ Object.defineProperty(GuestElement.prototype, "style", {
   });
 });
 
-GuestElement.prototype.append = function (...values) {
+GuestElement.prototype.append = function () {
   var args = [];
-  for (var index = 0; index < values.length; index++) args.push(encode(values[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("append"), args]);
 };
 
-GuestElement.prototype.replaceChildren = function (...values) {
+GuestElement.prototype.replaceChildren = function () {
   var args = [];
-  for (var index = 0; index < values.length; index++) args.push(encode(values[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
 };
 
