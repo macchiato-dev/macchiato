@@ -133,6 +133,17 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   // Pointer capture must exist in the editor's MicroQuickJS guest, not only
   // in the output's QuickJS guest. Even hovering used to call a missing method.
   const splitter = editor.locator(".project-editor__splitter");
+  async function assertDividersAligned(stage) {
+    const positions = await editor.evaluate(root => {
+      const toolbar = root.querySelector('.project-editor__toolbar-split').getBoundingClientRect();
+      const workspace = root.querySelector('.project-editor__splitter').getBoundingClientRect();
+      return { toolbar: { x: toolbar.x, width: toolbar.width }, workspace: { x: workspace.x, width: workspace.width } };
+    });
+    assert.ok(Math.abs(positions.toolbar.x - positions.workspace.x) < 0.1 &&
+      Math.abs(positions.toolbar.width - positions.workspace.width) < 0.1,
+      `${stage}: the toolbar and workspace share the same divider column: ${JSON.stringify(positions)}`);
+  }
+  await assertDividersAligned("initial split");
   const splitBox = await splitter.boundingBox();
   const splitX = splitBox.x + splitBox.width / 2;
   const splitY = splitBox.y + 80;
@@ -147,6 +158,16 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     const after = await splitter.boundingBox();
     assert.ok((after.x - before.x) * Math.sign(delta) > 40,
       "native pointer capture moves the divider in either direction");
+    await assertDividersAligned("pointer resize");
+  }
+  await splitter.focus();
+  for (const key of ["ArrowRight", "ArrowLeft"]) {
+    const before = await splitter.boundingBox();
+    await page.keyboard.press(key);
+    const after = await splitter.boundingBox();
+    assert.ok((after.x - before.x) * (key === "ArrowRight" ? 1 : -1) > 40,
+      "keyboard resizing moves the shared divider");
+    await assertDividersAligned("keyboard resize");
   }
   assert.deepEqual(errors, [], "divider dragging leaves the editor usable");
   await page.getByLabel("Title", { exact: true }).fill("Editing Marathon");
@@ -185,6 +206,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await page.evaluate(() => outputBuilds), 1,
     'one editing burst must cause one output build, not competing debounce timers');
   await page.evaluate(() => outputBuildObserver.disconnect());
+  await assertDividersAligned("output refresh");
   await page.screenshot({ path: join(artifacts, "editor-light.png") });
 
   const expandedFrame = await page.locator("iframe.project-editor__output-frame").elementHandle();
@@ -202,6 +224,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     "expanded view preserves the live output document");
   await expandedFrame.dispose();
   await outputHeading.dispose();
+  await assertDividersAligned("restored expanded view");
   await content.click();
 
   await page.keyboard.press("Control+z");
