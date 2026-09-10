@@ -121,6 +121,25 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame");
   await output.getByRole("heading", { name: "A small article" }).waitFor();
   assert.equal(await output.locator('a[href^="https://en.wikipedia.org/"]').count(), 3);
+  // Pointer capture must exist in the editor's MicroQuickJS guest, not only
+  // in the output's QuickJS guest. Even hovering used to call a missing method.
+  const splitter = editor.locator(".project-editor__splitter");
+  const splitBox = await splitter.boundingBox();
+  const splitX = splitBox.x + splitBox.width / 2;
+  const splitY = splitBox.y + 80;
+  await page.mouse.move(splitX, splitY);
+  assert.deepEqual(errors, [], "hovering the divider must not fail the guest");
+  for (const delta of [60, -60]) {
+    const before = await splitter.boundingBox();
+    await page.mouse.move(before.x + before.width / 2, splitY);
+    await page.mouse.down();
+    await page.mouse.move(before.x + delta, splitY, { steps: 8 });
+    await page.mouse.up();
+    const after = await splitter.boundingBox();
+    assert.ok((after.x - before.x) * Math.sign(delta) > 40,
+      "native pointer capture moves the divider in either direction");
+  }
+  assert.deepEqual(errors, [], "divider dragging leaves the editor usable");
   await page.getByLabel("Title", { exact: true }).fill("Editing Marathon");
   await page.getByLabel("Name", { exact: true }).fill("editing-marathon");
 
