@@ -1373,6 +1373,17 @@ comparisons favor the large-scan optimization, but ordinary typing varies and
 shows no consistent improvement or regression. The large browser-native
 insertion cost remains an open performance issue.
 
+Export `b1b9af1` passes the 151-file manifest check, compressed backend execution
+in Deno, and the four-project browser check using only exported browser assets.
+That includes 50 successive tour slides, SQLite fragment navigation, and theme
+switches. After restarting the local server, the live-owner check again dragged
+the divider and recovered from invalid font CSS to valid quoted `monospace`,
+with 144 Mahjong tiles and no stale warning or page error. All three autosave
+attempts were intercepted; no real project data changed.
+`/root/resources-bunny.tar.gz` now contains this verified export and was checked
+again after extraction. The previous `1b5e535` archive is retained in
+`/root/archive/2026/09/10/`. Nothing was deployed to Bunny.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
