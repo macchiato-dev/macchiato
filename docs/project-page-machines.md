@@ -895,6 +895,31 @@ The local server and `/root/resources-bunny.tar.gz` now use this build. The
 preceding archive is retained under `/root/archive/2026/09/10/`; no live project
 writes or Bunny deployment were performed.
 
+### September 10 inherited active markup
+
+Raw inherited-node probes confirmed that creation restrictions were insufficient:
+the guest could replace stylesheet text, change a stylesheet's Text child, or
+clone/reinsert active markup. Generic content mutation now checks the element
+allowlist, including containing elements for Text changes. Insertion and cloning
+check descendants as well; moving/removing text also checks its previous parent.
+This leaves reference identity, reading, and removal of whole stylesheets intact,
+but styles must still be authored through the structured CSS renderer.
+
+Nested HTML templates exposed another real request path. A selector over a
+template fragment does not enter nested template contents, so an image hidden
+there escaped validation and loaded after insertion. The check now enters those
+contents, and template assignment keeps the validated nodes rather than reparsing
+the original string and losing embedded-image resolution. Embedded `src` values
+take their explicit validated path, not the unrelated generic attribute list.
+
+Tests cover container/document grants, style text and child operations, wrapped
+active subtrees, inert scripts becoming executable on cloning/reinsertion, nested
+template images/scripts, and valid resolved images. Unexpected resource requests
+are intercepted and asserted absent. The 62-case focused run also includes raw
+reference boundaries, direct/iframe output, and native/MicroQuickJS editing.
+This remains a targeted improvement, not a completed audit of all inherited
+attributes or every browser object surface.
+
 ### September 10 binary reply copies
 
 A fresh DevTools sample of the 109 KB native insertion spent about 69% outside

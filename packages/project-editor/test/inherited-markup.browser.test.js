@@ -97,7 +97,7 @@ test("inherited active markup cannot become raw guest CSS or executable content"
             assert.equal(result.error, null);
             assert.deepEqual(result.reports, ["ready", operation === "read" ? "body { color: black; }" : "finished"]);
           } else {
-            assert.match(result.error || "", /not allowed/);
+            assert.match(result.error || "", /not allowed|image source must be an embedded project image/);
             assert.deepEqual(result.reports, ["ready"]);
           }
           if (operation === "resolvedImage") assert.match(result.image || "", /^data:image\/gif;base64,/);
