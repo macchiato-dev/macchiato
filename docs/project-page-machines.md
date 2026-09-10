@@ -1406,6 +1406,16 @@ the change. All 20 appearance tests pass afterward, including both pane loaders,
 iframe scheme inheritance, unavailable storage, and the exact bootstrap CSP
 grant. There is no additional client script or host API for this change.
 
+After rebuilding, all 24 live page/mode checks pass with first-frame opacity
+and transform checks as well as palette sampling. Early and ready screenshots
+were reviewed. Export `bec6585` passes the 151-file integrity check, compressed
+backend execution, and all four stored-project browser checks, including the
+tour's 50-slide navigation and SQLite fragments. The local server and verified
+`/root/resources-bunny.tar.gz` use this export. The preceding `b1b9af1` archive
+is retained under `/root/archive/2026/09/10/`. No Bunny deployment or stored
+project edit was made. The broader performance and host-containment audit is
+not declared complete by this appearance checkpoint.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

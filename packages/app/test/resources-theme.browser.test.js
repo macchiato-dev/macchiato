@@ -103,7 +103,7 @@ test("appearance is correct before the frontend loads, including document naviga
             && paint.background === (expected === "light" ? "#e7ecff" : "#1a1aa2")), JSON.stringify(paints));
           assert.ok(paints.every(paint => paint.content.every(block =>
             block.opacity === '1' && block.transform === 'none')),
-          'server-rendered content must be fully readable at first paint: ' + JSON.stringify(paints));
+            'server-rendered content must be fully readable at first paint: ' + JSON.stringify(paints));
         }
         await page.goto("http://theme.test/");
         await checkPaint();
