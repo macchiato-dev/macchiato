@@ -605,6 +605,17 @@ The tour's 50-slide/keyboard check and SQLite's iframe-only fragment navigation
 remain covered. The local deployment archive was refreshed; Bunny deployment
 and its real cold-start behavior are still untested.
 
+The next editor checkpoint limits synchronous `forceParsing` to CodeMirror's
+default viewport target and budget, instead of requesting the entire document
+for 250 ms. Guest mount measurements on real 109 KB JavaScript and 26 KB Rust
+files dropped from roughly 342–384 ms to 89–132 ms. Tests require parsing to
+catch up at the final viewport after typing and scrolling; deferred work is
+not discarded. The separate 2,024-line JavaScript typing run still had median
+insert/delete round trips of about 176, 111, and 87 ms at its beginning,
+middle, and end, including Playwright overhead. This is a startup improvement,
+not evidence that the larger-file typing target is complete. The full owner
+editing, save/reload, output-recovery, theme, and responsive test also passed.
+
 This is not a completed performance or deployment audit. The unprofiled
 2,020-line editing diagnostic still measured median insert/delete round trips
 of roughly 91–163 ms, including Playwright overhead. Real Bunny cold starts,
