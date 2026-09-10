@@ -113,3 +113,31 @@ function removeProbeListener() {
   document.removeEventListener('pointermove', listenerProbe);
   inspectListeners();
 }
+
+var burstTarget, burstCount, burstLast, burstRetained;
+function bubbleProbe(event) {
+  if (event.target !== burstTarget) return;
+  if (event !== burstLast || event.probe !== burstCount) throw new Error("event identity lost while bubbling");
+}
+function startEventBurst() {
+  burstCount = 0;
+  burstTarget = document.createElement("button");
+  burstTarget.id = "event-burst";
+  burstTarget.textContent = "Event test";
+  burstTarget.addEventListener("change", function (event) {
+    event.probe = ++burstCount;
+    burstLast = event;
+    if (!burstRetained) burstRetained = event;
+  });
+  document.body.appendChild(burstTarget);
+  document.addEventListener("change", bubbleProbe);
+  inspectListeners();
+}
+function inspectEventBurst() {
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify({
+    count: burstCount, slots: callbacks.length,
+    retainedType: burstRetained.type, retainedTarget: burstRetained.target.id,
+    retainedProbe: burstRetained.probe
+  }));
+  flush();
+}

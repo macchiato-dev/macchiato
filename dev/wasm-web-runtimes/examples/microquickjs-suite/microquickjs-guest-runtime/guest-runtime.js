@@ -777,13 +777,21 @@ gc();
 // guest wrapper for that synchronous dispatch so expandos used by delegated
 // event systems have the same meaning they have on the browser Event object.
 var deliveredEvents = Object.create(null);
+var deliveredEventCleanupPending = false;
 function eventForDelivery(reference) {
   var event = deliveredEvents[reference];
   if (event) return event;
   event = deliveredEvents[reference] = new GuestEvent(reference);
-  setTimeout(function () {
-    if (deliveredEvents[reference] === event) delete deliveredEvents[reference];
-  }, 0);
+  // Retire the dispatch cache as a batch. Native editing can emit thousands
+  // of events before timers run; one timer per wrapper exhausts callback IDs.
+  // Application-held events keep their own leases after this cache is gone.
+  if (!deliveredEventCleanupPending) {
+    deliveredEventCleanupPending = true;
+    setTimeout(function () {
+      deliveredEvents = Object.create(null);
+      deliveredEventCleanupPending = false;
+    }, 0);
+  }
   return event;
 }
 

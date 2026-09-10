@@ -324,6 +324,19 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   await page.mouse.move(target.x + 15, target.y + 5);
   assert.equal((await page.evaluate(() => window.callGuest("inspectListeners", {}))).hits, received.hits,
     "the removed host listener cannot dispatch into a reused slot");
+  const beforeBurst = await page.evaluate(() => window.callGuest("startEventBurst", {}));
+  await page.locator("#event-burst").evaluate(node => {
+    for (let index = 0; index < 5000; index++) node.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  // Wait for the guest's cache-retirement task, then read the retained event
+  // through its normal getters. Retiring a cache is not invalidating a lease.
+  await page.waitForTimeout(50);
+  const burst = await page.evaluate(() => window.callGuest("inspectEventBurst", {}));
+  assert.equal(burst.count, 5000);
+  assert.ok(burst.slots <= beforeBurst.slots + 16, "a burst needs one cleanup callback, not one per event");
+  assert.equal(burst.retainedType, "change");
+  assert.equal(burst.retainedTarget, "event-burst");
+  assert.equal(burst.retainedProbe, 1);
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });
