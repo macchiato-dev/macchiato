@@ -97,15 +97,25 @@ test('container styles cannot select siblings of the granted root', async t => {
               ? { source: 'body:has(+ [data-private="yes"]) p { color: #ff0001; }' }
               : { method, selector: 'body[data-private="yes"] p' };
             let error = null;
-            try { machine.onmsg(new TextEncoder().encode('\u0002' + command + '\0' + JSON.stringify(request))); }
-            catch (caught) { error = String(caught); }
-            return { error, reports, color: getComputedStyle(own.querySelector('p')).color };
+            const colors = [];
+            for (const value of ['yes', 'no']) {
+              document.body.setAttribute('data-private', value);
+              document.querySelector('#outside').setAttribute('data-private', value);
+              // Install CSS only once; the second sample proves that native
+              // selector evaluation reacts to host-only state changes.
+              if (!stylesheet || value === 'yes') {
+                try { machine.onmsg(new TextEncoder().encode('\u0002' + command + '\0' + JSON.stringify(request))); }
+                catch (caught) { error = String(caught); break; }
+              }
+              colors.push(getComputedStyle(own.querySelector('p')).color);
+            }
+            return { error, reports, colors };
           } finally { machine.destroy(); }
         }, method);
         t.diagnostic(method + ' context result: ' + JSON.stringify(result));
         if (result.error) assert.match(result.error, /selector.*scope|outside.*scope/);
-        else if (method === 'stylesheet') assert.equal(result.color, 'rgb(0, 0, 0)');
-        else assert.deepEqual(result.reports, ['false']);
+        else if (method === 'stylesheet') assert.deepEqual(result.colors, ['rgb(0, 0, 0)', 'rgb(0, 0, 0)']);
+        else assert.deepEqual(result.reports, ['false', 'false']);
       } finally { await page.close(); }
     });
   }

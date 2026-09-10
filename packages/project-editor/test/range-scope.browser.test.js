@@ -25,7 +25,7 @@ test('range access checks the subtree between its endpoints', async t => {
     bundle: true, write: false, format: 'esm', platform: 'browser' });
   const browser = await chromium.launch();
   t.after(() => browser.close());
-  for (const grant of ['separate-roots', 'single-root', 'document']) {
+  for (const grant of ['separate-roots', 'portal', 'single-root', 'document']) {
     for (const operation of ['getClientRects', 'getBoundingClientRect', 'measureRect', 'measureClientRects', 'addRange', 'extend', 'extendBackwards']) {
       await t.test(grant + ': ' + operation, async () => {
         const page = await browser.newPage();
@@ -43,8 +43,9 @@ test('range access checks the subtree between its endpoints', async t => {
             const module = await WebAssembly.compileStreaming(fetch('/probe.wasm'));
             const stamp = new Uint8Array(WebAssembly.Module.customSections(module, 'wasm-web-machine')[0]);
             const target = grant === 'document' ? document : grant === 'single-root' ? document.querySelector('main')
-              : [document.querySelector('#first'), document.querySelector('#last')];
-            const reports = [], machine = new Machine(module, target, { stamp, onMessage: value => reports.push(value) });
+              : grant === 'portal' ? document.querySelector('#first') : [document.querySelector('#first'), document.querySelector('#last')];
+            const reports = [], machine = new Machine(module, target, { stamp,
+              portals: grant === 'portal' ? [document.querySelector('#last')] : [], onMessage: value => reports.push(value) });
             let error = null;
             try {
               await machine.onmsg(0);
@@ -53,10 +54,11 @@ test('range access checks the subtree between its endpoints', async t => {
               return { error, reports, selected: String(document.getSelection()) };
             } finally { machine.destroy(); }
           }, { grant, operation });
-          if (grant === 'separate-roots') {
+          if (grant === 'separate-roots' || grant === 'portal') {
             assert.match(result.error || '', /outside the granted roots/);
             assert.deepEqual(result.reports, [], 'no geometry returned for private content between endpoints');
-            assert.equal(result.selected, '', 'private content was not added to the selection');
+            assert.equal(result.selected, operation === 'extend' ? 'One' : operation === 'extendBackwards' ? 'Two' : '',
+              'a rejected extension preserves the previous selection without private content');
           } else {
             assert.equal(result.error, null);
             assert.deepEqual(result.reports, ['accepted']);

@@ -15,6 +15,7 @@ function probeRange(json) {
     var backwards = request.operation === "extendBackwards";
     var active = hostCall(document.reference, "getSelection", []);
     hostCall(active[1], "collapse", [backwards ? end : start, backwards ? 3 : 0]);
+    hostCall(active[1], "extend", [backwards ? end : start, backwards ? 0 : 3]);
     hostCall(active[1], "extend", [backwards ? start : end, backwards ? 0 : 3]);
   } else if (request.operation === "addRange") {
     var selection = hostCall(document.reference, "getSelection", []);
