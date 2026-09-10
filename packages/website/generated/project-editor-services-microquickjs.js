@@ -247,16 +247,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     });
   }
   var notifyHost = globalThis.__browserUseNotify;
-  globalThis.__browserUseNotify = function (text) {
-    var message;
-    try {
-      message = JSON.parse(text);
-    } catch (_unused) {}
+  globalThis.__codeEditorNotify = function (message) {
     if (message && ["change", "ready", "limit"].includes(message.type)) {
       globalThis.__resourcesEditorLocalReceive == null || globalThis.__resourcesEditorLocalReceive(message);
       return;
     }
-    notifyHost(text);
+    notifyHost(JSON.stringify(message));
   };
   notifyHost(JSON.stringify({
     type: "editor-application-ready"
@@ -433,7 +429,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       try {
         var url = new URL(String(value));
         return (url.protocol === "https:" || url.protocol === "http:") && expression.test(url.hostname) && pathname.test("" + url.pathname + url.search + url.hash);
-      } catch (_unused2) {
+      } catch (_unused) {
         return false;
       }
     };
@@ -1144,7 +1140,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var stack = [];
       try {
         stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || [];
-      } catch (_unused3) {}
+      } catch (_unused2) {}
       var current = location.pathname + location.search;
       if (stack.at(-1) !== current) stack.push(current);
       sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
@@ -1155,7 +1151,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     var stack = [];
     try {
       stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || [];
-    } catch (_unused0) {}
+    } catch (_unused9) {}
     if (!Array.isArray(stack)) stack = [];
     var previous = stack.at(-1);
     close.href = typeof previous === "string" && previous.startsWith("/") ? previous : "/";
@@ -3452,7 +3448,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     sessionStorage.removeItem(pendingSnapshotKey);
                   }
                 }
-              } catch (_unused7) {
+              } catch (_unused6) {
                 sessionStorage.removeItem(pendingSnapshotKey);
               }
             }
@@ -3478,7 +3474,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             openTabs = [];
             try {
               openTabs = JSON.parse(sessionStorage.getItem(tabSessionKey)) || [];
-            } catch (_unused8) {}
+            } catch (_unused7) {}
             if (!openTabs.length) openTabs = Array.isArray((_state$config4 = state.config) == null ? void 0 : _state$config4.editorTabs) ? _toConsumableArray(state.config.editorTabs) : [selected];
             ready = false;
             pending2 = recoveredPendingSnapshot;
@@ -3536,7 +3532,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     }));
                     state = normalizeProjectSnapshot(stored.snapshot);
                   }
-                } catch (_unused9) {
+                } catch (_unused8) {
                   sessionStorage.removeItem(DRAFT_KEY);
                 }
               }

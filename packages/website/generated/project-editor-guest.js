@@ -26472,6 +26472,10 @@ var isSafeInteger2 = (value) => typeof value === "number" && value >= -214748364
 if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
   globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
 }
+function notify(message) {
+  if (typeof globalThis.__codeEditorNotify === "function") globalThis.__codeEditorNotify(message);
+  else globalThis.__browserUseNotify(JSON.stringify(message));
+}
 var parent2 = document.getElementById("editor");
 var editorSetup = new Compartment();
 var language2 = new Compartment();
@@ -26548,11 +26552,11 @@ function documentUsage(doc2) {
 var sourceEnvelope = createSourceEnvelopeExtension({
   limits: () => documentLimits,
   onLimit(usage) {
-    globalThis.__browserUseNotify(JSON.stringify({
+    notify({
       type: "limit",
       ...usage,
-      limits: documentLimits
-    }));
+      limits: { ...documentLimits }
+    });
   }
 });
 var dynamicLanguageFactories = /* @__PURE__ */ Object.create(null);
@@ -26600,11 +26604,11 @@ function loadedLanguage(name2) {
         throw error;
       });
       pendingLanguages.set(name2, pending2);
-      pending2.catch((error) => globalThis.__browserUseNotify(JSON.stringify({
+      pending2.catch((error) => notify({
         type: "language-error",
         language: name2,
         message: error.message || String(error)
-      })));
+      }));
     }
   }
   return languageSupport(name2);
@@ -26632,13 +26636,13 @@ function editorExtensions() {
     sourceEnvelope,
     EditorView.updateListener.of((update) => {
       if (update.docChanged && !applyingHostContent) {
-        globalThis.__browserUseNotify(JSON.stringify({
+        notify({
           type: "change",
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
           syntaxErrors: hasSyntaxErrors(update.state, currentLanguage)
-        }));
+        });
       }
     })
   ];
@@ -26647,11 +26651,11 @@ function mountEditor(content2 = 'const greeting = "Hello, constrained editor!";\
   const state = EditorState.create({ doc: content2, extensions: editorExtensions() });
   globalThis.__codeEditorView = new EditorView({ state, parent: parent2 });
   forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
-  globalThis.__browserUseNotify(JSON.stringify({
+  notify({
     type: "ready",
     characters: state.doc.length,
     lines: state.doc.lines
-  }));
+  });
   return globalThis.__codeEditorView;
 }
 if (!globalThis.__CODE_EDITOR_DEFER_START__) mountEditor();
@@ -27114,17 +27118,12 @@ function emptyProjectSnapshot() {
 
 // packages/website/project-editor-guest.js
 var notifyHost = globalThis.__browserUseNotify;
-globalThis.__browserUseNotify = (text) => {
-  let message;
-  try {
-    message = JSON.parse(text);
-  } catch {
-  }
+globalThis.__codeEditorNotify = (message) => {
   if (message && ["change", "ready", "limit"].includes(message.type)) {
     globalThis.__resourcesEditorLocalReceive?.(message);
     return;
   }
-  notifyHost(text);
+  notifyHost(JSON.stringify(message));
 };
 notifyHost(JSON.stringify({ type: "editor-application-ready" }));
 if (!globalThis.TextEncoder) {

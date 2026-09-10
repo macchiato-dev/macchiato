@@ -27448,6 +27448,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
     globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
   }
+  function notify(message) {
+    if (typeof globalThis.__codeEditorNotify === "function") globalThis.__codeEditorNotify(message);else globalThis.__browserUseNotify(JSON.stringify(message));
+  }
   var parent = document.getElementById("editor");
   var editorSetup = new _Compartment2();
   var language2 = new _Compartment2();
@@ -27552,11 +27555,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return documentLimits;
     },
     onLimit: function onLimit(usage) {
-      globalThis.__browserUseNotify(JSON.stringify(_extends({
+      notify(_extends({
         type: "limit"
       }, usage, {
-        limits: documentLimits
-      })));
+        limits: _extends({}, documentLimits)
+      }));
     }
   });
   var dynamicLanguageFactories = Object.create(null);
@@ -27607,11 +27610,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         });
         pendingLanguages.set(name2, pending);
         pending.catch(function (error) {
-          return globalThis.__browserUseNotify(JSON.stringify({
+          return notify({
             type: "language-error",
             language: name2,
             message: error.message || String(error)
-          }));
+          });
         });
       }
     }
@@ -27630,13 +27633,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       "aria-readonly": currentReadOnly ? "true" : "false"
     })]), editorTheme, themeMode.of(_EditorView2.darkTheme.of(currentTheme === "dark")), _syntaxHighlighting(editorHighlightStyle), _EditorView2.lineWrapping, sourceEnvelope, _EditorView2.updateListener.of(function (update) {
       if (update.docChanged && !applyingHostContent) {
-        globalThis.__browserUseNotify(JSON.stringify({
+        notify({
           type: "change",
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
           syntaxErrors: hasSyntaxErrors(update.state, currentLanguage)
-        }));
+        });
       }
     })];
   }
@@ -27653,11 +27656,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       parent: parent
     });
     _forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
-    globalThis.__browserUseNotify(JSON.stringify({
+    notify({
       type: "ready",
       characters: state.doc.length,
       lines: state.doc.lines
-    }));
+    });
     return globalThis.__codeEditorView;
   }
   if (!globalThis.__CODE_EDITOR_DEFER_START__) mountEditor();

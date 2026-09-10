@@ -58,6 +58,14 @@ medians in that run were 481–628 ms versus 230–277 ms, respectively. Other
 runs varied substantially: this is evidence for avoiding interpreted encoding,
 not a promised end-to-end latency or a completed performance target.
 
+When the workspace lives in the editor's own guest, it installs
+`__codeEditorNotify(message)` and receives freshly constructed notification
+objects directly. This avoids serializing and immediately parsing the entire
+document on every edit. Without that callback the editor keeps using its
+serialized boundary notifier. Limits in notifications are copies, not mutable
+references to the editor's limit settings; CodeMirror transactions and history
+are unchanged.
+
 Inline SVG keeps its namespace and drawing attributes. An embedded SVG in a
 CSS background becomes a semantic SVG tree in the stylesheet wire message.
 The host validates and renders that tree before producing a base64 image URL;
