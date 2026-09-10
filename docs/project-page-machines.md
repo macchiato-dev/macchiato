@@ -1216,7 +1216,15 @@ The checkpointed repeat reduced normalization from 1,261 ms to 96 ms across
 improvement but also substantial timing variability; it does not establish
 a fixed latency or solve all bulk native-input costs. Diagnostic bytecode was
 served only to the disposable browser, with all real project writes blocked.
-Full build and deployment-artifact verification remain pending.
+Final export `8daa970` passed all 237 regression tests, its 151-file manifest,
+and compressed backend execution in Deno. The four exported owner projects
+also passed: games, 50 tour slides, embedded keyboard navigation, SQLite
+fragments, and theme/mobile transitions. Screenshots were reviewed. The stress
+run pasted 109 KB in 1.30 seconds; native insertion still took 41.8 seconds, so
+that distinct performance gap remains open. The local server and refreshed
+`/root/resources-bunny.tar.gz` use this export, verified again after extraction.
+The prior archive is retained under `/root/archive/2026/09/10/`. No live project
+data was saved and no Bunny deployment was performed.
 
 ### Standalone compiler parity
 
