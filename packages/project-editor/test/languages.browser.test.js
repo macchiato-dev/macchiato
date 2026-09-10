@@ -354,6 +354,22 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   assert.equal(burst.retainedType, "change");
   assert.equal(burst.retainedTarget, "event-burst");
   assert.equal(burst.retainedProbe, 1);
+  await page.evaluate(() => window.callGuest("startMutationProbe", {}));
+  const nativeCount = await page.locator("#mutation-probe").evaluate(root => new Promise(resolve => {
+    const observer = new MutationObserver(records => { observer.disconnect(); resolve(records.length); });
+    observer.observe(root, { childList: true, subtree: true, characterData: true });
+    const [left, right] = root.children;
+    const [a, b, c, d] = left.children;
+    right.append(b); c.remove(); left.prepend(b); right.append(a);
+    const added = document.createElement("span");
+    added.dataset.name = "new"; left.append(added); d.textContent = "D";
+  }));
+  const mutation = await page.evaluate(() => window.callGuest("inspectMutationProbe", {}));
+  assert.deepEqual(mutation.left, ["b", "d", "new"]);
+  assert.deepEqual(mutation.right, ["e", "a"]);
+  assert.ok(mutation.same && mutation.removedParent && mutation.addedParent);
+  assert.equal(mutation.text, "D");
+  assert.equal(mutation.count, nativeCount, "preserve every native record while reconciling final child order");
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });

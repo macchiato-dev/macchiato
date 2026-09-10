@@ -155,3 +155,34 @@ function inspectEventBurst() {
   }));
   flush();
 }
+
+var mutationLeft, mutationRight, mutationSaved, mutationResult;
+function startMutationProbe() {
+  var root = document.createElement("div");
+  root.setAttribute("id", "mutation-probe");
+  mutationLeft = document.createElement("div");
+  mutationRight = document.createElement("div");
+  root.appendChild(mutationLeft); root.appendChild(mutationRight);
+  var nodes = ["a", "b", "c", "d", "e"].map(function (name, index) {
+    var node = document.createElement("span");
+    node.setAttribute("data-name", name); node.textContent = name;
+    (index < 4 ? mutationLeft : mutationRight).appendChild(node);
+    return node;
+  });
+  mutationSaved = nodes[1];
+  document.body.appendChild(root);
+  var observer = new MutationObserver(function (records) {
+    function names(parent) { return parent.childNodes.map(function (node) { return node.getAttribute("data-name"); }); }
+    mutationResult = { left: names(mutationLeft), right: names(mutationRight),
+      same: mutationLeft.firstChild === mutationSaved,
+      removedParent: nodes[2].parentNode === null,
+      addedParent: mutationLeft.lastChild.parentNode === mutationLeft,
+      text: nodes[3].textContent, count: records.length };
+  });
+  observer.observe(root, { childList: true, subtree: true, characterData: true });
+  inspectListeners();
+}
+function inspectMutationProbe() {
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify(mutationResult || null));
+  flush();
+}
