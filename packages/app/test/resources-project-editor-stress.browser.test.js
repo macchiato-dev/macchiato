@@ -218,6 +218,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   // A phone has one content pane at a time. Resizing and toggling must not
   // recreate either machine or leave the output iframe at zero width.
   const editorIdentity = await editor.getAttribute("data-editor-machine-id");
+  await content.evaluate(node => { window.retainedEditorContent = node; });
   const outputFrame = page.locator("iframe.project-editor__output-frame");
   await output.locator("h1").evaluate(node => { window.retainedHeading = node; });
   await page.setViewportSize({ width: 390, height: 844 });
@@ -242,6 +243,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.locator('[data-project-view="details"]').click();
   await outputFrame.waitFor({ state: "visible" });
   assert.equal(await editor.getAttribute("data-editor-machine-id"), editorIdentity);
+  assert.ok(await content.evaluate(node => node === window.retainedEditorContent));
   assert.ok(await output.locator("h1").evaluate(node => node === window.retainedHeading));
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.screenshot({ path: join(artifacts, "phone-output.png") });

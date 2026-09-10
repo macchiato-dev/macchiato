@@ -27982,15 +27982,17 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
     tooltip = null;
   };
   button._hideInstantTooltip = hide;
-  button.addEventListener("pointerenter", () => {
-    if (!shouldShow(button)) return;
+  button.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "touch" || !shouldShow(button)) return;
     clearTimeout(showTimer);
     showTimer = setTimeout(show, 600);
   });
   button.addEventListener("pointerleave", hide);
   button.addEventListener("pointerdown", hide);
   button.addEventListener("dragstart", hide);
-  button.addEventListener("focus", show);
+  button.addEventListener("focus", () => {
+    if (button.matches(":focus-visible")) show();
+  });
   button.addEventListener("blur", hide);
   button.addEventListener("instanttooltiphide", hide);
 }
@@ -29424,8 +29426,8 @@ ${bundleProjectModule(entry, script.textContent)}
   function placeProjectClose(detailsVisible) {
     if (!projectClose) return;
     if (detailsVisible) {
-      projectCloseHome.insertBefore(projectDetails, projectClose);
       projectCloseHome.append(projectClose);
+      projectCloseHome.insertBefore(projectDetails, projectClose);
     } else {
       projectViewControls.append(projectDetails);
       projectViewControls.append(projectClose);

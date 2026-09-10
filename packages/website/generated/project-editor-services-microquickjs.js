@@ -1672,15 +1672,17 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       tooltip = null;
     };
     button._hideInstantTooltip = hide;
-    button.addEventListener("pointerenter", function () {
-      if (!shouldShow(button)) return;
+    button.addEventListener("pointerenter", function (event) {
+      if (event.pointerType === "touch" || !shouldShow(button)) return;
       clearTimeout(showTimer);
       showTimer = setTimeout(show, 600);
     });
     button.addEventListener("pointerleave", hide);
     button.addEventListener("pointerdown", hide);
     button.addEventListener("dragstart", hide);
-    button.addEventListener("focus", show);
+    button.addEventListener("focus", function () {
+      if (button.matches(":focus-visible")) show();
+    });
     button.addEventListener("blur", hide);
     button.addEventListener("instanttooltiphide", hide);
   }
@@ -1936,8 +1938,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             placeProjectClose = function _placeProjectClose(detailsVisible) {
               if (!projectClose) return;
               if (detailsVisible) {
-                projectCloseHome.insertBefore(projectDetails, projectClose);
                 projectCloseHome.append(projectClose);
+                projectCloseHome.insertBefore(projectDetails, projectClose);
               } else {
                 projectViewControls.append(projectDetails);
                 projectViewControls.append(projectClose);
