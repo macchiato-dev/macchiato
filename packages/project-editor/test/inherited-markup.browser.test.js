@@ -40,6 +40,8 @@ test("inherited active markup cannot become raw guest CSS or executable content"
     ["div", "tabindex", "99", false], ["div", "tabindex", "-1", true],
     ["input", "placeholder", "x".repeat(513), false],
     ["input", "value", "x".repeat(2049), false],
+    ["li", "value", "131", true], ["li", "value", "-1", true],
+    ["li", "value", "2147483648", false], ["li", "value", "invalid", false],
     ["div", "data-note", "x".repeat(2049), false],
     ["div", "contenteditable", "invalid", false],
     ["div", "draggable", "true", true], ["div", "draggable", "invalid", false],

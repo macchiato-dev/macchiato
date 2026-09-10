@@ -1056,8 +1056,8 @@ var WasmWebBridge = class {
     }
     const guardSubmit = (event) => {
       const form = event.target;
-      if (form instanceof HTMLFormElement && insideDocument(form)) {
-        const submitter = event.submitter;
+      const submitter = event.submitter;
+      if (form instanceof HTMLFormElement && (insideDocument(form) || submitter instanceof Node && insideDocument(submitter))) {
         const method = submitter?.getAttribute("formmethod")?.toLowerCase() ?? form.method;
         const action = submitter?.getAttribute("formaction") ?? form.action;
         let sameOrigin = false;
@@ -1199,6 +1199,71 @@ var WasmWebBridge = class {
       }
       fail(`property get ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
+    function setAttribute(object, args) {
+      requireContentTarget(object);
+      if (!isAllowedAttribute(args[0]) || typeof args[1] !== "string") {
+        fail(`attribute ${args[0]} is not allowed`);
+      }
+      if (object instanceof HTMLMetaElement && !(args[0] === "name" && args[1] === "viewport" || args[0] === "content" && args[1] === "width=device-width, initial-scale=1")) {
+        fail("only the standard viewport metadata is allowed");
+      }
+      if (!(object instanceof HTMLMetaElement) && args[0] === "content") {
+        fail("attribute content is only allowed on meta");
+      }
+      if (args[0] === "name" && !(object instanceof HTMLMetaElement) && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement || object instanceof HTMLTextAreaElement) || !/^[a-z_][a-z0-9_.:-]{0,127}$/i.test(args[1]))) {
+        fail("name attribute is not allowed on this element");
+      }
+      if (args[0] === "form" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement) || args[1] !== "")) {
+        fail("only an empty form override is allowed on controls");
+      }
+      if (args[0] === "method" && (!(object instanceof HTMLFormElement) || args[1] !== "dialog")) {
+        fail("only the non-network dialog form method is allowed");
+      }
+      if (args[0] === "main-field" && (!(object instanceof HTMLInputElement) || args[1] !== "true")) {
+        fail("main-field is only allowed on a search input");
+      }
+      if (object instanceof SVGElement && (!SVG_IMAGE_ATTRIBUTES.has(args[0]) || !svgImageAttributeAllowed(args[0], args[1]))) {
+        fail(`SVG attribute ${args[0]} value is not allowed`);
+      }
+      if (args[0].startsWith("data-") && args[1].length > 2048) {
+        fail("data attribute is too long");
+      }
+      if (args[0] === "href" && (!(object instanceof HTMLAnchorElement) || !navigationAllowed(args[1]))) {
+        fail("href is not allowed by navigation policy");
+      }
+      if (args[0] === "target" && (!(object instanceof HTMLAnchorElement) || args[1] !== "_blank")) {
+        fail("target is only allowed as _blank on links");
+      }
+      if (args[0] === "rel" && (!(object instanceof HTMLAnchorElement) || args[1] !== "noopener noreferrer")) {
+        fail("rel is only allowed as noopener noreferrer on links");
+      }
+      if (args[0] === "tabindex" && !["-1", "0"].includes(args[1])) {
+        fail("tabindex must use normal or programmatic focus order");
+      }
+      if (args[0] === "value" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement || object.tagName === "OPTION") || args[1].length > 2048)) {
+        fail("value attribute is not allowed on this element");
+      }
+      if (args[0] === "placeholder" && (!(object instanceof HTMLInputElement || object instanceof HTMLTextAreaElement) || args[1].length > 512)) {
+        fail("placeholder is not allowed on this element");
+      }
+      if (["contenteditable", "spellcheck", "writingsuggestions"].includes(args[0]) && !["true", "false"].includes(args[1])) {
+        fail(`${args[0]} value is not allowed`);
+      }
+      if (args[0] === "draggable" && !["true", "false"].includes(args[1])) {
+        fail("draggable value is not allowed");
+      }
+      if (args[0] === "aria-autocomplete" && !["both", "inline", "list", "none"].includes(args[1])) {
+        fail("aria-autocomplete value is not allowed");
+      }
+      if (["autocapitalize", "autocomplete", "autocorrect"].includes(args[0]) && !["off", "on"].includes(args[1])) {
+        fail(`${args[0]} value is not allowed`);
+      }
+      if (args[0] === "translate" && !["no", "yes"].includes(args[1])) {
+        fail("translate value is not allowed");
+      }
+      object.setAttribute(args[0], args[1]);
+      return null;
+    }
     function set(object, name, next) {
       if (object instanceof Node) {
         requireNode(object);
@@ -1219,23 +1284,12 @@ var WasmWebBridge = class {
           for (const attribute of Array.from(element.attributes)) {
             if (attribute.name === "style" && /^--[a-z][a-z0-9-]{0,63}:\s*(?:#[0-9a-f]{3,8}|-?(?:\d+(?:\.\d*)?|\.\d+)%)$/i.test(attribute.value)) continue;
             if (attribute.name === "xmlns" && svg && attribute.value === "http://www.w3.org/2000/svg") continue;
-            if (!svg && attribute.name === "href" && (!(element instanceof HTMLAnchorElement) || !navigationAllowed(attribute.value))) {
-              fail("innerHTML href is not allowed by navigation policy");
-            }
             if (!svg && attribute.name === "src") {
               if (!(element instanceof HTMLImageElement)) fail("innerHTML src is not allowed on this element");
               element.setAttribute("src", embeddedImage(attribute.value));
               continue;
             }
-            if (!svg && attribute.name === "target" && (!(element instanceof HTMLAnchorElement) || attribute.value !== "_blank")) {
-              fail("innerHTML target is only allowed as _blank on links");
-            }
-            if (!svg && attribute.name === "rel" && (!(element instanceof HTMLAnchorElement) || attribute.value !== "noopener noreferrer")) {
-              fail("innerHTML rel is only allowed as noopener noreferrer on links");
-            }
-            if (!isAllowedAttribute(attribute.name) || svg && (!SVG_IMAGE_ATTRIBUTES.has(attribute.name) || !svgImageAttributeAllowed(attribute.name, attribute.value))) {
-              fail(`innerHTML attribute ${attribute.name} is not allowed`);
-            }
+            setAttribute(element, [attribute.name, attribute.value]);
           }
         }
         (object instanceof HTMLTemplateElement ? object.content : object).replaceChildren(template.content);
@@ -1851,71 +1905,7 @@ var WasmWebBridge = class {
         const found = hostDocument.elementFromPoint(args[0], args[1]);
         return found && insideDocument(found) ? reference(found) : null;
       }
-      if (object instanceof Element && name === "setAttribute") {
-        requireContentTarget(object);
-        if (!isAllowedAttribute(args[0]) || typeof args[1] !== "string") {
-          fail(`attribute ${args[0]} is not allowed`);
-        }
-        if (object instanceof HTMLMetaElement && !(args[0] === "name" && args[1] === "viewport" || args[0] === "content" && args[1] === "width=device-width, initial-scale=1")) {
-          fail("only the standard viewport metadata is allowed");
-        }
-        if (!(object instanceof HTMLMetaElement) && args[0] === "content") {
-          fail("attribute content is only allowed on meta");
-        }
-        if (args[0] === "name" && !(object instanceof HTMLMetaElement) && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement || object instanceof HTMLTextAreaElement) || !/^[a-z_][a-z0-9_.:-]{0,127}$/i.test(args[1]))) {
-          fail("name attribute is not allowed on this element");
-        }
-        if (args[0] === "form" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement) || args[1] !== "")) {
-          fail("only an empty form override is allowed on controls");
-        }
-        if (args[0] === "method" && (!(object instanceof HTMLFormElement) || args[1] !== "dialog")) {
-          fail("only the non-network dialog form method is allowed");
-        }
-        if (args[0] === "main-field" && (!(object instanceof HTMLInputElement) || args[1] !== "true")) {
-          fail("main-field is only allowed on a search input");
-        }
-        if (object instanceof SVGElement && (!SVG_IMAGE_ATTRIBUTES.has(args[0]) || !svgImageAttributeAllowed(args[0], args[1]))) {
-          fail(`SVG attribute ${args[0]} value is not allowed`);
-        }
-        if (args[0].startsWith("data-") && args[1].length > 2048) {
-          fail("data attribute is too long");
-        }
-        if (args[0] === "href" && (!(object instanceof HTMLAnchorElement) || !navigationAllowed(args[1]))) {
-          fail("href is not allowed by navigation policy");
-        }
-        if (args[0] === "target" && (!(object instanceof HTMLAnchorElement) || args[1] !== "_blank")) {
-          fail("target is only allowed as _blank on links");
-        }
-        if (args[0] === "rel" && (!(object instanceof HTMLAnchorElement) || args[1] !== "noopener noreferrer")) {
-          fail("rel is only allowed as noopener noreferrer on links");
-        }
-        if (args[0] === "tabindex" && !["-1", "0"].includes(args[1])) {
-          fail("tabindex must use normal or programmatic focus order");
-        }
-        if (args[0] === "value" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement || object.tagName === "OPTION") || args[1].length > 2048)) {
-          fail("value attribute is not allowed on this element");
-        }
-        if (args[0] === "placeholder" && (!(object instanceof HTMLInputElement || object instanceof HTMLTextAreaElement) || args[1].length > 512)) {
-          fail("placeholder is not allowed on this element");
-        }
-        if (["contenteditable", "spellcheck", "writingsuggestions"].includes(args[0]) && !["true", "false"].includes(args[1])) {
-          fail(`${args[0]} value is not allowed`);
-        }
-        if (args[0] === "draggable" && !["true", "false"].includes(args[1])) {
-          fail("draggable value is not allowed");
-        }
-        if (args[0] === "aria-autocomplete" && !["both", "inline", "list", "none"].includes(args[1])) {
-          fail("aria-autocomplete value is not allowed");
-        }
-        if (["autocapitalize", "autocomplete", "autocorrect"].includes(args[0]) && !["off", "on"].includes(args[1])) {
-          fail(`${args[0]} value is not allowed`);
-        }
-        if (args[0] === "translate" && !["no", "yes"].includes(args[1])) {
-          fail("translate value is not allowed");
-        }
-        object.setAttribute(args[0], args[1]);
-        return null;
-      }
+      if (object instanceof Element && name === "setAttribute") return setAttribute(object, args);
       if (object instanceof Element && name === "removeAttribute") {
         requireContentTarget(object);
         if (args.length !== 1 || typeof args[0] !== "string") {

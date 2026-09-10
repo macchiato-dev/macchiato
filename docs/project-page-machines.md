@@ -970,6 +970,13 @@ through DOM calls, direct HTML, and nested templates in both container/document
 modes, plus native form activation and direct/iframe project output. The host
 change removes duplicated checks rather than adding another policy layer.
 
+The first complete run passed all 210 tests, but the exported tour exposed a
+compatibility omission: its source line numbers use `li[value]`. List items
+now accept signed 32-bit integer values through the same shared setter. The
+expanded 161-case raw-markup suite passes, including positive and negative
+list values, overflow, and invalid text across all three assignment paths.
+The initial export stopped at slide 9 and was not promoted to the archive.
+
 ### September 10 binary reply copies
 
 A fresh DevTools sample of the 109 KB native insertion spent about 69% outside
