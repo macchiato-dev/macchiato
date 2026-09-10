@@ -632,7 +632,7 @@ GuestStyle.prototype = Object.create(GuestObject.prototype);
   "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing",
   "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow",
   "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "right",
-  "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace",
+  "tabSize", "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace",
   "width", "zIndex"].forEach(
   function (name) {
     var property = "";
