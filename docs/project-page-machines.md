@@ -860,6 +860,27 @@ intercepted project writes. In the stress run, 109 KB clipboard paste took
 1.27 seconds and native insertion took 28.7 seconds; the latter remains slow.
 No Bunny deployment was performed.
 
+### September 10 binary reply copies
+
+A fresh DevTools sample of the 109 KB native insertion spent about 69% outside
+JavaScript/Wasm stacks and 30% in guest delivery. The browser timeline showed
+4,000 input events, 8,093 layouts, and 8,095 layout-tree updates. This differs
+from the earlier guest array-search bottleneck; do not change input semantics
+merely to bypass this stress case. Ordinary first-page typing after loading
+the same source measured a 219 ms median for an insert/backspace pair.
+
+The binary reply decoder was still calling an interpreted byte getter for each
+payload byte. It now checks the declared length once and copies into a fresh
+Uint8Array using `set` and `subarray`. MicroQuickJS already implements this
+same-type copy with native `memmove`; no new C primitive or host ABI is needed.
+The fresh buffer is important because the bridge reuses its transfer buffer.
+
+Independent wire fixtures check exact bytes, logical truncation boundaries and
+cursor positions, empty/offset views, and two-way non-aliasing. They also count
+byte-getter calls so the copy cannot silently regress to an interpreted loop.
+In the focused MicroQuickJS run, 32 copies of 64 KiB took about 398 ms before
+and 1 ms after. This is a codec measurement, not a whole-editor speedup claim.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices

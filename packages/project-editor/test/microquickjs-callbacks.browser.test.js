@@ -11,6 +11,7 @@ for (const [fixture, expected] of [
   ["transient-dom-values", { updates: 24, retained: 0 }],
   ["wire-numbers", { equal: true, denied: 3 }],
   ["wire-uint", { cases: 8, bounded: 23 }],
+  ["wire-bytes", { bounded: 5, isolated: true, byteCalls: 1 }],
   ["wire-text", { cases: 8, denied: 5, subarray: true }],
   ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
@@ -75,6 +76,11 @@ for (const [fixture, expected] of [
     machine.destroy();
     return result;
   });
-  assert.deepEqual(messages.map((message) => JSON.parse(message)), [expected]);
+  const parsed = messages.map((message) => JSON.parse(message));
+  if (fixture === "wire-bytes") {
+    t.diagnostic(`32 independent 64 KiB payload copies: ${parsed[0].copyMilliseconds} ms`);
+    delete parsed[0].copyMilliseconds;
+  }
+  assert.deepEqual(parsed, [expected]);
   assert.deepEqual(errors, []);
 });
