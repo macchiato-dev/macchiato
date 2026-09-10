@@ -232,11 +232,15 @@
     activeSnapshot = request.snapshot;
     activeFile = activePath === "config" ? null :
       activeSnapshot.files.filter(function (file) { return file.path === activePath; })[0] || null;
+    // Updating data is not a render request. The project UI owns the debounce;
+    // scheduling here too rebuilt each edit twice and ignored its delay.
     if (refreshTimer) clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(function () { startOutput(activeSnapshot); }, 500);
     return JSON.stringify({ accepted: true });
   };
   globalThis.__resourcesProjectRenderSnapshot = function () {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    if (syntaxTimer) clearTimeout(syntaxTimer);
+    if (errorTimer) clearTimeout(errorTimer);
     if (activeSnapshot) startOutput(activeSnapshot);
     return JSON.stringify({ accepted: !!activeSnapshot });
   };

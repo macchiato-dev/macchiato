@@ -154,6 +154,15 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     `<p data-row="${index + 1}">Editable row ${String(index + 1).padStart(3, "0")}</p>`).join("\n");
   const source = `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<title>Editing Marathon</title>\n<style>\nbody { margin: 2rem; background: #e8f2ff; color: #17243a; font: 16px system-ui; }\nh1 { color: #315aa8; }\np:nth-child(3n) { color: #7b3fa1; }\n</style>\n</head>\n<body>\n<h1>Editing Marathon</h1>\n${rows}\n</body>\n</html>`;
 
+  await page.evaluate(() => {
+    window.outputBuilds = 0;
+    window.outputBuildObserver = new MutationObserver(records => {
+      for (const record of records) if (record.oldValue === 'build') outputBuilds++;
+    });
+    outputBuildObserver.observe(document.querySelector('[data-project-editor]'), {
+      attributes: true, attributeOldValue: true, attributeFilter: ['data-output-machine-stage'],
+    });
+  });
   await content.fill(source);
   await page.waitForTimeout(1_200);
   assert.equal((await content.innerText()).trim(), source.trim());
@@ -170,6 +179,10 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     })) }), { cause });
   }
   assert.equal(await output.locator("p", { hasText: /Editable row/ }).count(), 100);
+  await page.waitForTimeout(1_200);
+  assert.equal(await page.evaluate(() => outputBuilds), 1,
+    'one editing burst must cause one output build, not competing debounce timers');
+  await page.evaluate(() => outputBuildObserver.disconnect());
   await page.screenshot({ path: join(artifacts, "editor-light.png") });
 
   const expandedFrame = await page.locator("iframe.project-editor__output-frame").elementHandle();
@@ -257,6 +270,19 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await output.getByRole("heading", { name: "Recovered output" }).waitFor();
   await errorMessage.waitFor({ state: "hidden" });
   assert.equal(await editor.getAttribute("data-output-machine-state"), "ready");
+
+  // Reading history changes both the code and output, without requiring an
+  // edit to trigger the output scheduler. Returning to current restores both.
+  await page.waitForTimeout(1_700);
+  const historyButton = page.locator('[data-project-versions]');
+  await historyButton.click();
+  await page.locator('[data-project-history] [data-version-sequence="1"]').click();
+  await output.getByRole('heading', { name: 'Editing Marathon', exact: true }).waitFor();
+  assert.match(await page.locator('[data-project-snapshot]').inputValue(), /Editable row 100/);
+  await historyButton.click();
+  await page.locator('[data-project-history] [aria-current="true"]').click();
+  await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
+  assert.match(await content.innerText(), /Recovered output/);
 
   // A phone has one content pane at a time. Resizing and toggling must not
   // recreate either machine or leave the output iframe at zero width.

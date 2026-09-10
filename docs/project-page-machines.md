@@ -1228,6 +1228,20 @@ data was saved and no Bunny deployment was performed.
 
 ### Standalone compiler parity
 
+### September 10 output scheduling
+
+A live one-burst typing probe and a new browser assertion both found two
+output builds for one edit. The bootstrap's snapshot setter scheduled a
+500 ms render while the UI independently scheduled its configured debounce.
+The setter now updates data only; the UI owns the trailing-edge timer.
+Explicit history/import/configuration actions send their current snapshot and
+render it directly. Previously that editor-owned output path returned early,
+so selecting a version could leave the output showing another version.
+The initial output is already mounted by bootstrap and needs no second UI
+mount. Verification of the rebuilt scheduling and version behavior is pending.
+
+### Standalone compiler parity
+
 The temporary playground keeps its page integration behind a controller and a
 small set of related devices. A session device owns namespaced ephemeral state,
 an editor device owns the editor machine, a compiler device selects a

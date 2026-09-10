@@ -637,9 +637,15 @@ async function mountProjectRoot(root) {
   }
 
   async function renderPreview() {
-    if (root.dataset.outputOwner === "editor") return;
     clearTimeout(editorPreviewTimer);
     editorPreviewTimer = 0;
+    if (root.dataset.outputOwner === "editor") {
+      // Explicit actions (history, import, configuration) render the selected
+      // snapshot. Typing uses the single trailing-edge timer below instead.
+      editorController?.setSnapshot(state);
+      editorController?.renderSnapshot();
+      return;
+    }
     const generation = ++previewGeneration;
     root.dataset.outputMachineState = "starting";
     activeError = "";
@@ -1018,7 +1024,8 @@ async function mountProjectRoot(root) {
       if (root.dataset.outputMachineError) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
-      if (!previewController) renderPreview();
+      // The editor bootstrap has already mounted its initial output.
+      if (!previewController && root.dataset.outputOwner !== "editor") renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
