@@ -70,8 +70,8 @@ instead support a reviewed hot-update protocol, but retaining a guest is never
 implicit merely because the browser mount is unchanged.
 
 The intended runtime API separates the expensive engine from its disposable
-execution contexts. A reusable runtime owns the compiled Wasm module, QuickJS
-runtime, memory ceiling, and shared immutable resources. It can create two
+execution contexts. A reusable engine owns the compiled Wasm module, memory,
+allocator, and shared immutable resources. It can create two
 isolated contexts with distinct DOM roots and reference tables: the visible
 context continues running while the next context mounts into the hidden root;
 after a successful swap, the old context is destroyed. Context failure leaves
@@ -79,19 +79,16 @@ the visible generation intact. This must remain an explicit runtime/context
 API—passing a runtime object or a class that owns it—not an inference based on
 two machines receiving the same iframe.
 
-Implementation gap: output `load()` currently reuses a single QuickJS context,
-with a new module-name prefix on each load. This refreshes imports but does not
-clear global bindings, old module records, stylesheets, or all application
-callbacks. Final machine disposal now cancels native callbacks and listeners;
-that does **not** make repeated loads equivalent to fresh contexts. Clean
-context replacement remains required before this lifecycle design is complete.
-Fetch replies now carry controller-side load ownership: responses from replaced
-or destroyed outputs cannot resume their old application against a newer tree.
-The direct and iframe module tests both reproduce that race and verify the
-guard. This prevents stale execution, but does not reclaim unresolved promises
-or replace old module/global state.
+Output `load()` now uses `ProjectOutput` in both the direct and iframe paths.
+Each load gets a fresh QuickJS session and machine-scoped root; the previous
+session remains visible until the new scripts/modules finish initialization.
+A failed or superseded preparation is disposed without replacing that visible
+root. Successful replacement removes old styles, callbacks, modules, globals,
+and pending jobs. Fetch responses belong to their originating session and are
+ignored after its disposal. The controller retains the same iframe and actual
+WebAssembly instance across loads.
 
-The QuickJS session prototype in `dev/wasm-web-runtimes/quickjs/` can create
+The QuickJS session adapter in `dev/wasm-web-runtimes/quickjs/` creates
 independently disposable JS sessions in one WebAssembly instance. Its tests
 cover nested failures, reference cleanup, and bounded repeated replacement.
 They also leave modules suspended in top-level `await` before disposal, check
@@ -99,9 +96,11 @@ that a finalizer-reporting error cannot skip sibling sessions, and reject
 reattachment after engine disposal. Storage and route services can return
 unsubscribe functions, which the bridge now calls when a machine is destroyed;
 the shared service itself can survive for the replacement machine.
-It is not yet the live output path: integration must prepare a new root,
-preserve the old visible output on failure, and swap before disposing the old
-machine. Do not substitute a new WebAssembly instance for every keystroke.
+The module integration tests exercise both output paths, including repeated
+classic-script declarations, failed and superseded loads, persistent storage,
+late fetch replies, dialogs, and asynchronous errors. Preparation is not a
+transaction over external services: permitted storage writes or navigation
+performed by startup code are not rolled back if that code subsequently fails.
 
 The September 2026 browser verification found intermittent
 `event callback ... is unavailable` failures during repeated editor input.

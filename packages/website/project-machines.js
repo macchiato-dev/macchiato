@@ -35,10 +35,10 @@ function callMessage(name, payload) {
 }
 export function createConstrainedFetch(allowedOrigins = [], maxBytes = 1_048_576) {
   const origins = new Set(allowedOrigins.map((value) => new URL(value).origin));
-  return async (value) => {
+  return async (value, { signal } = {}) => {
     const url = new URL(value);
     if (url.protocol !== "https:" || !origins.has(url.origin)) throw new Error(`Fetch blocked for ${url.origin}`);
-    const response = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error" }), bytes = new Uint8Array(await response.arrayBuffer());
+    const response = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", signal }), bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.byteLength > maxBytes) throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
     let binary = "";
     for (let offset = 0; offset < bytes.length; offset += 0x8000)
@@ -49,8 +49,8 @@ export function createConstrainedFetch(allowedOrigins = [], maxBytes = 1_048_576
 export function createProjectFetch(files = [], allowedOrigins = [], maxBytes = 1_048_576) {
   const projectFiles = new Map(files.map((file) => [file.path, file]));
   const remoteFetch = createConstrainedFetch(allowedOrigins, maxBytes);
-  return async (value) => {
-    if (/^https:\/\//.test(value)) return remoteFetch(value);
+  return async (value, options) => {
+    if (/^https:\/\//.test(value)) return remoteFetch(value, options);
     if (typeof value !== "string" || value.includes("?") || value.includes("#"))
       throw new Error("Project file fetch requires a relative file path");
     const path = value.replace(/^\.\//, "");

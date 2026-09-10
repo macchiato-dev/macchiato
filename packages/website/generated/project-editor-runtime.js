@@ -767,8 +767,8 @@ function scopeSelector(selector, scopeClass) {
     return `${scope} ${trimmed}`;
   }).join(", ");
 }
-function fail(message) {
-  throw new Error(`wasm-web-machine: ${message}`);
+function fail(message2) {
+  throw new Error(`wasm-web-machine: ${message2}`);
 }
 function isAllowedAttribute(name) {
   return ATTRIBUTES.has(name) || /^(?:aria|data)-[a-z][a-z0-9-]{0,63}$/.test(name);
@@ -2225,11 +2225,11 @@ var WasmWebBridge = class {
       }
       if (capacity >= 6 && memory[offset] === 68 && memory[offset + 1] === 85 && memory[offset + 2] === 76 && memory[offset + 3] === 69) {
         const end = memory.indexOf(0, offset + 5);
-        const message = decoder.decode(memory.subarray(
+        const message2 = decoder.decode(memory.subarray(
           offset + 5,
           end < 0 || end > offset + capacity ? offset + capacity : end
         ));
-        fail(`guest execution failed at stage ${memory[offset + 4]}: ${message}`);
+        fail(`guest execution failed at stage ${memory[offset + 4]}: ${message2}`);
       }
       const length = new DataView(memory.buffer).getUint32(offset, true);
       if (length > capacity - 4) fail("invalid guest message length");
@@ -2402,16 +2402,16 @@ var WasmWebMachine = class {
     }
   }
   msg = (offset, length) => this.#bridge.imports.host.msg(offset, length);
-  onmsg = (message = 0) => {
+  onmsg = (message2 = 0) => {
     if (!this.#connected) {
-      if (message !== 0) {
+      if (message2 !== 0) {
         throw new Error("wasm-web-machine: first message must be the null message");
       }
       this.#connected = true;
       return this.#bridge.connect(this.#instance);
     }
-    if (message === 0) return this.#instance.exports.onmsg(0);
-    return this.#bridge.send(message);
+    if (message2 === 0) return this.#instance.exports.onmsg(0);
+    return this.#bridge.send(message2);
   };
   destroy = () => {
     try {
@@ -2443,8 +2443,362 @@ var editorLanguages = [
   { name: "cpp", title: "C/C++", extensions: ["c", "h", "cc", "cpp", "cxx", "hpp", "hxx"], aliases: ["c", "c++"], package: "cpp" }
 ];
 
-// packages/website/project-machines.js
+// dev/wasm-web-runtimes/quickjs/context-runtime.js
+var QuickJSRuntime = class {
+  #instance;
+  #active;
+  #sessions = /* @__PURE__ */ new Set();
+  #nextId = 1;
+  #destroyed = false;
+  constructor(module) {
+    this.#instance = new WebAssembly.Instance(module, { host: {
+      now: () => this.#active.session.imports.host.now(),
+      msg: (offset, length) => {
+        const call = this.#active;
+        if (call.control) {
+          if (length < 12) throw new Error("QuickJS session control buffer is too small");
+          new Uint8Array(this.#instance.exports.memory.buffer, offset, 12).set(call.control);
+          call.control = null;
+          return 12;
+        }
+        if (call.error && length !== 0) return 4294967295;
+        try {
+          return call.session.imports.host.msg(offset, length);
+        } catch (error) {
+          call.error ||= error;
+          return 4294967295;
+        }
+      }
+    } });
+  }
+  createSession() {
+    if (this.#destroyed) throw new Error("QuickJS runtime is disposed");
+    if (this.#nextId > 4294967295) throw new RangeError("QuickJS session IDs exhausted");
+    const session = { id: this.#nextId++, imports: null, disposed: false, disposing: false, depth: 0 };
+    return Object.freeze({
+      instantiate: (imports) => {
+        if (this.#destroyed) throw new Error("QuickJS runtime is disposed");
+        if (session.imports || session.disposed) throw new Error("QuickJS session was already attached");
+        session.imports = imports;
+        this.#sessions.add(session);
+        return {
+          exports: {
+            memory: this.#instance.exports.memory,
+            onmsg: (length) => this.#call(session, length, 0)
+          },
+          destroy: () => this.#dispose(session)
+        };
+      }
+    });
+  }
+  #call(session, length, action) {
+    if (session.disposed || session.disposing && action !== 1) throw new Error("QuickJS session is disposed");
+    const control = new Uint8Array(12), words = new DataView(control.buffer);
+    words.setUint32(0, session.id, true);
+    words.setUint32(4, length, true);
+    words.setUint32(8, action, true);
+    const previous = this.#active;
+    this.#active = { session, control };
+    session.depth++;
+    try {
+      this.#instance.exports.onmsg(12);
+      if (this.#active.error) throw this.#active.error;
+      if (this.#active.control) throw new Error("QuickJS build does not support sessions");
+    } finally {
+      session.depth--;
+      this.#active = previous;
+    }
+  }
+  #dispose(session) {
+    if (session.disposed) return;
+    if (session.depth) throw new Error("Cannot dispose a running QuickJS session");
+    session.disposing = true;
+    try {
+      this.#call(session, 0, 1);
+    } finally {
+      session.disposed = true;
+      session.imports = null;
+      this.#sessions.delete(session);
+    }
+  }
+  destroy() {
+    if (this.#destroyed) return;
+    for (const session of this.#sessions) {
+      if (session.depth) throw new Error("Cannot dispose a running QuickJS runtime");
+    }
+    this.#destroyed = true;
+    let failure;
+    for (const session of this.#sessions) {
+      try {
+        this.#dispose(session);
+      } catch (error) {
+        failure ||= error;
+      }
+    }
+    this.#instance = void 0;
+    if (failure) throw failure;
+  }
+};
+
+// packages/website/project-output-session.js
 var encoder2 = new TextEncoder();
+function message(name, payload) {
+  const fn = encoder2.encode(name), argument = encoder2.encode(JSON.stringify(payload));
+  const bytes = new Uint8Array(2 + fn.length + argument.length);
+  bytes[0] = 2;
+  bytes.set(fn, 1);
+  bytes.set(argument, fn.length + 2);
+  return bytes;
+}
+var OutputSession = class {
+  constructor(Machine, runtime, root, options, onError) {
+    this.pending = /* @__PURE__ */ new Map();
+    this.nextRequest = 1;
+    this.disposed = false;
+    this.starting = true;
+    this.onError = onError;
+    this.options = options;
+    this.abort = new AbortController();
+    const files = new Map((options.files || []).map((file) => [file.path, file.content]));
+    this.machine = new Machine(runtime.createSession(), root, {
+      ...options,
+      onError: (error) => this.report(error),
+      services: { ...options.services, call(name, path) {
+        if (name === "module.source") return JSON.stringify(files.get(path) ?? null);
+        if (typeof options.services?.call === "function") return options.services.call(name, path);
+        throw new Error(`Project service is unavailable: ${name}`);
+      } },
+      onMessage: (text) => {
+        if (text.startsWith("__wwcModule:")) {
+          const result = JSON.parse(text.slice(12)), pending = this.pending.get(result.id);
+          if (!pending) return;
+          this.pending.delete(result.id);
+          if (result.error) pending.reject(new Error(result.error));
+          else pending.resolve();
+        } else if (text.startsWith("__wwcResponse:")) this.response = text.slice(14);
+        else if (text.startsWith("__wwcError:")) this.report(new Error(text.slice(11)));
+        else {
+          let request;
+          try {
+            request = JSON.parse(text);
+          } catch {
+          }
+          if (request?.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string") {
+            void this.answerFetch(request).catch((error) => {
+              this.report(error);
+              queueMicrotask(() => {
+                throw error;
+              });
+            });
+          } else options.onMessage?.(text);
+        }
+      }
+    });
+  }
+  report(error) {
+    if (this.disposed) return;
+    this.error ||= error;
+    if (this.starting) {
+      for (const request of this.pending.values()) request.reject(error);
+      this.pending.clear();
+    } else queueMicrotask(() => {
+      if (!this.disposed) this.onError?.(error);
+    });
+  }
+  async answerFetch(request) {
+    let reply;
+    try {
+      if (!this.options.fetchResource) throw new Error("Project network access is disabled");
+      reply = { id: request.id, ...await this.options.fetchResource(request.url, { signal: this.abort.signal }) };
+    } catch (error) {
+      reply = { id: request.id, error: error.message || String(error) };
+    }
+    if (!this.disposed) this.machine.onmsg(message("__resourcesFetchResolve", reply));
+  }
+  call(name, payload) {
+    if (this.disposed) throw new Error("Project output was replaced or destroyed");
+    this.response = void 0;
+    this.error = null;
+    this.machine.onmsg(message(name, payload));
+    if (this.error) throw this.error;
+    if (this.response === void 0) throw new Error(`Guest function ${name} did not respond`);
+    return JSON.parse(this.response);
+  }
+  async run(scripts) {
+    for (const [index, script] of scripts.entries()) {
+      if (this.disposed) throw new Error("Project output was replaced or destroyed");
+      this.error = null;
+      if (script.module) {
+        const id = this.nextRequest++;
+        await new Promise((resolve, reject) => {
+          this.pending.set(id, { resolve, reject });
+          try {
+            this.call("__resourcesOutputRunModule", { id, source: script.source, code: script.code });
+          } catch (error) {
+            this.pending.delete(id);
+            reject(error);
+          }
+        });
+      } else {
+        const source = encoder2.encode(script.code), bytes = new Uint8Array(source.length + 1);
+        bytes[0] = 1;
+        bytes.set(source, 1);
+        await this.machine.onmsg(bytes);
+        if (this.error) throw new Error(`${script.source || `script ${index + 1}`}: ${this.error.message}`);
+      }
+    }
+  }
+  destroy() {
+    if (this.disposed) return;
+    this.disposed = true;
+    this.abort.abort();
+    for (const request of this.pending.values()) request.reject(new Error("Project output was replaced or destroyed"));
+    this.pending.clear();
+    this.machine.destroy();
+  }
+};
+var ProjectOutput = class {
+  constructor(Machine, module, root, optionsFor, onError) {
+    this.Machine = Machine;
+    this.runtime = new QuickJSRuntime(module);
+    this.root = root;
+    this.optionsFor = optionsFor;
+    this.onError = onError;
+    this.programs = 0;
+    this.destroyed = false;
+    this.active = null;
+    this.preparing = null;
+  }
+  load = async (project) => {
+    if (this.destroyed) throw new Error("Project output was destroyed");
+    this.remove(this.preparing);
+    const wrapper = this.root.ownerDocument.createElement("div");
+    const surface = this.root.ownerDocument.createElement("div");
+    surface.className = "project-output-root";
+    wrapper.append(surface);
+    wrapper.inert = true;
+    wrapper.style.cssText = "position:absolute;left:0;top:0;width:100%;opacity:0;visibility:hidden;pointer-events:none";
+    this.root.style.position = "relative";
+    this.root.append(wrapper);
+    const pending = { wrapper, session: null };
+    this.preparing = pending;
+    try {
+      const session = pending.session = new OutputSession(
+        this.Machine,
+        this.runtime,
+        surface,
+        this.optionsFor(project),
+        this.onError
+      );
+      await session.machine.onmsg(0);
+      if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
+      const result = session.call("__resourcesOutputLoad", {
+        tree: project.tree || [],
+        stylesheets: project.stylesheets || []
+      });
+      await session.machine.onmsg(0);
+      await session.run(project.scripts || []);
+      if (session.error) throw session.error;
+      if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
+      const previous = this.active;
+      this.active = pending;
+      this.preparing = null;
+      wrapper.removeAttribute("style");
+      wrapper.inert = false;
+      session.starting = false;
+      this.programs += (project.scripts || []).length;
+      this.remove(previous);
+      if (!previous) for (const node of [...this.root.childNodes]) {
+        if (node !== wrapper) node.remove();
+      }
+      return result;
+    } catch (error) {
+      if (this.preparing === pending) this.preparing = null;
+      this.remove(pending);
+      throw error;
+    }
+  };
+  remove(entry) {
+    if (!entry) return;
+    try {
+      entry.session?.destroy();
+    } finally {
+      entry.wrapper.remove();
+    }
+  }
+  setContent = (tree) => {
+    const session = this.active?.session;
+    if (!session) throw new Error("Project output is unavailable");
+    const result = session.call("__resourcesOutputSetContent", tree);
+    session.machine.onmsg(0);
+    return result;
+  };
+  run = async (scripts) => {
+    if (!this.active) throw new Error("Project output is unavailable");
+    await this.active.session.run(scripts);
+    this.programs += scripts.length;
+  };
+  inspect = () => ({ runtime: "quickjs", programs: this.programs });
+  destroy = () => {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.remove(this.preparing);
+    this.remove(this.active);
+    this.preparing = this.active = null;
+    this.runtime.destroy();
+  };
+};
+
+// packages/hub/src/url-pattern.js
+var HOST_LABEL = /^(?:\*|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$/i;
+function wildcardSource(value, { dotAware = false } = {}) {
+  return value.split("*").map((part) => part.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")).join(dotAware ? "[^.]+" : ".*");
+}
+function compileAllowedUrlPattern(input) {
+  const source = String(input || "").trim();
+  if (!source) throw new Error("URL pattern cannot be empty");
+  if (source.startsWith("`") || source.endsWith("`")) {
+    if (!(source.length > 2 && source.startsWith("`") && source.endsWith("`"))) throw new Error("Exact URLs need matching backquotes");
+    const exact = source.slice(1, -1);
+    const parsed = new URL(exact);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") throw new Error("Exact URLs must use HTTP or HTTPS");
+    return (value) => String(value) === exact;
+  }
+  if (source.startsWith("/")) {
+    const lastSlash = source.lastIndexOf("/");
+    if (lastSlash === 0) throw new Error("Regular expressions need a closing slash");
+    const expression2 = new RegExp(source.slice(1, lastSlash), source.slice(lastSlash + 1));
+    return (value) => {
+      expression2.lastIndex = 0;
+      return expression2.test(String(value));
+    };
+  }
+  const slash = source.indexOf("/");
+  const hostname = (slash < 0 ? source : source.slice(0, slash)).toLowerCase();
+  const path = slash < 0 ? "/*" : source.slice(slash);
+  if (!hostname.includes(".") || hostname.split(".").some((label) => !HOST_LABEL.test(label))) throw new Error("Use a hostname such as *.wikipedia.org");
+  if (!path.startsWith("/")) throw new Error("A hostname path must start with /");
+  const hostnamePattern = wildcardSource(hostname, { dotAware: true });
+  const pathPattern = wildcardSource(path);
+  const expression = new RegExp(`^${hostnamePattern}$`, "i");
+  const pathname = new RegExp(`^${pathPattern}$`);
+  return (value) => {
+    try {
+      const url = new URL(String(value));
+      return (url.protocol === "https:" || url.protocol === "http:") && expression.test(url.hostname) && pathname.test(`${url.pathname}${url.search}${url.hash}`);
+    } catch {
+      return false;
+    }
+  };
+}
+function urlMatchesAllowedPatterns(url, patterns) {
+  const value = String(url || "");
+  if (value.length <= 2048 && /^#[^\u0000-\u001f\u007f]*$/.test(value)) return true;
+  return (patterns || []).some((pattern) => compileAllowedUrlPattern(pattern)(url));
+}
+
+// packages/website/project-machines.js
+var encoder3 = new TextEncoder();
 var decoder2 = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
 var editorBytecodeNames = new Set(editorLanguages.map((item) => `language-${item.package}.bin`));
@@ -2473,25 +2827,19 @@ async function moduleFor(url) {
   }));
   return runtimeModules.get(url);
 }
-function taggedMessage(tag, value) {
-  const bytes = encoder2.encode(value), message = new Uint8Array(bytes.length + 1);
-  message[0] = tag;
-  message.set(bytes, 1);
-  return message;
-}
 function callMessage(name, payload) {
-  const fn = encoder2.encode(name), argument = encoder2.encode(JSON.stringify(payload)), message = new Uint8Array(2 + fn.length + argument.length);
-  message[0] = 2;
-  message.set(fn, 1);
-  message.set(argument, fn.length + 2);
-  return message;
+  const fn = encoder3.encode(name), argument = encoder3.encode(JSON.stringify(payload)), message2 = new Uint8Array(2 + fn.length + argument.length);
+  message2[0] = 2;
+  message2.set(fn, 1);
+  message2.set(argument, fn.length + 2);
+  return message2;
 }
 function createConstrainedFetch(allowedOrigins = [], maxBytes = 1048576) {
   const origins = new Set(allowedOrigins.map((value) => new URL(value).origin));
-  return async (value) => {
+  return async (value, { signal } = {}) => {
     const url = new URL(value);
     if (url.protocol !== "https:" || !origins.has(url.origin)) throw new Error(`Fetch blocked for ${url.origin}`);
-    const response = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error" }), bytes = new Uint8Array(await response.arrayBuffer());
+    const response = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", signal }), bytes = new Uint8Array(await response.arrayBuffer());
     if (bytes.byteLength > maxBytes) throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
     let binary = "";
     for (let offset = 0; offset < bytes.length; offset += 32768)
@@ -2503,8 +2851,8 @@ function createConstrainedFetch(allowedOrigins = [], maxBytes = 1048576) {
 function createProjectFetch(files = [], allowedOrigins = [], maxBytes = 1048576) {
   const projectFiles = new Map(files.map((file) => [file.path, file]));
   const remoteFetch = createConstrainedFetch(allowedOrigins, maxBytes);
-  return async (value) => {
-    if (/^https:\/\//.test(value)) return remoteFetch(value);
+  return async (value, options) => {
+    if (/^https:\/\//.test(value)) return remoteFetch(value, options);
     if (typeof value !== "string" || value.includes("?") || value.includes("#"))
       throw new Error("Project file fetch requires a relative file path");
     const path = value.replace(/^\.\//, "");
@@ -2528,7 +2876,7 @@ function createProjectFetch(files = [], allowedOrigins = [], maxBytes = 1048576)
     const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
     let bytes;
     if (data) bytes = Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0));
-    else bytes = encoder2.encode(file.content);
+    else bytes = encoder3.encode(file.content);
     if (bytes.byteLength > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
     let binary = "";
     for (let offset = 0; offset < bytes.length; offset += 32768)
@@ -2541,7 +2889,7 @@ function createProjectImageResolver(files = []) {
   for (const file of files) {
     if (/^data:image\/(?:gif|jpeg|png|webp);base64,/i.test(file.content)) images.set(file.path, file.content);
     else if (file.path.toLowerCase().endsWith(".svg")) {
-      const bytes = encoder2.encode(file.content);
+      const bytes = encoder3.encode(file.content);
       let binary = "";
       for (let offset = 0; offset < bytes.length; offset += 32768)
         binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
@@ -2550,147 +2898,32 @@ function createProjectImageResolver(files = []) {
   }
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
-async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
+async function createProjectOutputMachine({ root, scripts = [], options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  let reportedError = null, response, starting = true, destroyed = false, machine;
-  let generation = 0;
-  let moduleFiles = new Map((options.files || []).map((file) => [file.path, file.content]));
-  const moduleRequests = /* @__PURE__ */ new Map();
-  let nextModuleRequest = 1;
-  async function answerFetch(request) {
-    const requestedGeneration = generation;
-    let reply;
-    try {
-      if (typeof options.fetchResource !== "function") throw new Error("Project network access is disabled");
-      reply = { id: request.id, ...await options.fetchResource(request.url) };
-    } catch (error) {
-      reply = { id: request.id, error: error.message || String(error) };
-    }
-    if (!destroyed && requestedGeneration === generation)
-      machine.onmsg(callMessage("__resourcesFetchResolve", reply));
-  }
-  machine = new WasmWebMachine(module, root, {
-    ...options,
-    onError,
-    services: { ...options.services, call(name, path) {
-      if (name !== "module.source") {
-        if (typeof options.services?.call === "function") return options.services.call(name, path);
-        throw new Error(`Project service is unavailable: ${name}`);
-      }
-      return JSON.stringify(moduleFiles.get(path) ?? null);
-    } },
-    onMessage(text) {
-      if (text.startsWith("__wwcModule:")) {
-        const result = JSON.parse(text.slice(12));
-        const pending = moduleRequests.get(result.id);
-        if (pending) {
-          moduleRequests.delete(result.id);
-          if (result.error) pending.reject(new Error(result.error));
-          else pending.resolve();
-        }
-        return;
-      }
-      if (text.startsWith("__wwcResponse:")) {
-        response = text.slice(14);
-        return;
-      }
-      if (text.startsWith("__wwcError:") && !reportedError) {
-        reportedError = new Error(text.slice(11));
-        if (!starting) queueMicrotask(() => onError?.(reportedError));
-        return;
-      }
-      try {
-        const request = JSON.parse(text);
-        if (request.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string")
-          return void answerFetch(request).catch((error) => {
-            onError?.(error);
-            queueMicrotask(() => {
-              throw error;
-            });
-          });
-      } catch {
-      }
-      options.onMessage?.(text);
-    }
-  });
-  const machineId = `wasm-web-machine-${nextMachine++}`;
-  await machine.onmsg(0);
-  async function evaluate(script, index) {
-    reportedError = null;
-    if (script.module) {
-      const id = nextModuleRequest++;
-      let resolve, reject;
-      const complete = new Promise((yes, no) => {
-        resolve = yes;
-        reject = no;
-      });
-      moduleRequests.set(id, { resolve, reject });
-      try {
-        call("__resourcesOutputRunModule", { id, source: script.source, code: script.code });
-      } catch (error) {
-        moduleRequests.delete(id);
-        reject(error);
-      }
-      return complete;
-    }
-    await machine.onmsg(taggedMessage(1, script.code));
-    if (!reportedError) return;
-    const source = typeof script?.source === "string" && script.source ? script.source : `script ${index + 1}`;
-    throw new Error(`${source}: ${reportedError.message}`);
-  }
+  const output = new ProjectOutput(WasmWebMachine, module, root, (project) => {
+    const files = project.files || options.files || [];
+    return {
+      ...options,
+      files,
+      environment: { ...options.environment, ...project.environment },
+      fetchResource: options.fetchResource ?? createProjectFetch(files, project.allowedFetchOrigins || []),
+      resolveImage: options.resolveImage ?? createProjectImageResolver(files),
+      allowNavigate: options.allowNavigate ?? ((url) => urlMatchesAllowedPatterns(url, project.allowedLinkPatterns || []))
+    };
+  }, onError);
   try {
-    for (let index = 0; index < scripts.length; index++) await evaluate(scripts[index], index);
+    await output.load({ scripts, files: options.files });
   } catch (error) {
-    machine.destroy();
+    output.destroy();
     throw error;
   }
-  let programs = scripts.length;
-  starting = false;
-  function call(name, payload) {
-    response = void 0;
-    reportedError = null;
-    try {
-      machine.onmsg(callMessage(name, payload));
-    } catch (error) {
-      throw new Error(`${name}: ${error?.message || String(error)}`);
-    }
-    if (reportedError) throw new Error(`${name}: ${reportedError.message}`);
-    if (response === void 0) throw new Error(`Guest function ${name} did not respond`);
-    return JSON.parse(response);
-  }
+  const machineId = `wasm-web-machine-${nextMachine++}`;
   return Object.freeze({
-    setContent(tree) {
-      const result = call("__resourcesOutputSetContent", tree);
-      machine.onmsg(0);
-      return result;
-    },
-    async run(nextScripts) {
-      for (let index = 0; index < nextScripts.length; index++) await evaluate(nextScripts[index], index);
-      programs += nextScripts.length;
-    },
-    async load(project) {
-      generation++;
-      moduleFiles = new Map((project.files || []).map((file) => [file.path, file.content]));
-      const result = call("__resourcesOutputLoad", {
-        tree: project.tree || [],
-        stylesheets: project.stylesheets || []
-      });
-      machine.onmsg(0);
-      const nextScripts = project.scripts || [];
-      for (let index = 0; index < nextScripts.length; index++) await evaluate(nextScripts[index], index);
-      programs += nextScripts.length;
-      return result;
-    },
-    destroy() {
-      destroyed = true;
-      for (const pending of moduleRequests.values()) pending.reject(new Error("Project output was destroyed"));
-      moduleRequests.clear();
-      moduleFiles.clear();
-      machine.destroy();
-    },
-    inspect() {
-      return { runtime: "quickjs", programs, machine: { machineId } };
-    }
+    setContent: output.setContent,
+    run: output.run,
+    load: output.load,
+    destroy: output.destroy,
+    inspect: () => ({ ...output.inspect(), machine: { machineId } })
   });
 }
 async function createProjectBuildMachine() {
@@ -2752,7 +2985,7 @@ async function createProjectEditorMachine({
   function installBytecode({ name }) {
     if (!installedPrograms.has(name)) installedPrograms.set(name, editorBytecode(name).then((bytes) => {
       if (disposed) throw new Error("Editor was closed during bytecode loading");
-      const label = encoder2.encode(name + "\0");
+      const label = encoder3.encode(name + "\0");
       const packet = new Uint8Array(1 + label.length + bytes.length);
       packet[0] = 3;
       packet.set(label, 1);
@@ -2785,24 +3018,24 @@ async function createProjectEditorMachine({
         response = text.slice(14);
         return;
       }
-      const message = JSON.parse(text);
-      if (message.type === "editor-bytecode-started") root.dataset.editorBytecodeState = "started";
-      if (message.type === "editor-application-ready") root.dataset.editorApplicationState = "ready";
-      if (message.protocol === "resources-editor-v1") {
-        Promise.resolve().then(() => message.name === "bytecode.load" ? installBytecode(message.payload || {}) : onRequest(message.name, message.payload || {})).then(
-          (value) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", { id: message.id, value })),
+      const message2 = JSON.parse(text);
+      if (message2.type === "editor-bytecode-started") root.dataset.editorBytecodeState = "started";
+      if (message2.type === "editor-application-ready") root.dataset.editorApplicationState = "ready";
+      if (message2.protocol === "resources-editor-v1") {
+        Promise.resolve().then(() => message2.name === "bytecode.load" ? installBytecode(message2.payload || {}) : onRequest(message2.name, message2.payload || {})).then(
+          (value) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", { id: message2.id, value })),
           (error) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", {
-            id: message.id,
+            id: message2.id,
             error: error?.message || String(error)
           }))
         );
         return;
       }
       queueMicrotask(() => {
-        if (message.type === "change") onChange(message.content, { syntaxErrors: message.syntaxErrors === true });
-        else if (message.type === "ready") onReady?.(message);
-        else if (message.type === "limit") onLimit?.(message);
-        else if (message.type === "language-error") onError?.(new Error(`Language ${message.language}: ${message.message}`));
+        if (message2.type === "change") onChange(message2.content, { syntaxErrors: message2.syntaxErrors === true });
+        else if (message2.type === "ready") onReady?.(message2);
+        else if (message2.type === "limit") onLimit?.(message2);
+        else if (message2.type === "language-error") onError?.(new Error(`Language ${message2.language}: ${message2.message}`));
       });
     }
   });
@@ -2828,8 +3061,8 @@ async function createProjectEditorMachine({
     },
     command: (payload) => call("__codeEditorCommand", payload),
     callGuest: call,
-    receive(message) {
-      if (!disposed) machine.onmsg(callMessage("__resourcesEditorReceive", message));
+    receive(message2) {
+      if (!disposed) machine.onmsg(callMessage("__resourcesEditorReceive", message2));
     },
     inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
     focus() {

@@ -1,12 +1,11 @@
 // Project code arrives later through the QuickJS runtime's tagged message.
 let nextFetch = 1;
 const pendingFetches = new Map();
-let moduleGeneration = 0;
 
-// Each replacement gets its own module identities. Native module records must
-// not make a later edit reuse the previously evaluated dependency graph.
+// Each session has its own native module cache. The prefix separates project
+// resources from runtime code, not one source edit from the next.
 globalThis.__wwcModuleSource = name => {
-  const prefix = `project-${moduleGeneration}/`;
+  const prefix = "project/";
   if (!name.startsWith(prefix)) throw new Error(`Module is outside the active project: ${name}`);
   const source = JSON.parse(globalThis.__wwcServiceCall("module.source", name.slice(prefix.length)));
   if (typeof source !== "string") throw new ReferenceError(`Project module is unavailable: ${name}`);
@@ -14,7 +13,7 @@ globalThis.__wwcModuleSource = name => {
 };
 globalThis.__resourcesOutputRunModule = json => {
   const request = JSON.parse(json);
-  const name = `project-${moduleGeneration}/${request.source}`;
+  const name = `project/${request.source}`;
   Promise.resolve().then(() => globalThis.__wwcEvaluateModule(request.code, name)).then(
     () => globalThis.__wwcPostMessage("__wwcModule:" + JSON.stringify({ id: request.id })),
     error => globalThis.__wwcPostMessage("__wwcModule:" + JSON.stringify({ id: request.id,
@@ -61,7 +60,6 @@ globalThis.__resourcesOutputSetContent = (json) => {
 };
 
 globalThis.__resourcesOutputLoad = (json) => {
-  moduleGeneration++;
   const project = JSON.parse(json);
   const mounted = JSON.parse(globalThis.__resourcesOutputSetContent(JSON.stringify(project.tree || [])));
   for (const stylesheet of project.stylesheets || []) {

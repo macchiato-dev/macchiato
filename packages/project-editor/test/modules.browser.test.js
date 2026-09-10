@@ -21,6 +21,12 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     WebAssembly.Instance = new Proxy(WebAssembly.Instance, {
       construct(target, args) { outputInstances++; return Reflect.construct(target, args); },
     });
+    window.outputFetchSignals = [];
+    const nativeFetch = window.fetch;
+    window.fetch = (url, options) => {
+      if (String(url).startsWith('https://resource.test/')) outputFetchSignals.push(options?.signal);
+      return nativeFetch(url, options);
+    };
   });
   const errors = [], network = [];
   const heldFetches = [];
@@ -45,9 +51,9 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
       const { createProjectOutputMachine } = await import("/direct.js");
       window.output = await createProjectOutputMachine({ root: document.getElementById("guest"), scripts: [],
         onError: error => outputErrors.push(error.message),
-        options: { fetchResource: async url => {
+        options: { fetchResource: async (url, options) => {
           if (!url.startsWith("https://resource.test/")) throw new Error("Fetch blocked");
-          const reply = await fetch(url);
+          const reply = await fetch(url, options);
           return { status: reply.status, body: await reply.text() };
         } } });
       return;
@@ -130,6 +136,9 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   await load(classic);
   assert.match(await page.evaluate(() => supersededLoad), /replaced or destroyed/);
   assert.equal(await surface.innerText(), 'Replaced slow load');
+  slowFiles[1].content = 'setTimeout(() => { throw Error("Startup callback failed"); }, 5); await new Promise(() => {});';
+  await assert.rejects(load(slowFiles), /Startup callback failed/);
+  assert.equal(await surface.innerText(), 'Replaced slow load');
   // A stale fetch must not resume application code against a newer output.
   files[1].content = 'fetch("https://resource.test/old").then(r => r.text()).then(text => document.querySelector("main").textContent = text);';
   const startFetch = () => page.evaluate(project => window.output.load(project), {
@@ -141,6 +150,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   assert.equal(heldFetches.length, 1);
   files[1].content = 'document.querySelector("main").textContent = "New output";';
   await load(files);
+  assert.equal(await documentFrame.evaluate(() => outputFetchSignals[0].aborted), true);
   await heldFetches[0].fulfill({ status: 200, body: "Stale output", contentType: "text/plain" });
   await page.waitForTimeout(100);
   assert.equal(await surface.innerText(), "New output");
@@ -178,10 +188,12 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   assert.equal(heldFetches.length, 2);
   assert.ok(network.every(url => url.startsWith("http://modules.test/") || url.startsWith("https://resource.test/")));
   await page.evaluate(() => window.output.destroy());
+  assert.equal(await documentFrame.evaluate(() => outputFetchSignals.at(-1).aborted), true);
   await heldFetches[1].fulfill({ status: 200, body: "Late response", contentType: "text/plain" });
   await page.waitForTimeout(100);
-  assert.equal(errors.length, 3);
-  assert.match(errors[0], /late output failure/);
-  assert.match(errors[1], /plain timer failure/);
-  assert.match(errors[2], /Unicode failure/);
+  assert.equal(errors.length, 4);
+  assert.match(errors[0], /Startup callback failed/);
+  assert.match(errors[1], /late output failure/);
+  assert.match(errors[2], /plain timer failure/);
+  assert.match(errors[3], /Unicode failure/);
 });

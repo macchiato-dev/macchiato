@@ -8,7 +8,7 @@ import { compileProjectFiles } from "../src/single-file-compiler.js";
 for (const documentMode of [false, true]) test(`dialog forms work without network submission (${documentMode ? "document" : "element"})`, async t => {
   const runtime = await readFile(new URL("../../website/generated/project-quickjs-runtime.wasm", import.meta.url));
   const machine = await build({
-    stdin: { contents: `
+    stdin: { resolveDir: new URL(".", import.meta.url).pathname, contents: `
       export { default } from ${JSON.stringify(new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname)};
       export { QuickJSRuntime } from ${JSON.stringify(new URL("../../../dev/wasm-web-runtimes/quickjs/context-runtime.js", import.meta.url).pathname)};
     ` },

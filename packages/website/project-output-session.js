@@ -20,6 +20,7 @@ class OutputSession {
     this.starting = true;
     this.onError = onError;
     this.options = options;
+    this.abort = new AbortController();
     const files = new Map((options.files || []).map(file => [file.path, file.content]));
     this.machine = new Machine(runtime.createSession(), root, {
       ...options,
@@ -54,14 +55,19 @@ class OutputSession {
   report(error) {
     if (this.disposed) return;
     this.error ||= error;
-    if (!this.starting) this.onError?.(error);
+    if (this.starting) {
+      for (const request of this.pending.values()) request.reject(error);
+      this.pending.clear();
+    } else queueMicrotask(() => {
+      if (!this.disposed) this.onError?.(error);
+    });
   }
 
   async answerFetch(request) {
     let reply;
     try {
       if (!this.options.fetchResource) throw new Error("Project network access is disabled");
-      reply = { id: request.id, ...await this.options.fetchResource(request.url) };
+      reply = { id: request.id, ...await this.options.fetchResource(request.url, { signal: this.abort.signal }) };
     } catch (error) { reply = { id: request.id, error: error.message || String(error) }; }
     if (!this.disposed) this.machine.onmsg(message("__resourcesFetchResolve", reply));
   }
@@ -99,6 +105,7 @@ class OutputSession {
   destroy() {
     if (this.disposed) return;
     this.disposed = true;
+    this.abort.abort();
     for (const request of this.pending.values()) request.reject(new Error("Project output was replaced or destroyed"));
     this.pending.clear();
     this.machine.destroy();
@@ -129,7 +136,7 @@ export class ProjectOutput {
     surface.className = "project-output-root";
     wrapper.append(surface);
     wrapper.inert = true;
-    wrapper.style.cssText = "position:absolute;left:0;top:0;width:100%;visibility:hidden;pointer-events:none";
+    wrapper.style.cssText = "position:absolute;left:0;top:0;width:100%;opacity:0;visibility:hidden;pointer-events:none";
     // Position against the mount rather than the page. The application only
     // receives surface, so it cannot rewrite the controller's staging styles.
     this.root.style.position = "relative";
@@ -156,6 +163,9 @@ export class ProjectOutput {
       session.starting = false;
       this.programs += (project.scripts || []).length;
       this.remove(previous);
+      if (!previous) for (const node of [...this.root.childNodes]) {
+        if (node !== wrapper) node.remove();
+      }
       return result;
     } catch (error) {
       if (this.preparing === pending) this.preparing = null;

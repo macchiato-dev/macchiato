@@ -66,7 +66,7 @@ For constrained-engine testing, set `WWC_QUICKJS_MEMORY_LIMIT` to a byte count
 while building. The bootstrap passes at 1, 2, and 4 MiB; these numbers measure
 only the probe and are not recommended application defaults.
 
-## Reusable engine sessions (prototype)
+## Reusable engine sessions
 
 `WWC_MULTICONTEXT=1`, together with `WWC_CANONICAL_HOST=1`, builds the session
 transport used by `context-runtime.js`. It keeps the existing `onmsg` export
@@ -106,9 +106,11 @@ remains active:
 node --test packages/project-editor/test/sessions.browser.test.js
 ```
 
-Run that command from the repository root. The production output controller
-has not yet switched to this prototype; clean root swapping and its integration
-tests are required before making that change.
+Run that command from the repository root. Resources' direct and iframe output
+controllers use this adapter through `packages/website/project-output-session.js`.
+Their shared lifecycle prepares a replacement root, swaps only after successful
+initialization, and disposes the previous session without recreating the Wasm
+instance. `packages/project-editor/test/modules.browser.test.js` checks both paths.
 
 ## Upstream
 

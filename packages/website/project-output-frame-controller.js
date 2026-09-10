@@ -15,11 +15,11 @@ function reportError(error) {
 function projectFetch(files, allowedOrigins, maxBytes = 1_048_576) {
   const projectFiles = new Map(files.map((file) => [file.path, file]));
   const origins = new Set(allowedOrigins.map((value) => new URL(value).origin));
-  return async (value) => {
+  return async (value, { signal } = {}) => {
     if (/^https:\/\//.test(value)) {
       const url = new URL(value);
       if (!origins.has(url.origin)) throw new Error(`Fetch blocked for ${url.origin}`);
-      const reply = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error" });
+      const reply = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", signal });
       const bytes = new Uint8Array(await reply.arrayBuffer());
       if (bytes.byteLength > maxBytes) throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
       return resourceResult(bytes, reply.headers.get("content-type")?.split(";", 1)[0]);
