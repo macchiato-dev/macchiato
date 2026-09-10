@@ -196,6 +196,11 @@ fn main() {
     println!("cargo:rerun-if-changed=src/guest.c");
     println!("cargo:rerun-if-changed=microquickjs/mquickjs.c");
     println!("cargo:rerun-if-changed=microquickjs/mquickjs.h");
+    // Native function slots and ROM atoms must match both the bytecode
+    // compiler and the C runtime, even when only their generated tables change.
+    println!("cargo:rerun-if-changed=microquickjs/mqjs_stdlib.h");
+    println!("cargo:rerun-if-changed=microquickjs/mquickjs_atom.h");
+    println!("cargo:rerun-if-changed=microquickjs/mqjs");
     println!("cargo:rerun-if-changed=guest-runtime.js");
     println!("cargo:rerun-if-changed=../../../../../packages/project-editor/src/constrained-css.js");
     println!("cargo:rerun-if-changed=../mahjong");
