@@ -68,6 +68,8 @@ Writer.prototype.byte = function (value) {
 };
 
 Writer.prototype.uint = function (value) {
+  // Keep the byte loop local in interpreted guests. Arithmetic, rather than
+  // a 32-bit shift, preserves all safe-integer payloads in this wire format.
   var bytes = this.bytes, at = this.at;
   do {
     if (at >= bytes.length) {

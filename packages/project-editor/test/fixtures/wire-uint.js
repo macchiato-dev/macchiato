@@ -22,7 +22,7 @@ cases.forEach(function (entry) {
     if (!failed || truncated.at !== 4 + length) throw Error("Truncated read was not bounded");
     var short = new Uint8Array(4 + length), limited = new Writer(short);
     failed = false;
-    try { limited.uint(value); } catch (error) { failed = error instanceof RangeError; }
+    try { limited.uint(value); } catch (writeError) { failed = writeError instanceof RangeError; }
     if (!failed || limited.at !== short.length) throw Error("Short write was not bounded");
     for (var index = 0; index < length; index++) {
       if (short[index + 4] !== expected[index]) throw Error("Wrong partial write");
