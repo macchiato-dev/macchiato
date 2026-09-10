@@ -165,6 +165,23 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await output.locator("p", { hasText: /Editable row/ }).count(), 100);
   await page.screenshot({ path: join(artifacts, "editor-light.png") });
 
+  const expandedFrame = await page.locator("iframe.project-editor__output-frame").elementHandle();
+  const outputHeading = await output.locator("h1").elementHandle();
+  await editor.locator("[data-project-present]").click();
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]").dataset.presenting === "true");
+  const expanded = await expandedFrame.boundingBox();
+  assert.ok(expanded.x < 3 && expanded.y < 3 && expanded.width > 1435 && expanded.height > 895,
+    "expanded output covers the app bar and full viewport");
+  await page.screenshot({ path: join(artifacts, "output-expanded.png") });
+  await editor.locator("[data-project-present-close]").click();
+  assert.ok(await expandedFrame.evaluate(node => node === document.querySelector("iframe.project-editor__output-frame")),
+    "expanded view preserves the iframe");
+  assert.ok(await outputHeading.evaluate(node => node === document.querySelector("h1")),
+    "expanded view preserves the live output document");
+  await expandedFrame.dispose();
+  await outputHeading.dispose();
+  await content.click();
+
   await page.keyboard.press("Control+z");
   await page.waitForFunction(() => !document.querySelector(".cm-content").textContent.includes("Editable row 100"));
   await page.keyboard.press("Control+y");

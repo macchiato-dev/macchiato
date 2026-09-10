@@ -67,7 +67,8 @@ test("inherited active markup cannot become raw guest CSS or executable content"
               wrapper.id = "inherited";
               initial.replaceWith(wrapper);
               if (tag === "wrapper") wrapper.append(initial);
-              else wrapper.innerHTML = "<span>Plain inherited content</span>";
+              else wrapper.innerHTML = "<figure><figcaption>Plain inherited content</figcaption></figure>" +
+                "<kbd>Ctrl</kbd><output>Result</output>";
             }
             const escapedBefore = window.__escapedMarkup === true;
             const { default: Machine } = await import("/machine.js");

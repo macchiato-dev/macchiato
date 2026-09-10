@@ -920,6 +920,21 @@ reference boundaries, direct/iframe output, and native/MicroQuickJS editing.
 This remains a targeted improvement, not a completed audit of all inherited
 attributes or every browser object surface.
 
+The whole workspace required its existing passive `kbd`, `details`, `summary`,
+fieldset/legend, and figure/caption/output elements in the mutation allowlist.
+Those are ordinary content, not exceptions for active markup. The expanded-view
+check verifies viewport coverage above the app bar and preserves the original
+iframe and output node when closing. The workspace stress test passes with those
+elements included.
+
+Validation walks native element nodes (and separate template fragments), avoiding
+per-text-node child-array copies. A first 109 KB timing comparison rose from
+229 ms to 336 ms per insert/backspace pair; a subsequent old/new/old host-only
+comparison measured 584/441/581 ms. This variability does not isolate a regression
+to the new guards or establish a speedup. The new profile still spent about 90%
+in guest delivery. Repeat performance measurements under stable conditions;
+do not remove containment checks to fit these samples.
+
 ### September 10 binary reply copies
 
 A fresh DevTools sample of the 109 KB native insertion spent about 69% outside
