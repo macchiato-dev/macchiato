@@ -9,6 +9,7 @@ import { DatabaseSync } from "node:sqlite";
 import { chromium } from "playwright";
 
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
+import { createContentStore } from "../../hub/src/content.js";
 import { seal } from "../../../packages/website/auth/session.js";
 import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
@@ -273,7 +274,18 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
 
   // Reading history changes both the code and output, without requiring an
   // edit to trigger the output scheduler. Returning to current restores both.
-  await page.waitForTimeout(1_700);
+  await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.draftState === 'saved');
+  // Establish a second checkpoint in this disposable fixture. Autosave needn't
+  // create one within five minutes, and Save is disabled once already saved.
+  const checkpointDb = new DatabaseSync(join(dataDir, 'macchiato.sqlite3'));
+  try {
+    await createContentStore(createNodeSqliteClient(checkpointDb)).saveProjectSnapshot(
+      account.id, await editor.getAttribute('data-project-id'),
+      JSON.parse(await page.locator('[data-project-snapshot]').inputValue()),
+      { reason: 'manual' });
+  } finally {
+    checkpointDb.close();
+  }
   const historyButton = page.locator('[data-project-versions-proxy]');
   await historyButton.click();
   await page.locator('[data-project-history] [data-version-sequence="1"]').click();
@@ -281,6 +293,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.match(await page.locator('[data-project-snapshot]').inputValue(), /Editable row 100/);
   await historyButton.click();
   const storedChoices = page.locator('[data-project-history] [data-version-sequence]');
+  await storedChoices.first().waitFor();
   assert.ok(await storedChoices.count() >= 2, 'there are multiple saved versions to browse');
   await storedChoices.first().click();
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();

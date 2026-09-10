@@ -1242,6 +1242,16 @@ switching to a saved version and back with matching output. Further coverage
 visits multiple saved versions before returning and reloads a session draft.
 Browsing another old version must not replace the retained current snapshot.
 
+The expanded stress test passes: one build per edit, multiple historical
+versions and back, session-draft recovery on reload, output-error recovery,
+phone pane switching, and large native edits. The full regression run passed
+236 other tests; its history fixture initially failed because autosave does
+not create a checkpoint for every edit. The corrected test establishes its
+second checkpoint through the store in its disposable database, then passes
+the complete browser workflow (93 seconds). Large native insertion still
+takes about 42 seconds for 110 KB; this is not a claim that bulk input is fast.
+The compressed backend artifact also passes its Deno execution test.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

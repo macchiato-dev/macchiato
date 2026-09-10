@@ -2153,7 +2153,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                                       _context1.n = 1;
                                       return save();
                                     case 1:
-                                      currentSnapshot = state;
+                                      if (!viewingHistorical) currentSnapshot = state;
                                       _context1.n = 2;
                                       return fetch("/api/projects/" + encodeURIComponent(projectId) + "/versions/" + version.sequence);
                                     case 2:

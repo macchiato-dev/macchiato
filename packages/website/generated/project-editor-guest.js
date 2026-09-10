@@ -29076,7 +29076,7 @@ ${bundleProjectModule(entry, script.textContent)}
       button.addEventListener("click", async () => {
         clearNotice();
         await save();
-        currentSnapshot = state;
+        if (!viewingHistorical) currentSnapshot = state;
         const response2 = await fetch(`/api/projects/${encodeURIComponent(projectId)}/versions/${version.sequence}`);
         if (!response2.ok) {
           setStatus("Version unavailable", true);
