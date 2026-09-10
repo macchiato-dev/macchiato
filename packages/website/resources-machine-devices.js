@@ -362,7 +362,6 @@ export class ResourcesOutputDevice {
       // network submission; no project JavaScript runs in the browser realm.
       frame.sandbox = "allow-scripts allow-same-origin allow-forms";
       frame.allow = "fullscreen";
-      frame.allowFullscreen = true;
       frame.src = "/-/resources-site/project-output-frame.html";
       frame.style.cssText = "display:block;width:100%;height:100%;border:0";
       await new Promise((resolve, reject) => {

@@ -168,6 +168,34 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   await assert.rejects(load(boundaryFiles), /navigation policy/, "a previous session's link grant must not survive replacement");
   assert.equal(network.some(url => url.startsWith("https://outside.test/")), false);
   assert.equal(page.url(), "http://modules.test/");
+  boundaryFiles[1].content = `
+    var main = document.querySelector("main");
+    main.style.setProperty("width", "80px");
+    main.style.setProperty("height", "40px");
+    main.textContent = "Ready";
+    main.addEventListener("pointerdown", function (event) {
+      main.setPointerCapture(event.pointerId);
+      main.textContent = main.hasPointerCapture(event.pointerId) ? "Captured" : "Missing capture";
+    });
+    main.addEventListener("pointermove", function (event) {
+      if (main.hasPointerCapture(event.pointerId)) main.textContent = "Dragging";
+    });
+    main.addEventListener("pointerup", function (event) {
+      main.releasePointerCapture(event.pointerId);
+      main.textContent = main.hasPointerCapture(event.pointerId) ? "Still captured" : "Released";
+    });
+  `;
+  await load(boundaryFiles);
+  const dragBox = await surface.boundingBox();
+  for (let repeat = 0; repeat < 3; repeat++) {
+    await page.mouse.move(dragBox.x + 10, dragBox.y + 10);
+    await page.mouse.down();
+    assert.equal(await surface.innerText(), "Captured");
+    await page.mouse.move(dragBox.x + 160, dragBox.y + 10, { steps: 5 });
+    assert.equal(await surface.innerText(), "Dragging", "native capture continues beyond the element");
+    await page.mouse.up();
+    assert.equal(await surface.innerText(), "Released");
+  }
   // Classic-script declarations, timers, and CSS belong to one load too.
   const classic = [
     { path: "index.html", content: '<style>main { color: rebeccapurple; }</style><main></main><script src="app.js"></script>' },

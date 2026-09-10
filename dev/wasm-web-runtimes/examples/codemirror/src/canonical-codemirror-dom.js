@@ -329,6 +329,14 @@ Object.defineProperty(GuestElement.prototype, "namespaceURI", {
 GuestObject.prototype.contains = function (node) {
   return immediate([3, this.reference, stringIndex("contains"), [encode(node)]]);
 };
+["setPointerCapture", "releasePointerCapture", "hasPointerCapture"].forEach(function (name) {
+  GuestElement.prototype[name] = function (pointerId) {
+    return immediate([3, this.reference, stringIndex(name), [encode(pointerId)]]);
+  };
+});
+Object.defineProperty(GuestEvent.prototype, "pointerId", {
+  get: function () { return immediate([1, this.reference, stringIndex("pointerId")]); }
+});
 GuestObject.prototype.closest = function (selector) {
   var result = immediate([3, this.reference, stringIndex("closest"), [
     encode(String(selector))
