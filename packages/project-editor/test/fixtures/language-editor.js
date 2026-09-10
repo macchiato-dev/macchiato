@@ -94,3 +94,22 @@ function selectTheme(json) {
   globalThis.__codeEditorSetTheme(json);
   inspectEditor();
 }
+
+var listenerProbeHits = 0;
+var listenerProbe = function () { listenerProbeHits++; };
+function recycleListeners() {
+  for (var index = 0; index < 5000; index++) {
+    document.addEventListener('pointermove', listenerProbe);
+    document.removeEventListener('pointermove', listenerProbe);
+  }
+  document.addEventListener('pointermove', listenerProbe);
+  inspectListeners();
+}
+function inspectListeners() {
+  __wwcPostMessage('__wwcResponse:' + JSON.stringify({ hits: listenerProbeHits, slots: callbacks.length }));
+  flush();
+}
+function removeProbeListener() {
+  document.removeEventListener('pointermove', listenerProbe);
+  inspectListeners();
+}

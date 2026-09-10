@@ -312,6 +312,18 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
         getComputedStyle(node, "::selection").backgroundColor), expected, `${theme}: native selection agrees`);
     }
   }
+  const beforeListeners = await page.evaluate(() => window.callGuest("inspectListeners", {}));
+  const recycled = await page.evaluate(() => window.callGuest("recycleListeners", {}));
+  assert.ok(recycled.slots <= beforeListeners.slots + 4,
+    "5,000 temporary listeners reuse slots instead of consuming the 4,096 callback IDs");
+  const target = await page.locator(".cm-content").boundingBox();
+  await page.mouse.move(target.x + 5, target.y + 5);
+  const received = await page.evaluate(() => window.callGuest("inspectListeners", {}));
+  assert.equal(received.hits, beforeListeners.hits + 1, "only the current listener receives the event");
+  await page.evaluate(() => window.callGuest("removeProbeListener", {}));
+  await page.mouse.move(target.x + 15, target.y + 5);
+  assert.equal((await page.evaluate(() => window.callGuest("inspectListeners", {}))).hits, received.hits,
+    "the removed host listener cannot dispatch into a reused slot");
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });
