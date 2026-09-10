@@ -27074,6 +27074,11 @@ function diffProjectSnapshots(beforeValue, afterValue) {
   configDiff(before.config, after.config, [], config2);
   return Object.freeze({ version: 1, files: Object.freeze(files), config: Object.freeze(config2) });
 }
+function projectSnapshotsEqual(beforeValue, afterValue) {
+  const before = normalizeProjectSnapshot(beforeValue);
+  const after = normalizeProjectSnapshot(afterValue);
+  return before.files.length === after.files.length && before.files.every((file, index) => file.path === after.files[index].path && file.content === after.files[index].content) && same(before.config, after.config);
+}
 function configParent(root, path) {
   let current = root;
   for (const key of path.slice(0, -1)) {
@@ -28154,7 +28159,7 @@ async function mountProjectRoot(root) {
       const pendingValue = sessionStorage.getItem(pendingSnapshotKey);
       if (pendingValue) {
         const recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
-        if (!projectPatchIsEmpty(diffProjectSnapshots(state, recovered))) {
+        if (!projectSnapshotsEqual(state, recovered)) {
           state = recovered;
           snapshotField.value = JSON.stringify(state);
           recoveredPendingSnapshot = true;
@@ -28879,7 +28884,7 @@ ${bundleProjectModule(entry, script.textContent)}
   }
   function updateSnapshot(next, { destructive = false } = {}) {
     const normalized = normalizeProjectSnapshot(next);
-    if (projectPatchIsEmpty(diffProjectSnapshots(state, normalized))) return false;
+    if (projectSnapshotsEqual(state, normalized)) return false;
     const branchedFromHistory = viewingHistorical;
     showCurrentVersion();
     viewingHistorical = false;

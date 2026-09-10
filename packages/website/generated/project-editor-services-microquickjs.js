@@ -181,6 +181,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       config: Object.freeze(config)
     });
   }
+  function projectSnapshotsEqual(beforeValue, afterValue) {
+    var before = normalizeProjectSnapshot(beforeValue);
+    var after = normalizeProjectSnapshot(afterValue);
+    return before.files.length === after.files.length && before.files.every(function (file, index) {
+      return file.path === after.files[index].path && file.content === after.files[index].content;
+    }) && same(before.config, after.config);
+  }
   function configParent(root, path) {
     var current = root;
     for (var _iterator3 = _createForOfIteratorHelperLoose(path.slice(0, -1)), _step3; !(_step3 = _iterator3()).done;) {
@@ -2422,7 +2429,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 _ref17$destructive = _ref17.destructive,
                 destructive = _ref17$destructive === void 0 ? false : _ref17$destructive;
               var normalized = normalizeProjectSnapshot(next);
-              if (projectPatchIsEmpty(diffProjectSnapshots(state, normalized))) return false;
+              if (projectSnapshotsEqual(state, normalized)) return false;
               var branchedFromHistory = viewingHistorical;
               showCurrentVersion();
               viewingHistorical = false;
@@ -3454,7 +3461,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 pendingValue = sessionStorage.getItem(pendingSnapshotKey);
                 if (pendingValue) {
                   recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
-                  if (!projectPatchIsEmpty(diffProjectSnapshots(state, recovered))) {
+                  if (!projectSnapshotsEqual(state, recovered)) {
                     state = recovered;
                     snapshotField.value = JSON.stringify(state);
                     recoveredPendingSnapshot = true;
