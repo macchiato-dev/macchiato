@@ -875,12 +875,25 @@ keeps drops into the grant working even if an earlier native listener removes
 their target. Outside mouse events still support gesture completion and panel
 dismissal. This is a targeted containment check, not a completed host audit.
 
+Next, test inherited active markup through raw references: an existing `style`
+or `script` node, its text children, and clones or reinserted subtrees. The
+creation allowlist alone does not prove that generic operations on preexisting
+nodes cannot bypass the CSS renderer or activate content. Cover document grants
+as well as hydrated containers; keep this separate from native editor events.
+
 The native/MicroQuickJS comparison now also uses actual browser text dragging,
 requiring trusted `dragstart` and `drop` events, exact moved text, retained
 selection, undo, and redo. Both implementations pass, alongside the held-arrow
 caret and idle-blink checks. The harness measures a nonempty text range for its
 drop coordinates; collapsing a range at an element boundary returned an empty
 rectangle and initially sent the drag to the page corner in both versions.
+
+The full rebuilt suite passed 71 checks. Export `b273d03` passed its 151-file
+manifest, compressed backend execution, and the four live-owner project checks
+using exported assets, including the tour's 50 slides and SQLite navigation.
+The local server and `/root/resources-bunny.tar.gz` now use this build. The
+preceding archive is retained under `/root/archive/2026/09/10/`; no live project
+writes or Bunny deployment were performed.
 
 ### September 10 binary reply copies
 
