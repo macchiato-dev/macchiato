@@ -1480,6 +1480,21 @@ must preserve useful in-scope selectors and keep guest parsing responsibilities
 out of a growing host CSS parser; simply checking the returned node or wrapping
 the stylesheet in `@scope` does not solve the contextual access.
 
+The final focused run passes 51 tests with those same four unresolved selector
+probes (55 total). The local server serves the range checks, and a read-only
+owner session verifies modern JavaScript edits, divider dragging, and recovery
+from malformed font CSS with all 144 Mahjong tiles and no page errors. Its
+autosaves are intercepted; it does not change stored project content.
+
+Export `b82b179` reuses the just-rebuilt, unchanged guest/backend Wasm artifacts
+and rebuilds the two browser host bundles after the final selection check. Its
+151-file manifest and compressed backend execution pass. Exported-asset browser
+checks pass for Mahjong, Cat Memory, 50 tour slides, and SQLite fragments with
+theme/viewport changes. `/root/resources-bunny.tar.gz` contains that verified
+export; `cd6acdb` was archived under `/root/archive/2026/09/10/`. This is an
+updated development artifact, not clearance of the selector release gate or a
+Bunny deployment.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
