@@ -813,6 +813,13 @@ parentage, and retained identity. This also exposed a missing element
 allowed text-node reads only; element text reads now require an owned node or
 a node within the granted roots. The guest forwards that scoped read directly.
 
+After backing out the membership experiment, all sixteen history/compiler/
+editor/output regression cases passed, including the new tab-stop and mutation
+checks. Full-file clipboard paste took 1.23 seconds in that run; native input
+still took 68.7 seconds. A useful next experiment is to compare the guest's
+array-based sibling traversal with ordinary scoped native sibling reads,
+before adding another layer of cached indexes.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
