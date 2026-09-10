@@ -268,7 +268,12 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await editor.getAttribute("data-output-machine-state"), "failed");
   await page.screenshot({ path: join(artifacts, "output-timer-error.png") });
   assert.ok(errors.every(error => /output timer regression/.test(error)), JSON.stringify(errors));
-  await page.locator(".cm-content").fill("<h1>Recovered output</h1>");
+  await page.locator(".cm-content").fill("<h1>Recovered output</h1><!-- Español: 🀄 -->");
+  assert.ok(await page.evaluate(() => {
+    const root = document.querySelector('[data-project-editor]');
+    return sessionStorage.getItem('resources_project_pending_v1:' + root.dataset.projectId) ===
+      root.querySelector('[data-project-snapshot]').value;
+  }), 'session recovery immediately retains the exact form snapshot, including Unicode');
   await output.getByRole("heading", { name: "Recovered output" }).waitFor();
   await errorMessage.waitFor({ state: "hidden" });
   assert.equal(await editor.getAttribute("data-output-machine-state"), "ready");
