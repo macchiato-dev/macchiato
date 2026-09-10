@@ -2716,6 +2716,7 @@ var ProjectOutput = class {
     const wrapper = this.root.ownerDocument.createElement("div");
     const surface = this.root.ownerDocument.createElement("div");
     surface.className = "project-output-root";
+    surface.tabIndex = -1;
     wrapper.append(surface);
     wrapper.inert = true;
     wrapper.style.cssText = "position:absolute;left:0;top:0;width:100%;opacity:0;visibility:hidden;pointer-events:none";

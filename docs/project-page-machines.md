@@ -817,6 +817,19 @@ Direct and iframe tests click ordinary text, press an arrow, and check native
 focus as well as the guest's event response. The full tour remains an export
 gate rather than relying only on this small reproduction.
 
+Remaining containment checks must use the raw ABI too: an outside pointer's
+target reference can reach node operations, and a selection can return range
+endpoints. Test reads, writes, node arguments, and retained/detached lifetimes
+before claiming these reference paths are contained. Blocking unrelated input
+delivery does not substitute for checking the authority of those operations.
+
+Final export `c120746` passed all 51 regression checks, the live-owner
+invalid-to-valid edit recovery check, all four exported-project browser checks
+(including 50 tour slides and keyboard navigation), the compressed backend
+test, and its 151-file manifest. The corrected build is live locally. No
+project writes were persisted by the live checks, and no Bunny deployment was
+performed. Earlier exports from the failed media/focus checks were not promoted.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices
