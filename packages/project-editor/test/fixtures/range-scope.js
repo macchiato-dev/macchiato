@@ -2,6 +2,13 @@
 // permission boundary for a guest that sends its own protocol operations.
 function probeRange(json) {
   var request = JSON.parse(json);
+  if (request.operation === "collapseDocument") {
+    var selection = hostCall(document.reference, "getSelection", []);
+    hostCall(selection[1], "collapse", [new GuestObject(document.reference), 0]);
+    __wwcPostMessage("accepted");
+    flush();
+    return;
+  }
   var first = hostCall(document.reference, "getElementById", ["first"]);
   var last = hostCall(document.reference, "getElementById", ["last"]);
   var firstChildren = hostCall(first[1], "childNodes", []);
@@ -18,7 +25,7 @@ function probeRange(json) {
     hostCall(active[1], "extend", [backwards ? end : start, backwards ? 0 : 3]);
     hostCall(active[1], "extend", [backwards ? start : end, backwards ? 0 : 3]);
   } else if (request.operation === "addRange") {
-    var selection = hostCall(document.reference, "getSelection", []);
+    selection = hostCall(document.reference, "getSelection", []);
     hostCall(selection[1], "addRange", [range]);
   } else if (request.operation === "measureRect" || request.operation === "measureClientRects") {
     hostCall(document.reference, request.operation, [range]);

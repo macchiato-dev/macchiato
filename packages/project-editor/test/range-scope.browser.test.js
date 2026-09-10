@@ -26,7 +26,7 @@ test('range access checks the subtree between its endpoints', async t => {
   const browser = await chromium.launch();
   t.after(() => browser.close());
   for (const grant of ['separate-roots', 'portal', 'single-root', 'document']) {
-    for (const operation of ['getClientRects', 'getBoundingClientRect', 'measureRect', 'measureClientRects', 'addRange', 'extend', 'extendBackwards']) {
+    for (const operation of ['getClientRects', 'getBoundingClientRect', 'measureRect', 'measureClientRects', 'addRange', 'extend', 'extendBackwards', 'collapseDocument']) {
       await t.test(grant + ': ' + operation, async () => {
         const page = await browser.newPage();
         try {
@@ -54,7 +54,7 @@ test('range access checks the subtree between its endpoints', async t => {
               return { error, reports, selected: String(document.getSelection()) };
             } finally { machine.destroy(); }
           }, { grant, operation });
-          if (grant === 'separate-roots' || grant === 'portal') {
+          if (grant === 'separate-roots' || grant === 'portal' || operation === 'collapseDocument' && grant !== 'document') {
             assert.match(result.error || '', /outside the granted roots/);
             assert.deepEqual(result.reports, [], 'no geometry returned for private content between endpoints');
             assert.equal(result.selected, operation === 'extend' ? 'One' : operation === 'extendBackwards' ? 'Two' : '',

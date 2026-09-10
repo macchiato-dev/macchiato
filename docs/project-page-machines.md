@@ -1452,6 +1452,34 @@ predecessor archived under `/root/archive/2026/09/10/`. Nothing was deployed to
 Bunny. Large native insertion remains slow (about 43 seconds for 110 KB in this
 stress run), and the broader containment audit remains open.
 
+### Range intervals and selector-context audit
+
+Raw-guest probes found that ranges with endpoints in two different granted
+roots could measure or select intervening private host content. The same gap
+existed when extending a selection forward or backward. The host now requires
+the range's common ancestor to be granted as well. Selection extension checks
+the shared subtree before changing the browser selection, preserving the old
+selection on rejection. There is no new reference type, wire operation, DOM
+mirror, or guest-specific exception.
+
+Thirty-three browser cases cover separate roots, a root plus a portal, a single
+root, and document mode. Four measurement paths, adding a range, and extension
+in both directions are exercised. A container's document service reference also
+cannot be used as the target of `Selection.collapse`; a document-mode guest can
+still do so. The wider regression run has 229 passing
+tests, including native/MicroQuickJS text drag, undo/redo, caret blink/repeat,
+lazy language loading, and prior reference/markup boundaries.
+
+Four selector-context probes are deliberately marked TODO and are **not**
+passing containment coverage. CSS `body:has(+ [data-private="yes"])` can detect
+a neighboring host attribute after root remapping. Native `querySelector`,
+`matches`, and `closest` can detect a host ancestor's attribute while matching
+an owned paragraph. These are confirmed confidentiality gaps, not merely
+unexplored syntax. Their tests must eventually pass without TODO. Any remedy
+must preserve useful in-scope selectors and keep guest parsing responsibilities
+out of a growing host CSS parser; simply checking the returned node or wrapping
+the stylesheet in `@scope` does not solve the contextual access.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
