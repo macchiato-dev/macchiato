@@ -68,7 +68,9 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   });
   db.close();
   const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
-    iat: Date.now(), exp: Date.now() + 60_000 }, "local-preview-session-signing-key");
+    // Keep fixture authentication valid beyond the test's 120-second deadline,
+    // including slower CI hosts. Expiring mid-save is not an editor failure.
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
 
   const browser = await chromium.launch();
   t.after(async () => browser.close());
@@ -216,5 +218,6 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     readFile(join(root, "packages/website/generated/project-editor-runtime.js"), "utf8"),
   ]);
   assert.doesNotMatch(guest, /code-editor-use|packages\/code-editor-use/i);
+  assert.doesNotMatch(guest, /__codeEditorBeforeInput/);
   assert.doesNotMatch(runtime, /code-editor-use|packages\/code-editor-use/i);
 });

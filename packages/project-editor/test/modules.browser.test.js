@@ -102,12 +102,21 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   }
   // A callback runs after load() has resolved. Its error must cross back to
   // the owning editor even though there is no pending load request to reject.
-  files[1].content = 'setTimeout(() => { throw new Error("late output failure"); }, 10);';
-  await load(files);
-  await page.waitForFunction(() => outputErrors.length > 0);
-  assert.match((await page.evaluate(() => outputErrors))[0], /late output failure/);
+  for (const [expression, expected] of [
+    ['new Error("late output failure")', /late output failure/],
+    ['"plain timer failure"', /plain timer failure/],
+    ['new Error("Unicode failure " + "😀".repeat(100))', /Unicode failure/],
+  ]) {
+    const previous = await page.evaluate(() => outputErrors.length);
+    files[1].content = `setTimeout(() => { throw ${expression}; }, 10);`;
+    await load(files);
+    await page.waitForFunction(count => outputErrors.length > count, previous);
+    assert.match((await page.evaluate(() => outputErrors))[previous], expected);
+  }
   assert.ok(network.every(url => url.startsWith("http://modules.test/")));
   await page.evaluate(() => window.output.destroy());
-  assert.equal(errors.length, 1);
+  assert.equal(errors.length, 3);
   assert.match(errors[0], /late output failure/);
+  assert.match(errors[1], /plain timer failure/);
+  assert.match(errors[2], /Unicode failure/);
 });

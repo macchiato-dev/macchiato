@@ -62,7 +62,6 @@ const editorHighlightStyle = HighlightStyle.define([
 ]);
 let currentTheme = "dark";
 let applyingHostContent = false;
-let resetHistoryOnNextEdit = false;
 let currentLanguage = "javascript";
 let currentReadOnly = false;
 let documentLimits = {
@@ -190,14 +189,6 @@ function mountEditor(content = 'const greeting = "Hello, constrained editor!";\n
   // parse slice. Finish the visible document now so its initial paint does not
   // wait for a guest timer round trip.
   forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
-  globalThis.__codeEditorView.contentDOM.addEventListener("beforeinput", (event) => {
-    const handle = globalThis.__codeEditorBeforeInput;
-    if (typeof handle !== "function") return;
-    const result = JSON.parse(handle(JSON.stringify({ inputType: event.inputType, data: event.data })));
-    if (!result.handled) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }, true);
   globalThis.__browserUseNotify(JSON.stringify({
     type: "ready", characters: state.doc.length, lines: state.doc.lines,
   }));
@@ -406,7 +397,6 @@ globalThis.__codeEditorSetContent = (json) => {
   } finally {
     applyingHostContent = false;
   }
-  if (request.resetHistoryOnEdit === true) resetHistoryOnNextEdit = true;
   return JSON.stringify(documentUsage(view.state.doc));
 };
 let searchPanel = null;
@@ -527,50 +517,4 @@ globalThis.__codeEditorCommand = (json) => {
   }
   const selection = view.state.selection.main;
   return JSON.stringify({ handled: Boolean(handled), from: selection.from, to: selection.to });
-};
-globalThis.__codeEditorBeforeInput = (json) => {
-  const event = JSON.parse(json);
-  const view = globalThis.__codeEditorView;
-  if (resetHistoryOnNextEdit) {
-    resetHistoryOnNextEdit = false;
-    view.setState(EditorState.create({
-      doc: view.state.doc,
-      selection: view.state.selection,
-      extensions: editorExtensions(),
-    }));
-  }
-  const selection = view.state.selection.main;
-  if (view.state.readOnly) return JSON.stringify({ handled: true, from: selection.from, to: selection.to });
-  let from = selection.from;
-  let to = selection.to;
-  let insert = "";
-  if (event.inputType === "insertText" || event.inputType === "insertCompositionText") {
-    insert = event.data || "";
-    const pairs = { "(": ")", "[": "]", "{": "}", "\"": "\"", "'": "'", "`": "`" };
-    const closing = new Set(Object.values(pairs));
-    if (from === to && pairs[insert]) {
-      view.dispatch({ changes: { from, to, insert: insert + pairs[insert] }, selection: { anchor: from + 1 }, userEvent: "input.type" });
-      const pairedSelection = view.state.selection.main;
-      return JSON.stringify({ handled: true, from: pairedSelection.from, to: pairedSelection.to });
-    }
-    if (from === to && closing.has(insert) && view.state.doc.sliceString(from, from + 1) === insert) {
-      setSelection(from + 1);
-      return JSON.stringify({ handled: true, from: from + 1, to: from + 1 });
-    }
-  } else if (event.inputType === "insertLineBreak" || event.inputType === "insertParagraph") {
-    insert = "\\n";
-  } else if (event.inputType === "deleteContentBackward") {
-    if (from === to && from > 0) from -= 1;
-  } else if (event.inputType === "deleteContentForward") {
-    if (from === to && to < view.state.doc.length) to += 1;
-  } else {
-    return JSON.stringify({ handled: false, from: selection.from, to: selection.to });
-  }
-  view.dispatch({
-    changes: { from, to, insert },
-    selection: { anchor: from + insert.length },
-    userEvent: event.inputType.startsWith("delete") ? "delete.backward" : "input.type",
-  });
-  const nextSelection = view.state.selection.main;
-  return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });
 };
