@@ -71,6 +71,21 @@ serialized boundary notifier. Limits in notifications are copies, not mutable
 references to the editor's limit settings; CodeMirror transactions and history
 are unchanged.
 
+Project snapshot normalization weakly caches serialized byte counts for its
+own file records. It compares the current path and content before reuse,
+because MicroQuickJS's `Object.freeze` fallback does not enforce immutability.
+Records are still copied; nested configuration is always revalidated. Snapshot
+size is the exact JSON envelope, file sizes, and comma separators, including
+escaped characters and UTF-8. Editing one file no longer re-encodes every
+unchanged image or bundled resource just to check the budget.
+
+The `snapshot-usage` browser test compares cached records with deliberately
+fresh records in alternating order and checks the results after guest GC.
+On the September 2026 development VM, 20 edits with eight unchanged assets took
+929–948 ms uncached versus 2.3–2.4 ms cached. These are accounting-only timings,
+not full workspace typing timings; native tests also check the exact 70 MiB
+serialized boundary and invalidation when records or configuration change.
+
 Inline SVG keeps its namespace and drawing attributes. An embedded SVG in a
 CSS background becomes a semantic SVG tree in the stylesheet wire message.
 The host validates and renders that tree before producing a base64 image URL;

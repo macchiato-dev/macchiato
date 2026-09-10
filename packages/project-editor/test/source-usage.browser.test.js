@@ -9,7 +9,8 @@ import presetEnv from "@babel/preset-env";
 import { chromium } from "playwright";
 import microQuickJSSyntax from "../../../dev/wasm-web-runtimes/examples/codemirror/babel-microquickjs.js";
 
-test("incremental source accounting matches the baseline in MicroQuickJS", { timeout: 120_000 }, async t => {
+for (const fixture of ["source-usage", "snapshot-usage"])
+test(`${fixture} accounting matches the baseline in MicroQuickJS`, { timeout: 120_000 }, async t => {
   const root = new URL("../../../", import.meta.url).pathname;
   const working = resolve(root, "../macchiato-work");
   await mkdir(working, { recursive: true });
@@ -17,7 +18,7 @@ test("incremental source accounting matches the baseline in MicroQuickJS", { tim
   t.after(() => rm(directory, { recursive: true, force: true }));
   const examples = resolve(root, "dev/wasm-web-runtimes/examples");
   const runtime = resolve(examples, "microquickjs-suite/microquickjs-guest-runtime");
-  const bundled = await build({ entryPoints: [new URL("fixtures/source-usage-benchmark.js", import.meta.url).pathname],
+  const bundled = await build({ entryPoints: [new URL(`fixtures/${fixture}-benchmark.js`, import.meta.url).pathname],
     bundle: true, format: "iife", platform: "neutral", write: false });
   const lowered = await transformAsync(bundled.outputFiles[0].text, {
     comments: false, compact: false, assumptions: { iterableIsArray: false },

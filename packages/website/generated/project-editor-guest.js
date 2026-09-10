@@ -26985,6 +26985,7 @@ var MAX_FILES = 64;
 var MAX_FILE_BYTES = 70 * 1024 * 1024;
 var MAX_CONFIG_BYTES = 64e3;
 var MAX_SNAPSHOT_BYTES = 70 * 1024 * 1024;
+var fileJsonBytes = /* @__PURE__ */ new WeakMap();
 function own(object, key) {
   return Object.prototype.hasOwnProperty.call(object, key);
 }
@@ -27012,14 +27013,23 @@ function normalizeProjectSnapshot(value = {}) {
     const content2 = String(file?.content ?? "");
     if (!PATH.test(path) || path.includes("//")) throw new Error(`Invalid project file path: ${path}`);
     if (seen.has(path)) throw new Error(`Duplicate project file path: ${path}`);
-    if (new TextEncoder().encode(content2).byteLength > MAX_FILE_BYTES) throw new Error(`Project file exceeds the 50 MB portable-artifact budget: ${path}`);
+    const previous = file && typeof file === "object" ? fileJsonBytes.get(file) : null;
+    const cached = previous && previous.path === path && previous.content === content2;
+    if (!cached && new TextEncoder().encode(content2).byteLength > MAX_FILE_BYTES) throw new Error(`Project file exceeds the 50 MB portable-artifact budget: ${path}`);
     seen.add(path);
-    return Object.freeze({ path, content: content2 });
+    const normalized = Object.freeze({ path, content: content2 });
+    fileJsonBytes.set(normalized, cached ? previous : {
+      path,
+      content: content2,
+      bytes: new TextEncoder().encode(JSON.stringify(normalized)).byteLength
+    });
+    return normalized;
   }).sort((left, right) => left.path.localeCompare(right.path));
   const config2 = jsonValue(value.config ?? {}, "Project configuration");
   if (!config2 || Array.isArray(config2) || typeof config2 !== "object") throw new Error("Project configuration must be an object");
   if (new TextEncoder().encode(JSON.stringify(config2)).byteLength > MAX_CONFIG_BYTES) throw new Error("Project configuration is too large");
-  if (new TextEncoder().encode(JSON.stringify({ files, config: config2 })).byteLength > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
+  const snapshotBytes = new TextEncoder().encode(JSON.stringify({ files: [], config: config2 })).byteLength + files.reduce((bytes, file) => bytes + fileJsonBytes.get(file).bytes, 0) + Math.max(0, files.length - 1);
+  if (snapshotBytes > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
   return Object.freeze({ files: Object.freeze(files), config: Object.freeze(config2) });
 }
 function textSplice(before, after) {

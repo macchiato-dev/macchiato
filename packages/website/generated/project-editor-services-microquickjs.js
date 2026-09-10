@@ -37,6 +37,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   var MAX_FILE_BYTES = 70 * 1024 * 1024;
   var MAX_CONFIG_BYTES = 64e3;
   var MAX_SNAPSHOT_BYTES = 70 * 1024 * 1024;
+  var fileJsonBytes = new WeakMap();
   function own(object, key) {
     return Object.prototype.hasOwnProperty.call(object, key);
   }
@@ -75,22 +76,33 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var content = String((_file$content = file == null ? void 0 : file.content) != null ? _file$content : "");
       if (!PATH.test(path) || path.includes("//")) throw new Error("Invalid project file path: " + path);
       if (seen.has(path)) throw new Error("Duplicate project file path: " + path);
-      if (new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES) throw new Error("Project file exceeds the 50 MB portable-artifact budget: " + path);
+      var previous = file && typeof file === "object" ? fileJsonBytes.get(file) : null;
+      var cached = previous && previous.path === path && previous.content === content;
+      if (!cached && new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES) throw new Error("Project file exceeds the 50 MB portable-artifact budget: " + path);
       seen.add(path);
-      return Object.freeze({
+      var normalized = Object.freeze({
         path: path,
         content: content
       });
+      fileJsonBytes.set(normalized, cached ? previous : {
+        path: path,
+        content: content,
+        bytes: new TextEncoder().encode(JSON.stringify(normalized)).byteLength
+      });
+      return normalized;
     }).sort(function (left, right) {
       return left.path.localeCompare(right.path);
     });
     var config = jsonValue((_value$config = value.config) != null ? _value$config : {}, "Project configuration");
     if (!config || Array.isArray(config) || typeof config !== "object") throw new Error("Project configuration must be an object");
     if (new TextEncoder().encode(JSON.stringify(config)).byteLength > MAX_CONFIG_BYTES) throw new Error("Project configuration is too large");
-    if (new TextEncoder().encode(JSON.stringify({
-      files: files,
+    var snapshotBytes = new TextEncoder().encode(JSON.stringify({
+      files: [],
       config: config
-    })).byteLength > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
+    })).byteLength + files.reduce(function (bytes, file) {
+      return bytes + fileJsonBytes.get(file).bytes;
+    }, 0) + Math.max(0, files.length - 1);
+    if (snapshotBytes > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
     return Object.freeze({
       files: Object.freeze(files),
       config: Object.freeze(config)
