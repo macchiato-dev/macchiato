@@ -715,6 +715,12 @@ has not been reclassified as a passing test. Extra layout containment did not
 help and was not retained. The installed native CodeMirror enables EditContext
 only on Android, so that is not an explanation for the desktop comparison.
 
+Export `8110100` passed manifest verification, compressed backend execution,
+and the four-project browser check, including 50 tour slides and SQLite
+navigation. `/root/resources-bunny.tar.gz` now contains that export and was
+verified again after extraction. The previous `7e4c04f` archive is retained
+under `/root/archive/2026/09/10/`. No Bunny deployment was performed.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
