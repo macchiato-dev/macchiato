@@ -797,12 +797,13 @@ The running Wasm's 163,986-byte code section matched the symbol-bearing build
 exactly. The earlier layout-dominated profile must not be used to explain this
 new bottleneck: about 38 seconds now belonged to repeated guest array searches.
 
-Reconciliation keeps first-seen parent order but uses reference-keyed membership
-tables for affected parents and surviving children. Batch-retained node leases
-prevent those IDs from being recycled. New wrapper construction also no longer
-searches the parent's children: an existing parent-held wrapper would have
-been returned through the identity cache before reaching that branch. The host
-protocol, mutation records, and callback timing are unchanged.
+An experiment replaced reconciliation membership scans with reference-keyed
+tables and removed the new-wrapper child search. It preserved the tested DOM
+semantics but the live insertion still took 63.5 seconds, with no demonstrated
+improvement. That bookkeeping was backed out. The profile establishes expensive
+array searches under mutation delivery, not which guest JavaScript caller
+causes them. Sibling traversal, which searches the parent array on each getter,
+is another candidate to measure; it has not been changed speculatively.
 
 The regression moves nodes between parents, removes and reinserts a retained
 node, adds a new node, and replaces text in one browser operation. It compares
