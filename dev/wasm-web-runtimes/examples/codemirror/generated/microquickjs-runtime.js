@@ -453,13 +453,24 @@
   if (typeof TextEncoder === "undefined") {
     globalThis.TextEncoder = function TextEncoder2() {};
     TextEncoder.prototype.encode = function (text) {
-      text = String(text);
+      text = text === void 0 ? "" : String(text);
+      if (typeof __wwcWriteText === "function") {
+        var bytes = new Uint8Array(text.length * 3 + 5);
+        var end = __wwcWriteText(bytes, 0, text),
+          start = 0;
+        while (bytes[start++] & 128) {}
+        var result = new Uint8Array(end - start);
+        result.set(bytes.subarray(start, end));
+        return result;
+      }
       var values = [];
       for (var index = 0; index < text.length; index++) {
         var scalar = text.charCodeAt(index);
-        if (scalar >= 55296 && scalar <= 56319 && index + 1 < text.length) {
-          scalar = 65536 + (scalar - 55296 << 10) + (text.charCodeAt(++index) - 56320);
-        }
+        var next = text.charCodeAt(index + 1);
+        if (scalar >= 55296 && scalar <= 56319 && next >= 56320 && next <= 57343) {
+          scalar = 65536 + (scalar - 55296 << 10) + (next - 56320);
+          index++;
+        } else if (scalar >= 55296 && scalar <= 57343) scalar = 65533;
         if (scalar < 128) values.push(scalar);else if (scalar < 2048) values.push(192 | scalar >> 6, 128 | scalar & 63);else if (scalar < 65536) values.push(224 | scalar >> 12, 128 | scalar >> 6 & 63, 128 | scalar & 63);else values.push(240 | scalar >> 18, 128 | scalar >> 12 & 63, 128 | scalar >> 6 & 63, 128 | scalar & 63);
       }
       return new Uint8Array(values);

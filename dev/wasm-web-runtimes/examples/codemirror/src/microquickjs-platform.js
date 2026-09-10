@@ -13,7 +13,9 @@ if (typeof TextEncoder === "undefined") {
       var bytes = new Uint8Array(text.length * 3 + 5);
       var end = __wwcWriteText(bytes, 0, text), start = 0;
       while (bytes[start++] & 128) {}
-      return bytes.slice(start, end);
+      var result = new Uint8Array(end - start);
+      result.set(bytes.subarray(start, end));
+      return result;
     }
     var values = [];
     for (var index = 0; index < text.length; index++) {

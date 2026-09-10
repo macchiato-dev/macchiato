@@ -1190,8 +1190,6 @@ contains that export and passed verification after extraction. The previous
 `40795fc` archive is retained under `/root/archive/2026/09/10/`. It has not
 been deployed to Bunny; bulk native-input performance remains unfinished.
 
-### Standalone compiler parity
-
 ### September 10 UTF-8 encoding experiment
 
 The first-page 109 KB typing profile spends most time in guest execution, not
@@ -1206,8 +1204,19 @@ off its wire length prefix. It grants no host capability and adds no C API.
 The fallback now handles lone surrogates and omitted input like the browser.
 Tests compare both paths with native TextEncoder, including embedded NUL,
 surrogate pairs and non-pairs, multibyte lengths, and retained buffers after GC.
-The previous built runtime fails those parity checks; timing and final build
-verification of the replacement are pending.
+The previous built runtime fails those parity checks. Both rebuilt language
+variants pass them. MicroQuickJS lacks typed-array slice, so the implementation
+uses its existing native subarray/set operations. The temporary buffer reserves
+the UTF-8 upper bound (three bytes per UTF-16 unit plus the header); the returned
+buffer has the exact byte length and never aliases that scratch storage.
+
+The checkpointed repeat reduced normalization from 1,261 ms to 96 ms across
+24 edits. Uninstrumented old/new/old/new first-page edit/backspace medians were
+246/175/324/172 ms on the same 109,485-character fixture. This shows a useful
+improvement but also substantial timing variability; it does not establish
+a fixed latency or solve all bulk native-input costs. Diagnostic bytecode was
+served only to the disposable browser, with all real project writes blocked.
+Full build and deployment-artifact verification remain pending.
 
 ### Standalone compiler parity
 
