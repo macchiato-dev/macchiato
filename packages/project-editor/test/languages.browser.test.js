@@ -179,6 +179,12 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     // time. Keep full-document inspection outside each measured key pair.
     const source = await readFile(new URL("../../website/content-form-client.js", import.meta.url), "utf8");
     const lines = source.split("\n");
+    const profileDirectory = process.env.MACCHIATO_EDITOR_PROFILE;
+    const profiler = profileDirectory ? await page.context().newCDPSession(page) : null;
+    if (profiler) {
+      await mkdir(profileDirectory, { recursive: true });
+      await profiler.send("Profiler.enable");
+    }
     for (const line of [0, Math.floor(lines.length / 2), lines.length - 1]) {
       const position = lines.slice(0, line).reduce((sum, text) => sum + text.length + 1, 0);
       const content = source.slice(0, position) + "// sample: \n" + source.slice(position);
@@ -188,20 +194,26 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       await page.evaluate(head => window.callGuest("selectPosition", { head }), position + 11);
       await page.waitForTimeout(150);
       const samples = [];
+      if (profiler) await profiler.send("Profiler.start");
       for (let key = 0; key < 22; key++) {
         const start = performance.now();
         await page.keyboard.type("x");
         await page.keyboard.press("Backspace");
         if (key >= 2) samples.push(performance.now() - start);
       }
+      if (profiler) {
+        const { profile } = await profiler.send("Profiler.stop");
+        await writeFile(resolve(profileDirectory, `line-${line}.cpuprofile`), JSON.stringify(profile));
+      }
       const state = await page.evaluate(() => window.callGuest("inspectEditor", {}));
       assert.equal(state.document, content, "repeated edits must preserve the rest of the large file");
       assert.equal(state.selection.head, position + 11);
       const sorted = [...samples].sort((a, b) => a - b);
-      t.diagnostic(JSON.stringify({ benchmark: "large-project-javascript", lines: lines.length,
+      t.diagnostic(JSON.stringify({ benchmark: "large-project-javascript", profiled: !!profiler, lines: lines.length,
         characters: content.length, line, selectedMs, keyPairMs: samples,
         median: sorted[10], p95: sorted[18], maximum: sorted[19] }));
     }
+    if (profiler) await profiler.detach();
   }
   // The editor runs in MicroQuickJS, but project JavaScript runs in QuickJS.
   // Typing a comment must not reject valid modern syntax using the editor's

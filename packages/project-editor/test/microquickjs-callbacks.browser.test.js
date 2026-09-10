@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 
 for (const [fixture, expected] of [
   ["browser-timers", ["argument", "immediate", "interval", "timeout"]],
+  ["transient-messages", { requests: 24, serviceStrings: 0 }],
   ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
@@ -31,7 +32,7 @@ for (const [fixture, expected] of [
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", environment,
     resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    resolve(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
+    resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"),
     output, `runtime.bin=${environment}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);
@@ -56,7 +57,11 @@ for (const [fixture, expected] of [
     const module = await WebAssembly.compileStreaming(fetch("/callbacks.wasm"));
     const stamp = new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]);
     const machine = new WasmWebMachine(module, document.querySelector("#guest"),
-      { stamp, onMessage: (message) => result.push(message) });
+      { stamp, onMessage: (message) => result.push(message),
+        services: { call(name, payload) {
+          if (name !== "echo") throw new Error("Unexpected test service");
+          return payload;
+        } } });
     await machine.onmsg(0);
     // Let actual browser timers deliver their guest callbacks before disposal.
     const deadline = performance.now() + 3000;
