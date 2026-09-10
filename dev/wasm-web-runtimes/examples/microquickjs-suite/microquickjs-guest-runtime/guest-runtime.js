@@ -262,7 +262,7 @@ function GuestStyle(reference) {
 }
 GuestStyle.prototype = Object.create(GuestObject.prototype);
 
-["backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis",
+["animationDuration", "animationName", "backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis",
   "fontFamily", "fontFeatureSettings", "fontKerning", "fontSize", "fontStyle",
   "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing",
   "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow",
@@ -270,14 +270,19 @@ GuestStyle.prototype = Object.create(GuestObject.prototype);
   "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace",
   "width", "zIndex"].forEach(
   function (name) {
+    var property = "";
+    for (var index = 0; index < name.length; index++) {
+      var letter = name[index];
+      property += letter >= "A" && letter <= "Z"
+        ? "-" + letter.toLowerCase() : letter;
+    }
     Object.defineProperty(GuestStyle.prototype, name, {
+      // Read the actual inline declaration, including changes through cssText
+      // or setProperty. CodeMirror reads animationName before restarting blink.
+      get: function () {
+        return immediate([3, this.reference, stringIndex("getPropertyValue"), [encode(property)]]);
+      },
       set: function (value) {
-        var property = "";
-        for (var index = 0; index < name.length; index++) {
-          var letter = name[index];
-          property += letter >= "A" && letter <= "Z"
-            ? "-" + letter.toLowerCase() : letter;
-        }
         if (value === "") {
           immediate([3, this.reference, stringIndex("removeProperty"), [encode(property)]]);
           return;
