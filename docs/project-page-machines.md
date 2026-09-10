@@ -820,6 +820,12 @@ still took 68.7 seconds. A useful next experiment is to compare the guest's
 array-based sibling traversal with ordinary scoped native sibling reads,
 before adding another layer of cached indexes.
 
+Export `250cf75` passed the 151-file manifest check, compressed backend test,
+and the four-project exported-browser check. `/root/resources-bunny.tar.gz`
+contains that export and passed verification after extraction. The previous
+`40795fc` archive is retained under `/root/archive/2026/09/10/`. It has not
+been deployed to Bunny; bulk native-input performance remains unfinished.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
