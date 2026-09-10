@@ -102,7 +102,15 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   const wireCases = await readFile(new URL("fixtures/wire-text.js", import.meta.url), "utf8");
   await load([
     { path: "index.html", content: '<main></main><script src="wire.js"></script>' },
-    { path: "wire.js", content: wireCases + '\ndocument.querySelector("main").textContent = "UTF-8 checked";' },
+    { path: "wire.js", content: wireCases + `
+      // A board's worth of embedded tile-sized strings must not fall back to
+      // per-character interpreted loops. This is a generous regression guard,
+      // not a cross-engine benchmark.
+      var tileText = new Array(50001).join("x"), tileBytes = new Uint8Array(50016);
+      var began = performance.now();
+      for (var tile = 0; tile < 144; tile++) new Writer(tileBytes).text(tileText);
+      if (performance.now() - began > 3000) throw Error("Tile text encoding stalled");
+      document.querySelector("main").textContent = "UTF-8 checked";` },
   ]);
   const surface = iframe ? page.frameLocator("iframe").locator("main") : page.locator("#guest main");
   assert.equal(await surface.innerText(), "UTF-8 checked");

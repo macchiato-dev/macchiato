@@ -112,6 +112,14 @@ Their shared lifecycle prepares a replacement root, swaps only after successful
 initialization, and disposes the previous session without recreating the Wasm
 instance. `packages/project-editor/test/modules.browser.test.js` checks both paths.
 
+The guest's wire writer uses `__wwcWriteText(bytes, offset, string)` to encode
+length-prefixed UTF-8 directly in guest memory. It never calls the browser or
+coerces application objects. Bounds are checked before any write; lone
+surrogates become U+FFFD, matching `TextEncoder`. This keeps large image and
+document values practical without permanently interning them. The browser
+tests reuse MicroQuickJS's byte-level fixtures for both the native and
+JavaScript fallback paths, plus a board-sized repeated-string workload.
+
 ## Upstream
 
 The initial engine snapshot is Bellard QuickJS `2026-06-04`, commit
