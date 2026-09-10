@@ -27655,7 +27655,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       state: state,
       parent: parent
     });
-    _forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
+    _forceParsing(globalThis.__codeEditorView);
     notify({
       type: "ready",
       characters: state.doc.length,

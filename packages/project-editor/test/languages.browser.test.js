@@ -243,7 +243,7 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     await page.evaluate(() => window.callGuest("selectTextWriter", { native: true }));
     if (profiler) await profiler.detach();
   }
-  if (process.env.MACCHIATO_EDITOR_MOUNT_TIMINGS && !downloaded) {
+  if (!downloaded) {
     // Real source, a bounded viewport, and no profiler. The guest times editor
     // construction plus its DOM flush, excluding transport of the source and
     // the later full-document correctness check. Run before/after separately.
@@ -255,14 +255,14 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       const source = await readFile(new URL(file, import.meta.url), 'utf8');
       await select(path, source, language);
       const samples = [];
-      for (let iteration = 0; iteration < 4; iteration++) {
+      for (let iteration = 0; iteration < (process.env.MACCHIATO_EDITOR_MOUNT_TIMINGS ? 4 : 1); iteration++) {
         samples.push(await page.evaluate(request => window.callGuest('measureMount', request), { path, content: source }));
         await page.waitForFunction(() => document.querySelectorAll('.cm-line span[class]').length > 0);
         await page.waitForFunction(() => window.callGuest('inspectParsing', {}).available);
         assert.equal((await page.evaluate(() => window.callGuest('inspectEditor', {}))).document, source);
         await page.waitForTimeout(100);
       }
-      t.diagnostic(JSON.stringify({ benchmark: 'initial-parse', path, characters: source.length, samples }));
+      if (process.env.MACCHIATO_EDITOR_MOUNT_TIMINGS) t.diagnostic(JSON.stringify({ benchmark: 'initial-parse', path, characters: source.length, samples }));
       // Parsing beyond the first viewport is deferred, not disabled. Typing
       // and scrolling must still work without another click or remount.
       await page.evaluate(() => window.callGuest('selectPosition', { head: 0 }));

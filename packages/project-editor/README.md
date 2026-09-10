@@ -49,6 +49,20 @@ repository to also collect a DevTools CPU profile for each typing position.
 Those profiled timings are not interchangeable with unprofiled runs. Keep
 builds and other browser tests out of the measurement window, and retain the
 document/selection assertions when changing the benchmark.
+
+Editor mounting asks `forceParsing(view)` to prioritize the visible region
+using CodeMirror's default budget, rather than asking for the whole document
+with a 250 ms synchronous allowance. Its normal background parser continues
+as the editor idles and the user scrolls. The language browser test mounts
+real JavaScript and Rust source, edits the first viewport, then reaches the
+last viewport and requires its syntax tree to be available without remounting.
+`MACCHIATO_EDITOR_MOUNT_TIMINGS=1` repeats those mounts four times, reporting
+guest construction and DOM-flush time without counting source transport or
+the subsequent correctness checks. Run it separately from typing/profile
+measurements. In the September 10 development run, a 109 KB JavaScript file
+went from 360–384 ms to 111–132 ms; a 26 KB Rust file went from 342–370 ms to
+89–124 ms. These are mount measurements, not total page-load or typing times.
+
 `MACCHIATO_EDITOR_ENCODER_COMPARE=1` with timings enabled instead compares
 JavaScript/native text writers in A–B–B–A order in the same built editor. It
 also measures text encoding separately. On a September 2026 development VM,

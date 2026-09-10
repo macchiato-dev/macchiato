@@ -26650,7 +26650,7 @@ function editorExtensions() {
 function mountEditor(content2 = 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);') {
   const state = EditorState.create({ doc: content2, extensions: editorExtensions() });
   globalThis.__codeEditorView = new EditorView({ state, parent: parent2 });
-  forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
+  forceParsing(globalThis.__codeEditorView);
   notify({
     type: "ready",
     characters: state.doc.length,
