@@ -617,6 +617,25 @@ middle, and end, including Playwright overhead. This is a startup improvement,
 not evidence that the larger-file typing target is complete. The full owner
 editing, save/reload, output-recovery, theme, and responsive test also passed.
 
+A separate DevTools profile of the stamped-language editor attributed about
+45–57% of sampled self time to MicroQuickJS's `JS_Call` interpreter loop.
+String comparison/atom lookup and `JS_GC2` also appeared among the larger
+native costs; browser-side DOM calls did not dominate this fixture. Function
+numbers were mapped using an unstripped build whose 163,986-byte code section
+matched the profiled artifact byte for byte. This is an editor-only diagnostic
+after exercising multiple grammars, not a profile of the full Resources
+snapshot/autosave path, and it does not identify the guest JavaScript callers
+inside the interpreter. Profiled timings are not substituted for unprofiled
+keyboard measurements.
+
+That fresh-target build also exposed rest parameters in the directly compiled
+example runtime, which bypasses Babel. They now use `arguments`. A source
+compilation test requires a fresh bytecode output instead of trusting `mqjs`'s
+exit status; a cached Cargo build alone would miss this failure. The clean
+build, owner stress test, lazy-language tests, and direct/iframe module tests
+passed after the correction. No host permission or interpreter behavior was
+expanded for either profiling or this fix.
+
 This is not a completed performance or deployment audit. The unprofiled
 2,020-line editing diagnostic still measured median insert/delete round trips
 of roughly 91–163 ms, including Playwright overhead. Real Bunny cold starts,
