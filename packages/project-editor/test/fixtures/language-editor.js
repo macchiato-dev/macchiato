@@ -192,13 +192,21 @@ function startMutationProbe() {
   document.body.appendChild(root);
   var observer = new MutationObserver(function (records) {
     function names(parent) { return parent.childNodes.map(function (node) { return node.getAttribute("data-name"); }); }
+    function label(node) { return !node ? null : node.nodeType === 3 ? "#text" : node.getAttribute("data-name") || "container"; }
     mutationResult = { left: names(mutationLeft), right: names(mutationRight),
       same: mutationLeft.firstChild === mutationSaved,
       removedParent: nodes[2].parentNode === null,
       addedParent: mutationLeft.lastChild.parentNode === mutationLeft,
-      text: nodes[3].textContent, count: records.length };
+      text: nodes[3].textContent, count: records.length,
+      records: records.map(function (record) { return {
+        type: record.type, target: label(record.target),
+        previous: label(record.previousSibling), next: label(record.nextSibling),
+        added: (record.addedNodes || []).map(label), removed: (record.removedNodes || []).map(label),
+        attribute: record.attributeName || null, oldValue: record.oldValue == null ? null : record.oldValue
+      }; }) };
   });
-  observer.observe(root, { childList: true, subtree: true, characterData: true });
+  observer.observe(root, { childList: true, subtree: true, characterData: true,
+    characterDataOldValue: true, attributes: true, attributeOldValue: true });
   inspectListeners();
 }
 function inspectMutationProbe() {

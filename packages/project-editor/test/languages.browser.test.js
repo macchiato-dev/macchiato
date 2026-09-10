@@ -362,14 +362,27 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   assert.equal(burst.retainedTarget, "event-burst");
   assert.equal(burst.retainedProbe, 1);
   await page.evaluate(() => window.callGuest("startMutationProbe", {}));
-  const nativeCount = await page.locator("#mutation-probe").evaluate(root => new Promise(resolve => {
-    const observer = new MutationObserver(records => { observer.disconnect(); resolve(records.length); });
-    observer.observe(root, { childList: true, subtree: true, characterData: true });
+  const nativeRecords = await page.locator("#mutation-probe").evaluate(root => new Promise(resolve => {
+    const label = node => !node ? null : node.nodeType === 3 ? "#text" : node.getAttribute("data-name") || "container";
+    const observer = new MutationObserver(records => {
+      observer.disconnect();
+      resolve(records.map(record => ({
+        type: record.type, target: label(record.target),
+        previous: label(record.previousSibling), next: label(record.nextSibling),
+        added: Array.from(record.addedNodes, label), removed: Array.from(record.removedNodes, label),
+        attribute: record.attributeName || null, oldValue: record.oldValue
+      })));
+    });
+    observer.observe(root, { childList: true, subtree: true, characterData: true,
+      characterDataOldValue: true, attributes: true, attributeOldValue: true });
     const [left, right] = root.children;
     const [a, b, c, d] = left.children;
     right.append(b); c.remove(); left.prepend(b); right.append(a);
     const added = document.createElement("span");
     added.dataset.name = "new"; left.append(added); d.textContent = "D";
+    d.firstChild.nodeValue = "changed"; d.firstChild.nodeValue = "D";
+    d.setAttribute("data-probe", "first"); d.setAttribute("data-probe", "second");
+    d.removeAttribute("data-probe");
   }));
   const mutation = await page.evaluate(() => window.callGuest("inspectMutationProbe", {}));
   assert.deepEqual(errors, [], "native mutation delivery remains error-free");
@@ -378,7 +391,9 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   assert.deepEqual(mutation.right, ["e", "a"]);
   assert.ok(mutation.same && mutation.removedParent && mutation.addedParent);
   assert.equal(mutation.text, "D");
-  assert.equal(mutation.count, nativeCount, "preserve every native record while reconciling final child order");
+  assert.equal(mutation.count, nativeRecords.length, "preserve every native record while reconciling final child order");
+  assert.deepEqual(mutation.records, nativeRecords,
+    "preserve record order, intermediate siblings, old values, and node identities");
   const siblings = await page.evaluate(async () => {
     const before = document.createElement("div"), after = document.createElement("div");
     const root = document.querySelector("#guest");

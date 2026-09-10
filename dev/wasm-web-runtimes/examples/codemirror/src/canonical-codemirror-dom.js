@@ -956,6 +956,14 @@ function hostCall(reference, name, args) {
 function hostGet(reference, name) {
   return immediate([1, reference, stringIndex(name)]);
 }
+function hostGetMany(reference, names) {
+  var operations = [];
+  for (var index = 0; index < names.length; index++) {
+    operations.push([1, reference, stringIndex(names[index])]);
+  }
+  flush();
+  return exchange(operations);
+}
 function mutationNode(recordReference, kind, index) {
   var result = hostCall(recordReference, kind, [index]);
   return nodeForReference(result[1]);
@@ -1003,12 +1011,13 @@ function readMutationBatch(batchReference, batchToken) {
   var length = hostGet(batchReference, "length"), records = [], changedParents = [];
   for (var index = 0; index < length; index++) {
     var result = hostCall(batchReference, "item", [index]);
-    var reference = result[1], type = hostGet(reference, "type");
-    var targetResult = hostGet(reference, "target");
-    var record = { type: type, target: nodeForReference(targetResult[1]) };
+    // MutationRecord fields are fixed when recorded. Read these small groups
+    // together, using the ordinary ordered wire operations and reference leases.
+    var reference = result[1], header = hostGetMany(reference, ["type", "target"]);
+    var type = header[0], record = { type: type, target: nodeForReference(header[1][1]) };
     if (type === "childList") {
-      var added = hostGet(reference, "addedNodeCount");
-      var removed = hostGet(reference, "removedNodeCount");
+      var children = hostGetMany(reference, ["addedNodeCount", "removedNodeCount", "previousSibling", "nextSibling"]);
+      var added = children[0], removed = children[1];
       record.addedNodes = [];
       record.removedNodes = [];
       for (var add = 0; add < added; add++) {
@@ -1019,8 +1028,7 @@ function readMutationBatch(batchReference, batchToken) {
         record.removedNodes.push(removedNode);
         detachGuestNode(removedNode);
       }
-      var previous = hostGet(reference, "previousSibling");
-      var next = hostGet(reference, "nextSibling");
+      var previous = children[2], next = children[3];
       record.previousSibling = previous === null ? null : nodeForReference(previous[1]);
       record.nextSibling = next === null ? null : nodeForReference(next[1]);
       if (changedParents.indexOf(record.target) < 0) changedParents.push(record.target);
