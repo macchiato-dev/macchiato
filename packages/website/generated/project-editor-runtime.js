@@ -1525,16 +1525,21 @@ var WasmWebBridge = class {
       if (object === hostDocument && name === "mutationObserve" && args.length === 3 && args[0] instanceof Node && Number.isInteger(args[1]) && Number.isInteger(args[2])) {
         const flags = args[1];
         if (flags < 0 || flags > 31) fail("mutation observer flags are not allowed");
+        const targets = args[0] === hostDocument && !documentTarget ? roots : [args[0]];
+        if (targets.some((node) => !insideDocument(node) && !ownedNodes.has(node))) {
+          fail("mutation observer target is outside the granted roots");
+        }
         const observer = new MutationObserver((records) => deliver(args[2], records));
-        mutationObservers.add(observer);
-        observer.observe(args[0], {
+        const settings = {
           attributes: Boolean(flags & 1),
           attributeOldValue: Boolean(flags & 2),
           characterData: Boolean(flags & 4),
           characterDataOldValue: Boolean(flags & 8),
           childList: true,
           subtree: Boolean(flags & 16)
-        });
+        };
+        for (const node of targets) observer.observe(node, settings);
+        mutationObservers.add(observer);
         return reference(observer);
       }
       if (object === hostDocument && name === "timer") {

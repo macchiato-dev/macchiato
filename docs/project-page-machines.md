@@ -780,6 +780,13 @@ and passes after it; full-document behavior remains covered. This addresses
 observer registration, not a complete audit of every event/selection-derived
 reference and its permitted operations.
 
+The rebuilt site passed all 51 regression checks and the live-owner divider,
+modern-JavaScript, and invalid-to-valid font CSS recovery check. The latter
+intercepted all project writes; all 144 tiles returned with no guest errors.
+Export `ef95528` passed its 151-file manifest, compressed backend execution,
+and exported-browser checks for Mahjong, Cat Memory, the 50-slide tour, and
+SQLite fragment navigation. It has not been deployed to Bunny.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices
