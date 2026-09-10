@@ -1614,16 +1614,12 @@ Object.defineProperties(GuestObject.prototype, {
     return children.length ? children[children.length - 1] : null;
   } },
   nextSibling: { get: function () {
-    var parent = parentOf(this);
-    if (!parent) return null;
-    var siblings = childrenOf(parent);
-    return siblings[siblings.indexOf(this) + 1] || null;
+    var result = hostGet(this.reference, "nextSibling");
+    return result === null ? null : nodeForReference(result[1]);
   } },
   previousSibling: { get: function () {
-    var parent = parentOf(this);
-    if (!parent) return null;
-    var siblings = childrenOf(parent);
-    return siblings[siblings.indexOf(this) - 1] || null;
+    var result = hostGet(this.reference, "previousSibling");
+    return result === null ? null : nodeForReference(result[1]);
   } }
 });
 Object.defineProperty(GuestElement.prototype, "children", {

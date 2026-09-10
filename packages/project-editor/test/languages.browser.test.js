@@ -372,6 +372,34 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   assert.ok(mutation.same && mutation.removedParent && mutation.addedParent);
   assert.equal(mutation.text, "D");
   assert.equal(mutation.count, nativeCount, "preserve every native record while reconciling final child order");
+  const siblings = await page.evaluate(() => {
+    const before = document.createElement("div"), after = document.createElement("div");
+    const root = document.querySelector("#guest");
+    root.before(before); root.after(after);
+    const initial = window.callGuest("startSiblingProbe", {});
+    const parent = document.querySelector("#sibling-probe");
+    const [first, middle, last] = parent.children;
+    parent.prepend(last);
+    // Read synchronously: native mutations must be visible before any
+    // MutationObserver task has reconciled the guest's child arrays.
+    const moved = window.callGuest("inspectSiblingProbe", {});
+    parent.remove();
+    const detached = window.callGuest("inspectSiblingProbe", {});
+    middle.remove();
+    const removed = window.callGuest("inspectSiblingProbe", {});
+    return { initial, moved, detached, removed };
+  });
+  assert.deepEqual(siblings.initial.next, ["middle", "last", null]);
+  assert.deepEqual(siblings.initial.previous, [null, "first", "middle"]);
+  assert.ok(siblings.initial.identity);
+  assert.deepEqual(siblings.moved.next, ["middle", null, "first"]);
+  assert.deepEqual(siblings.moved.previous, ["last", "first", null]);
+  assert.deepEqual(siblings.detached, siblings.moved, "owned detached siblings remain usable");
+  assert.deepEqual(siblings.removed.next, [null, null, "first"]);
+  assert.deepEqual(siblings.removed.previous, ["last", null, null]);
+  for (const state of Object.values(siblings)) {
+    assert.ok(state.rootNext && state.rootPrevious, "root siblings remain outside the grant");
+  }
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });

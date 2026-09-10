@@ -760,6 +760,21 @@ Nothing was deployed to Bunny. The next performance comparison should match
 the native control's surrounding layout to the workspace before attributing
 the remaining difference to the interpreter.
 
+### September 10 synchronous sibling reads
+
+The guest's `nextSibling` and `previousSibling` getters scanned its cached
+child array. Besides a linear search on each traversal step, this returned
+stale siblings after native changes and before MutationObserver delivery.
+They now read the native properties through the existing host reference ABI.
+Returned nodes must pass the same subtree/ownership check as parent reads.
+No event scheduling, editing commands, or reference lifetime rules change.
+
+A browser regression fails on the old implementation and passes with both
+stamped and downloaded language bytecode after the change. It reorders native
+children and reads siblings synchronously, checks identity, detaches the owned
+parent, removes a child, and checks that siblings outside the granted root are
+not exposed. Large-file timing is a separate gate, not implied by this test.
+
 ### September 10 native layout comparison and tab stops
 
 A diagnostic copies the live workspace's layout and active CSS, removes its

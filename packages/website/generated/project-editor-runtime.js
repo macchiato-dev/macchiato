@@ -1033,9 +1033,9 @@ var WasmWebBridge = class {
       if (object === hostDocument && ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].includes(name)) {
         return Math.round(globalThis[name]);
       }
-      if (object instanceof Node && (name === "parentNode" || name === "parentElement")) {
-        const parent = object[name];
-        return parent && insideDocument(parent) ? reference(parent) : null;
+      if (object instanceof Node && ["parentNode", "parentElement", "nextSibling", "previousSibling"].includes(name)) {
+        const node = object[name];
+        return node && insideDocument(node) ? reference(node) : null;
       }
       if (object instanceof Node && name === "nodeType") return object.nodeType;
       if (object instanceof Node && name === "nodeName") return object.nodeName;

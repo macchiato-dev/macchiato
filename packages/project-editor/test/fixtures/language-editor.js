@@ -186,3 +186,28 @@ function inspectMutationProbe() {
   __wwcPostMessage("__wwcResponse:" + JSON.stringify(mutationResult || null));
   flush();
 }
+
+var siblingNodes, siblingParent;
+function startSiblingProbe() {
+  siblingParent = document.createElement("div");
+  siblingParent.setAttribute("id", "sibling-probe");
+  siblingNodes = ["first", "middle", "last"].map(function (name) {
+    var node = document.createElement("span");
+    node.setAttribute("data-name", name);
+    siblingParent.appendChild(node);
+    return node;
+  });
+  document.body.appendChild(siblingParent);
+  inspectSiblingProbe();
+}
+function inspectSiblingProbe() {
+  function name(node) { return node ? node.getAttribute("data-name") : null; }
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify({
+    next: siblingNodes.map(function (node) { return name(node.nextSibling); }),
+    previous: siblingNodes.map(function (node) { return name(node.previousSibling); }),
+    identity: siblingNodes[0].nextSibling === siblingNodes[1],
+    rootNext: document.body.nextSibling === null,
+    rootPrevious: document.body.previousSibling === null
+  }));
+  flush();
+}
