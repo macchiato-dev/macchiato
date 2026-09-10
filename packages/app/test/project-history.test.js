@@ -6,7 +6,28 @@ import {
   emptyProjectSnapshot,
   normalizeProjectSnapshot,
   projectPatchIsEmpty,
+  projectSnapshotsEqual,
 } from "@macchiato-dev/hub/project-history";
+
+test("snapshot equality agrees with empty patches without needing a text splice", () => {
+  const original = { files: [{ path: "b.js", content: "// large\n".repeat(12000) },
+    { path: "a.js", content: "one" }], config: { nested: { a: 1, b: [false, null] } } };
+  const cases = [original,
+    { ...original, files: [...original.files].reverse(), config: { nested: { b: [false, null], a: 1 } } },
+    { ...original, files: original.files.map(file => ({ ...file, content: "x" + file.content })) },
+    { ...original, files: original.files.slice(1) },
+    { ...original, files: [...original.files, { path: "c.js", content: "" }] },
+    { ...original, files: original.files.map(file => ({ ...file, path: "src/" + file.path })) },
+    { ...original, config: { nested: { a: 1, b: [false, true] } } },
+  ];
+  for (const candidate of cases) {
+    assert.equal(projectSnapshotsEqual(original, candidate),
+      projectPatchIsEmpty(diffProjectSnapshots(original, candidate)));
+    assert.equal(projectSnapshotsEqual(candidate, original), projectSnapshotsEqual(original, candidate));
+  }
+  assert.throws(() => projectSnapshotsEqual(original,
+    { files: [{ path: "../escape", content: "" }] }), /Invalid project file path/);
+});
 
 test("project patches round-trip multiple files and nested configuration", () => {
   const before = normalizeProjectSnapshot({

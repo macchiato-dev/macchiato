@@ -150,6 +150,16 @@ export function diffProjectSnapshots(beforeValue, afterValue) {
   return Object.freeze({ version: 1, files: Object.freeze(files), config: Object.freeze(config) });
 }
 
+// Equality doesn't need a splice range. In particular, avoid walking a large
+// file character by character for an editor change whose patch is discarded.
+export function projectSnapshotsEqual(beforeValue, afterValue) {
+  const before = normalizeProjectSnapshot(beforeValue);
+  const after = normalizeProjectSnapshot(afterValue);
+  return before.files.length === after.files.length &&
+    before.files.every((file, index) => file.path === after.files[index].path &&
+      file.content === after.files[index].content) && same(before.config, after.config);
+}
+
 function configParent(root, path) {
   let current = root;
   for (const key of path.slice(0, -1)) {

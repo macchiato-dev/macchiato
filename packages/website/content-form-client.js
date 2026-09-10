@@ -1,4 +1,4 @@
-import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty } from "/-/resources-site/project-history.js";
+import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty, projectSnapshotsEqual } from "/-/resources-site/project-history.js";
 import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { containerElementNames } from "/-/resources-site/container-elements.js";
 import { buildProject as buildProjectInMachine, downloadProjectArchive, frontendTheme, importProjectArchive, mountResourcesProjectEditor, mountResourcesProjectPreview, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
@@ -480,7 +480,7 @@ async function mountProjectRoot(root) {
       const pendingValue = sessionStorage.getItem(pendingSnapshotKey);
       if (pendingValue) {
         const recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
-        if (!projectPatchIsEmpty(diffProjectSnapshots(state, recovered))) {
+        if (!projectSnapshotsEqual(state, recovered)) {
           state = recovered;
           snapshotField.value = JSON.stringify(state);
           recoveredPendingSnapshot = true;
@@ -1197,7 +1197,7 @@ async function mountProjectRoot(root) {
 
   function updateSnapshot(next, { destructive = false } = {}) {
     const normalized = normalizeProjectSnapshot(next);
-    if (projectPatchIsEmpty(diffProjectSnapshots(state, normalized))) return false;
+    if (projectSnapshotsEqual(state, normalized)) return false;
     const branchedFromHistory = viewingHistorical;
     showCurrentVersion();
     viewingHistorical = false;
