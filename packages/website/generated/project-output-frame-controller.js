@@ -123,8 +123,21 @@ var moduleRequests = /* @__PURE__ */ new Map();
 var nextModuleRequest = 1;
 var storage;
 var ownerPort;
+var generation = 0;
 function reportError(error) {
   ownerPort?.postMessage({ protocol, type: "error", error: error?.message || String(error) });
+}
+async function answerFetch(request) {
+  const owner = machine, requestedGeneration = generation;
+  let reply;
+  try {
+    reply = { id: request.id, ...await fetchResourceImpl(request.url) };
+  } catch (error) {
+    reply = { id: request.id, error: error.message || String(error) };
+  }
+  if (owner && machine === owner && generation === requestedGeneration) {
+    owner.onmsg(callMessage("__resourcesFetchResolve", reply));
+  }
 }
 function taggedMessage(tag, value) {
   const bytes = encoder2.encode(value);
@@ -270,7 +283,14 @@ async function start(payload, port) {
       } else {
         try {
           const request = JSON.parse(text);
-          if (request.type === "fetch" && Number.isSafeInteger(request.id)) void fetchResourceImpl(request.url).then((result) => machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, ...result }))).catch((error) => machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message })));
+          if (request.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string") {
+            void answerFetch(request).catch((error) => {
+              reportError(error);
+              queueMicrotask(() => {
+                throw error;
+              });
+            });
+          }
         } catch {
         }
       }
@@ -288,6 +308,7 @@ async function operation(name, payload) {
     return value;
   }
   if (name === "load") {
+    generation++;
     fetchResourceImpl = projectFetch(payload.project.files || [], payload.project.allowedFetchOrigins || []);
     imageResolverImpl = imageResolver(payload.project.files || []);
     navigationPatterns = payload.project.allowedLinkPatterns || [];
@@ -305,6 +326,7 @@ async function operation(name, payload) {
   }
   if (name === "inspect") return { runtime: "quickjs", programs, realm: "iframe" };
   if (name === "destroy") {
+    generation++;
     storage?.destroy();
     storage = null;
     for (const listener of routeListeners) removeEventListener("hashchange", listener);

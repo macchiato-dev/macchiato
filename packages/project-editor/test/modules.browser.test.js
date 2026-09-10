@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 import { compileProjectFiles } from "../src/single-file-compiler.js";
 
 const website = new URL("../../website/", import.meta.url);
-for (const iframe of [false, true]) test(`project modules stay in QuickJS (${iframe ? "iframe" : "direct"})`, async t => {
+for (const iframe of [false, true]) test(`project modules stay in QuickJS (${iframe ? "iframe" : "direct"})`, { timeout: 60_000 }, async t => {
   const runtime = await readFile(new URL("generated/project-quickjs-runtime.wasm", website));
   const machine = await build({ entryPoints: [new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname],
     bundle: true, write: false, format: "esm", platform: "browser" });
@@ -17,6 +17,10 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   t.after(() => browser.close());
   const page = await browser.newPage();
   const errors = [], network = [];
+  const heldFetches = [];
+  let fetchArrived;
+  const nextFetch = () => new Promise(resolve => { fetchArrived = resolve; });
+  await page.route("https://resource.test/**", route => { heldFetches.push(route); fetchArrived(); });
   page.on("pageerror", error => errors.push(error.message));
   page.on("request", request => network.push(request.url()));
   await page.route("http://modules.test/**", route => {
@@ -34,7 +38,12 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     if (!iframe) {
       const { createProjectOutputMachine } = await import("/direct.js");
       window.output = await createProjectOutputMachine({ root: document.getElementById("guest"), scripts: [],
-        onError: error => outputErrors.push(error.message) });
+        onError: error => outputErrors.push(error.message),
+        options: { fetchResource: async url => {
+          if (!url.startsWith("https://resource.test/")) throw new Error("Fetch blocked");
+          const reply = await fetch(url);
+          return { status: reply.status, body: await reply.text() };
+        } } });
       return;
     }
     const frame = document.createElement("iframe");
@@ -87,6 +96,20 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   files[1].content = 'import { result } from "./lib/a.js"; const loaded = await import("./lib/value.js"); await new Promise(resolve => setTimeout(resolve, 5)); document.querySelector("main").textContent = result + loaded.value;';
   await load(files);
   assert.equal(await surface.innerText(), "AB70");
+  // A stale fetch must not resume application code against a newer output.
+  files[1].content = 'fetch("https://resource.test/old").then(r => r.text()).then(text => document.querySelector("main").textContent = text);';
+  const startFetch = () => page.evaluate(project => window.output.load(project), {
+    ...compileProjectFiles(files), files, allowedFetchOrigins: ["https://resource.test"],
+  });
+  const firstFetch = nextFetch();
+  await startFetch();
+  await firstFetch;
+  assert.equal(heldFetches.length, 1);
+  files[1].content = 'document.querySelector("main").textContent = "New output";';
+  await load(files);
+  await heldFetches[0].fulfill({ status: 200, body: "Stale output", contentType: "text/plain" });
+  await page.waitForTimeout(100);
+  assert.equal(await surface.innerText(), "New output");
   if (iframe) {
     files[1].content = 'sessionStorage.setItem("notes", "kept"); document.querySelector("main").textContent = sessionStorage.getItem("notes");';
     await load(files);
@@ -113,8 +136,16 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     await page.waitForFunction(count => outputErrors.length > count, previous);
     assert.match((await page.evaluate(() => outputErrors))[previous], expected);
   }
-  assert.ok(network.every(url => url.startsWith("http://modules.test/")));
+  files[0].content = '<main></main><script type="module" src="./app.js"></script>';
+  files[1].content = 'fetch("https://resource.test/destroyed").then(r => r.text()).then(() => { throw Error("Destroyed output resumed"); });';
+  const lastFetch = nextFetch();
+  await startFetch();
+  await lastFetch;
+  assert.equal(heldFetches.length, 2);
+  assert.ok(network.every(url => url.startsWith("http://modules.test/") || url.startsWith("https://resource.test/")));
   await page.evaluate(() => window.output.destroy());
+  await heldFetches[1].fulfill({ status: 200, body: "Late response", contentType: "text/plain" });
+  await page.waitForTimeout(100);
   assert.equal(errors.length, 3);
   assert.match(errors[0], /late output failure/);
   assert.match(errors[1], /plain timer failure/);

@@ -87,15 +87,19 @@ export function createProjectImageResolver(files = []) {
 export async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
   let reportedError = null, response, starting = true, destroyed = false, machine;
+  let generation = 0;
   let moduleFiles = new Map((options.files || []).map(file => [file.path, file.content]));
   const moduleRequests = new Map();
   let nextModuleRequest = 1;
   async function answerFetch(request) {
+    const requestedGeneration = generation;
+    let reply;
     try {
       if (typeof options.fetchResource !== "function") throw new Error("Project network access is disabled");
-      const result = await options.fetchResource(request.url), reply = { id: request.id, ...result };
-      if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", reply));
-    } catch (error) { if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message })); }
+      reply = { id: request.id, ...await options.fetchResource(request.url) };
+    } catch (error) { reply = { id: request.id, error: error.message || String(error) }; }
+    if (!destroyed && requestedGeneration === generation)
+      machine.onmsg(callMessage("__resourcesFetchResolve", reply));
   }
   machine = new WasmWebMachine(module, root, { ...options, onError,
     services: { ...options.services, call(name, path) {
@@ -123,7 +127,10 @@ export async function createProjectOutputMachine({ root, scripts, options = {}, 
     try {
       const request = JSON.parse(text);
       if (request.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string")
-        return void answerFetch(request);
+        return void answerFetch(request).catch(error => {
+          onError?.(error);
+          queueMicrotask(() => { throw error; });
+        });
     } catch {}
     options.onMessage?.(text);
   } });
@@ -170,6 +177,7 @@ export async function createProjectOutputMachine({ root, scripts, options = {}, 
       programs += nextScripts.length;
     },
     async load(project) {
+      generation++;
       moduleFiles = new Map((project.files || []).map(file => [file.path, file.content]));
       const result = call("__resourcesOutputLoad", {
         tree: project.tree || [],
