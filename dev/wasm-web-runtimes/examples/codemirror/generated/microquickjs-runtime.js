@@ -3273,7 +3273,7 @@ globalThis.removeEventListener = function (type, callback) {
   }
 };
 function allocateElementCallback(callback, target) {
-  var index = callbacks.length;
+  var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
   if (index >= 4096) throw new RangeError("event callback space exhausted");
   var state = {
     active: true,
@@ -3319,8 +3319,8 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
     if (record.type === type && record.callback === callback) {
       records.splice(index, 1);
       if (!record.local) {
+        immediate([5, this.reference, stringIndex(type), record.index]);
         releaseCallback(record.index);
-        pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
       }
       return;
     }

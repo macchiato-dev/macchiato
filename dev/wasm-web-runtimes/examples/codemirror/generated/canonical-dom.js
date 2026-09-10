@@ -2459,9 +2459,9 @@ globalThis.removeEventListener = function (type, callback) {
 };
 
 function allocateElementCallback(callback, target) {
-  // A DOM EventTarget may retain this listener for the life of the surface.
-  // Do not reuse callback slots that can still be named by a host listener.
-  var index = callbacks.length;
+  // Removed host listeners release their slots synchronously below. Reuse
+  // those slots rather than exhausting the event word after enough edits.
+  var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
   if (index >= 4096) throw new RangeError("event callback space exhausted");
   // A browser EventTarget strongly retains its listeners until removal.
   var state = { active: true, callback: callback };
@@ -2500,8 +2500,10 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
     if (record.type === type && record.callback === callback) {
       records.splice(index, 1);
       if (!record.local) {
+        // Unregister on the host before making the index reusable. An older
+        // listener must never dispatch into a newly allocated callback.
+        immediate([5, this.reference, stringIndex(type), record.index]);
         releaseCallback(record.index);
-        pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
       }
       return;
     }
