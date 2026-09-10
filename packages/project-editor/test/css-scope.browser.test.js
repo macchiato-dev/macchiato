@@ -66,4 +66,47 @@ test('container styles cannot select siblings of the granted root', async t => {
       }
     } finally { await page.close(); }
   });
+
+  // These are unresolved confidentiality probes, not passing containment
+  // coverage. Native selector matching can inspect beyond its result subtree.
+  for (const method of ['stylesheet', 'querySelector', 'matches', 'closest']) {
+    await t.test(method + ' cannot inspect host selector context', {
+      todo: 'Constrain selector predicate context without a second host CSS parser',
+    }, async () => {
+      const page = await browser.newPage();
+      try {
+        await page.route('http://css-scope.test/**', route => {
+          const path = new URL(route.request().url()).pathname;
+          return route.fulfill(path === '/machine.js' ? { body: host.outputFiles[0].text, contentType: 'text/javascript' }
+            : path === '/probe.wasm' ? { body: wasm, contentType: 'application/wasm' }
+            : { body: '<body data-private="yes"><div id="own"><p>Owned</p></div><div id="outside" data-private="yes">Private</div>',
+              contentType: 'text/html' });
+        });
+        await page.goto('http://css-scope.test/');
+        const result = await page.evaluate(async method => {
+          const { default: Machine } = await import('/machine.js');
+          const module = await WebAssembly.compileStreaming(fetch('/probe.wasm'));
+          const stamp = new Uint8Array(WebAssembly.Module.customSections(module, 'wasm-web-machine')[0]);
+          const reports = [], own = document.querySelector('#own');
+          const machine = new Machine(module, own, { stamp, onMessage: value => reports.push(value) });
+          try {
+            await machine.onmsg(0);
+            const stylesheet = method === 'stylesheet';
+            const command = stylesheet ? 'probeStylesheet' : 'probeSelector';
+            const request = stylesheet
+              ? { source: 'body:has(+ [data-private="yes"]) p { color: #ff0001; }' }
+              : { method, selector: 'body[data-private="yes"] p' };
+            let error = null;
+            try { machine.onmsg(new TextEncoder().encode('\u0002' + command + '\0' + JSON.stringify(request))); }
+            catch (caught) { error = String(caught); }
+            return { error, reports, color: getComputedStyle(own.querySelector('p')).color };
+          } finally { machine.destroy(); }
+        }, method);
+        t.diagnostic(method + ' context result: ' + JSON.stringify(result));
+        if (result.error) assert.match(result.error, /selector.*scope|outside.*scope/);
+        else if (method === 'stylesheet') assert.equal(result.color, 'rgb(0, 0, 0)');
+        else assert.deepEqual(result.reports, ['false']);
+      } finally { await page.close(); }
+    });
+  }
 });
