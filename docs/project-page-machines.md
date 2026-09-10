@@ -84,8 +84,19 @@ with a new module-name prefix on each load. This refreshes imports but does not
 clear global bindings, old module records, stylesheets, or all application
 callbacks. Final machine disposal now cancels native callbacks and listeners;
 that does **not** make repeated loads equivalent to fresh contexts. Clean
-context replacement, including rejecting late fetch/module replies from a
-previous context, remains required before this lifecycle design is complete.
+context replacement remains required before this lifecycle design is complete.
+Fetch replies now carry controller-side load ownership: responses from replaced
+or destroyed outputs cannot resume their old application against a newer tree.
+The direct and iframe module tests both reproduce that race and verify the
+guard. This prevents stale execution, but does not reclaim unresolved promises
+or replace old module/global state.
+
+The QuickJS session prototype in `dev/wasm-web-runtimes/quickjs/` can create
+independently disposable JS sessions in one WebAssembly instance. Its tests
+cover nested failures, reference cleanup, and bounded repeated replacement.
+It is not yet the live output path: integration must prepare a new root,
+preserve the old visible output on failure, and swap before disposing the old
+machine. Do not substitute a new WebAssembly instance for every keystroke.
 
 The September 2026 browser verification found intermittent
 `event callback ... is unavailable` failures during repeated editor input.

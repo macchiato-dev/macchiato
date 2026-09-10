@@ -25,7 +25,8 @@ Build the standalone runtime with:
 cargo build --release --target wasm32-unknown-unknown
 ```
 
-The resulting module imports only `host.msg(offset, length)`. Its enclosing
+The resulting module imports `host.msg(offset, length)` and `host.now()`.
+The latter supplies a monotonic clock to the browser-shaped environment. Its enclosing
 runner owns the linear-memory policy. The bootstrap evaluates modern syntax with full
 QuickJS and reports `QuickJS:42` through `host.msg`; this deliberately small
 probe distinguishes the engine port from the browser guest runtime that will
@@ -64,6 +65,47 @@ production applications can omit it and report `ready`.
 For constrained-engine testing, set `WWC_QUICKJS_MEMORY_LIMIT` to a byte count
 while building. The bootstrap passes at 1, 2, and 4 MiB; these numbers measure
 only the probe and are not recommended application defaults.
+
+## Reusable engine sessions (prototype)
+
+`WWC_MULTICONTEXT=1`, together with `WWC_CANONICAL_HOST=1`, builds the session
+transport used by `context-runtime.js`. It keeps the existing `onmsg` export
+and `host.msg` import. The adapter supplies three little-endian words before
+each ordinary machine message: session ID, message length, and action
+(`0` delivers; `1` disposes). This is runtime-specific, not a new DOM operation.
+
+`new QuickJSRuntime(module).createSession()` returns an adapter that can be
+passed in place of a compiled module to `new WasmWebMachine(...)`. Each session
+has its own DOM bridge and a separate QuickJS `JSRuntime`/`JSContext`, while
+sharing one WebAssembly instance and allocator. Separate QuickJS runtimes keep
+job queues and object graphs independently disposable; these are not shared
+globals or shared QuickJS objects.
+
+Destroy each machine to free its JS context, job queue, host-reference leases,
+and browser callbacks. `QuickJSRuntime.destroy()` releases any remaining JS
+sessions; owners must still destroy their machines to detach browser services.
+Do not destroy a session from inside one of its active host callbacks. Prepare
+a replacement against a separate hidden root, then swap roots and dispose the
+old machine after the call has returned.
+
+Browser exceptions must not unwind live interpreter C frames. The adapter
+returns an error sentinel for rejected host operations; the native bridge
+turns it into a QuickJS exception. The original browser error is rethrown after
+Wasm returns, so C can release its temporary values. Session state is passed
+explicitly to C helpers, including across nested calls that fail.
+
+The browser regression builds a session artifact in a sibling working
+directory, runs two guests, exercises nested errors and denied DOM access,
+checks reference release, and repeatedly replaces one guest while the other
+remains active:
+
+```sh
+node --test packages/project-editor/test/sessions.browser.test.js
+```
+
+Run that command from the repository root. The production output controller
+has not yet switched to this prototype; clean root swapping and its integration
+tests are required before making that change.
 
 ## Upstream
 

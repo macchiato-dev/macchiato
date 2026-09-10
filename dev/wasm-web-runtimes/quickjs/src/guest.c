@@ -11,7 +11,6 @@ extern double host_now(void);
 
 static char transfer[256];
 static JSClassID host_reference_class;
-#ifdef WWC_MULTICONTEXT
 /* Sessions share this Wasm instance and allocator, not QuickJS job queues or
    object graphs. A separate JSRuntime per session makes disposal independent
    even when a previous application has unresolved promises or retained roots. */
@@ -26,31 +25,17 @@ typedef struct GuestSession {
     uint32_t release_capacity;
     struct GuestSession *next;
 } GuestSession;
-static GuestSession *sessions, *active_session;
-#define runtime (active_session->rt)
-#define context (active_session->ctx)
-#define host_message (active_session->input)
-#define host_message_capacity (active_session->input_capacity)
-#define pending_releases (active_session->releases)
-#define pending_release_count (active_session->release_count)
-#define pending_release_capacity (active_session->release_capacity)
+#ifdef WWC_MULTICONTEXT
+static GuestSession *sessions;
 #else
-static JSRuntime *runtime;
-static JSContext *context;
-static uint8_t *host_message;
-static uint32_t host_message_capacity;
-#ifdef WWC_CANONICAL_HOST
-static uint32_t *pending_releases;
-static uint32_t pending_release_count;
-static uint32_t pending_release_capacity;
+static GuestSession singleton;
 #endif
-#endif
-#ifdef WWC_CANONICAL_HOST
 
-static void flush_pending_releases(void)
+#ifdef WWC_CANONICAL_HOST
+static void flush_pending_releases(GuestSession *session)
 {
-    while (pending_release_count != 0)
-        msg(pending_releases[--pending_release_count], 0);
+    while (session->release_count != 0)
+        msg(session->releases[--session->release_count], 0);
 }
 
 #endif
@@ -140,9 +125,11 @@ static JSValue guest_bridge(JSContext *ctx, JSValueConst this_value,
     }
     actual = msg((uint32_t)(uintptr_t)(bytes + offset), (uint32_t)length);
 #ifdef WWC_CANONICAL_HOST
-    flush_pending_releases();
+    flush_pending_releases(JS_GetRuntimeOpaque(JS_GetRuntime(ctx)));
 #endif
     JS_FreeValue(ctx, buffer);
+    if (actual == UINT32_MAX)
+        return JS_ThrowInternalError(ctx, "host bridge rejected operation");
     return JS_NewUint32(ctx, actual);
 }
 
@@ -158,20 +145,20 @@ static JSValue guest_now(JSContext *ctx, JSValueConst this_value,
 static void release_host_reference(JSRuntime *rt, JSValue value)
 {
     uintptr_t control = (uintptr_t)JS_GetOpaque(value, host_reference_class);
-    (void)rt;
+    GuestSession *session = JS_GetRuntimeOpaque(rt);
     if (control != 0) {
 #ifdef WWC_CANONICAL_HOST
-        if (pending_release_count == pending_release_capacity) {
-            uint32_t next_capacity = pending_release_capacity == 0 ? 64 :
-                                     pending_release_capacity * 2;
-            uint32_t *next = realloc(pending_releases,
+        if (session->release_count == session->release_capacity) {
+            uint32_t next_capacity = session->release_capacity == 0 ? 64 :
+                                     session->release_capacity * 2;
+            uint32_t *next = realloc(session->releases,
                                      next_capacity * sizeof(*next));
             if (next == NULL)
                 return;
-            pending_releases = next;
-            pending_release_capacity = next_capacity;
+            session->releases = next;
+            session->release_capacity = next_capacity;
         }
-        pending_releases[pending_release_count++] = (uint32_t)control;
+        session->releases[session->release_count++] = (uint32_t)control;
 #else
         msg((uint32_t)control, 0);
 #endif
@@ -277,8 +264,10 @@ static JSValue evaluate_guest_module(JSContext *ctx, JSValueConst self,
     return result;
 }
 
-static int install_host_references(void)
+static int install_host_references(GuestSession *session)
 {
+    JSRuntime *runtime = session->rt;
+    JSContext *context = session->ctx;
     JSClassDef definition = {
         .class_name = "HostReference",
         .finalizer = release_host_reference,
@@ -317,8 +306,9 @@ static int install_host_references(void)
 }
 
 #ifdef WWC_CANONICAL_HOST
-static void report_text(const char *text, uint32_t length)
+static void report_text(GuestSession *session, const char *text, uint32_t length)
 {
+    JSContext *context = session->ctx;
     JSValue global = JS_GetGlobalObject(context);
     JSValue reporter = JS_GetPropertyStr(context, global, "__wwcReportError");
     JSValue message = JS_NewStringLen(context, text, length);
@@ -330,8 +320,9 @@ static void report_text(const char *text, uint32_t length)
 }
 #endif
 
-static void report(JSValue value)
+static void report(GuestSession *session, JSValue value)
 {
+    JSContext *context = session->ctx;
     char message[sizeof(transfer) - 5];
     const char *text, *stack_text = NULL;
     uint32_t length = 0, at = 0;
@@ -371,8 +362,9 @@ static void report(JSValue value)
 #endif
 }
 
-static void report_memory(void)
+static void report_memory(GuestSession *session)
 {
+    JSRuntime *runtime = session->rt;
     JSMemoryUsage usage;
     int length;
     JS_ComputeMemoryUsage(runtime, &usage);
@@ -386,28 +378,32 @@ static void report_memory(void)
             (uint32_t)(length < (int)sizeof(transfer) ? length : sizeof(transfer)));
 }
 
-static void report_snapshot(void)
+static void report_snapshot(GuestSession *session)
 {
+    JSContext *context = session->ctx;
     static const char source[] =
         "globalThis.__wwcSnapshot ? 'WWC_DOM:'+JSON.stringify(__wwcSnapshot()) : undefined";
     JSValue result = JS_Eval(context, source, sizeof(source) - 1,
                              "guest-snapshot.js", JS_EVAL_TYPE_GLOBAL);
-    if (!JS_IsUndefined(result)) report(result);
+    if (!JS_IsUndefined(result)) report(session, result);
     JS_FreeValue(context, result);
 }
 
-static void drain_jobs(void);
-static void flush_guest_operations(void);
+static void drain_jobs(GuestSession *session);
+static void flush_guest_operations(GuestSession *session);
 
-static void receive_host_message(uint32_t minimum_length)
+static void receive_host_message(GuestSession *session, uint32_t minimum_length)
 {
+    JSContext *context = session->ctx;
+    uint8_t *host_message = session->input;
+    uint32_t host_message_capacity = session->input_capacity;
     JSValue global, receiver, bytes, result;
     uint32_t actual_length;
     if (minimum_length + 1 > host_message_capacity) {
         uint8_t *next = realloc(host_message, minimum_length + 1);
         if (next == NULL) return;
-        host_message = next;
-        host_message_capacity = minimum_length + 1;
+        session->input = host_message = next;
+        session->input_capacity = host_message_capacity = minimum_length + 1;
     }
     actual_length = msg((uint32_t)(uintptr_t)host_message, host_message_capacity);
     if (actual_length >= host_message_capacity) return;
@@ -422,10 +418,10 @@ static void receive_host_message(uint32_t minimum_length)
         result = JS_Eval(context, (const char *)(host_message + 1),
                          actual_length - 1, "dynamic-application.js",
                          JS_EVAL_TYPE_GLOBAL);
-        if (JS_IsException(result)) report(result);
+        if (JS_IsException(result)) report(session, result);
         JS_FreeValue(context, result);
-        drain_jobs();
-        flush_guest_operations();
+        drain_jobs(session);
+        flush_guest_operations(session);
         return;
     }
     if (actual_length > 1 && host_message[0] == 2
@@ -450,7 +446,7 @@ static void receive_host_message(uint32_t minimum_length)
                                 actual_length - name_length - 2);
         result = JS_Call(context, receiver, global, 1, &bytes);
         if (JS_IsException(result)) {
-            report(result);
+            report(session, result);
         } else {
             result_text = JS_ToCString(context, result);
             if (result_text != NULL) {
@@ -476,8 +472,8 @@ static void receive_host_message(uint32_t minimum_length)
         JS_FreeValue(context, bytes);
         JS_FreeValue(context, receiver);
         JS_FreeValue(context, global);
-        drain_jobs();
-        flush_guest_operations();
+        drain_jobs(session);
+        flush_guest_operations(session);
         return;
     }
     global = JS_GetGlobalObject(context);
@@ -500,10 +496,10 @@ static void receive_host_message(uint32_t minimum_length)
     result = JS_Call(context, receiver, global, 1, &bytes);
     if (JS_IsException(result)) {
 #ifdef WWC_CANONICAL_HOST
-        report(result);
+        report(session, result);
         report_stage("event");
 #else
-        report(result);
+        report(session, result);
 #endif
     }
     else if (JS_ToBool(context, result)) {
@@ -515,14 +511,15 @@ static void receive_host_message(uint32_t minimum_length)
     JS_FreeValue(context, receiver);
     JS_FreeValue(context, global);
 #ifndef WWC_CANONICAL_HOST
-    report_snapshot();
+    report_snapshot(session);
 #endif
 }
 
 /* Run jobs only when the host sends its coalesced end-of-task wake. Draining
    between listeners would observably differ from a browser event dispatch. */
-static void drain_jobs(void)
+static void drain_jobs(GuestSession *session)
 {
+    JSRuntime *runtime = session->rt;
     JSContext *job_context = NULL;
     int status;
     while ((status = JS_ExecutePendingJob(runtime, &job_context)) > 0) {}
@@ -532,8 +529,9 @@ static void drain_jobs(void)
     }
 }
 
-static void flush_guest_operations(void)
+static void flush_guest_operations(GuestSession *session)
 {
+    JSContext *context = session->ctx;
     static const char source[] =
         "globalThis.flush && flush()";
     JSValue result = JS_Eval(context, source, sizeof(source) - 1,
@@ -544,36 +542,39 @@ static void flush_guest_operations(void)
     JS_FreeValue(context, result);
 }
 
-static void run_session(uint32_t minimum_length)
+static void run_session(GuestSession *session, uint32_t minimum_length)
 {
+    JSRuntime *runtime = session->rt;
+    JSContext *context = session->ctx;
     JSValue result;
     if (runtime != NULL) {
         if (minimum_length != 0) {
-            receive_host_message(minimum_length);
+            receive_host_message(session, minimum_length);
         }
         else {
-            drain_jobs();
-            flush_guest_operations();
+            drain_jobs(session);
+            flush_guest_operations(session);
         }
         return;
     }
-    runtime = JS_NewRuntime();
+    session->rt = runtime = JS_NewRuntime();
     if (runtime == NULL)
         return;
 #ifdef QUICKJS_MEMORY_LIMIT
     JS_SetMemoryLimit(runtime, QUICKJS_MEMORY_LIMIT);
 #endif
-    context = JS_NewContext(runtime);
+    JS_SetRuntimeOpaque(runtime, session);
+    session->ctx = context = JS_NewContext(runtime);
     if (context == NULL)
         return;
-    if (install_host_references() < 0)
+    if (install_host_references(session) < 0)
         return;
     if (guest_environment_length != 0) {
         result = JS_Eval(context, (const char *)guest_environment,
                          guest_environment_length, "guest-environment.js",
                          JS_EVAL_TYPE_GLOBAL);
         if (JS_IsException(result)) {
-            report(result);
+            report(session, result);
             report_stage("guest-environment-error");
             JS_FreeValue(context, result);
             return;
@@ -603,14 +604,14 @@ static void run_session(uint32_t minimum_length)
            generic stage only if that diagnostic can return. */
     }
     if (JS_IsException(result)) {
-        report(result);
+        report(session, result);
         report_stage("guest-result-error");
     }
 #ifndef WWC_CANONICAL_HOST
-    else report(result);
+    else report(session, result);
 #endif
     JS_FreeValue(context, result);
-    drain_jobs();
+    drain_jobs(session);
 #ifndef WWC_CANONICAL_HOST
     {
         static const char visual_source[] =
@@ -618,12 +619,12 @@ static void run_session(uint32_t minimum_length)
         result = JS_Eval(context, visual_source,
                          sizeof(visual_source) - 1,
                          "guest-visual.js", JS_EVAL_TYPE_GLOBAL);
-        if (JS_IsException(result)) report(result);
+        if (JS_IsException(result)) report(session, result);
         JS_FreeValue(context, result);
     }
-    report_snapshot();
+    report_snapshot(session);
     JS_RunGC(runtime);
-    report_memory();
+    report_memory(session);
 #endif
 }
 
@@ -634,7 +635,7 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
        the existing machine ABI unchanged: session ID, message length, action
        (0: deliver, 1: dispose). No additional Wasm exports are required. */
     uint32_t control[3];
-    GuestSession **link, *selected, *previous;
+    GuestSession **link, *selected;
     if (minimum_length != sizeof(control) ||
         msg((uint32_t)(uintptr_t)control, sizeof(control)) != sizeof(control) ||
         control[0] == 0 || control[2] > 1) return;
@@ -647,21 +648,18 @@ void quickjs_guest_onmsg(uint32_t minimum_length)
         (*link)->id = control[0];
     }
     selected = *link;
-    previous = active_session;
-    active_session = selected;
     if (control[2] == 0) {
-        run_session(control[1]);
+        run_session(selected, control[1]);
     } else {
-        if (context != NULL) JS_FreeContext(context);
-        if (runtime != NULL) JS_FreeRuntime(runtime);
-        flush_pending_releases();
-        free(pending_releases);
-        free(host_message);
         *link = selected->next;
+        if (selected->ctx != NULL) JS_FreeContext(selected->ctx);
+        if (selected->rt != NULL) JS_FreeRuntime(selected->rt);
+        flush_pending_releases(selected);
+        free(selected->releases);
+        free(selected->input);
         free(selected);
     }
-    active_session = previous;
 #else
-    run_session(minimum_length);
+    run_session(&singleton, minimum_length);
 #endif
 }

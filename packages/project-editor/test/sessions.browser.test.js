@@ -50,7 +50,12 @@ test("QuickJS sessions share a Wasm instance but not globals, callbacks, or leas
     const engine = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/runtime.wasm")));
     const calls = [], leases = new Map();
     const first = new Machine(engine.createSession(), document.querySelector("#first"), {
-      onMessage: value => calls.push(["first", value]),
+      onMessage: value => {
+        if (value === "nested") {
+          try { evaluate(second, "throw Error('Nested failure');"); }
+          catch (error) { calls.push(["caught", /Nested failure/.test(error.message)]); }
+        } else calls.push(["first", value]);
+      },
       onReferenceLease: (id, count) => { if (count) leases.set(id, count); else leases.delete(id); },
     });
     const second = new Machine(engine.createSession(), document.querySelector("#second"), {
@@ -71,6 +76,11 @@ test("QuickJS sessions share a Wasm instance but not globals, callbacks, or leas
       document.querySelector('button').addEventListener('click', () => __wwcPostMessage(privateValue));`);
     document.querySelector("#first button").click();
     document.querySelector("#second button").click();
+    evaluate(first, "__wwcPostMessage('nested'); __wwcPostMessage(privateValue + '-resumed');");
+    let blocked;
+    try { evaluate(second, "document.createElement('iframe');"); }
+    catch (error) { blocked = /not allowed/.test(error.message); }
+    evaluate(second, "__wwcPostMessage(privateValue + '-recovered');");
     const leasesBefore = leases.size;
     first.destroy();
     const leasesAfter = leases.size;
@@ -88,11 +98,13 @@ test("QuickJS sessions share a Wasm instance but not globals, callbacks, or leas
     document.querySelector("#second button").click();
     second.destroy();
     engine.destroy();
-    return { instances, calls, leasesBefore, leasesAfter, sizes };
+    return { instances, calls, blocked, leasesBefore, leasesAfter, sizes };
   });
   t.diagnostic(JSON.stringify(result));
   assert.equal(result.instances, 1);
-  assert.deepEqual(result.calls, [["first", "first"], ["second", "second"], ["second", "second"], ["second", "second"]]);
+  assert.deepEqual(result.calls, [["first", "first"], ["second", "second"], ["caught", true],
+    ["first", "first-resumed"], ["second", "second-recovered"], ["second", "second"], ["second", "second"]]);
+  assert.equal(result.blocked, true);
   assert.ok(result.leasesBefore > 0);
   assert.equal(result.leasesAfter, 0);
   assert.ok(Math.max(...result.sizes.slice(12)) <= Math.max(...result.sizes.slice(0, 12)) + 65536,

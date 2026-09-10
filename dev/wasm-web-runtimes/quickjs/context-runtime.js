@@ -18,14 +18,20 @@ export class QuickJSRuntime {
           call.control = null;
           return 12;
         }
-        return call.session.imports.host.msg(offset, length);
+        // Do not unwind a live QuickJS C stack with a browser exception. The
+        // guest bridge turns this sentinel into a JS exception, allowing its
+        // stack/values to unwind normally. Re-throw the original host error
+        // only after Wasm returns. Finalizer releases may still complete.
+        if (call.error && length !== 0) return 0xffffffff;
+        try { return call.session.imports.host.msg(offset, length); }
+        catch (error) { call.error ||= error; return 0xffffffff; }
       },
     } });
   }
 
   createSession() {
     if (this.#nextId > 0xffffffff) throw new RangeError("QuickJS session IDs exhausted");
-    const session = { id: this.#nextId++, imports: null, disposed: false, depth: 0 };
+    const session = { id: this.#nextId++, imports: null, disposed: false, disposing: false, depth: 0 };
     return Object.freeze({
       instantiate: imports => {
         if (session.imports || session.disposed) throw new Error("QuickJS session was already attached");
@@ -43,7 +49,7 @@ export class QuickJSRuntime {
   }
 
   #call(session, length, action) {
-    if (session.disposed) throw new Error("QuickJS session is disposed");
+    if (session.disposed || session.disposing && action !== 1) throw new Error("QuickJS session is disposed");
     const control = new Uint8Array(12), words = new DataView(control.buffer);
     words.setUint32(0, session.id, true);
     words.setUint32(4, length, true);
@@ -53,6 +59,7 @@ export class QuickJSRuntime {
     session.depth++;
     try {
       this.#instance.exports.onmsg(12);
+      if (this.#active.error) throw this.#active.error;
       if (this.#active.control) throw new Error("QuickJS build does not support sessions");
     } finally {
       session.depth--;
@@ -63,6 +70,7 @@ export class QuickJSRuntime {
   #dispose(session) {
     if (session.disposed) return;
     if (session.depth) throw new Error("Cannot dispose a running QuickJS session");
+    session.disposing = true;
     this.#call(session, 0, 1);
     session.disposed = true;
     session.imports = null;
