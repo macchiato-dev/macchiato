@@ -5,14 +5,12 @@ import {
 } from "../hub/src/project-history.js";
 
 const notifyHost = globalThis.__browserUseNotify;
-globalThis.__browserUseNotify = (text) => {
-  let message;
-  try { message = JSON.parse(text); } catch {}
+globalThis.__codeEditorNotify = (message) => {
   if (message && ["change", "ready", "limit"].includes(message.type)) {
     globalThis.__resourcesEditorLocalReceive?.(message);
     return;
   }
-  notifyHost(text);
+  notifyHost(JSON.stringify(message));
 };
 notifyHost(JSON.stringify({ type: "editor-application-ready" }));
 

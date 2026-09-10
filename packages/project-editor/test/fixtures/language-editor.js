@@ -2,6 +2,18 @@ globalThis.__CODE_EDITOR_DEFER_START__ = true;
 load("editor.bin");
 globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(load);
 var nativeTextWriter = globalThis.__wwcWriteText;
+var localNotices = [];
+
+function localNotifications(json) {
+  var enabled = JSON.parse(json).enabled;
+  globalThis.__codeEditorNotify = enabled ? function (message) {
+    if (!message || typeof message !== "object") throw new Error("notification is not an object");
+    localNotices.push(message);
+  } : undefined;
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify(localNotices));
+  flush();
+  if (!enabled) localNotices = [];
+}
 
 function selectTextWriter(json) {
   var native = JSON.parse(json).native;

@@ -173,6 +173,16 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   ]) await select(path, content, language);
   if (downloaded) assert.deepEqual(downloads, ["html", "markdown", "python", "rust", "sql", "yaml", "cpp", "javascript", "json", "css", "vue", "svelte"]
     .map(name => `language-${name}.bin`));
+  await select("local.js", "const local = 1;\n", "javascript");
+  const remoteChanges = await page.evaluate(() => guestNotices.filter(text => text.startsWith('{"type":"change"')).length);
+  await page.evaluate(() => window.callGuest("localNotifications", { enabled: true }));
+  await page.evaluate(() => window.callGuest("selectPosition", { head: 0 }));
+  await page.keyboard.type("// local\n");
+  const localNotices = await page.evaluate(() => window.callGuest("localNotifications", { enabled: false }));
+  assert.equal(localNotices.filter(message => message.type === "change").at(-1)?.content,
+    "// local\nconst local = 1;\n", "same-guest notifications deliver the actual edit as an object");
+  assert.equal(await page.evaluate(() => guestNotices.filter(text => text.startsWith('{"type":"change"')).length),
+    remoteChanges, "local edits should not also send a serialized host notification");
   if (process.env.MACCHIATO_EDITOR_TIMINGS && !downloaded) {
     // Measure real keyboard input in the shipped runtime, outside any builds.
     // Optional CDP profiles are diagnostic runs, not comparable timing runs.

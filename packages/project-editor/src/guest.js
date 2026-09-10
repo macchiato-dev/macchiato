@@ -27,6 +27,12 @@ const isSafeInteger = (value) => typeof value === "number" && value >= -21474836
 if (!globalThis.__browserUseNotify && globalThis.__wwcPostMessage) {
   globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
 }
+function notify(message) {
+  // A workspace in this same guest can receive values directly. Serialize
+  // only when the integration actually sends a message out of the machine.
+  if (typeof globalThis.__codeEditorNotify === "function") globalThis.__codeEditorNotify(message);
+  else globalThis.__browserUseNotify(JSON.stringify(message));
+}
 
 const parent = document.getElementById("editor");
 const editorSetup = new Compartment();
@@ -94,11 +100,11 @@ function documentUsage(doc) {
 const sourceEnvelope = createSourceEnvelopeExtension({
   limits: () => documentLimits,
   onLimit(usage) {
-  globalThis.__browserUseNotify(JSON.stringify({
+  notify({
     type: "limit",
     ...usage,
-    limits: documentLimits,
-  }));
+    limits: { ...documentLimits },
+  });
   },
 });
 const dynamicLanguageFactories = Object.create(null);
@@ -145,9 +151,9 @@ function loadedLanguage(name) {
         return support;
       }, error => { pendingLanguages.delete(name); throw error; });
       pendingLanguages.set(name, pending);
-      pending.catch(error => globalThis.__browserUseNotify(JSON.stringify({
+      pending.catch(error => notify({
         type: "language-error", language: name, message: error.message || String(error),
-      })));
+      }));
     }
   }
   return languageSupport(name);
@@ -175,13 +181,13 @@ function editorExtensions() {
     sourceEnvelope,
     EditorView.updateListener.of((update) => {
       if (update.docChanged && !applyingHostContent) {
-        globalThis.__browserUseNotify(JSON.stringify({
+        notify({
           type: "change",
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
           syntaxErrors: hasSyntaxErrors(update.state, currentLanguage),
-        }));
+        });
       }
     }),
   ];
@@ -193,9 +199,9 @@ function mountEditor(content = 'const greeting = "Hello, constrained editor!";\n
   // parse slice. Finish the visible document now so its initial paint does not
   // wait for a guest timer round trip.
   forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
-  globalThis.__browserUseNotify(JSON.stringify({
+  notify({
     type: "ready", characters: state.doc.length, lines: state.doc.lines,
-  }));
+  });
   return globalThis.__codeEditorView;
 }
 if (!globalThis.__CODE_EDITOR_DEFER_START__) mountEditor();
