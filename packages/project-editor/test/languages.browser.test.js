@@ -38,8 +38,9 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     applicationSource]);
   const output = resolve(directory, "editor.wasm");
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    resolve(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"), output,
-    `runtime.bin=${resolve(examples, "codemirror/generated/microquickjs-runtime.bin")}`,
+    // Re-stamp the shipped editor, not the last unrelated Cargo/demo build.
+    resolve(generated, "project-editor-quickjs-runtime.wasm"), output,
+    `runtime.bin=${resolve(generated, "project-editor-runtime.bin")}`,
     `application.bin=${application}`, `editor.bin=${resolve(generated, "project-editor-core.bin")}`,
     ...(downloaded ? [`language-atoms.bin=${resolve(generated, "project-editor-language-atoms.bin")}`]
       : [...new Set(editorLanguages.map((entry) => entry.package))].map((name) =>

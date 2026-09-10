@@ -119,6 +119,14 @@ the machine's scoped keyframe names hidden on reads and preserved on writes.
 `packages/project-editor/test/caret.browser.test.js` compares repeated-arrow
 movement with the same native editor and checks that idle blinking still works.
 
+The language-loading regression also uses the shipped editor runtime rather
+than a demo bytecode file. This exposed an element `remove()` implementation
+that removed the host node but bypassed the guest mirror update. CodeMirror's
+temporary measurement line could consequently be read back as document text
+during input. Element and text-node removal now share the cache-aware method;
+a focused regression checks removal and reinsertion without relying on a
+MutationObserver to repair the cache.
+
 ## DOM authority
 
 The browser host retains the real document. Each role receives a distinct root

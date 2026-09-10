@@ -11,6 +11,8 @@ for (const [fixture, expected] of [
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
   ["rom-string-keys", { before: true, after: true, same: true }],
+  ["dom-removal", { before: 3, afterElement: [2, true, true, true],
+    afterText: [1, true, true, true], reinserted: [2, true, true], remaining: 0 }],
   ["string-iteration", { counts: [0, 3, 1, 5], first: "😀", second: "x", done: true,
     mapped: [8, 13], closed: true, set: ["a", "b"], map: [["a", 1], ["b", 2]] }],
 ]) test(`MicroQuickJS runtime regression: ${fixture}`, async (t) => {
