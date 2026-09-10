@@ -10,6 +10,7 @@ import microQuickJSSyntax from "../../dev/wasm-web-runtimes/examples/codemirror/
 import lowerDatasetAccess from "./babel-resources-dataset.js";
 import { editorLanguages } from "../project-editor/src/languages.js";
 import { atomCatalogSource } from "../../dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/bytecode-atoms.js";
+import { optimizeMutationScans } from "../project-editor/codemirror-mutation-scan.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const outputDirectory = join(directory, "generated");
@@ -196,6 +197,16 @@ execFileSync(join(microRuntime, "microquickjs", "mqjs"),
   { stdio: "inherit" });
 const editorCoreSource = await build({
   entryPoints: [join(workspace, "packages", "project-editor", "src", "guest.js")],
+  plugins: [{
+    name: "codemirror-mutation-scan",
+    setup(builder) {
+      builder.onLoad({ filter: /[/\\]@codemirror[/\\]view[/\\]dist[/\\]index\.js$/ }, async ({ path }) => ({
+        contents: optimizeMutationScans(await readFile(path, "utf8")),
+        loader: "js",
+        resolveDir: dirname(path),
+      }));
+    },
+  }],
   bundle: true,
   format: "iife",
   platform: "neutral",

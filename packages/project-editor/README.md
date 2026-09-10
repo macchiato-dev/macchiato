@@ -305,6 +305,20 @@ slots or unreachable heap strings.
 
 ## Runtime build transformations
 
+The Resources editor build adapts CodeMirror view 6.43.9's mutation scan with
+[`codemirror-mutation-scan.js`](codemirror-mutation-scan.js). For batches over 128 records,
+it caches the nearest rendered child along each traversed path. This avoids
+repeatedly walking long runs of native-inserted nodes that do not yet have
+CodeMirror tiles. Smaller batches keep the original search.
+
+The cache is local to one synchronous `processRecords` call, separated by
+container tile and direction. It is never retained across a DOM/view update;
+no observer records, events, or callbacks are suppressed or deferred. The host
+is unchanged. The build transformation checks the upstream search and call
+sites and fails if they no longer match, requiring review when upgrading
+CodeMirror. The helper retains CodeMirror's MIT attribution. It is currently
+enabled for the Resources editor, not the independent demo builds.
+
 Multi-memory WebAssembly is worth testing for runtime builds: interpreter state,
 guest resources or bytecode, and shared device buffers need not compete in one
 linear memory. A post-link transformation tool such as Walrus may be useful for
