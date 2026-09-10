@@ -246,8 +246,7 @@
   };
 
   try {
-    root.setAttribute("data-output-machine-stage", "snapshot");
-    root.setAttribute("data-output-machine-stage", "editor");
+    if (!outputId) root.setAttribute("data-output-machine-stage", "editor");
     start({ snapshot: initialSnapshot });
     // The project UI is installed at startup. Language code remains on demand;
     // this trusted editor intentionally leaves its bytecode gate open.

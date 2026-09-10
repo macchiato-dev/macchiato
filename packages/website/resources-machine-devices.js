@@ -262,6 +262,9 @@ export class ResourcesEditorDevice {
     return { snapshot: this.initialSnapshot, outputId: this.initialOutputId };
   }
   async mountInitialOutput(root) {
+    // The workspace also contains the details form; output state belongs on
+    // the editor section, where subsequent guest updates and loaders read it.
+    root = root.querySelector("[data-project-editor]");
     const snapshot = this.initialSnapshot;
     const preview = root.querySelector("[data-project-preview]");
     if (!preview || !snapshot?.files?.length) return;

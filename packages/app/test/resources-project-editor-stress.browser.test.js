@@ -114,6 +114,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     throw error;
   });
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.outputMachineState === "ready");
   await page.waitForFunction(() => document.querySelectorAll(".cm-line span[class]").length > 0);
   assert.deepEqual(languageDownloads, ["project-editor-language-html.bin"]);
   // The frontend is MicroQuickJS: this also catches guest-wrapper APIs that
