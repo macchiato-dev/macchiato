@@ -236,6 +236,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   }
   await page.locator('[data-project-view="details"]').click();
   await page.getByLabel("Title", { exact: true }).waitFor({ state: "visible" });
+  assert.ok(await page.locator('[data-project-view="details"]').evaluate(node =>
+    Boolean(node.closest(".project-fields__toolbar"))));
   assert.equal(await outputFrame.isVisible(), false);
   await page.locator('[data-project-view="details"]').click();
   await outputFrame.waitFor({ state: "visible" });
@@ -247,8 +249,10 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await content.waitFor({ state: "visible" });
   await page.screenshot({ path: join(artifacts, "phone-editor.png") });
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForFunction(() => document.querySelector(".project-editor__workspace").dataset.view === "split");
   await outputFrame.waitFor({ state: "visible" });
   await content.waitFor({ state: "visible" });
+  assert.ok(errors.every(error => /output timer regression/.test(error)), JSON.stringify(errors));
 
   const [guest, runtime] = await Promise.all([
     readFile(join(root, "packages/website/generated/project-editor-guest.js"), "utf8"),

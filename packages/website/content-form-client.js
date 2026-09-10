@@ -1739,8 +1739,10 @@ async function mountProjectRoot(root) {
   function placeProjectClose(detailsVisible) {
     if (!projectClose) return;
     if (detailsVisible) {
-      projectCloseHome.insertBefore(projectDetails, projectClose);
+      // The close button may still be in the other toolbar. Restore it before
+      // using it as an insertion anchor in its original parent.
       projectCloseHome.append(projectClose);
+      projectCloseHome.insertBefore(projectDetails, projectClose);
     } else {
       projectViewControls.append(projectDetails);
       projectViewControls.append(projectClose);
