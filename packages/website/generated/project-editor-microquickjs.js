@@ -27452,6 +27452,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   var editorSetup = new _Compartment2();
   var language2 = new _Compartment2();
   var editability = new _Compartment2();
+  var themeMode = new _Compartment2();
   var editorTheme = _EditorView2.theme({
     "&": {
       color: "var(--resources-editor-fg)",
@@ -27465,6 +27466,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     },
     ".cm-content .cm-line::selection, .cm-content .cm-line ::selection": {
       backgroundColor: "var(--resources-editor-selection) !important"
+    },
+    ".cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "var(--resources-editor-selection)"
     },
     ".cm-activeLine": {
       backgroundColor: "var(--resources-editor-active)"
@@ -27624,7 +27628,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   function editorExtensions() {
     return [editorSetup.of(basicSetup), language2.of(languageExtension(currentLanguage)), editability.of([_EditorState2.readOnly.of(currentReadOnly), _EditorView2.contentAttributes.of({
       "aria-readonly": currentReadOnly ? "true" : "false"
-    })]), editorTheme, _syntaxHighlighting(editorHighlightStyle), _EditorView2.lineWrapping, sourceEnvelope, _EditorView2.updateListener.of(function (update) {
+    })]), editorTheme, themeMode.of(_EditorView2.darkTheme.of(currentTheme === "dark")), _syntaxHighlighting(editorHighlightStyle), _EditorView2.lineWrapping, sourceEnvelope, _EditorView2.updateListener.of(function (update) {
       if (update.docChanged && !applyingHostContent) {
         globalThis.__browserUseNotify(JSON.stringify({
           type: "change",
@@ -27866,6 +27870,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       theme: currentTheme
     });
     currentTheme = requested;
+    if (view) view.dispatch({
+      effects: themeMode.reconfigure(_EditorView2.darkTheme.of(currentTheme === "dark"))
+    });
     return JSON.stringify({
       theme: currentTheme
     });

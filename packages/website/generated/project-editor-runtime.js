@@ -1130,6 +1130,7 @@ var WasmWebBridge = class {
       if (object instanceof MouseEvent && ["button", "buttons", "clientX", "clientY", "detail"].includes(name)) {
         return object[name];
       }
+      if (object instanceof PointerEvent && name === "pointerId") return object.pointerId;
       if (object instanceof Event && name === "target") {
         return object.target instanceof Node ? reference(object.target) : null;
       }
@@ -1251,6 +1252,10 @@ var WasmWebBridge = class {
       frames.delete(id);
     }
     function call(object, name, args) {
+      if (object instanceof Element && ["setPointerCapture", "releasePointerCapture", "hasPointerCapture"].includes(name)) {
+        if (args.length !== 1 || !Number.isInteger(args[0])) fail("pointer ID must be an integer");
+        return object[name](args[0]) ?? null;
+      }
       if (object instanceof HTMLDialogElement && name === "showModal" && args.length === 0) {
         object.showModal();
         return null;
@@ -2103,7 +2108,14 @@ var WasmWebBridge = class {
         if (next === false) return this.byte(1);
         if (next === true) return this.byte(2);
         if (typeof next === "number") {
-          if (!Number.isInteger(next)) fail("wire number must be an integer");
+          if (!Number.isFinite(next)) fail("wire number must be finite");
+          if (!Number.isSafeInteger(next) || Object.is(next, -0)) {
+            this.byte(9);
+            const bytes = new Uint8Array(8);
+            new DataView(bytes.buffer).setFloat64(0, next, true);
+            for (const byte of bytes) this.byte(byte);
+            return;
+          }
           if (next >= 0) {
             this.byte(3);
             return this.uint(next);
@@ -2168,6 +2180,13 @@ var WasmWebBridge = class {
         return bytes;
       }
       if (tag === 7) return reader.text();
+      if (tag === 9) {
+        if (reader.bytes.length - reader.at < 8) fail("truncated wire number");
+        const value2 = new DataView(reader.bytes.buffer, reader.bytes.byteOffset + reader.at, 8).getFloat64(0, true);
+        reader.at += 8;
+        if (!Number.isFinite(value2)) fail("wire number must be finite");
+        return value2;
+      }
       fail("unknown wire value");
     }
     function readOperation(reader) {

@@ -449,9 +449,20 @@ function writeValue(writer, value) {
   if (value === null) return writer.byte(0);
   if (value === false) return writer.byte(1);
   if (value === true) return writer.byte(2);
+  if (typeof value === "string") {
+    writer.byte(7);
+    return writer.text(value);
+  }
   if (typeof value === "number") {
-    if (value % 1 !== 0 || !isFinite(value)) {
-      throw new TypeError("wire number must be an integer");
+    if (!isFinite(value)) throw new TypeError("wire number must be finite");
+    if (value % 1 !== 0 || Math.abs(value) > 9007199254740991 || (value === 0 && 1 / value < 0)) {
+      writer.byte(9);
+      // WebAssembly memory and typed-array buffers in this guest are little endian.
+      var number = new Float64Array(1);
+      number[0] = value;
+      var bytes = new Uint8Array(number.buffer);
+      for (var offset = 0; offset < 8; offset++) writer.byte(bytes[offset]);
+      return;
     }
     if (value >= 0) { writer.byte(3); return writer.uint(value); }
     writer.byte(8); return writer.uint(-value * 2 - 1);
@@ -521,6 +532,12 @@ function readValue(reader) {
     return bytes;
   }
   if (tag === 7) return reader.text();
+  if (tag === 9) {
+    var number = new Float64Array(1), bytes = new Uint8Array(number.buffer);
+    for (var index = 0; index < 8; index++) bytes[index] = reader.byte();
+    if (!isFinite(number[0])) throw new TypeError("wire number must be finite");
+    return number[0];
+  }
   if (tag === 8) return -(reader.uint() + 1) / 2;
   throw new TypeError("unknown wire value");
 }
@@ -1150,19 +1167,19 @@ if (!String.prototype.padStart) {
 }
 globalThis.__wwcPostMessage = function (message) {
   pendingOperations.push([3, document.reference, stringIndex("postMessage"), [
-    encode(String(message))
+    String(message)
   ]]);
 };
 globalThis.__wwcServiceCall = function (name, payload) {
   return immediate([3, document.reference, stringIndex("serviceCall"), [
-    encode(String(name)), encode(String(payload))
+    encode(String(name)), String(payload)
   ]]);
 };
 globalThis.__wwcReportError = function (message) {
   // Error reporting must survive a guest exception that prevents the normal
   // operation queue from reaching its next flush.
   immediate([3, document.reference, stringIndex("postMessage"), [
-    encode("__wwcError:" + String(message))
+    "__wwcError:" + String(message)
   ]]);
 };
 document.defaultView = globalThis;
@@ -1448,6 +1465,14 @@ Object.defineProperty(GuestElement.prototype, "namespaceURI", {
 GuestObject.prototype.contains = function (node) {
   return immediate([3, this.reference, stringIndex("contains"), [encode(node)]]);
 };
+["setPointerCapture", "releasePointerCapture", "hasPointerCapture"].forEach(function (name) {
+  GuestElement.prototype[name] = function (pointerId) {
+    return immediate([3, this.reference, stringIndex(name), [encode(pointerId)]]);
+  };
+});
+Object.defineProperty(GuestEvent.prototype, "pointerId", {
+  get: function () { return immediate([1, this.reference, stringIndex("pointerId")]); }
+});
 GuestObject.prototype.closest = function (selector) {
   var result = immediate([3, this.reference, stringIndex("closest"), [
     encode(String(selector))
