@@ -1252,6 +1252,22 @@ the complete browser workflow (93 seconds). Large native insertion still
 takes about 42 seconds for 110 KB; this is not a claim that bulk input is fast.
 The compressed backend artifact also passes its Deno execution test.
 
+The live owner check then exposed readiness written on the surrounding
+workspace rather than the editor section. The removed duplicate render had
+masked this: the game rendered, but its own loading state stayed `starting`.
+Initial mounting now writes to the same section as later guest updates, and
+bootstrap preserves an already-mounted output's stage. The updated stress
+test checks initial output readiness too. The live Mahjong check passes
+divider dragging, modern JavaScript edits, and invalid-to-valid font CSS
+recovery: 144 tiles, no page errors or stale warning, and all saves intercepted.
+
+Export `7ed09b6` passes the 151-file manifest, compressed backend execution,
+and all four stored owner projects with exported browser assets. Coverage
+includes 50 tour slides, embedded keyboard input, SQLite fragment navigation,
+and theme switches. `/root/resources-bunny.tar.gz` now contains that export;
+the previous archive is under `/root/archive/2026/09/10/`. The local server
+uses the rebuilt files. No Bunny deployment was performed.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
