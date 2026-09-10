@@ -211,6 +211,19 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   await load(boundaryFiles);
   assert.equal(await surface.innerText(), "[true,true,true]", "queries and traversal stay within the output root");
   assert.equal(await outputDocument.locator("#outside-secret").innerText(), "Private host content");
+  // Replacing `body` with a host scope class must not turn a root sibling
+  // selector into authority over neighboring host content.
+  const escapedStyles = [
+    'body + #outside-secret', 'body ~ #outside-secret',
+    'html:not(.missing) ~ #outside-secret', ':root:is(div, main) ~ #outside-secret',
+  ];
+  for (const selector of escapedStyles) {
+    boundaryFiles[0].content = `<style>${selector} { color: #ff0001; }</style><main>Scoped</main>`;
+    const before = await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color);
+    await assert.rejects(load(boundaryFiles), /root.*sibling|outside.*scope/i, selector);
+    assert.equal(await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color), before);
+  }
+  boundaryFiles[0].content = '<main></main><script src="boundary.js"></script>';
   boundaryFiles[1].content = `
     var main = document.querySelector("main");
     main.style.setProperty("color", "rebeccapurple");
