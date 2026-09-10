@@ -752,6 +752,14 @@ test, 109 KB clipboard paste took 1.25 seconds and native insertion took 68.6
 seconds; both preserved exact source through undo and redo. The increased
 test timeout accommodates the known latency rather than treating it as fast.
 
+Export `40795fc` passed its 151-file manifest check, compressed backend test,
+and all four owner-project browser checks (including tour navigation and
+SQLite fragments). The extracted `/root/resources-bunny.tar.gz` was verified
+again; the previous archive remains under `/root/archive/2026/09/10/`.
+Nothing was deployed to Bunny. The next performance comparison should match
+the native control's surrounding layout to the workspace before attributing
+the remaining difference to the interpreter.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
