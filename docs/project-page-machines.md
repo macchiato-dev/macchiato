@@ -770,6 +770,11 @@ local Mahjong starting document; the diagnostic now captures the actual
 starting document too. These controls are not production code and do not
 save changes to the real project.
 
+Repeating that native control with the actual stored starting document took
+17.1 seconds, so the starting-document correction did not remove the gap.
+The copied layout isolates native CodeMirror from the frontend/editor guests;
+it is a diagnostic baseline, not an alternative production editing path.
+
 Comparing computed styles uncovered a guest API mismatch independently of
 timing: `CSSStyleDeclaration.tabSize` was missing. CodeMirror's feature probe
 therefore chose `-moz-tab-size`, which the CSS adapter intentionally ignores,
