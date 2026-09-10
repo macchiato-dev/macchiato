@@ -760,6 +760,26 @@ Nothing was deployed to Bunny. The next performance comparison should match
 the native control's surrounding layout to the workspace before attributing
 the remaining difference to the interpreter.
 
+### September 10 mutation-observer containment
+
+A direct-ABI test demonstrated that a div-scoped machine could observe the
+real host document and read old attribute values from unrelated elements.
+Filtering the guest facade's target nodes was not sufficient: hostile guest
+code can read `MutationRecord.oldValue` directly through the ABI.
+
+Document observation now targets only the machine's granted roots in container
+mode, including explicitly granted portal roots. Document-mode machines retain
+native full-document observation. Explicit observation targets must be inside
+the grant or owned by the machine. Scope is enforced when registering the
+native observer, so callbacks and synchronous `takeRecords()` have the same
+boundary without filtering every normal editor mutation afterward.
+
+The new browser regression uses the ABI directly rather than trusting the DOM
+facade. It fails before the fix for single-root, multi-root, and portal grants,
+and passes after it; full-document behavior remains covered. This addresses
+observer registration, not a complete audit of every event/selection-derived
+reference and its permitted operations.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices
