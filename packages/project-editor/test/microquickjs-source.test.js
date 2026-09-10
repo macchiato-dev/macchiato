@@ -16,7 +16,7 @@ test("the directly compiled MicroQuickJS example runtime remains valid source", 
   // straight into mqjs without Babel. A cached Cargo result must not hide
   // incompatible syntax introduced while editing its shared DOM helpers.
   const log = execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", output,
-    resolve(runtime, "guest-runtime.js")], { encoding: "utf8", stdio: "pipe" });
+    resolve(runtime, "guest-runtime.js")], { encoding: "utf8", stdio: ["ignore", "pipe", "inherit"] });
   // mqjs can report a parse error while exiting with status zero. Require a
   // fresh output, not merely successful process completion or an old .bin.
   const bytecode = await readFile(output).catch(error => {
