@@ -598,6 +598,13 @@ memories without retaining disposed instances; no profiler was added to the
 production controller. Desktop Chromium with a phone viewport does not
 establish memory limits or performance on physical phones.
 
+Export `f3b8129` includes these responsive fixes. Its 151-file manifest and
+compressed backend test passed; the four owner-project browser checks also
+passed narrow/desktop pane switching with assets served from this export.
+The tour's 50-slide/keyboard check and SQLite's iframe-only fragment navigation
+remain covered. The local deployment archive was refreshed; Bunny deployment
+and its real cold-start behavior are still untested.
+
 This is not a completed performance or deployment audit. The unprofiled
 2,020-line editing diagnostic still measured median insert/delete round trips
 of roughly 91–163 ms, including Playwright overhead. Real Bunny cold starts,
