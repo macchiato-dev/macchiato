@@ -1787,6 +1787,9 @@ test("resources sqlite site CSS is constrained by its site schema", () => {
   assert.equal(validateResourcesStylesheet(css), true);
   assert.equal(validateResourcesStylesheet(`${css}\n:root { --accent: #31d6c9; --gap: 24px; }`), true);
   assert.equal(validateResourcesStylesheet(`${css}\n.block { margin-top: 18px; }`), true);
+  assert.equal(validateResourcesStylesheet(`${css}\n.project-editor__mount { contain: size; }`), true);
+  assert.throws(() => validateResourcesStylesheet(`${css}\n.project-editor__mount { contain: paint; }`),
+    /CSS value not allowed for contain/);
   assert.throws(
     () => validateResourcesStylesheet(`${css}\n.evil { filter: blur(4px); }`),
     /CSS property not allowed: filter/,

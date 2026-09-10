@@ -304,6 +304,9 @@
             "content-box"
           ]
         },
+        "contain": {
+          "enum": ["size"]
+        },
         "display": {
           "$ref": "display"
         },
