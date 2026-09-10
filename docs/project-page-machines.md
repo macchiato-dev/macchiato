@@ -788,6 +788,30 @@ empty inline tab-size value. They now check 2-, 8-, and 4-space state facets,
 the inline/computed CSS values, and actual tab width measured with a native
 Range. Both pass, including the existing event-lifetime and selection tests.
 
+### September 10 mutation-batch membership scans
+
+A fresh profile after the layout and event-cache fixes changed the diagnosis.
+Of 63.8 sampled seconds, `js_strict_eq` accounted for 43.6% self time and
+`js_array_indexOf` for 15.5%, predominantly under mutation-observer delivery.
+The running Wasm's 163,986-byte code section matched the symbol-bearing build
+exactly. The earlier layout-dominated profile must not be used to explain this
+new bottleneck: about 38 seconds now belonged to repeated guest array searches.
+
+Reconciliation keeps first-seen parent order but uses reference-keyed membership
+tables for affected parents and surviving children. Batch-retained node leases
+prevent those IDs from being recycled. New wrapper construction also no longer
+searches the parent's children: an existing parent-held wrapper would have
+been returned through the identity cache before reaching that branch. The host
+protocol, mutation records, and callback timing are unchanged.
+
+The regression moves nodes between parents, removes and reinserts a retained
+node, adds a new node, and replaces text in one browser operation. It compares
+the native observer's record count with the guest's, final child order,
+parentage, and retained identity. This also exposed a missing element
+`textContent` getter (the setter shadowed the node getter). The host previously
+allowed text-node reads only; element text reads now require an owned node or
+a node within the granted roots. The guest forwards that scoped read directly.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

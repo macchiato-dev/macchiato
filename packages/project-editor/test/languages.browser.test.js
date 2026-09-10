@@ -365,6 +365,8 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     added.dataset.name = "new"; left.append(added); d.textContent = "D";
   }));
   const mutation = await page.evaluate(() => window.callGuest("inspectMutationProbe", {}));
+  assert.deepEqual(errors, [], "native mutation delivery remains error-free");
+  assert.ok(mutation, "native mutation callback ran");
   assert.deepEqual(mutation.left, ["b", "d", "new"]);
   assert.deepEqual(mutation.right, ["e", "a"]);
   assert.ok(mutation.same && mutation.removedParent && mutation.addedParent);

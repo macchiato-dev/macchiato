@@ -669,7 +669,7 @@ GuestElement.prototype = Object.create(GuestObject.prototype);
 ["className", "hidden", "src", "textContent", "title", "value"].forEach(function (name) {
   Object.defineProperty(GuestElement.prototype, name, {
     configurable: true,
-    get: name === "value" ? function () {
+    get: name === "value" || name === "textContent" ? function () {
       return immediate([1, this.reference, stringIndex(name)]);
     } : undefined,
     set: function (value) {
@@ -1436,7 +1436,9 @@ function nodeForReference(reference) {
   if (parentResult !== null) {
     var parent = nodeForReference(parentResult[1]);
     var children = childrenOf(parent);
-    if (children.indexOf(node) < 0) children.push(node);
+    // This wrapper is new. If a parent already held it, guestNodes' weak
+    // entry above would still be live and would have returned that identity.
+    children.push(node);
     setParent(node, parent);
   }
   return node;
@@ -2106,16 +2108,17 @@ function mutationNode(recordReference, kind, index) {
 function synchronizeGuestChildren(target) {
   var bytes = hostCall(target.reference, "childNodeReferences", []);
   var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
-  var next = [];
+  var next = [], nextReferences = Object.create(null);
   for (var index = 0; index < length; index++) {
     var at = 4 + index * 4;
     var reference = bytes[at] | bytes[at + 1] << 8 |
       bytes[at + 2] << 16 | bytes[at + 3] << 24;
     next.push(nodeForReference(reference));
+    nextReferences[reference] = true;
   }
   var previous = childrenOf(target).slice();
   for (var old = 0; old < previous.length; old++) {
-    if (next.indexOf(previous[old]) < 0 && parentOf(previous[old]) === target) {
+    if (!nextReferences[previous[old].reference] && parentOf(previous[old]) === target) {
       setParent(previous[old], null);
     }
   }
@@ -2144,6 +2147,9 @@ GuestObject.prototype.cloneNode = function (deep) {
 };
 function readMutationBatch(batchReference, batchToken) {
   var length = hostGet(batchReference, "length"), records = [], changedParents = [];
+  // Keep first-seen ordering, with membership keyed by leased host identity.
+  // Those references cannot be recycled while the batch retains its nodes.
+  var changedParentReferences = Object.create(null);
   for (var index = 0; index < length; index++) {
     var result = hostCall(batchReference, "item", [index]);
     var reference = result[1], type = hostGet(reference, "type");
@@ -2166,7 +2172,10 @@ function readMutationBatch(batchReference, batchToken) {
       var next = hostGet(reference, "nextSibling");
       record.previousSibling = previous === null ? null : nodeForReference(previous[1]);
       record.nextSibling = next === null ? null : nodeForReference(next[1]);
-      if (changedParents.indexOf(record.target) < 0) changedParents.push(record.target);
+      if (!changedParentReferences[record.target.reference]) {
+        changedParentReferences[record.target.reference] = true;
+        changedParents.push(record.target);
+      }
     } else if (type === "characterData") {
       record.oldValue = hostGet(reference, "oldValue");
       // Browser editing changed this node outside the guest. Its previously
