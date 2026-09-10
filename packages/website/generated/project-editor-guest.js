@@ -28897,9 +28897,10 @@ ${bundleProjectModule(entry, script.textContent)}
     editorController?.setSnapshot(state);
     currentUpdatedAt = Date.now();
     currentSnapshot = state;
-    snapshotField.value = JSON.stringify(state);
+    const serialized = JSON.stringify(state);
+    snapshotField.value = serialized;
     pending2 = true;
-    if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, JSON.stringify(state));
+    if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, serialized);
     root.dataset.draftDirty = "true";
     root.dataset.draftState = "dirty";
     unsavedChangeCount += 1;

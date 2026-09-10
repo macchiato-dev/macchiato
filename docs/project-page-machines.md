@@ -1268,6 +1268,38 @@ and theme switches. `/root/resources-bunny.tar.gz` now contains that export;
 the previous archive is under `/root/archive/2026/09/10/`. The local server
 uses the rebuilt files. No Bunny deployment was performed.
 
+### September 10 native insertion trace and recovery serialization
+
+On the rebuilt `7ed09b6` workspace, a fresh 109,485-character insertion CPU
+profile took 31.7 seconds: 73% of samples were outside JavaScript execution,
+and about 26% were inside guest delivery. A separate browser timeline took
+35.0 seconds and recorded 4,000 native `input` events, 8,092 layouts (12.0
+seconds), and 8,094 style/layout-tree updates (4.3 seconds). These event and
+callback totals overlap; they must not be added together as separate costs.
+One mutation delivery occupied about seven seconds. This is not evidence
+that all remaining insertion time is an interpreter or garbage-collector cost.
+
+A local-only `contain: layout` experiment on the scroller took 39.3 seconds
+and did not demonstrate an improvement; it was not added to production. These
+diagnostics are under `/root/macchiato-work/`, with no profiler or counters in
+the served code, and intercept writes to the real owner's project.
+
+Ordinary first-page typing after clipboard paste is measured separately. Its
+baseline ten-pair median was 166 ms for an insert/backspace pair, including
+Playwright overhead. The next small change reuses one serialized snapshot for
+the form field and immediate session-recovery write. It does not debounce
+recovery storage, suppress events, or change CodeMirror history. A browser
+assertion compares both values immediately after an edit containing Unicode.
+Alternating old/new/old/new runtimes gave pair medians of 166/145/142/138 ms.
+Every run checked exact source and no page errors, without a profiler or
+concurrent build. The second pair is close enough that this is evidence for
+removing duplicate work, not a reliable large responsiveness improvement.
+The remaining native-insertion and mutation-batch costs are still open.
+The five-case regression run passed, including the full owner editing workflow,
+immediate Unicode recovery, undo/redo, saved versions, and bytecode/source
+parity. Its 110 KB paste took 0.99 seconds; native insertion took 47 seconds,
+again demonstrating that bulk native insertion is not solved by this change.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

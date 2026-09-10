@@ -2437,9 +2437,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               (_editorController2 = editorController) == null || _editorController2.setSnapshot(state);
               currentUpdatedAt = Date.now();
               currentSnapshot = state;
-              snapshotField.value = JSON.stringify(state);
+              var serialized = JSON.stringify(state);
+              snapshotField.value = serialized;
               pending2 = true;
-              if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, JSON.stringify(state));
+              if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, serialized);
               __resourcesDatasetSet(root, "data-draft-dirty", "true");
               __resourcesDatasetSet(root, "data-draft-state", "dirty");
               unsavedChangeCount += 1;
