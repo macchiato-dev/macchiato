@@ -42,7 +42,7 @@ test("project output storage isolates keys, enforces byte quotas and cleans up l
   assert.throws(() => first.get("local", 0), /key/);
   assert.throws(() => first.set("session", "notes", {}), /strings/);
   let notified = 0;
-  first.listen("local", "settings", () => notified++);
+  const stop = first.listen("local", "settings", () => notified++);
   const emit = event => { for (const callback of events) callback(event); };
   emit({ storageArea: window.localStorage, key: second.key("settings") });
   assert.equal(notified, 0);
@@ -50,6 +50,11 @@ test("project output storage isolates keys, enforces byte quotas and cleans up l
   assert.equal(notified, 0);
   emit({ storageArea: window.localStorage, key: first.key("settings") });
   assert.equal(notified, 1);
+  stop(); stop();
+  emit({ storageArea: window.localStorage, key: first.key("settings") });
+  assert.equal(notified, 1);
+  assert.equal(first.listeners.size, 0);
+  assert.equal(events.size, 2, "unsubscribing one machine does not destroy the shared storage service");
   first.destroy(); second.destroy();
   assert.equal(events.size, 0);
   const reopened = new ProjectOutputStorage(window, "first");

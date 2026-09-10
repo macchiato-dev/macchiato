@@ -886,6 +886,7 @@ var WasmWebBridge = class {
     const eventListeners = /* @__PURE__ */ new WeakMap();
     const listenedObjects = /* @__PURE__ */ new Set();
     const mutationObservers = /* @__PURE__ */ new Set();
+    const serviceSubscriptions = /* @__PURE__ */ new Set();
     const timers = /* @__PURE__ */ new Map();
     const frames = /* @__PURE__ */ new Map();
     let nextFrame = 1;
@@ -1703,7 +1704,8 @@ var WasmWebBridge = class {
         if (!options.services?.storage) fail("storage is not available");
         const callback = args[2];
         if (!Number.isInteger(callback)) fail("storage callback is not allowed");
-        options.services.storage.listen(args[0], args[1], () => deliver(callback));
+        const stop = options.services.storage.listen(args[0], args[1], () => deliver(callback));
+        if (typeof stop === "function") serviceSubscriptions.add(stop);
         return null;
       }
       if (object === hostDocument && name === "routeGet") {
@@ -1717,7 +1719,8 @@ var WasmWebBridge = class {
       if (object === hostDocument && name === "routeListen") {
         if (!options.services?.route) fail("routing is not available");
         if (!Number.isInteger(args[0])) fail("route callback is not allowed");
-        options.services.route.listen(() => deliver(args[0]));
+        const stop = options.services.route.listen(() => deliver(args[0]));
+        if (typeof stop === "function") serviceSubscriptions.add(stop);
         return null;
       }
       if (object === hostDocument && name === "createElement") {
@@ -2364,6 +2367,8 @@ var WasmWebBridge = class {
       listenedObjects.clear();
       for (const observer of mutationObservers) observer.disconnect();
       mutationObservers.clear();
+      for (const stop of serviceSubscriptions) stop();
+      serviceSubscriptions.clear();
       for (const timer of timers.values()) realm.clearTimeout(timer);
       timers.clear();
       for (const id of frames.keys()) cancelFrame(id);
@@ -2389,7 +2394,12 @@ var WasmWebMachine = class {
       throw new TypeError("wasm-web-machine: module must be a WebAssembly.Module or runtime session");
     }
     this.#bridge = new WasmWebBridge(target, options);
-    this.#instance = module instanceof WebAssembly.Module ? new WebAssembly.Instance(module, this.#bridge.imports) : module.instantiate(this.#bridge.imports);
+    try {
+      this.#instance = module instanceof WebAssembly.Module ? new WebAssembly.Instance(module, this.#bridge.imports) : module.instantiate(this.#bridge.imports);
+    } catch (error) {
+      this.#bridge.destroy();
+      throw error;
+    }
   }
   msg = (offset, length) => this.#bridge.imports.host.msg(offset, length);
   onmsg = (message = 0) => {

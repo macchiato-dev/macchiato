@@ -94,7 +94,12 @@ test("QuickJS sessions share a Wasm instance but not globals, callbacks, or leas
     for (let index = 0; index < 24; index++) {
       const next = new Machine(engine.createSession(), document.querySelector("#first"));
       await next.onmsg(0);
-      evaluate(next, "const privateValue = 'replacement'; document.body.innerHTML = '<p>New session</p>';");
+      evaluate(next, `const privateValue = 'replacement';
+        document.body.innerHTML = '<p>New session</p>';
+        globalThis.pendingModule = __wwcEvaluateModule(
+          "const retained = document.querySelector('p'); " +
+          "await new Promise(resolve => setTimeout(resolve, 60000)); " +
+          "retained.textContent = 'Disposed module resumed';", 'pending.js');`);
       next.destroy();
       sizes.push(memory.buffer.byteLength);
     }

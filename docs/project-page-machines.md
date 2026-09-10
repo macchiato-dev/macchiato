@@ -94,6 +94,11 @@ or replace old module/global state.
 The QuickJS session prototype in `dev/wasm-web-runtimes/quickjs/` can create
 independently disposable JS sessions in one WebAssembly instance. Its tests
 cover nested failures, reference cleanup, and bounded repeated replacement.
+They also leave modules suspended in top-level `await` before disposal, check
+that a finalizer-reporting error cannot skip sibling sessions, and reject
+reattachment after engine disposal. Storage and route services can return
+unsubscribe functions, which the bridge now calls when a machine is destroyed;
+the shared service itself can survive for the replacement machine.
 It is not yet the live output path: integration must prepare a new root,
 preserve the old visible output on failure, and swap before disposing the old
 machine. Do not substitute a new WebAssembly instance for every keystroke.

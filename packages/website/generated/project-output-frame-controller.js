@@ -98,7 +98,9 @@ var ProjectOutputStorage = class {
   listen(kind, key, listener) {
     this.area(kind);
     this.key(key);
-    this.listeners.add({ kind, key, listener });
+    const entry = { kind, key, listener };
+    this.listeners.add(entry);
+    return () => this.listeners.delete(entry);
   }
   destroy() {
     this.window.removeEventListener("storage", this.changed);
@@ -263,6 +265,10 @@ async function start(payload, port) {
         listen(listener) {
           routeListeners.add(listener);
           addEventListener("hashchange", listener);
+          return () => {
+            routeListeners.delete(listener);
+            removeEventListener("hashchange", listener);
+          };
         }
       },
       storage
