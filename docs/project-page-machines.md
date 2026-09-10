@@ -1308,7 +1308,7 @@ is retained under `/root/archive/2026/09/10/`; nothing was deployed to Bunny.
 
 ### September 10 grouped mutation-record reads
 
-The guest reads MutationRecord metadata through the existing multi-operation
+An experiment read MutationRecord metadata through the existing multi-operation
 wire format. Adjacent `type`/`target`, added/removed counts, and previous/next
 sibling reads each share an exchange. They are fixed native fields, not
 arbitrary guest-defined getters. The flush after detached-node callbacks is
@@ -1319,8 +1319,16 @@ The expanded browser probe compares the complete native and guest record
 sequences, including identified left/right parents, intermediate siblings,
 added/removed nodes, repeated character-data changes, and attribute old values.
 It passes before and after grouping, for both stamped and downloaded language
-bytecode. Timing the large input separately is required before calling this
-a performance improvement.
+bytecode. An uninstrumented old/new pair took 40.4/41.5 seconds for the same
+109,485-character native insertion. Disposable guest-only probes then measured
+decoding all 10,067 records at 746/735 ms, out of 32.2/35.1 seconds total.
+The metadata reader is only a small part of the roughly seven-second observer
+callback; subsequent DOM reading/editor processing needs separate attribution.
+
+The grouping was backed out because it did not demonstrate a meaningful
+improvement. The stronger native-record parity tests remain. No probing code
+was added to the host or production guests. Timing scripts and disposable
+stamped guests are in `/root/macchiato-work/`; live-owner writes were intercepted.
 
 ### Standalone compiler parity
 
