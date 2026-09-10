@@ -4,6 +4,9 @@ const MAX_FILES = 64;
 const MAX_FILE_BYTES = 70 * 1024 * 1024;
 const MAX_CONFIG_BYTES = 64_000;
 const MAX_SNAPSHOT_BYTES = 70 * 1024 * 1024;
+// Only records created here qualify. Compare their string fields too: guest
+// runtimes may lack a real Object.freeze. Nested configuration is never cached.
+const fileJsonBytes = new WeakMap();
 
 function own(object, key) {
   return Object.prototype.hasOwnProperty.call(object, key);
@@ -36,14 +39,24 @@ export function normalizeProjectSnapshot(value = {}) {
     const content = String(file?.content ?? "");
     if (!PATH.test(path) || path.includes("//")) throw new Error(`Invalid project file path: ${path}`);
     if (seen.has(path)) throw new Error(`Duplicate project file path: ${path}`);
-    if (new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES) throw new Error(`Project file exceeds the 50 MB portable-artifact budget: ${path}`);
+    const previous = file && typeof file === "object" ? fileJsonBytes.get(file) : null;
+    const cached = previous && previous.path === path && previous.content === content;
+    if (!cached && new TextEncoder().encode(content).byteLength > MAX_FILE_BYTES) throw new Error(`Project file exceeds the 50 MB portable-artifact budget: ${path}`);
     seen.add(path);
-    return Object.freeze({ path, content });
+    const normalized = Object.freeze({ path, content });
+    fileJsonBytes.set(normalized, cached ? previous : {
+      path, content, bytes: new TextEncoder().encode(JSON.stringify(normalized)).byteLength,
+    });
+    return normalized;
   }).sort((left, right) => left.path.localeCompare(right.path));
   const config = jsonValue(value.config ?? {}, "Project configuration");
   if (!config || Array.isArray(config) || typeof config !== "object") throw new Error("Project configuration must be an object");
   if (new TextEncoder().encode(JSON.stringify(config)).byteLength > MAX_CONFIG_BYTES) throw new Error("Project configuration is too large");
-  if (new TextEncoder().encode(JSON.stringify({ files, config })).byteLength > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
+  // Add the exact serialized file sizes and their separators to the empty
+  // envelope. Unchanged assets need no rescanning, serialization, or byte copy.
+  const snapshotBytes = new TextEncoder().encode(JSON.stringify({ files: [], config })).byteLength +
+    files.reduce((bytes, file) => bytes + fileJsonBytes.get(file).bytes, 0) + Math.max(0, files.length - 1);
+  if (snapshotBytes > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
   return Object.freeze({ files: Object.freeze(files), config: Object.freeze(config) });
 }
 

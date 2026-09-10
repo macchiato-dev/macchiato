@@ -59,3 +59,65 @@ test("project snapshots reject duplicate and escaping file paths", () => {
   assert.throws(() => normalizeProjectSnapshot({ files: [{ path: "../secret", content: "x" }] }), /Invalid project file path/);
   assert.throws(() => normalizeProjectSnapshot({ files: [{ path: "a.js", content: "1" }, { path: "a.js", content: "2" }] }), /Duplicate/);
 });
+
+test("snapshot normalization copies records and rechecks mutable input and configuration", () => {
+  const input = { path: "notes.txt", content: 'café 😀\n"quoted"\\\ud800' };
+  const first = normalizeProjectSnapshot({ files: [input], config: { nested: { value: "small" } } });
+  const second = normalizeProjectSnapshot(first);
+  assert.notEqual(second.files[0], first.files[0]);
+  assert.deepEqual(second.files[0], first.files[0]);
+  assert.throws(() => normalizeProjectSnapshot({ files: [first.files[0], first.files[0]] }), /Duplicate/);
+  input.path = "../escape";
+  assert.throws(() => normalizeProjectSnapshot({ files: [input] }), /Invalid project file path/);
+  assert.throws(() => normalizeProjectSnapshot({ files: [Object.freeze({ path: "../escape", content: "" })] }), /Invalid project file path/);
+  first.config.nested.value = "x".repeat(64_001);
+  assert.throws(() => normalizeProjectSnapshot(first), /configuration is too large/);
+  assert.equal(second.config.nested.value, "small", "configuration is still copied, not cached");
+});
+
+test("unchanged asset content is not encoded again during normalization or diffing", () => {
+  const first = normalizeProjectSnapshot({ files: [
+    { path: "asset.bin", content: "immutable asset ".repeat(10_000) },
+    { path: "app.js", content: "let x = 1;" },
+  ] });
+  const NativeEncoder = globalThis.TextEncoder, lengths = [];
+  globalThis.TextEncoder = class extends NativeEncoder {
+    encode(text) { lengths.push(text.length); return super.encode(text); }
+  };
+  try {
+    const next = normalizeProjectSnapshot({ files: first.files.map(file => file.path === "app.js"
+      ? { path: file.path, content: "let x = 2;" } : file), config: first.config });
+    assert.deepEqual(diffProjectSnapshots(first, next).files,
+      [{ op: "splice", path: "app.js", start: 8, remove: "1", insert: "2" }]);
+    assert.ok(lengths.length > 0 && Math.max(...lengths) < 100, JSON.stringify(lengths));
+  } finally { globalThis.TextEncoder = NativeEncoder; }
+});
+
+test("cached file accounting enforces the exact serialized snapshot byte limit", () => {
+  const files = [{ path: "a.txt", content: 'café 😀\n"\\\ud800' }, { path: "b.txt", content: "" }];
+  const config = { title: "Unicode 中文" }, encoder = new TextEncoder();
+  const remaining = 70 * 1024 * 1024 - encoder.encode(JSON.stringify({ files, config })).byteLength;
+  files[1].content = "x".repeat(remaining);
+  const exact = normalizeProjectSnapshot({ files, config });
+  assert.equal(encoder.encode(JSON.stringify(exact)).byteLength, 70 * 1024 * 1024);
+  assert.equal(normalizeProjectSnapshot(exact).files[1].content, exact.files[1].content);
+  assert.throws(() => normalizeProjectSnapshot({ files: exact.files, config: { title: config.title + "x" } }), /snapshot is too large/);
+});
+
+test("file accounting does not assume a guest's Object.freeze actually freezes", () => {
+  const freeze = Object.freeze;
+  Object.freeze = value => value;
+  try {
+    const first = normalizeProjectSnapshot({ files: [{ path: "a.txt", content: "small" }] });
+    first.files[0].path = "../escape";
+    assert.throws(() => normalizeProjectSnapshot(first), /Invalid project file path/);
+    first.files[0].path = "a.txt";
+    first.files[0].content = "changed 😀";
+    const second = normalizeProjectSnapshot(first);
+    assert.equal(second.files[0].content, "changed 😀");
+    first.files[0].content = "another change";
+    assert.equal(second.files[0].content, "changed 😀", "records do not become aliases");
+    first.files[0].content = "x".repeat(70 * 1024 * 1024 + 1);
+    assert.throws(() => normalizeProjectSnapshot(first), /Project file exceeds/);
+  } finally { Object.freeze = freeze; }
+});
