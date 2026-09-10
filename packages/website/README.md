@@ -87,6 +87,14 @@ cycles, dynamic imports, and top-level `await`. Each output load uses new module
 identities so edited dependencies are evaluated again. Old module records are
 released when the output runtime is disposed, not on each refresh.
 
+Disposal cancels native frames, throttled frames, timers, and ambient window
+listeners as well as DOM listeners and observers. Queued event checkpoints and
+late service replies cannot wake a disposed machine. The guest's timer handles
+use one namespace for timeouts and intervals; cancelling either removes the
+browser timer and releases the callback slot immediately. Removing a window
+listener likewise unsubscribes it rather than leaving an inactive callback in
+the browser.
+
 Output storage is separate from the website's storage. The controller chooses
 the namespace from the project identity (or page path for an unsaved project),
 not from guest input or the iframe's shared URL. Guest keys are unprefixed;
@@ -559,6 +567,11 @@ For a reproducible local build:
 ```sh
 ./scripts/build-resources-bunny.sh
 ```
+
+The editor and frontend build commands regenerate their QuickJS/MicroQuickJS
+guest environments from source. The runtime builder's `--environments-only`
+mode skips standalone demo applications and fixtures; it must not be replaced
+with a dependency on whichever generated facade happens to be in the checkout.
 
 Verify the resulting inventory and run the exported backend artifact in Deno
 before uploading. Substitute the build's seven-character revision below:

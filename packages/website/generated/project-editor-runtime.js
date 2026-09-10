@@ -880,10 +880,11 @@ var WasmWebBridge = class {
     const eventListeners = /* @__PURE__ */ new WeakMap();
     const listenedObjects = /* @__PURE__ */ new Set();
     const mutationObservers = /* @__PURE__ */ new Set();
-    const intervals = /* @__PURE__ */ new Map();
-    const animationTimeouts = /* @__PURE__ */ new Set();
+    const timers = /* @__PURE__ */ new Map();
+    const frames = /* @__PURE__ */ new Map();
+    let nextFrame = 1;
     const cleanupCallbacks = /* @__PURE__ */ new Map();
-    let nextInterval = 1;
+    let nextTimer = 1;
     let nextCleanupCallback = 1;
     const ownedNodes = /* @__PURE__ */ new WeakSet();
     const graphicsObjects = /* @__PURE__ */ new WeakMap();
@@ -1226,6 +1227,22 @@ var WasmWebBridge = class {
       }
       fail(`property set ${name} is not allowed`);
     }
+    function scheduleTimeout(callback, delay) {
+      const id = nextTimer++;
+      const handle = realm.setTimeout(() => {
+        timers.delete(id);
+        deliver(callback);
+      }, delay);
+      timers.set(id, handle);
+      return id;
+    }
+    function cancelFrame(id) {
+      const frame = frames.get(id);
+      if (!frame) return;
+      if (frame.timeout) realm.clearTimeout(frame.handle);
+      else realm.cancelAnimationFrame(frame.handle);
+      frames.delete(id);
+    }
     function call(object, name, args) {
       if (object instanceof HTMLDialogElement && name === "showModal" && args.length === 0) {
         object.showModal();
@@ -1508,23 +1525,22 @@ var WasmWebBridge = class {
         return reference(observer);
       }
       if (object === hostDocument && name === "timer") {
-        if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 2147483647 || !Number.isInteger(args[1]) || intervals.size >= 1024) fail("timer is not allowed");
-        const id = nextInterval++;
-        intervals.set(id, setInterval(() => deliver(args[1]), args[0]));
+        if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 2147483647 || !Number.isInteger(args[1]) || timers.size >= 1024) fail("timer is not allowed");
+        const id = nextTimer++;
+        timers.set(id, realm.setInterval(() => deliver(args[1]), args[0]));
         return id;
       }
       if (object === hostDocument && name === "timerCancel" && args.length === 1 && Number.isInteger(args[0])) {
-        const timer = intervals.get(args[0]);
+        const timer = timers.get(args[0]);
         if (timer !== void 0) {
-          clearInterval(timer);
-          intervals.delete(args[0]);
+          realm.clearTimeout(timer);
+          timers.delete(args[0]);
         }
         return null;
       }
       if (object === hostDocument && name === "timerOnce") {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 2147483647 || !Number.isInteger(args[1])) fail("one-shot timer is not allowed");
-        setTimeout(() => deliver(args[1]), args[0]);
-        return null;
+        return scheduleTimeout(args[1], args[0]);
       }
       if (object === hostDocument && name === "cleanupOpportunity" && args.length === 2) {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 6e4 || !Number.isInteger(args[1]) || cleanupCallbacks.size >= 1024) {
@@ -1542,31 +1558,27 @@ var WasmWebBridge = class {
       if (object === hostDocument && name === "animationFrame" && args.length === 1 && Number.isInteger(args[0])) {
         const configured = typeof options.frameInterval === "function" ? options.frameInterval() : options.frameInterval;
         const delay = Number.isFinite(configured) ? Math.max(0, configured) : 0;
-        if (delay > 0) {
-          const handle = setTimeout(() => {
-            animationTimeouts.delete(handle);
-            deliver(args[0]);
-          }, Math.max(1, delay));
-          animationTimeouts.add(handle);
-          return handle;
-        }
-        return requestAnimationFrame(() => deliver(args[0]));
+        const id = nextFrame++;
+        const run = () => {
+          frames.delete(id);
+          deliver(args[0]);
+        };
+        const handle = delay > 0 ? realm.setTimeout(run, Math.max(1, delay)) : realm.requestAnimationFrame(run);
+        frames.set(id, { timeout: delay > 0, handle });
+        return id;
       }
       if (object === hostDocument && name === "cancelAnimationFrame" && args.length === 1 && Number.isInteger(args[0])) {
-        if (animationTimeouts.delete(args[0])) clearTimeout(args[0]);
-        else cancelAnimationFrame(args[0]);
+        cancelFrame(args[0]);
         return null;
       }
       if (object === hostDocument && name === "task" && args.length === 1 && Number.isInteger(args[0])) {
-        setTimeout(() => deliver(args[0]), 0);
-        return null;
+        return scheduleTimeout(args[0], 0);
       }
       if (object === hostDocument && name === "windowListen") {
-        if (!["beforeprint", "blur", "focus", "hashchange", "keydown", "message", "pagehide", "resize", "scroll"].includes(args[0]) || !Number.isInteger(args[1])) {
-          fail("window event listener is not allowed");
-        }
-        hostDocument.defaultView.addEventListener(args[0], (event) => deliver(args[1], event));
-        return null;
+        return listen(realm, args[0], args[1]);
+      }
+      if (object === hostDocument && name === "windowUnlisten" && args.length === 2) {
+        return unlisten(realm, args[0], args[1]);
       }
       if (object instanceof Event && ["preventDefault", "stopImmediatePropagation", "stopPropagation"].includes(name) && args.length === 0) {
         object[name]();
@@ -1961,7 +1973,8 @@ var WasmWebBridge = class {
       const elementEvent = object instanceof Element && elementEventName;
       const documentEvent = object === hostDocument && (elementEventName || ["instanttooltiphide", "selectionchange", "themechange", "visibilitychange"].includes(type));
       const mediaEvent = object instanceof MediaQueryList && type === "change";
-      if (!elementEvent && !documentEvent && !mediaEvent || !Number.isInteger(callback)) fail(`event listener ${type} is not allowed`);
+      const windowEvent = object === realm && ["beforeprint", "blur", "focus", "hashchange", "keydown", "message", "pagehide", "resize", "scroll"].includes(type);
+      if (!elementEvent && !documentEvent && !mediaEvent && !windowEvent || !Number.isInteger(callback)) fail(`event listener ${type} is not allowed`);
       const listener = (event) => {
         try {
           deliver(callback, event);
@@ -1980,7 +1993,7 @@ var WasmWebBridge = class {
       const records = eventListeners.get(object) || [];
       const index = records.findIndex((record) => record.type === type && record.callback === callback);
       if (index < 0) return null;
-      object.removeEventListener(type, records[index].listener);
+      object.removeEventListener(type, records[index].listener, { capture: records[index].capture });
       records.splice(index, 1);
       if (!records.length) listenedObjects.delete(object);
       return null;
@@ -2225,6 +2238,7 @@ var WasmWebBridge = class {
       return write(memory, offset, capacity, Uint8Array.from(writer.bytes));
     }
     function deliver(callback, event = null) {
+      if (!instance) return;
       if (!Number.isInteger(callback) || callback < 0 || callback >= 4096) {
         fail("event callback space exhausted");
       }
@@ -2268,7 +2282,7 @@ var WasmWebBridge = class {
         checkpointQueued = true;
         queueMicrotask(() => {
           try {
-            instance.exports.onmsg(0);
+            if (instance) instance.exports.onmsg(0);
           } finally {
             checkpointQueued = false;
           }
@@ -2340,10 +2354,9 @@ var WasmWebBridge = class {
       listenedObjects.clear();
       for (const observer of mutationObservers) observer.disconnect();
       mutationObservers.clear();
-      for (const timer of intervals.values()) clearInterval(timer);
-      intervals.clear();
-      animationTimeouts.forEach(clearTimeout);
-      animationTimeouts.clear();
+      for (const timer of timers.values()) realm.clearTimeout(timer);
+      timers.clear();
+      for (const id of frames.keys()) cancelFrame(id);
       for (const handle of cleanupCallbacks.values()) {
         if (typeof cancelIdleCallback === "function") cancelIdleCallback(handle);
         else clearTimeout(handle);
