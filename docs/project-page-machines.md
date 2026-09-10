@@ -775,6 +775,14 @@ children and reads siblings synchronously, checks identity, detaches the owned
 parent, removes a child, and checks that siblings outside the granted root are
 not exposed. Large-file timing is a separate gate, not implied by this test.
 
+The first full-size native insertion exceeded the 90-second diagnostic
+deadline. A separate profiled run completed in 103.2 seconds: the previous
+array-search hotspot disappeared, but interpreted guest execution and wire
+exchange costs increased. This is a regression, not a successful optimization.
+A follow-up experiment reduces interpreted calls in the integer codec and
+operation encoder without changing the wire format or host permissions.
+Keep the known-good deployment archive until the experiment is resolved.
+
 ### September 10 native layout comparison and tab stops
 
 A diagnostic copies the live workspace's layout and active CSS, removes its

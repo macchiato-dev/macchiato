@@ -100,9 +100,10 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   // editor. Reuse byte-level golden cases, including the JS fallback, rather
   // than allowing an encoder/decoder pair to conceal matching mistakes.
   const wireCases = await readFile(new URL("fixtures/wire-text.js", import.meta.url), "utf8");
+  const wireIntegers = await readFile(new URL("fixtures/wire-uint.js", import.meta.url), "utf8");
   await load([
     { path: "index.html", content: '<main></main><script src="wire.js"></script>' },
-    { path: "wire.js", content: wireCases + `
+    { path: "wire.js", content: wireCases + wireIntegers + `
       // A board's worth of embedded tile-sized strings must not fall back to
       // per-character interpreted loops. This is a generous regression guard,
       // not a cross-engine benchmark.

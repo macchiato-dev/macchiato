@@ -68,11 +68,17 @@ Writer.prototype.byte = function (value) {
 };
 
 Writer.prototype.uint = function (value) {
+  var bytes = this.bytes, at = this.at;
   do {
+    if (at >= bytes.length) {
+      this.at = at;
+      throw new RangeError("wire message too large");
+    }
     var next = value % 128;
-    value = Math.floor(value / 128);
-    this.byte(next | (value ? 128 : 0));
+    value = (value - next) / 128;
+    bytes[at++] = next | (value ? 128 : 0);
   } while (value);
+  this.at = at;
 };
 
 Writer.prototype.text = function (text) {
@@ -156,9 +162,15 @@ Reader.prototype.byte = function () {
 };
 
 Reader.prototype.uint = function () {
-  var value = 0, scale = 1, byte;
-  do { byte = this.byte(); value += (byte & 127) * scale; scale *= 128; }
-  while (byte & 128);
+  var value = 0, scale = 1, byte, bytes = this.bytes, at = this.at;
+  do {
+    if (at >= this.length) {
+      this.at = at;
+      throw new RangeError("truncated wire message");
+    }
+    byte = bytes[at++]; value += (byte & 127) * scale; scale *= 128;
+  } while (byte & 128);
+  this.at = at;
   return value;
 };
 
@@ -211,11 +223,12 @@ function readValue(reader) {
 function exchange(operations) {
   var writer = new Writer(wireBuffer);
   writer.uint(pendingStrings.length);
-  pendingStrings.forEach(function (text) { writer.text(text); });
+  for (var string = 0; string < pendingStrings.length; string++) writer.text(pendingStrings[string]);
   writer.uint(operations.length);
-  operations.forEach(function (operation) {
+  for (var index = 0; index < operations.length; index++) {
+    var operation = operations[index];
     writer.byte(operation[0]);
-    if (operation[0] === 0) return;
+    if (operation[0] === 0) continue;
     writer.uint(operation[1]);
     writer.uint(operation[2]);
     if (operation[0] === 2) writeValue(writer, operation[3]);
@@ -230,7 +243,7 @@ function exchange(operations) {
       writer.byte(operation[4] === true ? 1 : 0);
     }
     if (operation[0] === 5) writer.uint(operation[3]);
-  });
+  }
   wireBuffer[0] = writer.at - 4;
   wireBuffer[1] = (writer.at - 4) >> 8;
   wireBuffer[2] = (writer.at - 4) >> 16;
