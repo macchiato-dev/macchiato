@@ -95,6 +95,19 @@ function selectTheme(json) {
   inspectEditor();
 }
 
+var tabSizeCompartment;
+function configureTabSize(json) {
+  var state = globalThis.__codeMirrorRequire("@codemirror/state");
+  var extension = state.EditorState.tabSize.of(JSON.parse(json).size);
+  var effect;
+  if (!tabSizeCompartment) {
+    tabSizeCompartment = new state.Compartment();
+    effect = state.StateEffect.appendConfig.of(tabSizeCompartment.of(extension));
+  } else effect = tabSizeCompartment.reconfigure(extension);
+  globalThis.__codeEditorView.dispatch({ effects: effect });
+  inspectEditor();
+}
+
 var listenerProbeHits = 0;
 var listenerProbe = function () { listenerProbeHits++; };
 function recycleListeners() {

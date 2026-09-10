@@ -312,6 +312,23 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
         getComputedStyle(node, "::selection").backgroundColor), expected, `${theme}: native selection agrees`);
     }
   }
+  await page.evaluate(() => window.callGuest("selectFile", { path: "tabs.txt", content: "\tvalue" }));
+  let narrowTab;
+  for (const size of [2, 8, 4]) {
+    await page.evaluate(size => window.callGuest("configureTabSize", { size }), size);
+    const measurement = await page.locator(".cm-content").evaluate(node => {
+      const text = document.createTreeWalker(node.querySelector(".cm-line"), NodeFilter.SHOW_TEXT).nextNode();
+      if (!text || text.nodeValue[0] !== "\t") throw new Error("Leading tab missing");
+      const range = document.createRange();
+      range.setStart(text, 0); range.setEnd(text, 1);
+      return { inline: node.style.tabSize, computed: getComputedStyle(node).tabSize,
+        width: range.getBoundingClientRect().width };
+    });
+    assert.equal(measurement.inline, String(size), "CodeMirror uses the supported tab-size property");
+    assert.equal(measurement.computed, String(size));
+    if (size === 2) narrowTab = measurement.width;
+    else assert.ok(Math.abs(measurement.width / narrowTab - size / 2) < 0.02, "native tab geometry follows the state facet");
+  }
   const beforeListeners = await page.evaluate(() => window.callGuest("inspectListeners", {}));
   const recycled = await page.evaluate(() => window.callGuest("recycleListeners", {}));
   assert.ok(recycled.slots <= beforeListeners.slots + 4,
