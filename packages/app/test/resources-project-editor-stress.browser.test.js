@@ -215,6 +215,41 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await errorMessage.waitFor({ state: "hidden" });
   assert.equal(await editor.getAttribute("data-output-machine-state"), "ready");
 
+  // A phone has one content pane at a time. Resizing and toggling must not
+  // recreate either machine or leave the output iframe at zero width.
+  const editorIdentity = await editor.getAttribute("data-editor-machine-id");
+  const outputFrame = page.locator("iframe.project-editor__output-frame");
+  await output.locator("h1").evaluate(node => { window.retainedHeading = node; });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => document.querySelector(".project-editor__workspace").dataset.view === "preview");
+  assert.equal(await page.locator('[data-project-view="split"]').isVisible(), false);
+  assert.equal(await page.locator(".project-editor__source").isVisible(), false);
+  assert.ok((await outputFrame.boundingBox()).width >= 380);
+  for (let cycle = 0; cycle < 3; cycle++) {
+    await page.locator('[data-project-view="editor"]').click();
+    await content.waitFor({ state: "visible" });
+    assert.equal(await outputFrame.isVisible(), false);
+    assert.equal(await page.locator("[data-project-file-trigger]").isVisible(), true);
+    await page.locator('[data-project-view="preview"]').click();
+    await outputFrame.waitFor({ state: "visible" });
+    assert.equal(await content.isVisible(), false);
+  }
+  await page.locator('[data-project-view="details"]').click();
+  await page.getByLabel("Title", { exact: true }).waitFor({ state: "visible" });
+  assert.equal(await outputFrame.isVisible(), false);
+  await page.locator('[data-project-view="details"]').click();
+  await outputFrame.waitFor({ state: "visible" });
+  assert.equal(await editor.getAttribute("data-editor-machine-id"), editorIdentity);
+  assert.ok(await output.locator("h1").evaluate(node => node === window.retainedHeading));
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.screenshot({ path: join(artifacts, "phone-output.png") });
+  await page.locator('[data-project-view="editor"]').click();
+  await content.waitFor({ state: "visible" });
+  await page.screenshot({ path: join(artifacts, "phone-editor.png") });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await outputFrame.waitFor({ state: "visible" });
+  await content.waitFor({ state: "visible" });
+
   const [guest, runtime] = await Promise.all([
     readFile(join(root, "packages/website/generated/project-editor-guest.js"), "utf8"),
     readFile(join(root, "packages/website/generated/project-editor-runtime.js"), "utf8"),

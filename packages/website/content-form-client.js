@@ -290,15 +290,17 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
     tooltip = null;
   };
   button._hideInstantTooltip = hide;
-  button.addEventListener("pointerenter", () => {
-    if (!shouldShow(button)) return;
+  button.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "touch" || !shouldShow(button)) return;
     clearTimeout(showTimer);
     showTimer = setTimeout(show, 600);
   });
   button.addEventListener("pointerleave", hide);
   button.addEventListener("pointerdown", hide);
   button.addEventListener("dragstart", hide);
-  button.addEventListener("focus", show);
+  button.addEventListener("focus", () => {
+    if (button.matches(":focus-visible")) show();
+  });
   button.addEventListener("blur", hide);
   button.addEventListener("instanttooltiphide", hide);
 }

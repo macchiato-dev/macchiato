@@ -1265,26 +1265,29 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
   .project-create__layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
   .project-editor { min-height: 0; border-radius: 0; }
   .project-create__fields { display: none; padding: 12px; background: var(--pop-bg); }
-  .project-editor__toolbar { flex-wrap: wrap; gap: 5px 8px; }
-  .project-editor__source-toolbar { width: 100%; }
+  .project-editor:has(.project-editor__workspace[data-view="editor"]) .project-editor__toolbar { flex-direction: column; height: auto; }
+  .project-editor:has(.project-editor__workspace[data-view="editor"]) .project-editor__source-toolbar { width: 100%; }
   .project-editor__tab-close { display: none; }
   .project-editor__tab-scroll { display: none; }
-  .project-editor__preview-toolbar { order: -1; flex-basis: 100%; justify-content: flex-start; }
+  .project-editor__preview-toolbar { justify-content: flex-end; }
   .project-editor__preview-toolbar > [data-preview-title] { display: none; }
-  .project-editor__view-controls [data-project-view="split"] { display: none; }
+  .project-editor__view-controls button[data-project-view="split"] { display: none; }
   .project-editor__view-controls [data-project-view="details"] { display: block; }
-  .project-editor__view-controls { width: 100%; gap: 5px; }
-  .project-editor__view-controls button { min-height: 34px; padding: 6px 11px; font-size: 14px; }
+  .project-editor__view-controls { gap: 5px; }
   .project-create__layout[data-mobile-view="details"] { grid-template-rows: auto minmax(0, 1fr); }
   .project-create__layout[data-mobile-view="details"] .project-editor { min-height: 0; grid-template-rows: auto; }
   .project-create__layout[data-mobile-view="details"] .project-editor__source-toolbar,
   .project-create__layout[data-mobile-view="details"] .project-editor__workspace,
   .project-create__layout[data-mobile-view="details"] .project-editor__status { display: none; }
-  .project-create__layout[data-mobile-view="details"] .project-create__fields { display: grid; grid-row: 2; }
+  .project-create__layout[data-mobile-view="details"] .project-create__fields { display: grid; grid-row: 2; min-height: 0; overflow: auto; }
+  /* The server's initial split becomes output-only before any guest starts.
+     Match the responsive guest's initial view; never flash the editor first. */
   .project-editor__workspace[data-view="split"] { grid-template-columns: 1fr; }
-  .project-editor__workspace[data-view="split"] .project-editor__preview,
+  .project-editor__workspace[data-view="split"] .project-editor__source,
   .project-editor__workspace[data-view="split"] .project-editor__splitter { display: none; }
-  .project-editor__source { padding: 6px; }
+  .project-editor:has(.project-editor__workspace[data-view="split"]) .project-editor__source-toolbar,
+  .project-editor:has(.project-editor__workspace[data-view="split"]) .project-editor__toolbar-split { display: none; }
+  .project-editor:has(.project-editor__workspace[data-view="split"]) .project-editor__toolbar { grid-template-columns: 1fr; }
   .project-editor__preview > [data-project-preview] { padding: 0; }
   .project-editor__status { gap: 7px; }
   .project-editor__save { max-width: 34%; overflow: hidden; }

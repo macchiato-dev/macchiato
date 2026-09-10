@@ -29,14 +29,15 @@ test("appearance is correct before the frontend loads, including document naviga
   const browser = await chromium.launch({ headless: true });
   t.after(() => browser.close());
 
-  for (const [system, stored, expected] of [
+  for (const mobile of [false, true]) for (const [system, stored, expected] of [
     ["light", "system", "light"], ["dark", "system", "dark"],
     ["light", "dark", "dark"], ["dark", "light", "light"],
     ["light", null, "light"], ["light", "invalid", "light"],
     ["light", "unavailable", "light"],
   ]) {
-    await t.test(`${system} system, preference ${stored}`, async () => {
-      const context = await browser.newContext({ colorScheme: system });
+    await t.test(`${mobile ? "phone" : "desktop"}, ${system} system, preference ${stored}`, async () => {
+      const context = await browser.newContext({ colorScheme: system,
+        viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 } });
       try {
         // Serve the real generated documents and CSP, but no frontend machine.
         // First paint must not depend on its download or startup completing.
@@ -85,11 +86,15 @@ test("appearance is correct before the frontend loads, including document naviga
           const toolbar = document.querySelector(".project-editor__toolbar");
           const color = node => node && getComputedStyle(node).backgroundColor;
           return {
+            overflow: document.documentElement.scrollWidth > innerWidth,
+            splitVisible: document.querySelector('[data-project-view="split"]').checkVisibility(),
+            sourceVisible: document.querySelector('.project-editor__source').checkVisibility(),
+            outputVisible: document.querySelector('.project-editor__preview').checkVisibility(),
             toolbar: color(toolbar),
             details: color(document.querySelector(".project-create__fields")),
             panes: [...document.querySelectorAll(".project-editor__pane-loading")].map(node => {
               const box = node.getBoundingClientRect(), pane = node.parentElement.getBoundingClientRect();
-              return { color: color(node), display: getComputedStyle(node).display,
+              return { color: color(node), display: getComputedStyle(node).display, visible: node.checkVisibility(),
                 inset: Math.abs(box.x - pane.x) + Math.abs(box.width - pane.width),
                 width: box.width, height: box.height };
             }),
@@ -97,16 +102,21 @@ test("appearance is correct before the frontend loads, including document naviga
         });
         assert.equal(workspace.toolbar, expected === "light" ? "rgb(219, 228, 255)" : "rgb(23, 34, 110)");
         assert.equal(workspace.details, workspace.toolbar);
+        assert.equal(workspace.overflow, false);
+        assert.equal(workspace.splitVisible, !mobile);
+        assert.equal(workspace.sourceVisible, !mobile);
+        assert.equal(workspace.outputVisible, true);
         assert.equal(workspace.panes.length, 2);
+        assert.equal(workspace.panes.filter(pane => pane.visible).length, mobile ? 1 : 2);
         for (const pane of workspace.panes) {
           assert.equal(pane.color, workspace.toolbar);
           assert.equal(pane.display, "grid");
-          assert.ok(pane.width > 100 && pane.height > 100 && pane.inset <= 2, JSON.stringify(pane));
+          if (pane.visible) assert.ok(pane.width > 100 && pane.height > 100 && pane.inset <= 2, JSON.stringify(pane));
         }
         if (process.env.MACCHIATO_TEST_ARTIFACTS) {
           await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
           await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS,
-            `project-first-paint-${system}-${stored}.png`) });
+            `project-first-paint-${mobile ? "phone" : "desktop"}-${system}-${stored}.png`) });
         }
         assert.deepEqual(errors, []);
       } finally {
