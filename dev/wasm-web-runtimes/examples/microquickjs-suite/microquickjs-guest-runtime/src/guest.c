@@ -29,6 +29,8 @@ static JSValue js_clearTimeout(JSContext *ctx, JSValue *this_value,
                                int argc, JSValue *argv);
 static JSValue js_bridge(JSContext *ctx, JSValue *this_value,
                          int argc, JSValue *argv);
+static JSValue js_write_text(JSContext *ctx, JSValue *this_value,
+                             int argc, JSValue *argv);
 static JSValue js_host_reference_constructor(JSContext *ctx, JSValue *this_value,
                                              int argc, JSValue *argv);
 static void js_host_reference_finalizer(JSContext *ctx, void *opaque);
@@ -298,6 +300,52 @@ static JSValue js_clearTimeout(JSContext *ctx, JSValue *this_value,
                                int argc, JSValue *argv)
 {
     return unavailable(ctx, this_value, argc, argv);
+}
+
+/* Strings already live in MicroQuickJS's arena as UTF-8. Write the wire length
+   and bytes directly instead of interpreting two JavaScript loops per message.
+   This only touches guest memory; it neither calls the host nor retains data. */
+static JSValue js_write_text(JSContext *ctx, JSValue *this_value,
+                             int argc, JSValue *argv)
+{
+    JSCStringBuf buffer;
+    uint8_t *destination;
+    const uint8_t *source;
+    size_t capacity, length, header = 1, remaining, at;
+    double offset;
+    UNUSED(this_value);
+    if (argc != 3 || !JS_IsNumber(ctx, argv[1]) || !JS_IsString(ctx, argv[2]) ||
+        JS_ToNumber(ctx, &offset, argv[1]) ||
+        JS_GetUint8Array(ctx, argv[0], &destination, &capacity))
+        return JS_ThrowTypeError(ctx, "writeText expects bytes, offset and string");
+    if (!(offset >= 0 && offset <= capacity) || offset != (size_t)offset)
+        return JS_ThrowRangeError(ctx, "invalid text offset");
+    /* No allocating calls between obtaining these arena pointers and using
+       them. JS_ToCStringLen does not allocate for a value already a string. */
+    source = (const uint8_t *)JS_ToCStringLen(ctx, &length, argv[2], &buffer);
+    if (!source) return JS_EXCEPTION;
+    for (remaining = length; remaining >= 128; remaining /= 128) header++;
+    at = (size_t)offset;
+    if (header > capacity - at || length > capacity - at - header)
+        return JS_ThrowRangeError(ctx, "wire message too large");
+    remaining = length;
+    do {
+        destination[at++] = (remaining & 127) | (remaining >= 128 ? 128 : 0);
+        remaining /= 128;
+    } while (remaining);
+    for (size_t index = 0; index < length; index++) {
+        /* Lone UTF-16 surrogates are WTF-8 in the engine, but wire text is
+           UTF-8. Replace each with U+FFFD, as TextEncoder does (same length). */
+        if (source[index] == 0xed && index + 2 < length &&
+            source[index + 1] >= 0xa0 && source[index + 1] <= 0xbf &&
+            (source[index + 2] & 0xc0) == 0x80) {
+            destination[at++] = 0xef;
+            destination[at++] = 0xbf;
+            destination[at++] = 0xbd;
+            index += 2;
+        } else destination[at++] = source[index];
+    }
+    return JS_NewInt32(ctx, (int32_t)at);
 }
 
 static JSValue js_bridge(JSContext *ctx, JSValue *this_value,

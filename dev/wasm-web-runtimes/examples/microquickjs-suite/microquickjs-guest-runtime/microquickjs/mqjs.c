@@ -300,6 +300,9 @@ static JSValue js_close_guest(JSContext *ctx, JSValue *this_value,
     return JS_UNDEFINED;
 }
 
+// CUSTOMIZATION: 2 lines below added: the compiler records this runtime-only native slot.
+#define js_write_text js_collection_stub
+
 #include "mqjs_stdlib.h"
 
 #define STYLE_DEFAULT    COLOR_BRIGHT_GREEN

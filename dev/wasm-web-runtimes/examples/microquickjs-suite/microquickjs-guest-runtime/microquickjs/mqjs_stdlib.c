@@ -456,6 +456,8 @@ static const JSPropDef js_global_object[] = {
     JS_PROP_CLASS_DEF("WeakMap", &js_weak_map_class),
     JS_PROP_CLASS_DEF("WeakSet", &js_weak_set_class),
     JS_CFUNC_DEF("print", 1, js_print),
+    // CUSTOMIZATION: 1 line below added: encode wire strings inside guest memory.
+    JS_CFUNC_DEF("__wwcWriteText", 3, js_write_text),
 #ifdef CONFIG_CLASS_EXAMPLE
     JS_PROP_CLASS_DEF("Rectangle", &js_rectangle_class),
     JS_PROP_CLASS_DEF("FilledRectangle", &js_filled_rectangle_class),

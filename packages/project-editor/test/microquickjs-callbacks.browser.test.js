@@ -9,6 +9,7 @@ for (const [fixture, expected] of [
   ["browser-timers", ["argument", "immediate", "interval", "timeout"]],
   ["transient-messages", { requests: 24, serviceStrings: 0 }],
   ["wire-numbers", { equal: true, denied: 3 }],
+  ["wire-text", { cases: 8, denied: 5, subarray: true }],
   ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
