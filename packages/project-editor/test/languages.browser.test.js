@@ -173,6 +173,49 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   ]) await select(path, content, language);
   if (downloaded) assert.deepEqual(downloads, ["html", "markdown", "python", "rust", "sql", "yaml", "cpp", "javascript", "json", "css", "vue", "svelte"]
     .map(name => `language-${name}.bin`));
+  if (process.env.MACCHIATO_EDITOR_TIMINGS && !downloaded) {
+    // Measure real keyboard input in the shipped runtime, outside any builds
+    // or profiler. Round-trip timings include Playwright overhead, not just VM
+    // time. Keep full-document inspection outside each measured key pair.
+    const source = await readFile(new URL("../../website/content-form-client.js", import.meta.url), "utf8");
+    const lines = source.split("\n");
+    for (const line of [0, Math.floor(lines.length / 2), lines.length - 1]) {
+      const position = lines.slice(0, line).reduce((sum, text) => sum + text.length + 1, 0);
+      const content = source.slice(0, position) + "// sample: \n" + source.slice(position);
+      const started = performance.now();
+      await select("large.js", content, "javascript");
+      const selectedMs = performance.now() - started;
+      await page.evaluate(head => window.callGuest("selectPosition", { head }), position + 11);
+      await page.waitForTimeout(150);
+      const samples = [];
+      for (let key = 0; key < 22; key++) {
+        const start = performance.now();
+        await page.keyboard.type("x");
+        await page.keyboard.press("Backspace");
+        if (key >= 2) samples.push(performance.now() - start);
+      }
+      const state = await page.evaluate(() => window.callGuest("inspectEditor", {}));
+      assert.equal(state.document, content, "repeated edits must preserve the rest of the large file");
+      assert.equal(state.selection.head, position + 11);
+      const sorted = [...samples].sort((a, b) => a - b);
+      t.diagnostic(JSON.stringify({ benchmark: "large-project-javascript", lines: lines.length,
+        characters: content.length, line, selectedMs, keyPairMs: samples,
+        median: sorted[10], p95: sorted[18], maximum: sorted[19] }));
+    }
+  }
+  // The editor runs in MicroQuickJS, but project JavaScript runs in QuickJS.
+  // Typing a comment must not reject valid modern syntax using the editor's
+  // more limited Function constructor as the project's syntax validator.
+  const modern = 'const greeting = (name = "World") => `Hello ${name}`;\n';
+  await select("modern.js", modern, "javascript");
+  await page.locator(".cm-content").click();
+  await page.keyboard.press("Control+Home");
+  await page.keyboard.type("// comment\n");
+  const change = await page.evaluate(() => guestNotices.map(text => {
+    try { return JSON.parse(text); } catch { return null; }
+  }).filter(message => message?.type === "change").at(-1));
+  assert.equal(change.content, "// comment\n" + modern);
+  assert.equal(change.syntaxErrors, false, "valid project JavaScript must not be classified as invalid ES5");
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });

@@ -18,3 +18,9 @@ function collectEditor() {
   gc();
   inspectEditor();
 }
+
+function selectPosition(json) {
+  globalThis.__codeEditorSelect(json);
+  globalThis.__codeEditorFocus();
+  inspectEditor();
+}
