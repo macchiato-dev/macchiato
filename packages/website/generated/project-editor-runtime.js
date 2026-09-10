@@ -1057,6 +1057,7 @@ var WasmWebBridge = class {
       if (object instanceof Text && (name === "nodeValue" || name === "textContent")) {
         return object[name];
       }
+      if (object instanceof Element && name === "textContent" && (ownedNodes.has(object) || insideDocument(object))) return object.textContent;
       if (object instanceof DOMRectReadOnly && ["bottom", "height", "left", "right", "top", "width", "x", "y"].includes(name)) {
         return Math.round(object[name] * 64);
       }

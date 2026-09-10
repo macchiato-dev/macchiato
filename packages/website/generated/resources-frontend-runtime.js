@@ -1466,7 +1466,7 @@ GuestElement.prototype = Object.create(GuestObject.prototype);
 ["className", "hidden", "src", "textContent", "title", "value"].forEach(function (name) {
   Object.defineProperty(GuestElement.prototype, name, {
     configurable: true,
-    get: name === "value" ? function () {
+    get: name === "value" || name === "textContent" ? function () {
       return immediate([1, this.reference, stringIndex(name)]);
     } : undefined,
     set: function set(value) {
