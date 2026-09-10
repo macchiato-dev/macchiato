@@ -184,11 +184,13 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       page: (await page.locator("body").innerText()).slice(-1500) }), { cause });
   });
   assert.equal(new URL(page.url()).pathname, "/editor-stress/editing-marathon");
+  assert.equal(await editor.getAttribute("data-persistence"), "stored", "the saved project is an authenticated owner view");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   await page.reload({ waitUntil: "networkidle" });
   await page.locator(".cm-content").waitFor();
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   const restoredSnapshot = await page.locator("[data-project-snapshot]").inputValue();
+  assert.equal(await editor.getAttribute("data-persistence"), "stored", "reload must not silently fall back to the public view");
   assert.match(restoredSnapshot, /Editable row 100/);
   assert.match(restoredSnapshot, /revision 80/);
   assert.deepEqual(oldEditorRequests, []);

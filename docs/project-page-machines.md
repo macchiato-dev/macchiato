@@ -562,6 +562,13 @@ Wasm, iframe, and language assets with the local API. Cat Memory Match, Mahjong,
 the code tour, and the SQLite reader loaded; the tour traversed 50 slides and
 accepted keyboard navigation, and SQLite's internal link changed only the
 iframe fragment. These checks did not save over the existing projects.
+Those first live runs exercised public views: the diagnostic cookie lacked
+the required `v: 1` and expiry fields. The `4bb5227` follow-up supplied valid
+session fields and asserted `data-persistence="stored"` on all four owner
+views, repeating those navigation checks. A separate owner-edit run recovered
+from invalid CSS and intercepted its three autosave requests; the stored
+Mahjong version and timestamp remained unchanged. Read-only diagnostics must
+block writes explicitly, not assume that avoiding the Save button is enough.
 
 The separate disposable-database stress test passed editing, scrolling,
 undo/redo, theme switching, save/reload, and output-error recovery. The
