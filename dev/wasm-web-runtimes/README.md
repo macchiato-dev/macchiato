@@ -34,8 +34,9 @@ bytecode tag can be added without changing the machine or its two-function
 The canonical example's `guest-runtime.js` is compiled directly by `mqjs`,
 without the CodeMirror environment's Babel pass. Keep it in the supported
 syntax subset: variadic helpers use `arguments`, not rest parameters. The
-project-editor source-compilation test requires newly produced bytecode,
-because this compiler can report a parse error while returning status zero.
+project-editor source-compilation test requires newly produced bytecode.
+The vendored compiler exits unsuccessfully on parse errors, including when an
+older output file exists; upstream's success exit could disguise stale bytecode.
 
 For a clean interpreter build, run Cargo from
 `examples/microquickjs-suite/microquickjs-guest-runtime` with a fresh

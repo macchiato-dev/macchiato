@@ -472,7 +472,10 @@ static void compile_file(const char *filename, const char *outfilename,
     free(eval_str);
     if (JS_IsException(val)) {
         dump_error(ctx);
-        return;
+        // CUSTOMIZATION: 1 line below commented out: compilation errors must fail the command.
+        // return;
+        // CUSTOMIZATION: 1 line below added: match other compile_file failure exits.
+        exit(1);
     }
 
 #if JSW == 8 

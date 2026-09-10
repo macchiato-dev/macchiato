@@ -630,8 +630,10 @@ keyboard measurements.
 
 That fresh-target build also exposed rest parameters in the directly compiled
 example runtime, which bypasses Babel. They now use `arguments`. A source
-compilation test requires a fresh bytecode output instead of trusting `mqjs`'s
-exit status; a cached Cargo build alone would miss this failure. The clean
+compilation test requires a fresh bytecode output. The vendored `mqjs` also
+now exits unsuccessfully on a parse error, rather than letting build scripts
+silently accept an older output file. The test checks that case explicitly;
+a cached Cargo build alone would miss this failure. The clean
 build, owner stress test, lazy-language tests, and direct/iframe module tests
 passed after the correction. No host permission or interpreter behavior was
 expanded for either profiling or this fix.
