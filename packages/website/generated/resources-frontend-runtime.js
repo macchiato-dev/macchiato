@@ -1864,13 +1864,18 @@ function addEventListener(type, callback) {
   }
 }
 var deliveredEvents = Object.create(null);
+var deliveredEventCleanupPending = false;
 function eventForDelivery(reference) {
   var event = deliveredEvents[reference];
   if (event) return event;
   event = deliveredEvents[reference] = new GuestEvent(reference);
-  setTimeout(function () {
-    if (deliveredEvents[reference] === event) delete deliveredEvents[reference];
-  }, 0);
+  if (!deliveredEventCleanupPending) {
+    deliveredEventCleanupPending = true;
+    setTimeout(function () {
+      deliveredEvents = Object.create(null);
+      deliveredEventCleanupPending = false;
+    }, 0);
+  }
   return event;
 }
 function dispatch(message) {
