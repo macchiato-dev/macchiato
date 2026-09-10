@@ -25,11 +25,17 @@ function startScopeEvents() {
     var type = hostGet(event.reference, "type");
     var value = type === "keydown" ? hostGet(event.reference, "key")
       : type === "beforeinput" ? hostGet(event.reference, "data") : null;
+    if (type.indexOf("drag") === 0 || type === "drop") {
+      var transfer = hostGet(event.reference, "dataTransfer");
+      value = hostCall(transfer[1], "getData", ["text/plain"]);
+      hostCall(transfer[1], "setData", ["text/plain", "changed-by-guest"]);
+    }
     hostCall(event.reference, "preventDefault", []);
     __wwcPostMessage(JSON.stringify({ type: type, value: value }));
     flush();
   }
-  ["keydown", "beforeinput", "change", "copy", "mousedown", "mouseup"].forEach(function (type) {
+  ["keydown", "beforeinput", "change", "copy", "mousedown", "mouseup",
+    "dragstart", "dragend", "dragenter", "dragleave", "dragover", "drop"].forEach(function (type) {
     pendingOperations.push([4, document.reference, stringIndex(type),
       allocateCallback(reportEvent, false)]);
   });

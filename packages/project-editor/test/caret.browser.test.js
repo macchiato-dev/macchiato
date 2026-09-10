@@ -6,7 +6,7 @@ import test from "node:test";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 
-test("held arrow keys reset CodeMirror blink in native and MicroQuickJS editors", {
+test("native and MicroQuickJS editors preserve caret blink and text dragging", {
   timeout: 60_000,
 }, async t => {
   const root = new URL("../../../", import.meta.url).pathname;
@@ -102,6 +102,51 @@ test("held arrow keys reset CodeMirror blink in native and MicroQuickJS editors"
       idleOpacity.add((await sample()).opacity);
     }
     assert.deepEqual([...idleOpacity].sort(), [0, 1], mode + ": idle caret still blinks");
+    await t.test(mode + " text drag, undo, and redo", async () => {
+      const original = "alpha beta gamma\nsecond line";
+      const moved = " beta gamma\nsecond linealpha";
+      const content = page.locator(".cm-content");
+      await content.fill(original);
+      await page.keyboard.press("Control+Home");
+      for (let index = 0; index < 5; index++) await page.keyboard.press("Shift+ArrowRight");
+      const points = await page.evaluate(() => {
+        const selection = document.getSelection();
+        const from = selection.getRangeAt(0).getBoundingClientRect();
+        const last = document.querySelector(".cm-line:last-child");
+        const range = document.createRange();
+        range.selectNodeContents(last);
+        const to = range.getBoundingClientRect();
+        window.dragEvents = [];
+        for (const type of ["dragstart", "drop"])
+          document.addEventListener(type, event => window.dragEvents.push({ type, trusted: event.isTrusted }));
+        return { selected: selection.toString(), x: from.left + from.width / 2,
+          y: from.top + from.height / 2, toX: to.right + 5, toY: to.top + to.height / 2 };
+      });
+      assert.equal(points.selected, "alpha");
+      await page.mouse.move(points.x, points.y);
+      await page.mouse.down();
+      await page.waitForTimeout(150);
+      await page.mouse.move(points.toX, points.toY, { steps: 15 });
+      await page.mouse.up();
+      await page.waitForFunction(moved => document.querySelector(".cm-content").innerText === moved, moved,
+        { timeout: 2000 }).catch(async error => {
+          t.diagnostic(JSON.stringify({ mode, points, state: await page.evaluate(() => ({
+            text: document.querySelector(".cm-content").innerText, events: window.dragEvents,
+            selected: document.getSelection().toString(),
+          })) }));
+          throw error;
+        });
+      assert.deepEqual(await page.evaluate(() => window.dragEvents), [
+        { type: "dragstart", trusted: true }, { type: "drop", trusted: true },
+      ], "exercise browser drag events, not a synthetic transfer shortcut");
+      assert.equal(await page.evaluate(() => document.getSelection().toString()), "alpha");
+      await page.keyboard.press("Control+z");
+      await page.waitForFunction(original => document.querySelector(".cm-content").innerText === original, original);
+      await page.keyboard.press("Control+y");
+      await page.waitForFunction(moved => document.querySelector(".cm-content").innerText === moved, moved);
+      if (process.env.MACCHIATO_TEST_ARTIFACTS)
+        await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, `${mode}-drag.png`) });
+    });
     assert.deepEqual(errors, []);
     await page.evaluate(() => window.machine?.destroy());
     await context.close();

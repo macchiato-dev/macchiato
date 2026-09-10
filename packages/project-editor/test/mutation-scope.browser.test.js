@@ -97,6 +97,22 @@ test("document observers and delegated input respect the machine's granted roots
           ],
         } : { accepted: [true, true, true, true], reports: [] },
         id + ": document/window listeners must not read or cancel another subtree's input");
+        for (const type of ["dragstart", "dragend", "dragenter", "dragleave", "dragover", "drop"]) {
+          const drag = await page.evaluate(({ id, type }) => {
+            window.reports = [];
+            const data = new DataTransfer();
+            data.setData("text/plain", "private-drag-" + id);
+            const accepted = document.getElementById(id).dispatchEvent(new DragEvent(type, {
+              dataTransfer: data, bubbles: true, cancelable: true,
+            }));
+            return { accepted, value: data.getData("text/plain"), reports: window.reports };
+          }, { id, type });
+          assert.deepEqual(drag, allowed ? {
+            accepted: false, value: "changed-by-guest",
+            reports: [{ type, value: "private-drag-" + id }],
+          } : { accepted: true, value: "private-drag-" + id, reports: [] },
+          id + ": delegated " + type + " must not expose or modify unrelated transfer data");
+        }
       }
       // Outside pointer events still support dismissal and completing drags.
       assert.deepEqual(await page.evaluate(() => {
@@ -120,6 +136,17 @@ test("document observers and delegated input respect the machine's granted roots
         { type: "keydown", value: "detached-during-dispatch" },
         { type: "keydown", value: "detached-during-dispatch" },
       ]);
+      assert.deepEqual(await page.evaluate(() => {
+        window.reports = [];
+        const root = document.getElementById("own"), target = document.createElement("div");
+        root.append(target);
+        const data = new DataTransfer();
+        data.setData("text/plain", "dropped-into-grant");
+        root.addEventListener("drop", () => target.remove(), { capture: true, once: true });
+        target.dispatchEvent(new DragEvent("drop", { dataTransfer: data, bubbles: true }));
+        return window.reports;
+      }), [{ type: "drop", value: "dropped-into-grant" }],
+      "a drop retains its grant when a native listener detaches the target");
       assert.deepEqual(errors, []);
       await page.evaluate(() => window.machine.destroy());
     } finally { await page.close(); }

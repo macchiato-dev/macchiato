@@ -860,6 +860,28 @@ intercepted project writes. In the stress run, 109 KB clipboard paste took
 1.27 seconds and native insertion took 28.7 seconds; the latter remains slow.
 No Bunny deployment was performed.
 
+### September 10 drag-transfer boundaries
+
+Raw ABI tests exposed a missing scope check for delegated drag events. A
+container's document listener could read another subtree's transfer text,
+replace it, and cancel its drag. Keyboard and clipboard events were already
+scoped, but `dragstart`, `dragend`, `dragenter`, `dragleave`, `dragover`, and
+`drop` were missing from that same input boundary. They now use it as well.
+No new permission, wrapper, or guest convention is involved.
+
+The fixture checks all six events in single-root, multiple-root, portal, and
+whole-document modes. It checks both data access and native cancellation, and
+keeps drops into the grant working even if an earlier native listener removes
+their target. Outside mouse events still support gesture completion and panel
+dismissal. This is a targeted containment check, not a completed host audit.
+
+The native/MicroQuickJS comparison now also uses actual browser text dragging,
+requiring trusted `dragstart` and `drop` events, exact moved text, retained
+selection, undo, and redo. Both implementations pass, alongside the held-arrow
+caret and idle-blink checks. The harness measures a nonempty text range for its
+drop coordinates; collapsing a range at an element boundary returned an empty
+rectangle and initially sent the drag to the page corner in both versions.
+
 ### September 10 binary reply copies
 
 A fresh DevTools sample of the 109 KB native insertion spent about 69% outside
