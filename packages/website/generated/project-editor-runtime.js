@@ -2275,6 +2275,7 @@ var WasmWebBridge = class {
           eventType: event?.type || null,
           message: error?.stack || String(error)
         });
+        options.onError?.(error);
         throw error;
       }
       if (instrument) trace("event-complete", { callback, eventType: event?.type || null });
@@ -2283,6 +2284,9 @@ var WasmWebBridge = class {
         queueMicrotask(() => {
           try {
             if (instance) instance.exports.onmsg(0);
+          } catch (error) {
+            options.onError?.(error);
+            throw error;
           } finally {
             checkpointQueued = false;
           }
@@ -2543,6 +2547,7 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
   }
   machine = new WasmWebMachine(module, root, {
     ...options,
+    onError,
     services: { ...options.services, call(name, path) {
       if (name !== "module.source") {
         if (typeof options.services?.call === "function") return options.services.call(name, path);
@@ -2793,6 +2798,9 @@ async function createProjectEditorMachine({
     },
     command: (payload) => call("__codeEditorCommand", payload),
     callGuest: call,
+    receive(message) {
+      if (!disposed) machine.onmsg(callMessage("__resourcesEditorReceive", message));
+    },
     inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
     focus() {
       root.querySelector(".cm-content")?.focus();

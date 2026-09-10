@@ -26525,7 +26525,6 @@ var editorHighlightStyle = HighlightStyle.define([
 ]);
 var currentTheme = "dark";
 var applyingHostContent = false;
-var resetHistoryOnNextEdit = false;
 var currentLanguage = "javascript";
 var currentReadOnly = false;
 var documentLimits = {
@@ -26653,14 +26652,6 @@ function mountEditor(content2 = 'const greeting = "Hello, constrained editor!";\
   const state = EditorState.create({ doc: content2, extensions: editorExtensions() });
   globalThis.__codeEditorView = new EditorView({ state, parent: parent2 });
   forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
-  globalThis.__codeEditorView.contentDOM.addEventListener("beforeinput", (event) => {
-    const handle = globalThis.__codeEditorBeforeInput;
-    if (typeof handle !== "function") return;
-    const result2 = JSON.parse(handle(JSON.stringify({ inputType: event.inputType, data: event.data })));
-    if (!result2.handled) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-  }, true);
   globalThis.__browserUseNotify(JSON.stringify({
     type: "ready",
     characters: state.doc.length,
@@ -26863,7 +26854,6 @@ globalThis.__codeEditorSetContent = (json) => {
   } finally {
     applyingHostContent = false;
   }
-  if (request.resetHistoryOnEdit === true) resetHistoryOnNextEdit = true;
   return JSON.stringify(documentUsage(view.state.doc));
 };
 var searchPanel = null;
@@ -26987,52 +26977,6 @@ globalThis.__codeEditorCommand = (json) => {
   }
   const selection = view.state.selection.main;
   return JSON.stringify({ handled: Boolean(handled), from: selection.from, to: selection.to });
-};
-globalThis.__codeEditorBeforeInput = (json) => {
-  const event = JSON.parse(json);
-  const view = globalThis.__codeEditorView;
-  if (resetHistoryOnNextEdit) {
-    resetHistoryOnNextEdit = false;
-    view.setState(EditorState.create({
-      doc: view.state.doc,
-      selection: view.state.selection,
-      extensions: editorExtensions()
-    }));
-  }
-  const selection = view.state.selection.main;
-  if (view.state.readOnly) return JSON.stringify({ handled: true, from: selection.from, to: selection.to });
-  let from = selection.from;
-  let to = selection.to;
-  let insert2 = "";
-  if (event.inputType === "insertText" || event.inputType === "insertCompositionText") {
-    insert2 = event.data || "";
-    const pairs = { "(": ")", "[": "]", "{": "}", '"': '"', "'": "'", "`": "`" };
-    const closing2 = new Set(Object.values(pairs));
-    if (from === to && pairs[insert2]) {
-      view.dispatch({ changes: { from, to, insert: insert2 + pairs[insert2] }, selection: { anchor: from + 1 }, userEvent: "input.type" });
-      const pairedSelection = view.state.selection.main;
-      return JSON.stringify({ handled: true, from: pairedSelection.from, to: pairedSelection.to });
-    }
-    if (from === to && closing2.has(insert2) && view.state.doc.sliceString(from, from + 1) === insert2) {
-      setSelection(from + 1);
-      return JSON.stringify({ handled: true, from: from + 1, to: from + 1 });
-    }
-  } else if (event.inputType === "insertLineBreak" || event.inputType === "insertParagraph") {
-    insert2 = "\\n";
-  } else if (event.inputType === "deleteContentBackward") {
-    if (from === to && from > 0) from -= 1;
-  } else if (event.inputType === "deleteContentForward") {
-    if (from === to && to < view.state.doc.length) to += 1;
-  } else {
-    return JSON.stringify({ handled: false, from: selection.from, to: selection.to });
-  }
-  view.dispatch({
-    changes: { from, to, insert: insert2 },
-    selection: { anchor: from + insert2.length },
-    userEvent: event.inputType.startsWith("delete") ? "delete.backward" : "input.type"
-  });
-  const nextSelection = view.state.selection.main;
-  return JSON.stringify({ handled: true, from: nextSelection.from, to: nextSelection.to });
 };
 
 // packages/hub/src/project-history.js
@@ -27440,7 +27384,9 @@ var previousEditorReceive = globalThis.__resourcesEditorReceive;
 globalThis.__resourcesEditorReceive = (json) => {
   const message = JSON.parse(json);
   if (message.type === "output-error") {
-    outputListeners.get(message.id)?.(new Error(message.message));
+    const listener = outputListeners.get(message.id);
+    if (listener) listener(new Error(message.message));
+    else if (previousEditorReceive) return previousEditorReceive(json);
     return "null";
   }
   const operation = pending.get(message.id);
@@ -27457,6 +27403,8 @@ globalThis.__resourcesEditorLocalReceive = (message) => {
   );
   else if (message.type === "ready") listeners?.onReady?.(message);
   else if (message.type === "limit") listeners?.onLimit?.(message);
+  else if (message.type === "output-error") listeners?.onOutputError?.(new Error(message.message));
+  else if (message.type === "output-ready") listeners?.onOutputReady?.();
 };
 var EditorResponse = class {
   constructor(value) {
@@ -28725,6 +28673,15 @@ ${bundleProjectModule(entry, script.textContent)}
         root: editorMount,
         limits: false,
         onChange: receiveEditorChange,
+        onOutputError(error) {
+          setStatus(`Output stopped: ${error.message}`, "error", null, "output");
+        },
+        onOutputReady() {
+          if (activeStatusSurface !== "output") return;
+          activeError = "";
+          activeErrorAction = null;
+          renderStatusState();
+        },
         onViolation(error) {
           setStatus(`Editor stopped: ${error.message}`, true, { label: root.dataset.resetLabel || "Reset", run: resetStoppedEditor }, "editor");
         }
@@ -28746,6 +28703,9 @@ ${bundleProjectModule(entry, script.textContent)}
       root.dataset.editorMachineStage = "content";
       sendContent();
       root.dataset.editorMachineStage = "ready";
+      if (root.dataset.outputMachineError) {
+        setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
+      }
       if (!previewController) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;

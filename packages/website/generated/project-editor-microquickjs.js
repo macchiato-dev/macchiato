@@ -27527,7 +27527,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }]);
   var currentTheme = "dark";
   var applyingHostContent = false;
-  var resetHistoryOnNextEdit = false;
   var currentLanguage = "javascript";
   var currentReadOnly = false;
   var documentLimits = {
@@ -27660,17 +27659,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       parent: parent
     });
     _forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
-    globalThis.__codeEditorView.contentDOM.addEventListener("beforeinput", function (event) {
-      var handle = globalThis.__codeEditorBeforeInput;
-      if (typeof handle !== "function") return;
-      var result = JSON.parse(handle(JSON.stringify({
-        inputType: event.inputType,
-        data: event.data
-      })));
-      if (!result.handled) return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }, true);
     globalThis.__browserUseNotify(JSON.stringify({
       type: "ready",
       characters: state.doc.length,
@@ -27942,7 +27930,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     } finally {
       applyingHostContent = false;
     }
-    if (request.resetHistoryOnEdit === true) resetHistoryOnNextEdit = true;
     return JSON.stringify(documentUsage(view.state.doc));
   };
   var searchPanel = null;
@@ -28083,95 +28070,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       handled: Boolean(handled),
       from: selection.from,
       to: selection.to
-    });
-  };
-  globalThis.__codeEditorBeforeInput = function (json) {
-    var event = JSON.parse(json);
-    var view = globalThis.__codeEditorView;
-    if (resetHistoryOnNextEdit) {
-      resetHistoryOnNextEdit = false;
-      view.setState(_EditorState2.create({
-        doc: view.state.doc,
-        selection: view.state.selection,
-        extensions: editorExtensions()
-      }));
-    }
-    var selection = view.state.selection.main;
-    if (view.state.readOnly) return JSON.stringify({
-      handled: true,
-      from: selection.from,
-      to: selection.to
-    });
-    var from = selection.from;
-    var to = selection.to;
-    var insert2 = "";
-    if (event.inputType === "insertText" || event.inputType === "insertCompositionText") {
-      insert2 = event.data || "";
-      var pairs = {
-        "(": ")",
-        "[": "]",
-        "{": "}",
-        '"': '"',
-        "'": "'",
-        "`": "`"
-      };
-      var closing2 = new Set(Object.values(pairs));
-      if (from === to && pairs[insert2]) {
-        view.dispatch({
-          changes: {
-            from: from,
-            to: to,
-            insert: insert2 + pairs[insert2]
-          },
-          selection: {
-            anchor: from + 1
-          },
-          userEvent: "input.type"
-        });
-        var pairedSelection = view.state.selection.main;
-        return JSON.stringify({
-          handled: true,
-          from: pairedSelection.from,
-          to: pairedSelection.to
-        });
-      }
-      if (from === to && closing2.has(insert2) && view.state.doc.sliceString(from, from + 1) === insert2) {
-        setSelection(from + 1);
-        return JSON.stringify({
-          handled: true,
-          from: from + 1,
-          to: from + 1
-        });
-      }
-    } else if (event.inputType === "insertLineBreak" || event.inputType === "insertParagraph") {
-      insert2 = "\\n";
-    } else if (event.inputType === "deleteContentBackward") {
-      if (from === to && from > 0) from -= 1;
-    } else if (event.inputType === "deleteContentForward") {
-      if (from === to && to < view.state.doc.length) to += 1;
-    } else {
-      return JSON.stringify({
-        handled: false,
-        from: selection.from,
-        to: selection.to
-      });
-    }
-    view.dispatch({
-      changes: {
-        from: from,
-        to: to,
-        insert: insert2
-      },
-      selection: {
-        anchor: from + insert2.length
-      },
-      userEvent: event.inputType.startsWith("delete") ? "delete.backward" : "input.type"
-    });
-    var nextSelection = view.state.selection.main;
-    return JSON.stringify({
-      handled: true,
-      from: nextSelection.from,
-      to: nextSelection.to
     });
   };
 })();

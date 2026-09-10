@@ -122,6 +122,10 @@ var moduleFiles = /* @__PURE__ */ new Map();
 var moduleRequests = /* @__PURE__ */ new Map();
 var nextModuleRequest = 1;
 var storage;
+var ownerPort;
+function reportError(error) {
+  ownerPort?.postMessage({ protocol, type: "error", error: error?.message || String(error) });
+}
 function taggedMessage(tag, value) {
   const bytes = encoder2.encode(value);
   const message = new Uint8Array(bytes.length + 1);
@@ -234,6 +238,7 @@ async function start(payload, port) {
     fetchResource: (value) => fetchResourceImpl(value),
     resolveImage: (value) => imageResolverImpl(value),
     allowNavigate: (url) => urlMatchesAllowedPatterns(url, navigationPatterns),
+    onError: reportError,
     services: {
       call(name, path) {
         if (name !== "module.source") throw new Error(`Project service is unavailable: ${name}`);
@@ -259,8 +264,10 @@ async function start(payload, port) {
           else pending.resolve();
         }
       } else if (text.startsWith("__wwcResponse:")) response = text.slice(14);
-      else if (text.startsWith("__wwcError:")) reportedError ||= new Error(text.slice(11));
-      else {
+      else if (text.startsWith("__wwcError:")) {
+        reportedError ||= new Error(text.slice(11));
+        reportError(reportedError);
+      } else {
         try {
           const request = JSON.parse(text);
           if (request.type === "fetch" && Number.isSafeInteger(request.id)) void fetchResourceImpl(request.url).then((result) => machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, ...result }))).catch((error) => machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message })));
@@ -307,13 +314,15 @@ async function operation(name, payload) {
     moduleFiles.clear();
     machine?.destroy();
     machine = null;
+    ownerPort = null;
     return null;
   }
   throw new Error(`Unknown project output operation: ${name}`);
 }
 addEventListener("message", (event) => {
-  if (event.origin !== location.origin || event.data?.protocol !== protocol || event.data.type !== "connect" || !event.ports[0]) return;
+  if (ownerPort || event.source !== parent || event.origin !== location.origin || event.data?.protocol !== protocol || event.data.type !== "connect" || !event.ports[0]) return;
   const port = event.ports[0];
+  ownerPort = port;
   port.onmessage = async ({ data }) => {
     if (data?.protocol !== protocol || data.type !== "request") return;
     try {

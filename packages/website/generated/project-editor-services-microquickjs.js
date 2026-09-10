@@ -605,8 +605,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   globalThis.__resourcesEditorReceive = function (json) {
     var message = JSON.parse(json);
     if (message.type === "output-error") {
-      var _outputListeners$get;
-      (_outputListeners$get = outputListeners.get(message.id)) == null || _outputListeners$get(new Error(message.message));
+      var listener = outputListeners.get(message.id);
+      if (listener) listener(new Error(message.message));else if (previousEditorReceive) return previousEditorReceive(json);
       return "null";
     }
     var operation = pending.get(message.id);
@@ -616,10 +616,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     return "null";
   };
   globalThis.__resourcesEditorLocalReceive = function (message) {
-    var _listeners, _listeners2, _listeners3;
+    var _listeners, _listeners2, _listeners3, _listeners4, _listeners5;
     if (message.type === "change") (_listeners = listeners) == null || _listeners.onChange == null || _listeners.onChange(message.content, {
       syntaxErrors: message.syntaxErrors === true
-    });else if (message.type === "ready") (_listeners2 = listeners) == null || _listeners2.onReady == null || _listeners2.onReady(message);else if (message.type === "limit") (_listeners3 = listeners) == null || _listeners3.onLimit == null || _listeners3.onLimit(message);
+    });else if (message.type === "ready") (_listeners2 = listeners) == null || _listeners2.onReady == null || _listeners2.onReady(message);else if (message.type === "limit") (_listeners3 = listeners) == null || _listeners3.onLimit == null || _listeners3.onLimit(message);else if (message.type === "output-error") (_listeners4 = listeners) == null || _listeners4.onOutputError == null || _listeners4.onOutputError(new Error(message.message));else if (message.type === "output-ready") (_listeners5 = listeners) == null || _listeners5.onOutputReady == null || _listeners5.onOutputReady();
   };
   var EditorResponse = function () {
     function EditorResponse(value) {
@@ -2671,6 +2671,15 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         root: editorMount,
                         limits: false,
                         onChange: receiveEditorChange,
+                        onOutputError: function onOutputError(error) {
+                          setStatus("Output stopped: " + error.message, "error", null, "output");
+                        },
+                        onOutputReady: function onOutputReady() {
+                          if (activeStatusSurface !== "output") return;
+                          activeError = "";
+                          activeErrorAction = null;
+                          renderStatusState();
+                        },
                         onViolation: function onViolation(error) {
                           setStatus("Editor stopped: " + error.message, true, {
                             label: __resourcesDatasetGet(root, "data-reset-label") || "Reset",
@@ -2700,6 +2709,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "content");
                       sendContent();
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "ready");
+                      if (__resourcesDatasetGet(root, "data-output-machine-error")) {
+                        setStatus("Output stopped: " + __resourcesDatasetGet(root, "data-output-machine-error"), "error", null, "output");
+                      }
                       if (!previewController) renderPreview();
                       _context9.n = 6;
                       break;
