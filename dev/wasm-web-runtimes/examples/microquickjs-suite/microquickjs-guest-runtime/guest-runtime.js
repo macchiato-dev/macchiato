@@ -114,7 +114,7 @@ function writeValue(writer, value) {
   }
   if (typeof value === "number") {
     if (!isFinite(value)) throw new TypeError("wire number must be finite");
-    if (value % 1 !== 0 || (value === 0 && 1 / value < 0)) {
+    if (value % 1 !== 0 || Math.abs(value) > 9007199254740991 || (value === 0 && 1 / value < 0)) {
       writer.byte(9);
       // WebAssembly memory and typed-array buffers in this guest are little endian.
       var number = new Float64Array(1);
