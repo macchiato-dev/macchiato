@@ -2385,11 +2385,11 @@ var WasmWebMachine = class {
   #connected = false;
   #instance;
   constructor(module, target = document, options = {}) {
-    if (!(module instanceof WebAssembly.Module)) {
-      throw new TypeError("wasm-web-machine: module must be a WebAssembly.Module");
+    if (!(module instanceof WebAssembly.Module) && typeof module?.instantiate !== "function") {
+      throw new TypeError("wasm-web-machine: module must be a WebAssembly.Module or runtime session");
     }
     this.#bridge = new WasmWebBridge(target, options);
-    this.#instance = new WebAssembly.Instance(module, this.#bridge.imports);
+    this.#instance = module instanceof WebAssembly.Module ? new WebAssembly.Instance(module, this.#bridge.imports) : module.instantiate(this.#bridge.imports);
   }
   msg = (offset, length) => this.#bridge.imports.host.msg(offset, length);
   onmsg = (message = 0) => {
@@ -2404,9 +2404,13 @@ var WasmWebMachine = class {
     return this.#bridge.send(message);
   };
   destroy = () => {
-    this.#bridge.destroy();
-    this.#instance = void 0;
-    this.#connected = false;
+    try {
+      this.#instance?.destroy?.();
+    } finally {
+      this.#bridge.destroy();
+      this.#instance = void 0;
+      this.#connected = false;
+    }
   };
 };
 
@@ -2539,17 +2543,21 @@ function createProjectImageResolver(files = []) {
 async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
   let reportedError = null, response, starting = true, destroyed = false, machine;
+  let generation = 0;
   let moduleFiles = new Map((options.files || []).map((file) => [file.path, file.content]));
   const moduleRequests = /* @__PURE__ */ new Map();
   let nextModuleRequest = 1;
   async function answerFetch(request) {
+    const requestedGeneration = generation;
+    let reply;
     try {
       if (typeof options.fetchResource !== "function") throw new Error("Project network access is disabled");
-      const result = await options.fetchResource(request.url), reply = { id: request.id, ...result };
-      if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", reply));
+      reply = { id: request.id, ...await options.fetchResource(request.url) };
     } catch (error) {
-      if (!destroyed) machine.onmsg(callMessage("__resourcesFetchResolve", { id: request.id, error: error.message }));
+      reply = { id: request.id, error: error.message || String(error) };
     }
+    if (!destroyed && requestedGeneration === generation)
+      machine.onmsg(callMessage("__resourcesFetchResolve", reply));
   }
   machine = new WasmWebMachine(module, root, {
     ...options,
@@ -2584,7 +2592,12 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
       try {
         const request = JSON.parse(text);
         if (request.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string")
-          return void answerFetch(request);
+          return void answerFetch(request).catch((error) => {
+            onError?.(error);
+            queueMicrotask(() => {
+              throw error;
+            });
+          });
       } catch {
       }
       options.onMessage?.(text);
@@ -2646,6 +2659,7 @@ async function createProjectOutputMachine({ root, scripts, options = {}, onError
       programs += nextScripts.length;
     },
     async load(project) {
+      generation++;
       moduleFiles = new Map((project.files || []).map((file) => [file.path, file.content]));
       const result = call("__resourcesOutputLoad", {
         tree: project.tree || [],
