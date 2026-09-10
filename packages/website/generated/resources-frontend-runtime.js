@@ -1417,14 +1417,17 @@ function GuestStyle(reference) {
   GuestObject.call(this, reference);
 }
 GuestStyle.prototype = Object.create(GuestObject.prototype);
-["backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis", "fontFamily", "fontFeatureSettings", "fontKerning", "fontSize", "fontStyle", "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing", "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow", "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "right", "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace", "width", "zIndex"].forEach(function (name) {
+["animationDuration", "animationName", "backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis", "fontFamily", "fontFeatureSettings", "fontKerning", "fontSize", "fontStyle", "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing", "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow", "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "right", "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace", "width", "zIndex"].forEach(function (name) {
+  var property = "";
+  for (var index = 0; index < name.length; index++) {
+    var letter = name[index];
+    property += letter >= "A" && letter <= "Z" ? "-" + letter.toLowerCase() : letter;
+  }
   Object.defineProperty(GuestStyle.prototype, name, {
+    get: function get() {
+      return immediate([3, this.reference, stringIndex("getPropertyValue"), [encode(property)]]);
+    },
     set: function set(value) {
-      var property = "";
-      for (var index = 0; index < name.length; index++) {
-        var letter = name[index];
-        property += letter >= "A" && letter <= "Z" ? "-" + letter.toLowerCase() : letter;
-      }
       if (value === "") {
         immediate([3, this.reference, stringIndex("removeProperty"), [encode(property)]]);
         return;

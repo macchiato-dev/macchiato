@@ -87,13 +87,22 @@ that does **not** make repeated loads equivalent to fresh contexts. Clean
 context replacement, including rejecting late fetch/module replies from a
 previous context, remains required before this lifecycle design is complete.
 
-The September 2026 browser verification also found an intermittent
-`event callback ... is unavailable` during repeated editor input. The native
-CodeMirror input path passed the full edit/save/error/recovery test, but a
-repeat run delivered a browser timeout after its guest callback slot had been
-released. This still needs a deterministic callback-lifetime regression and
-fix; a successful build or one passing editing run is not deployment-readiness
-evidence for it. Do not hide the error by ignoring missing callback indices.
+The September 2026 browser verification found intermittent
+`event callback ... is unavailable` failures during repeated editor input.
+The editor build regenerated its JavaScript environment but stamped an older
+demo bytecode file, retaining old callback semantics. It now compiles that
+environment explicitly before stamping. The artifact test compares the actual
+embedded runtime with freshly compiled source and failed on the stale build;
+the edit/save/error/recovery test passed after rebuilding. Browser tests that
+compile their own runtime cannot establish that the shipped artifact is fresh.
+Do not hide callback errors by ignoring missing indices.
+
+Caret testing must also cover held keys, not just isolated key presses.
+CodeMirror restarts its blink animation through inline `animationName` and
+`animationDuration` access. Those operations must reach the real CSSOM, with
+the machine's scoped keyframe names hidden on reads and preserved on writes.
+`packages/project-editor/test/caret.browser.test.js` compares repeated-arrow
+movement with the same native editor and checks that idle blinking still works.
 
 ## DOM authority
 

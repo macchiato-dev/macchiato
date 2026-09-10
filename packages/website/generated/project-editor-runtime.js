@@ -224,6 +224,12 @@ function createCssRenderer(dependencies) {
     scopeSelector: scopeSelector2,
     renderSvg
   } = dependencies;
+  const keyframeNames = /* @__PURE__ */ new Map();
+  const originalKeyframeNames = /* @__PURE__ */ new Map();
+  function readStyleProperty(style, property) {
+    const value = style.getPropertyValue(property);
+    return property === "animation" || property === "animation-name" ? value.replace(/[-_a-z][-_a-z0-9]*/gi, (name) => originalKeyframeNames.get(name) || name) : value;
+  }
   function installStylesheet(bytes, targetStyle = null, replace = false) {
     if (!(bytes instanceof Uint8Array) || bytes.length > 128 * 1024) {
       fail2("stylesheet operation must contain bounded bytes");
@@ -235,7 +241,6 @@ function createCssRenderer(dependencies) {
     if (targetStyle && itemCount !== 1) fail2("inline style must contain one rule");
     const probe = new CSSStyleSheet();
     const output = [];
-    const keyframeNames = /* @__PURE__ */ new Map();
     let lastDeclaration = null;
     function readDeclarations(declarationCount, ruleIndex) {
       if (declarationCount > 128) fail2("stylesheet rule has too many declarations");
@@ -438,6 +443,7 @@ ${nested.join("\n\n")}
           if (!/^[a-z_][a-z0-9_-]*$/i.test(name)) fail2("keyframe name is not representable");
           const scopedName = scopeClass ? `${scopeClass.slice(1)}--${name}` : name;
           keyframeNames.set(name, scopedName);
+          originalKeyframeNames.set(scopedName, name);
           const frameCount = reader.uint();
           if (frameCount > 256) fail2("keyframes rule has too many frames");
           const frames = [];
@@ -495,7 +501,7 @@ ${declarations.join("\n")}
     logicalHead.append(style);
     installedStyles.add(style);
   }
-  return installStylesheet;
+  return { installStylesheet, readStyleProperty };
 }
 var SVG_ELEMENTS = /* @__PURE__ */ new Set([
   "circle",
@@ -1450,7 +1456,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof CSSStyleDeclaration && name === "getPropertyValue" && args.length === 1 && typeof args[0] === "string" && isAllowedProperty(args[0])) {
-        return object.getPropertyValue(args[0]);
+        return readStyleProperty(object, args[0]);
       }
       if (object === hostDocument && name === "renderSvg") return renderSvg(args[0]);
       if (object === hostDocument && name === "getSelection" && args.length === 0) {
@@ -2127,7 +2133,7 @@ var WasmWebBridge = class {
       }
     }
     const renderSvg = createSvgRenderer(Reader, encoder, fail);
-    const installStylesheet = createCssRenderer({
+    const { installStylesheet, readStyleProperty } = createCssRenderer({
       CSS_VALUE_FUNCTIONS,
       Reader,
       hostDocument,

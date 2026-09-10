@@ -25,7 +25,7 @@ test("the host renders embedded CSS SVG and rejects unsafe image data before app
     window.install = createCssRenderer({ Reader, CSS_VALUE_FUNCTIONS: CONSTRAINED_CSS_VALUE_FUNCTIONS,
       hostDocument: document, logicalHead: document.head, installedStyles: new Set(),
       options: {}, pendingChecks: [], reject: fail, isAllowedProperty: isAllowedCssProperty,
-      renderSvg: createSvgRenderer(Reader, new TextEncoder(), fail) });
+      renderSvg: createSvgRenderer(Reader, new TextEncoder(), fail) }).installStylesheet;
   `;
   const code = await build({ stdin: { contents: source, resolveDir: new URL("../../../", import.meta.url).pathname },
     bundle: true, write: false, format: "iife", platform: "browser" });
