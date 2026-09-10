@@ -950,6 +950,26 @@ Further raw-ABI coverage is still needed for attribute/value restrictions on
 inherited nodes and HTML-assignment paths, including form associations and
 navigation. Creation and content-element checks alone do not prove those cases.
 
+### September 10 attribute-path and form parity
+
+Raw probes found different policies in HTML assignment and `setAttribute`:
+HTML could associate controls with an outside form, set network form methods,
+and bypass several element/value and size restrictions. The two paths now use
+one attribute setter. The HTML-only embedded-image and limited inline-style
+paths remain explicit; this does not widen the general `src` attribute grant.
+Nested templates pass through the same checks.
+
+The native form guard also checks the submitter, not just the form's location.
+A real click on an inherited button inside the guest formerly issued a request
+through its outside form. The guard now prevents that without suppressing
+unrelated outside form events or the frontend's explicit same-origin POST grant.
+Dialog forms, propagation behavior, and normal guest submit handlers still work.
+
+The focused 141-case run passed: raw content/reference tests, attribute checks
+through DOM calls, direct HTML, and nested templates in both container/document
+modes, plus native form activation and direct/iframe project output. The host
+change removes duplicated checks rather than adding another policy layer.
+
 ### September 10 binary reply copies
 
 A fresh DevTools sample of the 109 KB native insertion spent about 69% outside

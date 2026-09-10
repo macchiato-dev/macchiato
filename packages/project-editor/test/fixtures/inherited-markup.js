@@ -4,7 +4,16 @@ function probeMarkup(json) {
   var found = hostCall(document.reference, "getElementById", ["inherited"]);
   var target = new GuestObject(found[1]);
   var text = "body { background-image: url(/unexpected-style.png); }";
-  if (request.operation === "read") {
+  if (request.operation === "attribute") {
+    if (request.path === "dom") {
+      var element = hostCall(document.reference, "createElement", [request.tag]);
+      hostCall(element[1], "setAttribute", [request.name, request.value]);
+    } else {
+      var html = "<" + request.tag + " " + request.name + '=\"' + request.value + '\"></' + request.tag + ">";
+      if (request.path === "nested") html = "<template>" + html + "</template>";
+      immediate([2, target.reference, stringIndex("innerHTML"), html]);
+    }
+  } else if (request.operation === "read") {
     __wwcPostMessage(hostGet(target.reference, "textContent"));
     flush();
     return;

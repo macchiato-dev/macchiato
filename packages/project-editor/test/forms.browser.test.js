@@ -94,8 +94,19 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     "form.setAttribute('action', 'https://outside.test/')", "form.submit()", "form.requestSubmit()"] ) {
     await assert.rejects(page.evaluate(code => run(code), code));
   }
+  // A granted control can be associated with a form outside its subtree by
+  // inherited markup. Native activation must not acquire a navigation grant.
+  await page.evaluate(() => {
+    const outside = document.getElementById("outside");
+    outside.action = "/unexpected-associated-submit";
+    const associated = document.createElement("button");
+    associated.setAttribute("form", "outside");
+    associated.textContent = "Associated control";
+    document.getElementById("guest").append(associated);
+  });
+  await page.getByRole("button", { name: "Associated control", exact: true }).click();
   await page.waitForTimeout(100);
-  assert.equal(requests.length, before);
+  assert.deepEqual(requests.slice(before), [], "native form actions must not issue requests");
   assert.equal(page.url(), "http://forms.test/");
   assert.equal(await page.locator("#outside").evaluate(form =>
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))), !documentMode);

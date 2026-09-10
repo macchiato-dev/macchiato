@@ -32,9 +32,28 @@ test("inherited active markup cannot become raw guest CSS or executable content"
   cases.push({ operation: "clone", tag: "inert" });
   cases.push({ operation: "nestedImage", tag: "inert" }, { operation: "nestedScript", tag: "inert" });
   cases.push({ operation: "resolvedImage", tag: "template" });
+  const attributes = [
+    ["button", "form", "outside", false], ["button", "form", "", true],
+    ["form", "method", "post", false], ["form", "method", "dialog", true],
+    ["div", "name", "field", false], ["input", "name", "bad field", false],
+    ["input", "name", "field", true], ["div", "content", "data", false],
+    ["div", "tabindex", "99", false], ["div", "tabindex", "-1", true],
+    ["input", "placeholder", "x".repeat(513), false],
+    ["input", "value", "x".repeat(2049), false],
+    ["div", "data-note", "x".repeat(2049), false],
+    ["div", "contenteditable", "invalid", false],
+    ["div", "draggable", "true", true], ["div", "draggable", "invalid", false],
+  ];
+  for (const path of ["dom", "html", "nested"]) {
+    for (const [element, name, value, allowed] of attributes) cases.push({
+      operation: "attribute", tag: "inert", path, element, name, value, allowed,
+    });
+  }
   for (const mode of ["container", "document"]) {
-    for (const { operation, tag } of cases) {
-      await t.test(mode + " " + tag + " " + operation, async () => {
+    for (const probe of cases) {
+      const { operation, tag } = probe;
+      const label = operation === "attribute" ? `${probe.path} ${probe.element}.${probe.name} ${probe.allowed ? "allowed" : "denied"}` : tag + " " + operation;
+      await t.test(mode + " " + label, async () => {
         const page = await browser.newPage(), requests = [];
         try {
           await page.route("http://markup.test/**", route => {
@@ -48,7 +67,7 @@ test("inherited active markup cannot become raw guest CSS or executable content"
               : { body: '<div id="own"><style id="inherited">body { color: black; }</style></div>', contentType: "text/html" });
           });
           await page.goto("http://markup.test/");
-          const result = await page.evaluate(async ({ mode, operation, tag }) => {
+          const result = await page.evaluate(async ({ mode, operation, tag, probe }) => {
             const initial = document.getElementById("inherited");
             if (tag === "script") {
               const script = document.createElement("script");
@@ -83,22 +102,24 @@ test("inherited active markup cannot become raw guest CSS or executable content"
             let error = null;
             try {
               await machine.onmsg(0);
-              machine.onmsg(new TextEncoder().encode("\u0002probeMarkup\0" + JSON.stringify({ operation })));
+              machine.onmsg(new TextEncoder().encode("\u0002probeMarkup\0" + JSON.stringify({
+                ...probe, operation, tag: probe.element || tag,
+              })));
             } catch (caught) { error = String(caught); }
             finally { machine.destroy(); }
             return { reports, error, styles: document.querySelectorAll("style").length,
               escaped: window.__escapedMarkup === true, escapedBefore,
               image: document.querySelector("img")?.getAttribute("src") };
-          }, { mode, operation, tag });
+          }, { mode, operation, tag, probe });
           await page.waitForTimeout(50);
           assert.deepEqual(requests, [], "no unexpected resource request may leave the page");
           assert.equal(result.escapedBefore, false, "host setup leaves scripts inert");
           assert.equal(result.escaped, false, "guest cannot activate inherited scripts");
-          if (["read", "remove", "resolvedImage"].includes(operation) || (tag === "inert" && operation === "clone")) {
+          if (probe.allowed || ["read", "remove", "resolvedImage"].includes(operation) || (tag === "inert" && operation === "clone")) {
             assert.equal(result.error, null);
             assert.deepEqual(result.reports, ["ready", operation === "read" ? "body { color: black; }" : "finished"]);
           } else {
-            assert.match(result.error || "", /not allowed|image source must be an embedded project image/);
+            assert.match(result.error || "", /not allowed|only|must|too long/);
             assert.deepEqual(result.reports, ["ready"]);
           }
           if (operation === "resolvedImage") assert.match(result.image || "", /^data:image\/gif;base64,/);
