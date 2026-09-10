@@ -6,7 +6,7 @@ import test from "node:test";
 import { chromium } from "playwright";
 import { editorLanguages } from "../src/languages.js";
 
-for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${downloaded ? "downloaded" : "stamped"} language bytecode and Markdown fences`, { timeout: process.env.MACCHIATO_EDITOR_ENCODER_COMPARE || process.env.MACCHIATO_EDITOR_NOTIFICATION_COMPARE ? 120_000 : 60_000 }, async (t) => {
+for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${downloaded ? "downloaded" : "stamped"} language bytecode and Markdown fences`, { timeout: process.env.MACCHIATO_EDITOR_ENCODER_COMPARE || process.env.MACCHIATO_EDITOR_NOTIFICATION_COMPARE || process.env.MACCHIATO_EDITOR_MOUNT_TIMINGS ? 120_000 : 60_000 }, async (t) => {
   const root = new URL("../../../", import.meta.url).pathname;
   const working = resolve(root, "../macchiato-work");
   await mkdir(working, { recursive: true });
@@ -242,6 +242,40 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     }
     await page.evaluate(() => window.callGuest("selectTextWriter", { native: true }));
     if (profiler) await profiler.detach();
+  }
+  if (process.env.MACCHIATO_EDITOR_MOUNT_TIMINGS && !downloaded) {
+    // Real source, a bounded viewport, and no profiler. The guest times editor
+    // construction plus its DOM flush, excluding transport of the source and
+    // the later full-document correctness check. Run before/after separately.
+    await page.addStyleTag({ content: '#editor { height: 500px; } .cm-editor { height: 100%; }' });
+    for (const [path, file, language] of [
+      ['large.js', '../../website/content-form-client.js', 'javascript'],
+      ['large.rs', '../../../dev/microesnext/src/ponyfill.rs', 'rust'],
+    ]) {
+      const source = await readFile(new URL(file, import.meta.url), 'utf8');
+      await select(path, source, language);
+      const samples = [];
+      for (let iteration = 0; iteration < 4; iteration++) {
+        samples.push(await page.evaluate(request => window.callGuest('measureMount', request), { path, content: source }));
+        await page.waitForFunction(() => document.querySelectorAll('.cm-line span[class]').length > 0);
+        await page.waitForFunction(() => window.callGuest('inspectParsing', {}).available);
+        assert.equal((await page.evaluate(() => window.callGuest('inspectEditor', {}))).document, source);
+        await page.waitForTimeout(100);
+      }
+      t.diagnostic(JSON.stringify({ benchmark: 'initial-parse', path, characters: source.length, samples }));
+      // Parsing beyond the first viewport is deferred, not disabled. Typing
+      // and scrolling must still work without another click or remount.
+      await page.evaluate(() => window.callGuest('selectPosition', { head: 0 }));
+      await page.keyboard.type(' ');
+      await page.keyboard.press('Backspace');
+      assert.equal((await page.evaluate(() => window.callGuest('inspectEditor', {}))).document, source);
+      await page.evaluate(head => window.callGuest('selectPosition', { head }), source.length);
+      await page.waitForFunction(() => {
+        const state = window.callGuest('inspectParsing', {});
+        return state.viewportTo === state.length && state.available;
+      }, null, { timeout: 30000 });
+      assert.ok(await page.locator('.cm-line span[class]').count() > 0);
+    }
   }
   // The editor runs in MicroQuickJS, but project JavaScript runs in QuickJS.
   // Typing a comment must not reject valid modern syntax using the editor's

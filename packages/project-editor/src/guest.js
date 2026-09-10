@@ -196,9 +196,9 @@ function mountEditor(content = 'const greeting = "Hello, constrained editor!";\n
   const state = EditorState.create({ doc: content, extensions: editorExtensions() });
   globalThis.__codeEditorView = new EditorView({ state, parent });
   // A separately loaded grammar may exceed CodeMirror's first synchronous
-  // parse slice. Finish the visible document now so its initial paint does not
-  // wait for a guest timer round trip.
-  forceParsing(globalThis.__codeEditorView, state.doc.length, 250);
+  // parse slice. Prioritize the viewport using CodeMirror's default budget;
+  // its parse worker handles the rest as the user scrolls or the editor idles.
+  forceParsing(globalThis.__codeEditorView);
   notify({
     type: "ready", characters: state.doc.length, lines: state.doc.lines,
   });

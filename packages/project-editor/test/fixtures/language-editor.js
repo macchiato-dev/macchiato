@@ -46,6 +46,34 @@ function selectFile(json) {
   inspectEditor();
 }
 
+function measureMount(json) {
+  var request = JSON.parse(json);
+  request.language = globalThis.__codeEditorLanguageForPath(request.path);
+  if (globalThis.__codeEditorView) globalThis.__codeEditorView.destroy();
+  globalThis.__codeEditorView = null;
+  var encoded = JSON.stringify(request), started = performance.now();
+  globalThis.__codeEditorSetContent(encoded);
+  flush();
+  var elapsed = performance.now() - started;
+  var view = globalThis.__codeEditorView;
+  var language = globalThis.__codeMirrorRequire("@codemirror/language");
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify({
+    elapsed: elapsed, parsedTo: language.syntaxTree(view.state).length,
+    viewportTo: view.viewport.to, length: view.state.doc.length
+  }));
+  flush();
+}
+
+function inspectParsing() {
+  var view = globalThis.__codeEditorView;
+  var language = globalThis.__codeMirrorRequire("@codemirror/language");
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify({
+    viewportTo: view.viewport.to, length: view.state.doc.length,
+    available: language.syntaxTreeAvailable(view.state, view.viewport.to)
+  }));
+  flush();
+}
+
 function inspectEditor() {
   globalThis.__wwcPostMessage("__wwcResponse:" + globalThis.__codeEditorInspect());
   flush();
