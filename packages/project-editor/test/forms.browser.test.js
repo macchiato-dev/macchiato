@@ -8,7 +8,10 @@ import { compileProjectFiles } from "../src/single-file-compiler.js";
 for (const documentMode of [false, true]) test(`dialog forms work without network submission (${documentMode ? "document" : "element"})`, async t => {
   const runtime = await readFile(new URL("../../website/generated/project-quickjs-runtime.wasm", import.meta.url));
   const machine = await build({
-    entryPoints: [new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname],
+    stdin: { contents: `
+      export { default } from ${JSON.stringify(new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname)};
+      export { QuickJSRuntime } from ${JSON.stringify(new URL("../../../dev/wasm-web-runtimes/quickjs/context-runtime.js", import.meta.url).pathname)};
+    ` },
     bundle: true, write: false, format: "esm", platform: "browser",
   });
   const browser = await chromium.launch();
@@ -27,8 +30,9 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
   });
   await page.goto("http://forms.test/");
   await page.evaluate(async documentMode => {
-    const { default: Machine } = await import("/machine.js");
-    window.machine = new Machine(await WebAssembly.compileStreaming(fetch("/runtime.wasm")),
+    const { default: Machine, QuickJSRuntime } = await import("/machine.js");
+    window.engine = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/runtime.wasm")));
+    window.machine = new Machine(engine.createSession(),
       documentMode ? document : document.querySelector("#guest"), {});
     await machine.onmsg(0);
     window.run = async source => {
@@ -95,7 +99,7 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
   assert.equal(page.url(), "http://forms.test/");
   assert.equal(await page.locator("#outside").evaluate(form =>
     form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))), !documentMode);
-  await page.evaluate(() => machine.destroy());
+  await page.evaluate(() => { machine.destroy(); engine.destroy(); });
   assert.deepEqual(errors, []);
   // Server-rendered website forms use an explicit same-origin grant, unlike
   // a project output's link-pattern callback.

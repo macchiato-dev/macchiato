@@ -405,6 +405,7 @@ export class ResourcesOutputDevice {
     const channel = new MessageChannel();
     const pending = new Map();
     let nextRequest = 1;
+    let disposed = false;
     return new Promise((resolve, reject) => {
       const fail = (message) => {
         reject(new Error(message));
@@ -418,7 +419,15 @@ export class ResourcesOutputDevice {
         }
         if (data.type === "failed") return fail(data.error || "Project output frame failed");
         if (data.type === "ready") return resolve(Object.freeze({
-          destroy() { request("destroy", {}).catch(() => {}); channel.port1.close(); frame.remove(); },
+          destroy() {
+            if (disposed) return;
+            disposed = true;
+            channel.port1.postMessage({ protocol, type: "request", id: nextRequest++, name: "destroy" });
+            for (const operation of pending.values()) operation.reject(new Error("Project output was destroyed"));
+            pending.clear();
+            channel.port1.close();
+            frame.remove();
+          },
           inspect: () => request("inspect", {}),
           setContent: (tree) => request("setContent", { tree }),
           run: (scripts) => request("run", { scripts }),
@@ -433,6 +442,7 @@ export class ResourcesOutputDevice {
       };
       channel.port1.start();
       const request = (name, operationPayload) => new Promise((requestResolve, requestReject) => {
+        if (disposed) return requestReject(new Error("Project output was destroyed"));
         const id = nextRequest++;
         pending.set(id, { resolve: requestResolve, reject: requestReject });
         channel.port1.postMessage({ protocol, type: "request", id, name, payload: operationPayload });

@@ -16,6 +16,12 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage();
+  await page.addInitScript(() => {
+    window.outputInstances = 0;
+    WebAssembly.Instance = new Proxy(WebAssembly.Instance, {
+      construct(target, args) { outputInstances++; return Reflect.construct(target, args); },
+    });
+  });
   const errors = [], network = [];
   const heldFetches = [];
   let fetchArrived;
@@ -96,6 +102,34 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   files[1].content = 'import { result } from "./lib/a.js"; const loaded = await import("./lib/value.js"); await new Promise(resolve => setTimeout(resolve, 5)); document.querySelector("main").textContent = result + loaded.value;';
   await load(files);
   assert.equal(await surface.innerText(), "AB70");
+  // Classic-script declarations, timers, and CSS belong to one load too.
+  const classic = [
+    { path: "index.html", content: '<style>main { color: rebeccapurple; }</style><main></main><script src="app.js"></script>' },
+    { path: "app.js", content: 'const privateValue = "Fresh"; document.querySelector("main").textContent = privateValue; setTimeout(() => { throw Error("Old timer survived replacement"); }, 60000);' },
+  ];
+  for (let index = 0; index < 6; index++) await load(classic);
+  assert.equal(await surface.innerText(), "Fresh");
+  const documentFrame = iframe ? page.frames().find(frame => frame !== page.mainFrame()) : page;
+  assert.equal(await documentFrame.evaluate(() => outputInstances), 1, "loads reuse the actual Wasm instance");
+  assert.equal(await documentFrame.locator('style').count(), 1, "old application styles are removed");
+  classic[1].content = 'document.querySelector("main").textContent = "Failed replacement"; throw Error("New code failed");';
+  await assert.rejects(load(classic), /New code failed/);
+  assert.equal(await surface.innerText(), "Fresh", "failed preparation keeps the visible application");
+  assert.equal(await documentFrame.locator('style').count(), 1);
+  const slowFiles = [
+    { path: "index.html", content: '<main>Preparing</main><script type="module" src="slow.js"></script>' },
+    { path: "slow.js", content: 'await new Promise(resolve => setTimeout(resolve, 60000));' },
+  ];
+  await page.evaluate(project => {
+    window.supersededLoad = window.output.load(project).then(() => "unexpected success", error => error.message);
+  }, { ...compileProjectFiles(slowFiles), files: slowFiles });
+  await documentFrame.locator('main').filter({ hasText: 'Preparing' }).waitFor({ state: 'attached' });
+  assert.equal(await documentFrame.locator('main').filter({ hasText: 'Preparing' }).isVisible(), false);
+  assert.equal(await documentFrame.locator('main').filter({ hasText: 'Fresh' }).isVisible(), true);
+  classic[1].content = 'const privateValue = "Replaced slow load"; document.querySelector("main").textContent = privateValue;';
+  await load(classic);
+  assert.match(await page.evaluate(() => supersededLoad), /replaced or destroyed/);
+  assert.equal(await surface.innerText(), 'Replaced slow load');
   // A stale fetch must not resume application code against a newer output.
   files[1].content = 'fetch("https://resource.test/old").then(r => r.text()).then(text => document.querySelector("main").textContent = text);';
   const startFetch = () => page.evaluate(project => window.output.load(project), {

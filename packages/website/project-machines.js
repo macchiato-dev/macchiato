@@ -1,5 +1,8 @@
 import WasmWebMachine from "../../dev/wasm-web-machine/dist/module/wasm-web-machine.js";
 import { editorLanguages } from "../project-editor/src/languages.js";
+import { ProjectOutput } from "./project-output-session.js";
+import { QuickJSRuntime } from "../../dev/wasm-web-runtimes/quickjs/context-runtime.js";
+import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 const encoder = new TextEncoder(), decoder = new TextDecoder(), runtimeModules = new Map();
 const editorBytecodeNames = new Set(editorLanguages.map(item => `language-${item.package}.bin`));
 const editorBytecodes = new Map();
@@ -84,118 +87,23 @@ export function createProjectImageResolver(files = []) {
   }
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
-export async function createProjectOutputMachine({ root, scripts, options = {}, onError }) {
+export async function createProjectOutputMachine({ root, scripts = [], options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  let reportedError = null, response, starting = true, destroyed = false, machine;
-  let generation = 0;
-  let moduleFiles = new Map((options.files || []).map(file => [file.path, file.content]));
-  const moduleRequests = new Map();
-  let nextModuleRequest = 1;
-  async function answerFetch(request) {
-    const requestedGeneration = generation;
-    let reply;
-    try {
-      if (typeof options.fetchResource !== "function") throw new Error("Project network access is disabled");
-      reply = { id: request.id, ...await options.fetchResource(request.url) };
-    } catch (error) { reply = { id: request.id, error: error.message || String(error) }; }
-    if (!destroyed && requestedGeneration === generation)
-      machine.onmsg(callMessage("__resourcesFetchResolve", reply));
-  }
-  machine = new WasmWebMachine(module, root, { ...options, onError,
-    services: { ...options.services, call(name, path) {
-      if (name !== "module.source") {
-        if (typeof options.services?.call === "function") return options.services.call(name, path);
-        throw new Error(`Project service is unavailable: ${name}`);
-      }
-      return JSON.stringify(moduleFiles.get(path) ?? null);
-    } }, onMessage(text) {
-    if (text.startsWith("__wwcModule:")) {
-      const result = JSON.parse(text.slice(12));
-      const pending = moduleRequests.get(result.id);
-      if (pending) {
-        moduleRequests.delete(result.id);
-        if (result.error) pending.reject(new Error(result.error)); else pending.resolve();
-      }
-      return;
-    }
-    if (text.startsWith("__wwcResponse:")) { response = text.slice(14); return; }
-    if (text.startsWith("__wwcError:") && !reportedError) {
-      reportedError = new Error(text.slice(11));
-      if (!starting) queueMicrotask(() => onError?.(reportedError));
-      return;
-    }
-    try {
-      const request = JSON.parse(text);
-      if (request.type === "fetch" && Number.isSafeInteger(request.id) && typeof request.url === "string")
-        return void answerFetch(request).catch(error => {
-          onError?.(error);
-          queueMicrotask(() => { throw error; });
-        });
-    } catch {}
-    options.onMessage?.(text);
-  } });
+  const output = new ProjectOutput(WasmWebMachine, module, root, project => {
+    const files = project.files || options.files || [];
+    return { ...options, files,
+      environment: { ...options.environment, ...project.environment },
+      fetchResource: options.fetchResource ?? createProjectFetch(files, project.allowedFetchOrigins || []),
+      resolveImage: options.resolveImage ?? createProjectImageResolver(files),
+      allowNavigate: options.allowNavigate ?? (url => urlMatchesAllowedPatterns(url, project.allowedLinkPatterns || [])),
+    };
+  }, onError);
+  try { await output.load({ scripts, files: options.files }); }
+  catch (error) { output.destroy(); throw error; }
   const machineId = `wasm-web-machine-${nextMachine++}`;
-  await machine.onmsg(0);
-  async function evaluate(script, index) {
-    reportedError = null;
-    if (script.module) {
-      const id = nextModuleRequest++;
-      let resolve, reject;
-      const complete = new Promise((yes, no) => { resolve = yes; reject = no; });
-      moduleRequests.set(id, { resolve, reject });
-      try { call("__resourcesOutputRunModule", { id, source: script.source, code: script.code }); }
-      catch (error) { moduleRequests.delete(id); reject(error); }
-      return complete;
-    }
-    await machine.onmsg(taggedMessage(1, script.code));
-    if (!reportedError) return;
-    const source = typeof script?.source === "string" && script.source ? script.source : `script ${index + 1}`;
-    throw new Error(`${source}: ${reportedError.message}`);
-  }
-  try {
-    for (let index = 0; index < scripts.length; index++) await evaluate(scripts[index], index);
-  } catch (error) { machine.destroy(); throw error; }
-  let programs = scripts.length;
-  starting = false;
-  function call(name, payload) {
-    response = undefined;
-    reportedError = null;
-    try { machine.onmsg(callMessage(name, payload)); }
-    catch (error) { throw new Error(`${name}: ${error?.message || String(error)}`); }
-    if (reportedError) throw new Error(`${name}: ${reportedError.message}`);
-    if (response === undefined) throw new Error(`Guest function ${name} did not respond`);
-    return JSON.parse(response);
-  }
   return Object.freeze({
-    setContent(tree) {
-      const result = call("__resourcesOutputSetContent", tree);
-      machine.onmsg(0);
-      return result;
-    },
-    async run(nextScripts) {
-      for (let index = 0; index < nextScripts.length; index++) await evaluate(nextScripts[index], index);
-      programs += nextScripts.length;
-    },
-    async load(project) {
-      generation++;
-      moduleFiles = new Map((project.files || []).map(file => [file.path, file.content]));
-      const result = call("__resourcesOutputLoad", {
-        tree: project.tree || [],
-        stylesheets: project.stylesheets || [],
-      });
-      machine.onmsg(0);
-      const nextScripts = project.scripts || [];
-      for (let index = 0; index < nextScripts.length; index++) await evaluate(nextScripts[index], index);
-      programs += nextScripts.length;
-      return result;
-    },
-    destroy() {
-      destroyed = true;
-      for (const pending of moduleRequests.values()) pending.reject(new Error("Project output was destroyed"));
-      moduleRequests.clear(); moduleFiles.clear();
-      machine.destroy();
-    },
-    inspect() { return { runtime: "quickjs", programs, machine: { machineId } }; },
+    setContent: output.setContent, run: output.run, load: output.load, destroy: output.destroy,
+    inspect: () => ({ ...output.inspect(), machine: { machineId } }),
   });
 }
 export async function createProjectBuildMachine() {
@@ -237,15 +145,16 @@ export async function createProjectBuildMachine() {
 }
 export async function createProjectAppMachine(root) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
+  const runtime = new QuickJSRuntime(module);
   let requested = false, machineError = null;
-  const machine = new WasmWebMachine(module, root, { onMessage(text) {
+  const machine = new WasmWebMachine(runtime.createSession(), root, { onMessage(text) {
     requested ||= text === "mount-project-editor";
     if (text.startsWith("__wwcError:")) machineError ||= text.slice(11);
   } });
   const machineId = `wasm-web-machine-${nextMachine++}`;
   await machine.onmsg(0); await machine.onmsg(taggedMessage(1, "__wwcPostMessage('mount-project-editor')"));
   if (!requested) throw new Error(machineError || "Project app did not request its editor");
-  return Object.freeze({ machineId, destroy() { machine.destroy(); } });
+  return Object.freeze({ machineId, destroy() { machine.destroy(); runtime.destroy(); } });
 }
 export async function createProjectEditorMachine({ root, onChange, onReady,
   onLimit, onError, onRequest, services, limits, allowNavigate = false }) {

@@ -9,7 +9,10 @@ test("guest media queries follow browser changes without resize or polling", asy
   // browser-only mock of the guest's DOM wrappers.
   const runtime = await readFile(new URL("../../website/generated/project-quickjs-runtime.wasm", import.meta.url));
   const machine = await build({
-    entryPoints: [new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname],
+    stdin: { contents: `
+      export { default } from ${JSON.stringify(new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname)};
+      export { QuickJSRuntime } from ${JSON.stringify(new URL("../../../dev/wasm-web-runtimes/quickjs/context-runtime.js", import.meta.url).pathname)};
+    ` },
     bundle: true, write: false, format: "esm", platform: "browser",
   });
   const browser = await chromium.launch();
@@ -27,10 +30,11 @@ test("guest media queries follow browser changes without resize or polling", asy
   });
   await page.goto("http://media.test/");
   await page.evaluate(async () => {
-    const { default: WasmWebMachine } = await import("/machine.js");
+    const { default: WasmWebMachine, QuickJSRuntime } = await import("/machine.js");
     window.messages = [];
+    window.engine = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/runtime.wasm")));
     window.machine = new WasmWebMachine(
-      await WebAssembly.compileStreaming(fetch("/runtime.wasm")),
+      engine.createSession(),
       document.querySelector("#guest"),
       { onMessage: (message) => window.messages.push(message) },
     );
@@ -76,7 +80,7 @@ test("guest media queries follow browser changes without resize or polling", asy
   await page.emulateMedia({ colorScheme: "dark" });
   await page.waitForFunction((n) => window.messages.length > n, before);
   await page.evaluate(() => window.runGuest("query.removeListener(changed);"));
-  await page.evaluate(() => window.machine.destroy());
+  await page.evaluate(() => { machine.destroy(); engine.destroy(); });
   await page.emulateMedia({ colorScheme: "light" });
   assert.deepEqual(errors, []);
 });

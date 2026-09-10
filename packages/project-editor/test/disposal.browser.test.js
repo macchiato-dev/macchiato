@@ -7,7 +7,10 @@ import { chromium } from "playwright";
 test("disposing a machine cancels pending work and ambient listeners", async t => {
   const runtime = await readFile(new URL("../../website/generated/project-quickjs-runtime.wasm", import.meta.url));
   const machine = await build({
-    entryPoints: [new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname],
+    stdin: { contents: `
+      export { default } from ${JSON.stringify(new URL("../../../dev/wasm-web-machine/src/wasm-web-machine.ts", import.meta.url).pathname)};
+      export { QuickJSRuntime } from ${JSON.stringify(new URL("../../../dev/wasm-web-runtimes/quickjs/context-runtime.js", import.meta.url).pathname)};
+    ` },
     bundle: true, write: false, format: "esm", platform: "browser",
   });
   const browser = await chromium.launch();
@@ -24,8 +27,8 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
   });
   await page.goto("http://dispose.test/");
   await page.evaluate(async () => {
-    const { default: Machine } = await import("/machine.js");
-    const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
+    const { default: Machine, QuickJSRuntime } = await import("/machine.js");
+    const engine = window.engine = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/runtime.wasm")));
     window.messages = [];
     const pendingTimers = new Set(), pendingFrames = new Set(), listeners = new Map();
     const subscriptions = new Set();
@@ -59,7 +62,7 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     }
     if (listeners.size) throw Error('Failed construction retained its submission guard');
     for (let index = 0; index < 10; index++) {
-      const machine = new Machine(module, document.getElementById("guest"), {
+      const machine = new Machine(engine.createSession(), document.getElementById("guest"), {
         frameInterval: index % 2 ? 30 : 0,
         onMessage: message => messages.push(message),
         services: {
@@ -102,7 +105,7 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     dispatchEvent(new Event('resize'));
     dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
     document.dispatchEvent(new MouseEvent('click'));
-    const live = new Machine(module, document.getElementById('guest'), {
+    const live = new Machine(engine.createSession(), document.getElementById('guest'), {
       onMessage: message => messages.push(message),
     });
     await live.onmsg(0);
@@ -132,7 +135,7 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     Object.assign(window, { setTimeout: timeout, clearTimeout: clear,
       requestAnimationFrame: frame, cancelAnimationFrame: cancel,
       addEventListener: add, removeEventListener: remove });
-    window.timerMachine = new Machine(module, document.getElementById('guest'), {
+    window.timerMachine = new Machine(engine.createSession(), document.getElementById('guest'), {
       onMessage: message => messages.push(message),
     });
     await timerMachine.onmsg(0);
@@ -158,6 +161,6 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
   await page.waitForTimeout(120);
   assert.deepEqual((await page.evaluate(() => messages)).sort(),
     ['interval OK', 'live callback', 'no arguments OK', 'timeout OK']);
-  await page.evaluate(() => timerMachine.destroy());
+  await page.evaluate(() => { timerMachine.destroy(); engine.destroy(); });
   assert.deepEqual(errors, []);
 });

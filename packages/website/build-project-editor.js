@@ -170,6 +170,7 @@ execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"]
     ...process.env,
     WWC_CANONICAL_HOST: "1",
     WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "examples", "codemirror", "generated", "canonical-dom.js"),
+    WWC_MULTICONTEXT: "1",
     WWC_APPLICATION_SOURCE: join(directory, "project-output-bootstrap.js"),
   },
   stdio: "inherit",
