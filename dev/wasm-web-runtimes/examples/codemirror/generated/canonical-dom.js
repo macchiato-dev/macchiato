@@ -409,6 +409,8 @@ Writer.prototype.byte = function (value) {
 };
 
 Writer.prototype.uint = function (value) {
+  // Keep the byte loop local in interpreted guests. Arithmetic, rather than
+  // a 32-bit shift, preserves all safe-integer payloads in this wire format.
   var bytes = this.bytes, at = this.at;
   do {
     if (at >= bytes.length) {
@@ -1626,15 +1628,25 @@ Object.defineProperties(GuestObject.prototype, {
     var children = childrenOf(this);
     return children.length ? children[children.length - 1] : null;
   } },
-  // Sibling reads must see native edits before MutationObserver delivery.
-  // They also avoid scanning the parent's child array for every traversal step.
+  // A saved index is only a hint: validate the slot on every read, so reorders
+  // and moves between parents cannot make it point at a different node.
   nextSibling: { get: function () {
-    var result = hostGet(this.reference, "nextSibling");
-    return result === null ? null : nodeForReference(result[1]);
+    var parent = parentOf(this);
+    if (!parent) return null;
+    var siblings = childrenOf(parent), index = this._guestChildIndex;
+    if (index === undefined || siblings[index] !== this) {
+      this._guestChildIndex = index = siblings.indexOf(this);
+    }
+    return index >= 0 ? siblings[index + 1] || null : null;
   } },
   previousSibling: { get: function () {
-    var result = hostGet(this.reference, "previousSibling");
-    return result === null ? null : nodeForReference(result[1]);
+    var parent = parentOf(this);
+    if (!parent) return null;
+    var siblings = childrenOf(parent), index = this._guestChildIndex;
+    if (index === undefined || siblings[index] !== this) {
+      this._guestChildIndex = index = siblings.indexOf(this);
+    }
+    return index >= 0 ? siblings[index - 1] || null : null;
   } }
 });
 Object.defineProperty(GuestElement.prototype, "children", {
