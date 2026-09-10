@@ -1192,6 +1192,25 @@ been deployed to Bunny; bulk native-input performance remains unfinished.
 
 ### Standalone compiler parity
 
+### September 10 UTF-8 encoding experiment
+
+The first-page 109 KB typing profile spends most time in guest execution, not
+browser layout. Disposable bytecode checkpoints attributed 1.26 seconds across
+24 edits to snapshot normalization. Its TextEncoder builds an array of byte
+values in interpreted JavaScript, even though this runtime already has a native
+UTF-8 writer. The native `js_array_every` profile label covers map, filter,
+forEach, and some as well as every; it does not identify an every call site.
+
+An experiment reuses the guest-only native writer for TextEncoder and slices
+off its wire length prefix. It grants no host capability and adds no C API.
+The fallback now handles lone surrogates and omitted input like the browser.
+Tests compare both paths with native TextEncoder, including embedded NUL,
+surrogate pairs and non-pairs, multibyte lengths, and retained buffers after GC.
+The previous built runtime fails those parity checks; timing and final build
+verification of the replacement are pending.
+
+### Standalone compiler parity
+
 The temporary playground keeps its page integration behind a controller and a
 small set of related devices. A session device owns namespaced ephemeral state,
 an editor device owns the editor machine, a compiler device selects a

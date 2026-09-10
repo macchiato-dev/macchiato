@@ -127,6 +127,13 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     await page.keyboard.press("Control+z");
     assert.equal((await page.evaluate(() => window.callGuest("inspectEditor", {}))).document, original);
   }
+  const encoderInputs = ['', 'ASCII\0\n', 'café 中文 😀', '\ud800', '\udc00',
+    '\ud800A', '\ud800\ud800\udc00', '\udc00\ud800', '\ufeff',
+    'a'.repeat(127), 'a'.repeat(128), '€'.repeat(5500), null, 123, true];
+  const expectedBytes = [...encoderInputs, undefined].map(value => [...new TextEncoder().encode(value)]);
+  const encoderResults = await page.evaluate(inputs => window.callGuest('encodeTextCases', inputs), encoderInputs);
+  assert.deepEqual(encoderResults, [expectedBytes, expectedBytes],
+    'native guest writer and JavaScript fallback match browser TextEncoder');
   async function select(path, content, language) {
     let info = await page.evaluate((request) => window.callGuest("selectFile", request), { path, content });
     if (downloaded) {

@@ -5,13 +5,24 @@ globalThis.__microQuickJS = true;
 if (typeof TextEncoder === "undefined") {
   globalThis.TextEncoder = function TextEncoder() {};
   TextEncoder.prototype.encode = function (text) {
-    text = String(text);
+    text = text === undefined ? "" : String(text);
+    // The guest's native wire writer already copies arena UTF-8 and replaces
+    // lone surrogates. Remove its length prefix, returning an independent,
+    // exactly sized buffer. No host call or borrowed arena pointer is involved.
+    if (typeof __wwcWriteText === "function") {
+      var bytes = new Uint8Array(text.length * 3 + 5);
+      var end = __wwcWriteText(bytes, 0, text), start = 0;
+      while (bytes[start++] & 128) {}
+      return bytes.slice(start, end);
+    }
     var values = [];
     for (var index = 0; index < text.length; index++) {
       var scalar = text.charCodeAt(index);
-      if (scalar >= 0xd800 && scalar <= 0xdbff && index + 1 < text.length) {
-        scalar = 0x10000 + ((scalar - 0xd800) << 10) + (text.charCodeAt(++index) - 0xdc00);
-      }
+      var next = text.charCodeAt(index + 1);
+      if (scalar >= 0xd800 && scalar <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {
+        scalar = 0x10000 + ((scalar - 0xd800) << 10) + (next - 0xdc00);
+        index++;
+      } else if (scalar >= 0xd800 && scalar <= 0xdfff) scalar = 0xfffd;
       if (scalar < 0x80) values.push(scalar);
       else if (scalar < 0x800) values.push(0xc0 | scalar >> 6, 0x80 | scalar & 63);
       else if (scalar < 0x10000) values.push(0xe0 | scalar >> 12,

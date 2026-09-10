@@ -4,6 +4,25 @@ globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoade
 var nativeTextWriter = globalThis.__wwcWriteText;
 var localNotices = [];
 
+function encodeTextCases(json) {
+  var inputs = JSON.parse(json), result = [];
+  [true, false].forEach(function (native) {
+    globalThis.__wwcWriteText = native ? nativeTextWriter : undefined;
+    var encoder = new TextEncoder();
+    var encoded = inputs.map(function (text) { return encoder.encode(text); });
+    encoded.push(encoder.encode());
+    // Later writes and collection must not invalidate previous results.
+    encoder.encode('unrelated later buffer'); gc();
+    result.push(encoded.map(function (bytes) {
+      if (bytes.byteOffset !== 0 || bytes.buffer.byteLength !== bytes.length)
+        throw new Error('TextEncoder must return an exactly sized independent buffer');
+      return Array.from(bytes);
+    }));
+  });
+  globalThis.__wwcWriteText = nativeTextWriter;
+  __wwcPostMessage('__wwcResponse:' + JSON.stringify(result)); flush();
+}
+
 function localNotifications(json) {
   var request = JSON.parse(json);
   globalThis.__codeEditorNotify = request.enabled ? function (message) {
