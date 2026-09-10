@@ -787,6 +787,23 @@ Export `ef95528` passed its 151-file manifest, compressed backend execution,
 and exported-browser checks for Mahjong, Cat Memory, the 50-slide tour, and
 SQLite fragment navigation. It has not been deployed to Bunny.
 
+### September 10 delegated input containment
+
+Direct-ABI tests showed that container-mode document/window listeners could
+read and cancel keyboard, input, change, and clipboard events originating in
+another host subtree. Those input events now require a target inside a grant
+or an original dispatch path through a granted root. The latter preserves
+document delegation when an earlier native listener removes the target.
+The check is selected once when registering each listener, not by allocating
+an event-type list on every pointer movement.
+
+The regression covers single roots, root collections, explicit portals, and
+full-document machines. It checks both message delivery and native default
+prevention, outside pointer delivery, and removal during dispatch. Document
+mode retains its full-page input behavior. Outside pointer events remain
+available for dismissal and dragging; this change does not by itself audit
+every operation reachable through an event's target reference.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices

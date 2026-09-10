@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
 
-test("document mutation observation covers only the machine's granted roots", async t => {
+test("document observers and delegated input respect the machine's granted roots", async t => {
   const root = new URL("../../../", import.meta.url).pathname;
   const working = resolve(root, "../macchiato-work");
   await mkdir(working, { recursive: true });
@@ -70,6 +70,56 @@ test("document mutation observation covers only the machine's granted roots", as
       assert.deepEqual(await page.evaluate(() => window.reports.slice(2)), [{ values:
         mode === "document" ? ["own-new", "portal-new", "outside-new"]
           : mode === "element" ? ["own-new"] : ["own-new", "portal-new"] }]);
+      await page.evaluate(() => {
+        window.machine.onmsg(new TextEncoder().encode("\u0002startScopeEvents\0{}"));
+        window.reports = [];
+      });
+      for (const id of ["own", "portal", "outside"]) {
+        const allowed = mode === "document" || id === "own" ||
+          (id === "portal" && mode !== "element");
+        const result = await page.evaluate(id => {
+          window.reports = [];
+          const target = document.getElementById(id);
+          const events = [
+            new KeyboardEvent("keydown", { key: "secret-" + id, bubbles: true, cancelable: true }),
+            new InputEvent("beforeinput", { data: "private-" + id, bubbles: true, cancelable: true }),
+            new Event("change", { bubbles: true, cancelable: true }),
+            new ClipboardEvent("copy", { bubbles: true, cancelable: true }),
+          ];
+          return { accepted: events.map(event => target.dispatchEvent(event)), reports: window.reports };
+        }, id);
+        assert.deepEqual(result, allowed ? {
+          accepted: [false, false, false, false], reports: [
+            { type: "keydown", value: "secret-" + id },
+            { type: "keydown", value: "secret-" + id },
+            { type: "beforeinput", value: "private-" + id },
+            { type: "change", value: null }, { type: "copy", value: null },
+          ],
+        } : { accepted: [true, true, true, true], reports: [] },
+        id + ": document/window listeners must not read or cancel another subtree's input");
+      }
+      // Outside pointer events still support dismissal and completing drags.
+      assert.deepEqual(await page.evaluate(() => {
+        window.reports = [];
+        for (const type of ["mousedown", "mouseup"])
+          document.getElementById("outside").dispatchEvent(new MouseEvent(type, { bubbles: true }));
+        return window.reports;
+      }), [{ type: "mousedown", value: null }, { type: "mouseup", value: null }]);
+      assert.deepEqual(await page.evaluate(() => {
+        window.reports = [];
+        const root = document.getElementById("own"), input = document.createElement("input");
+        root.append(input);
+        // Native listeners can detach a browser-created target before document
+        // delegation runs. The dispatch path still proves the original grant.
+        root.addEventListener("keydown", () => input.remove(), { capture: true, once: true });
+        input.dispatchEvent(new KeyboardEvent("keydown", {
+          key: "detached-during-dispatch", bubbles: true, cancelable: true,
+        }));
+        return window.reports;
+      }), [
+        { type: "keydown", value: "detached-during-dispatch" },
+        { type: "keydown", value: "detached-during-dispatch" },
+      ]);
       assert.deepEqual(errors, []);
       await page.evaluate(() => window.machine.destroy());
     } finally { await page.close(); }
