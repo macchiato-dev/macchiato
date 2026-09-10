@@ -142,6 +142,66 @@ static JSValue guest_now(JSContext *ctx, JSValueConst this_value,
     return JS_NewFloat64(ctx, host_now());
 }
 
+/* Write length-prefixed UTF-8 inside guest memory. This avoids interpreting
+   two character loops for every DOM string, including embedded images. No
+   host call or user coercion occurs, and rejected writes leave bytes intact. */
+static JSValue guest_write_text(JSContext *ctx, JSValueConst this_value,
+                                int argc, JSValueConst *argv)
+{
+    JSValue buffer;
+    uint8_t *destination;
+    const uint8_t *source;
+    size_t offset, capacity, element_size, buffer_length, length, header = 1;
+    size_t at, remaining;
+    double start;
+    (void)this_value;
+    if (argc != 3 || !JS_IsNumber(argv[1]) || !JS_IsString(argv[2]) ||
+        JS_ToFloat64(ctx, &start, argv[1]))
+        return JS_ThrowTypeError(ctx, "writeText expects bytes, offset and string");
+    buffer = JS_GetTypedArrayBuffer(ctx, argv[0], &offset, &capacity, &element_size);
+    if (JS_IsException(buffer)) return buffer;
+    destination = JS_GetArrayBuffer(ctx, &buffer_length, buffer);
+    if (!destination || element_size != 1 || offset > buffer_length ||
+        capacity > buffer_length - offset) {
+        JS_FreeValue(ctx, buffer);
+        return JS_ThrowTypeError(ctx, "writeText expects bounded bytes");
+    }
+    if (!(start >= 0 && start <= capacity) || start != (size_t)start) {
+        JS_FreeValue(ctx, buffer);
+        return JS_ThrowRangeError(ctx, "invalid text offset");
+    }
+    source = (const uint8_t *)JS_ToCStringLen(ctx, &length, argv[2]);
+    if (!source) { JS_FreeValue(ctx, buffer); return JS_EXCEPTION; }
+    for (remaining = length; remaining >= 128; remaining /= 128) header++;
+    at = (size_t)start;
+    if (header > capacity - at || length > capacity - at - header) {
+        JS_FreeCString(ctx, (const char *)source);
+        JS_FreeValue(ctx, buffer);
+        return JS_ThrowRangeError(ctx, "wire message too large");
+    }
+    destination += offset;
+    remaining = length;
+    do {
+        destination[at++] = (remaining & 127) | (remaining >= 128 ? 128 : 0);
+        remaining /= 128;
+    } while (remaining);
+    for (size_t index = 0; index < length; index++) {
+        /* QuickJS preserves lone surrogates in its C string conversion.
+           Wire text replaces them with U+FFFD, like browser TextEncoder. */
+        if (source[index] == 0xed && index + 2 < length &&
+            source[index + 1] >= 0xa0 && source[index + 1] <= 0xbf &&
+            (source[index + 2] & 0xc0) == 0x80) {
+            destination[at++] = 0xef;
+            destination[at++] = 0xbf;
+            destination[at++] = 0xbd;
+            index += 2;
+        } else destination[at++] = source[index];
+    }
+    JS_FreeCString(ctx, (const char *)source);
+    JS_FreeValue(ctx, buffer);
+    return JS_NewUint32(ctx, at);
+}
+
 static void release_host_reference(JSRuntime *rt, JSValue value)
 {
     uintptr_t control = (uintptr_t)JS_GetOpaque(value, host_reference_class);
@@ -296,6 +356,8 @@ static int install_host_references(GuestSession *session)
                       JS_NewCFunction(context, guest_bridge, "bridge", 1));
     JS_SetPropertyStr(context, global, "hostNow",
                       JS_NewCFunction(context, guest_now, "hostNow", 0));
+    JS_SetPropertyStr(context, global, "__wwcWriteText",
+                      JS_NewCFunction(context, guest_write_text, "__wwcWriteText", 3));
 #ifdef WWC_CANONICAL_HOST
     JS_SetPropertyStr(context, global, "__wwcReportError",
                       JS_NewCFunction(context, guest_report_error,

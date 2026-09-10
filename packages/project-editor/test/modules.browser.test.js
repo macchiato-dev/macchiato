@@ -96,8 +96,17 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   const load = (files, permissions = {}) => page.evaluate(project => window.output.load(project), {
     ...compileProjectFiles(files), files, ...permissions,
   });
-  await load(files);
+  // The output runtime must have the same bounded native UTF-8 path as the
+  // editor. Reuse byte-level golden cases, including the JS fallback, rather
+  // than allowing an encoder/decoder pair to conceal matching mistakes.
+  const wireCases = await readFile(new URL("fixtures/wire-text.js", import.meta.url), "utf8");
+  await load([
+    { path: "index.html", content: '<main></main><script src="wire.js"></script>' },
+    { path: "wire.js", content: wireCases + '\ndocument.querySelector("main").textContent = "UTF-8 checked";' },
+  ]);
   const surface = iframe ? page.frameLocator("iframe").locator("main") : page.locator("#guest main");
+  assert.equal(await surface.innerText(), "UTF-8 checked");
+  await load(files);
   assert.equal(await surface.innerText(), "42");
   assert.equal(await page.evaluate(() => window.onlyInGuest), undefined);
   files[2].content = "export let value = 70; export function increment() { value++; }";
