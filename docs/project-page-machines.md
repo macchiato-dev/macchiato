@@ -809,6 +809,14 @@ query's `change` notification is not form input. Excluding media-query
 listeners restored native light/dark changes in both direct and iframe
 QuickJS tests while retaining all delegated-input scope checks.
 
+The exported tour check also exposed a real focus gap: clicking plain slide
+text left the iframe's outer body focused, so its arrow keys were correctly
+outside the grant. Each output surface now has native `tabIndex = -1`; clicks
+focus that ancestor without adding a tab stop or forwarding unrelated input.
+Direct and iframe tests click ordinary text, press an arrow, and check native
+focus as well as the guest's event response. The full tour remains an export
+gate rather than relying only on this small reproduction.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices

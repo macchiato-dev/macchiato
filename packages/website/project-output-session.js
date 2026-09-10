@@ -134,6 +134,9 @@ export class ProjectOutput {
     const wrapper = this.root.ownerDocument.createElement("div");
     const surface = this.root.ownerDocument.createElement("div");
     surface.className = "project-output-root";
+    // Native clicks on non-focusable app content should focus its granted
+    // surface, not the outer document. This adds no sequential tab stop.
+    surface.tabIndex = -1;
     wrapper.append(surface);
     wrapper.inert = true;
     wrapper.style.cssText = "position:absolute;left:0;top:0;width:100%;opacity:0;visibility:hidden;pointer-events:none";

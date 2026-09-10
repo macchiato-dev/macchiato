@@ -117,6 +117,19 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   const surface = iframe ? page.frameLocator("iframe").locator("main") : page.locator("#guest main");
   assert.equal(await surface.innerText(), "UTF-8 checked");
   await load([
+    { path: "index.html", content: '<main>Click this text</main><script src="keys.js"></script>' },
+    { path: "keys.js", content: `
+      document.addEventListener("keydown", function (event) {
+        document.querySelector("main").textContent = "Key: " + event.key;
+      });` },
+  ]);
+  await surface.click();
+  await page.keyboard.press("ArrowRight");
+  assert.equal(await surface.innerText(), "Key: ArrowRight", "plain output content receives keyboard input after clicking");
+  assert.equal(await surface.evaluate(node => node.ownerDocument.activeElement === node.closest(".project-output-root")), true);
+  assert.equal(await surface.evaluate(node => node.closest(".project-output-root").tabIndex), -1,
+    "the output surface does not add a tab stop");
+  await load([
     { path: "index.html", content: `<style>
         main { background: #112233; }
         @media (prefers-color-scheme: light) { main { background: #ddeeff; } }

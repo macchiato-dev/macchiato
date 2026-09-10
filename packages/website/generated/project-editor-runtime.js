@@ -1995,7 +1995,23 @@ var WasmWebBridge = class {
       const mediaEvent = object instanceof MediaQueryList && type === "change";
       const windowEvent = object === realm && ["beforeprint", "blur", "focus", "hashchange", "keydown", "message", "pagehide", "resize", "scroll"].includes(type);
       if (!elementEvent && !documentEvent && !mediaEvent && !windowEvent || !Number.isInteger(callback)) fail(`event listener ${type} is not allowed`);
+      const scopedInput = !documentTarget && !mediaEvent && [
+        "beforeinput",
+        "change",
+        "compositionend",
+        "compositionstart",
+        "compositionupdate",
+        "copy",
+        "cut",
+        "input",
+        "keydown",
+        "keypress",
+        "keyup",
+        "paste",
+        "submit"
+      ].includes(type);
       const listener = (event) => {
+        if (scopedInput && !insideDocument(event.target) && !event.composedPath().some((node) => roots.includes(node))) return;
         try {
           deliver(callback, event);
         } finally {
