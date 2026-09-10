@@ -55,7 +55,7 @@ async function stopApp(child) {
   if (child.exitCode === null) child.kill("SIGKILL");
 }
 
-test("Resources creates and heavily edits a project without code-editor-use", { timeout: 120_000 }, async (t) => {
+test("Resources creates and heavily edits a project without code-editor-use", { timeout: 180_000 }, async (t) => {
   const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-stress-"))]);
   const app = startApp(port, dataDir);
   t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
@@ -68,7 +68,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   });
   db.close();
   const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
-    // Keep fixture authentication valid beyond the test's 120-second deadline,
+    // Keep fixture authentication valid beyond the test's 180-second deadline,
     // including slower CI hosts. Expiring mid-save is not an editor failure.
     iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
 
@@ -281,10 +281,11 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   const moduleSource = await readFile(join(root, "packages/website/content-form-client.js"), "utf8");
   const inertSource = source => `<!--\n${source.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
   const large = inertSource(moduleSource);
-  // Native insertText is distinct from paste: Chromium emits hundreds of
-  // input events here. The whole-file native case remains a separate known
-  // performance/quota failure; cover 400 lines here, and full-size paste.
-  const nativeSource = inertSource(moduleSource.split("\n").slice(0, 400).join("\n"));
+  // Native insertText emits thousands of input events, unlike paste. Cover
+  // the full file in both paths: event-cache cleanup must not exhaust timer
+  // callbacks in a single input operation. Native layout latency is measured
+  // separately; this test checks data, undo/redo, and error-free recovery.
+  const nativeSource = large + "\n<!-- native insertion -->";
   const mount = editor.locator(".project-editor__source > .project-editor__mount");
   assert.equal(await mount.evaluate(node => getComputedStyle(node).contain), "size");
   const originalSize = await mount.boundingBox();

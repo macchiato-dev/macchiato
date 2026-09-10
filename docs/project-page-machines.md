@@ -721,6 +721,32 @@ navigation. `/root/resources-bunny.tar.gz` now contains that export and was
 verified again after extraction. The previous `7e4c04f` archive is retained
 under `/root/archive/2026/09/10/`. No Bunny deployment was performed.
 
+### September 10 batched event-cache retirement
+
+A test-only served-host counter traced the remaining callback exhaustion to
+7,892 zero-delay timers during the 109 KB native insertion. Each newly delivered
+event wrapper scheduled its own timer to retire its dispatch-cache entry.
+The guest now schedules one timer to retire that cache as a batch. It does not
+coalesce application callbacks, change input dispatch, or invalidate events
+retained by application code. The host and its callback quota are unchanged.
+
+A 5,000-event regression checks shared identity and expandos in target and
+document listeners, bounded callback slots, and retained event access after
+cache retirement and guest GC. It runs with both stamped and downloaded
+language bytecode. The independent live-owner counter and insertion reproducer
+established the failure before the fix.
+
+The uninstrumented live-owner 109,485-character native insertion now completes
+without errors or text loss. Twelve first-page insert/backspace pairs followed;
+the ten measured pairs had a median round trip of 223 ms. Insertion still took
+62.7 seconds. A separate native CodeMirror control with the same source (minus
+the diagnostic's 12-character comment) took 7.0 seconds. Those layouts differ,
+so this is not a pure interpreter comparison. The native bulk-input latency
+remains an open performance issue; batching cache retirement fixes exhaustion,
+not the repeated browser layout. Real clipboard paste remains a separate,
+much faster path. The owner regression now exercises the full file in both
+paths instead of restricting native input to 400 lines.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

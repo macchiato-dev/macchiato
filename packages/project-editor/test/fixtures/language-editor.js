@@ -134,6 +134,7 @@ function startEventBurst() {
   inspectListeners();
 }
 function inspectEventBurst() {
+  gc();
   __wwcPostMessage("__wwcResponse:" + JSON.stringify({
     count: burstCount, slots: callbacks.length,
     retainedType: burstRetained.type, retainedTarget: burstRetained.target.getAttribute("id"),
