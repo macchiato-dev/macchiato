@@ -342,7 +342,7 @@ function parseCss(source) {
 /* `print` is the unchanged MicroQuickJS native slot used by this build. */
 var bridge = globalThis.bridge;
 
-/* A small guest-side DOM facade. The host sees only interned byte operations;
+/* A small guest-side DOM facade. The host sees compact byte operations;
    the application below uses browser-shaped objects and owns all UI policy. */
 var wireStrings = [];
 var wireIndexes = Object.create(null);
@@ -393,7 +393,8 @@ function stringIndex(text) {
 
 function encode(value) {
   if (value instanceof GuestObject) return ["r", value.reference];
-  if (typeof value === "string") return ["s", stringIndex(value)];
+  // Only operation names are interned. DOM text, input values and method
+  // arguments must not keep every old edit alive for the lifetime of the VM.
   return value;
 }
 

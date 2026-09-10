@@ -55,6 +55,10 @@ guest-local memory work, not a new machine method or host permission.
 Transient messages are sent inline, not interned indefinitely. In particular,
 editing a document must not leave every old source snapshot in the bridge's
 string table after the editor's own history has released it.
+The same rule applies to DOM property values and method arguments: input
+values, text nodes, and attribute contents travel as inline values. Method and
+property names still use compact interned identifiers. This uses the existing
+wire string value, with no added host API or policy exemption.
 
 After changing native ROM entries, run
 `examples/microquickjs-suite/scripts/prepare.sh` before building the runtimes.

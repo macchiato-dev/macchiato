@@ -1212,7 +1212,6 @@ function stringIndex(text) {
 }
 function encode(value) {
   if (value instanceof GuestObject) return ["r", value.reference];
-  if (typeof value === "string") return ["s", stringIndex(value)];
   return value;
 }
 function Writer(bytes) {
