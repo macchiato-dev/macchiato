@@ -305,33 +305,43 @@ static void report_text(const char *text, uint32_t length)
 
 static void report(JSValue value)
 {
-    const char *text;
-    uint32_t length = 0;
+    char message[sizeof(transfer) - 5];
+    const char *text, *stack_text = NULL;
+    uint32_t length = 0, at = 0;
+    int exception = JS_IsException(value);
     JSValue stack = JS_UNDEFINED;
-    if (JS_IsException(value)) {
+    if (exception) {
         value = JS_GetException(context);
         stack = JS_GetPropertyStr(context, value, "stack");
     }
-    text = JS_ToCString(context, JS_IsUndefined(stack) ? value : stack);
-    if (text == NULL)
-        return;
-    while (text[length] != '\0') length++;
-#ifdef WWC_CANONICAL_HOST
-    report_stage(text);
-    if (!JS_IsUndefined(stack)) {
-        const char *stack_text = JS_ToCString(context, stack);
-        uint32_t stack_length = 0;
-        if (stack_text != NULL) {
-            while (stack_text[stack_length] != '\0') stack_length++;
-            report_stage(stack_text);
-            JS_FreeCString(context, stack_text);
-        }
+    /* QuickJS's stack contains frames, not the error name/message. Send both
+       together: the host can throw on the first report, so a second report
+       would never arrive. Release temporary values before crossing back. */
+    text = JS_ToCString(context, value);
+    if (!JS_IsUndefined(stack)) stack_text = JS_ToCString(context, stack);
+    if (text != NULL) {
+        while (text[length] && length + 1 < sizeof(message)) length++;
+        /* Do not cut a UTF-8 code point at the bounded message's edge. */
+        while (length && ((unsigned char)text[length] & 0xc0) == 0x80) length--;
+        memcpy(message, text, length);
     }
-#else
-    msg((uint32_t)(uintptr_t)text, length);
-#endif
+    if (stack_text != NULL && length + 2 < sizeof(message)) {
+        message[length++] = '\n';
+        while (stack_text[at] && length + at + 1 < sizeof(message)) at++;
+        while (at && ((unsigned char)stack_text[at] & 0xc0) == 0x80) at--;
+        memcpy(message + length, stack_text, at);
+        length += at;
+    }
+    message[length] = '\0';
+    JS_FreeCString(context, stack_text);
     JS_FreeCString(context, text);
     JS_FreeValue(context, stack);
+    if (exception) JS_FreeValue(context, value);
+#ifdef WWC_CANONICAL_HOST
+    report_stage(message);
+#else
+    msg((uint32_t)(uintptr_t)message, length);
+#endif
 }
 
 static void report_memory(void)

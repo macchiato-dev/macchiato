@@ -5,9 +5,8 @@ roles. A page does not satisfy this model merely by allocating three machine
 IDs: each role must own the application state and behavior named below, and the
 browser integration must remain a small, auditable host controller.
 
-The intended runtime split is MicroQuickJS for the Resources frontend,
-full QuickJS for the CodeMirror editor while its compatibility surface is still
-being refined, and a disposable runtime selected by the project container. A
+The current runtime split is MicroQuickJS for the Resources frontend and
+CodeMirror workspace, with full QuickJS for project output. A
 benchmark may justify changing a runtime, but it must not collapse the three
 authority and lifetime boundaries.
 
@@ -21,12 +20,12 @@ project references.
 
 ### Site frontend
 
-The site frontend machine owns the Resources.co workspace controller as well as
-bounded site behavior such as theme, language, command-palette, and user-menu
-state. In particular, draft state, open files, pane selection, preview
-debouncing, save/version orchestration, and project navigation do not run as a
-large browser-realm controller. The frontend receives narrow editor and output
-services; it does not receive either machine's internal DOM references.
+The site frontend machine owns bounded site behavior such as theme, language,
+command-palette, user-menu state, and project navigation. Draft state, open
+files, pane selection, output debouncing, and save/version orchestration belong
+to the editor machine below, not to a large browser-realm controller. The
+frontend receives narrow editor services; it does not receive either child
+machine's internal DOM references.
 
 This machine follows the surrounding site page. Replacing an editor or project
 machine must not reset the site menu or other app-wide state.
@@ -58,8 +57,8 @@ serialization boundary, and eviction UX remain to be designed.
 
 ### Project
 
-The project machine runs the project's script inside its selected container.
-It receives the container's `*-use` capabilities and owns only the project
+The project machine runs the project's script through WasmWebMachine.
+It receives configured device capabilities and owns only the project
 surface delegated by the host. It does not receive the editor DOM, site DOM, or
 version store.
 
@@ -79,6 +78,14 @@ after a successful swap, the old context is destroyed. Context failure leaves
 the visible generation intact. This must remain an explicit runtime/context
 API—passing a runtime object or a class that owns it—not an inference based on
 two machines receiving the same iframe.
+
+Implementation gap: output `load()` currently reuses a single QuickJS context,
+with a new module-name prefix on each load. This refreshes imports but does not
+clear global bindings, old module records, stylesheets, or all application
+callbacks. Final machine disposal now cancels native callbacks and listeners;
+that does **not** make repeated loads equivalent to fresh contexts. Clean
+context replacement, including rejecting late fetch/module replies from a
+previous context, remains required before this lifecycle design is complete.
 
 ## DOM authority
 
@@ -120,6 +127,12 @@ The browser host is still the enforcement point and may originate a blocked
 event when a guest instruction never reaches the project surface. Development
 containers can attach more guest diagnostics, but production correctness does
 not depend on cooperation from untrusted code.
+
+Asynchronous browser callbacks report through the machine's optional `onError`
+hook. An iframe relays a string error on its existing private message port;
+the editor routes it to the output status rail without stopping CodeMirror.
+The original exception remains visible in DevTools. No error object or DOM
+reference crosses from the output into the editor.
 
 DOM quotas, event budgets, gas, memory, and network rules are accounted per
 role. A project exhausting its operation budget must not stop the editor, and
