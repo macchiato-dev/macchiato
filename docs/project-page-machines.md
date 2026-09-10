@@ -553,6 +553,27 @@ parent/closest boundaries, safe inline styling and fragment links, and removal
 of a previous load's navigation grant. This is regression coverage of these
 paths, not a substitute for auditing the full host protocol and its renderers.
 
+### Local verification checkpoint: September 10, 2026
+
+The `bc11a84` export passed the 151-file manifest check and the Deno test of
+its compressed backend artifact (routing, escaped document output, and unknown
+SQL-operation rejection). Browser checks used its exported controller, machine,
+Wasm, iframe, and language assets with the local API. Cat Memory Match, Mahjong,
+the code tour, and the SQLite reader loaded; the tour traversed 50 slides and
+accepted keyboard navigation, and SQLite's internal link changed only the
+iframe fragment. These checks did not save over the existing projects.
+
+The separate disposable-database stress test passed editing, scrolling,
+undo/redo, theme switching, save/reload, and output-error recovery. The
+first-paint test now also runs the actual server document renderer for the
+project form, with frontend code withheld, checking both pane loaders and the
+details background for all seven appearance-preference cases.
+
+This is not a completed performance or deployment audit. The unprofiled
+2,020-line editing diagnostic still measured median insert/delete round trips
+of roughly 91–163 ms, including Playwright overhead. Real Bunny cold starts,
+mobile memory, and full protocol review are not established by these results.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
