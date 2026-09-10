@@ -26,6 +26,18 @@ test("appearance is correct before the frontend loads, including document naviga
     { sub: "theme-test", login: "theme-test", name: "Theme Test" }, {}, {},
     { locale: "en", pathname: "/projects/new", formErrorCode: "", signupsEnabled: true, controllerVersion: "test" },
   ])]));
+  const accountHome = await renderer.request(["page", JSON.stringify([
+    documents.get("/dashboard"),
+    { kind: "dashboard", focused: false, notifications: [], publicProjects: null,
+      accountContent: { organizations: [], projects: [{ name: "Theme fixture project",
+        namespace: "theme-test", slug: "theme-fixture", description: "",
+        template: "article", visibility: "public" }] } },
+    { sub: "theme-test", login: "theme-test", name: "Theme Test" }, {}, {},
+    { locale: "en", pathname: "/", formErrorCode: "", signupsEnabled: true, controllerVersion: "test" },
+  ])]);
+  assert.match(accountHome, /Theme fixture project/);
+  const articles = [...documents.keys()].filter(path => path.startsWith("/blog/"));
+  assert.ok(articles.length > 0, "exercise article documents, not only the blog index");
   const browser = await chromium.launch({ headless: true });
   t.after(() => browser.close());
 
@@ -41,18 +53,29 @@ test("appearance is correct before the frontend loads, including document naviga
       try {
         // Serve the real generated documents and CSP, but no frontend machine.
         // First paint must not depend on its download or startup completing.
-        await context.route("http://theme.test/**", (route) => {
+        await context.route("**/*", (route) => {
+          // Embedded examples are not part of this static first-paint check.
+          // Never fetch their external assets or run an unrelated application.
+          if (new URL(route.request().url()).origin !== "http://theme.test") {
+            return route.fulfill({ contentType: "text/html", body: "" });
+          }
           if (new URL(route.request().url()).pathname === "/output-probe.html") {
             return route.fulfill({ contentType: "text/html", body: `<!doctype html>
               <style>body { background: #112233; }
                 @media (prefers-color-scheme: light) { body { background: #ddeeff; } }
               </style><body>Output theme probe</body>` });
           }
-          const body = documents.get(new URL(route.request().url()).pathname);
+          const url = new URL(route.request().url());
+          // This query selects a fixture response only; the real server uses
+          // its authenticated page plan to render this document at the root.
+          const body = url.pathname === "/" && url.searchParams.has("account")
+            ? accountHome : documents.get(url.pathname);
           return route.fulfill({ status: body ? 200 : 404,
             headers: Object.fromEntries(publicResponseHeaders("index.html")), body: body || "" });
         });
         await context.addInitScript(({ stored }) => {
+          // The preference belongs to the site, not sandboxed article frames.
+          if (window !== window.top) return;
           if (stored === "unavailable") {
             Object.defineProperty(window, "localStorage", { get() { throw new Error("Storage blocked"); } });
           } else if (stored !== null) localStorage.setItem("macchiato-theme", stored);
@@ -83,6 +106,14 @@ test("appearance is correct before the frontend loads, including document naviga
         await checkPaint();
         await page.goBack();
         await checkPaint();
+        for (const article of articles) {
+          await page.goto("http://theme.test" + article);
+          await checkPaint();
+        }
+        await page.goto("http://theme.test/?account");
+        await checkPaint();
+        assert.equal(await page.locator('a[href="/theme-test/theme-fixture"]').count(), 1,
+          "the signed-in home renders the fixture project, not the public shell");
         await page.goto("http://theme.test/projects/new");
         await checkPaint();
         // The server-rendered workspace must already be correctly colored
