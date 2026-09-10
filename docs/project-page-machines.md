@@ -804,6 +804,11 @@ mode retains its full-page input behavior. Outside pointer events remain
 available for dismissal and dragging; this change does not by itself audit
 every operation reachable through an event's target reference.
 
+The first full regression run caught an over-broad classification: a media
+query's `change` notification is not form input. Excluding media-query
+listeners restored native light/dark changes in both direct and iframe
+QuickJS tests while retaining all delegated-input scope checks.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices
