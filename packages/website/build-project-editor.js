@@ -186,6 +186,13 @@ execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"]
   env: { ...process.env, WWC_REBUILD_EXAMPLES: "1" },
   stdio: "inherit",
 });
+// The Cargo build supplies the interpreter, not this DOM runtime's bytecode.
+// Compile the environment just generated above; an old demo .bin may contain
+// different callback/timer semantics even when every JavaScript file is fresh.
+const runtimeBytecode = join(outputDirectory, "project-editor-runtime.bin");
+execFileSync(join(microRuntime, "microquickjs", "mqjs"),
+  ["-m32", "-o", runtimeBytecode, join(microExample, "generated", "microquickjs-runtime.js")],
+  { stdio: "inherit" });
 const editorCoreSource = await build({
   entryPoints: [join(workspace, "packages", "project-editor", "src", "guest.js")],
   bundle: true,
@@ -244,7 +251,7 @@ execFileSync(process.execPath, [
   join(workspace, "dev", "wasm-web-runtimes", "examples", "microquickjs-suite", "scripts", "stamp-wasm.js"),
   join(microRuntime, "target", "wasm32-unknown-unknown", "release", "wasm_web_container_example_runtime.wasm"),
   join(outputDirectory, "project-editor-quickjs-runtime.wasm"),
-  `runtime.bin=${join(microExample, "generated", "microquickjs-runtime.bin")}`,
+  `runtime.bin=${runtimeBytecode}`,
   `application.bin=${controllerBytecode}`,
   `editor.bin=${editorBytecode}`,
   `project.bin=${projectServicesBytecode}`,
