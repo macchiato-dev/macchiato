@@ -31,19 +31,19 @@ if (!String.prototype.padStart) {
 }
 globalThis.__wwcPostMessage = function (message) {
   pendingOperations.push([3, document.reference, stringIndex("postMessage"), [
-    encode(String(message))
+    String(message)
   ]]);
 };
 globalThis.__wwcServiceCall = function (name, payload) {
   return immediate([3, document.reference, stringIndex("serviceCall"), [
-    encode(String(name)), encode(String(payload))
+    encode(String(name)), String(payload)
   ]]);
 };
 globalThis.__wwcReportError = function (message) {
   // Error reporting must survive a guest exception that prevents the normal
   // operation queue from reaching its next flush.
   immediate([3, document.reference, stringIndex("postMessage"), [
-    encode("__wwcError:" + String(message))
+    "__wwcError:" + String(message)
   ]]);
 };
 document.defaultView = globalThis;

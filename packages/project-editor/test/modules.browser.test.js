@@ -178,7 +178,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
       main.textContent = main.hasPointerCapture(event.pointerId) ? "Captured" : "Missing capture";
     });
     main.addEventListener("pointermove", function (event) {
-      if (main.hasPointerCapture(event.pointerId)) main.textContent = "Dragging";
+      if (main.hasPointerCapture(event.pointerId)) main.textContent = "Dragging " + event.clientX + "," + event.clientY;
     });
     main.addEventListener("pointerup", function (event) {
       main.releasePointerCapture(event.pointerId);
@@ -186,13 +186,20 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     });
   `;
   await load(boundaryFiles);
+  await outputDocument.evaluate(() => {
+    document.addEventListener("pointermove", event => {
+      window.nativePointer = [event.clientX, event.clientY];
+    }, true);
+  });
   const dragBox = await surface.boundingBox();
   for (let repeat = 0; repeat < 3; repeat++) {
     await page.mouse.move(dragBox.x + 10, dragBox.y + 10);
     await page.mouse.down();
     assert.equal(await surface.innerText(), "Captured");
-    await page.mouse.move(dragBox.x + 160, dragBox.y + 10, { steps: 5 });
-    assert.equal(await surface.innerText(), "Dragging", "native capture continues beyond the element");
+    await page.mouse.move(dragBox.x + 160.5, dragBox.y + 10.25, { steps: 5 });
+    const coordinates = await outputDocument.evaluate(() => window.nativePointer);
+    assert.equal(coordinates[0] % 1, 0.5);
+    assert.equal(await surface.innerText(), "Dragging " + coordinates.join(","), "capture preserves fractional coordinates beyond the element");
     await page.mouse.up();
     assert.equal(await surface.innerText(), "Released");
   }
