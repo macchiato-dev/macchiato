@@ -2594,7 +2594,9 @@ GuestElement.prototype.removeChild = function (child) {
   pendingOperations.push([3, this.reference, stringIndex("removeChild"), [encode(child)]]);
   return child;
 };
-GuestObject.prototype.remove = function () {
+// The base element facade has its own remove(). Override it too, otherwise
+// elements bypass this tree-cache update while text nodes use it correctly.
+GuestElement.prototype.remove = GuestObject.prototype.remove = function () {
   detachGuestNode(this);
   pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
 };

@@ -3412,7 +3412,7 @@ GuestElement.prototype.removeChild = function (child) {
   pendingOperations.push([3, this.reference, stringIndex("removeChild"), [encode(child)]]);
   return child;
 };
-GuestObject.prototype.remove = function () {
+GuestElement.prototype.remove = GuestObject.prototype.remove = function () {
   detachGuestNode(this);
   pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
 };
