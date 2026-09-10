@@ -15,6 +15,7 @@ function check(condition, message) { if (!condition) throw new Error(message); }
 // which could hide the same encoding bug on both sides.
 [true, false].forEach(function (native) {
   globalThis.__wwcWriteText = native ? nativeWrite : undefined;
+  check((typeof __wwcWriteText === "function") === native, "writer path was not switched");
   cases.forEach(function (entry) {
     var bytes = new Uint8Array(4 + 1 + entry[1].length);
     var writer = new Writer(bytes);

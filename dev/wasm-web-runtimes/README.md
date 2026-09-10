@@ -41,3 +41,23 @@ no-receiver callback path stays on the bytecode stack. The host is unchanged.
 Browser tests cover deep visitors, array mutation/receiver semantics, and both
 overflow and recovery through a still-native callback method. Do not remove
 the C-call guard or equate raising it with fixing arbitrary recursive code.
+
+## Guest text encoding
+
+The MicroQuickJS build supplies a private `__wwcWriteText(bytes, offset, text)`
+primitive for the guest bridge. It writes a varuint byte length followed by
+UTF-8 and returns the next offset. The native implementation reads the engine's
+existing UTF-8 string storage without allocating a second string or retaining
+it. It checks the complete destination range before writing and converts lone
+surrogates to U+FFFD. A JavaScript fallback serves the other runtimes. This is
+guest-local memory work, not a new machine method or host permission.
+
+Transient messages are sent inline, not interned indefinitely. In particular,
+editing a document must not leave every old source snapshot in the bridge's
+string table after the editor's own history has released it.
+
+After changing native ROM entries, run
+`examples/microquickjs-suite/scripts/prepare.sh` before building the runtimes.
+It builds the native bytecode compiler and then generates the wasm32 ROM
+headers; plain `make mqjs` alone leaves native-width headers in place. Rebuild
+the bytecode and Wasm together when these tables change.

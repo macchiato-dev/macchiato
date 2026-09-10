@@ -416,22 +416,28 @@ Writer.prototype.uint = function (value) {
 };
 
 Writer.prototype.text = function (text) {
+  if (typeof __wwcWriteText === "function") {
+    this.at = __wwcWriteText(this.bytes, this.at, text);
+    return;
+  }
   var length = 0;
   for (var index = 0; index < text.length; index++) {
     var code = text.charCodeAt(index);
-    if (code >= 0xd800 && code <= 0xdbff && index + 1 < text.length) {
+    var next = text.charCodeAt(index + 1);
+    if (code >= 0xd800 && code <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {
       code = 0x10000 + ((code - 0xd800) << 10) +
         (text.charCodeAt(++index) - 0xdc00);
-    }
+    } else if (code >= 0xd800 && code <= 0xdfff) code = 0xfffd;
     length += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
   }
   this.uint(length);
   for (var cursor = 0; cursor < text.length; cursor++) {
     var scalar = text.charCodeAt(cursor);
-    if (scalar >= 0xd800 && scalar <= 0xdbff && cursor + 1 < text.length) {
+    var following = text.charCodeAt(cursor + 1);
+    if (scalar >= 0xd800 && scalar <= 0xdbff && following >= 0xdc00 && following <= 0xdfff) {
       scalar = 0x10000 + ((scalar - 0xd800) << 10) +
         (text.charCodeAt(++cursor) - 0xdc00);
-    }
+    } else if (scalar >= 0xd800 && scalar <= 0xdfff) scalar = 0xfffd;
     if (scalar < 0x80) this.byte(scalar);
     else if (scalar < 0x800) {
       this.byte(0xc0 | scalar >> 6); this.byte(0x80 | scalar & 63);

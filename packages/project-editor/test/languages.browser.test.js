@@ -6,7 +6,7 @@ import test from "node:test";
 import { chromium } from "playwright";
 import { editorLanguages } from "../src/languages.js";
 
-for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${downloaded ? "downloaded" : "stamped"} language bytecode and Markdown fences`, { timeout: 60_000 }, async (t) => {
+for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${downloaded ? "downloaded" : "stamped"} language bytecode and Markdown fences`, { timeout: process.env.MACCHIATO_EDITOR_ENCODER_COMPARE ? 120_000 : 60_000 }, async (t) => {
   const root = new URL("../../../", import.meta.url).pathname;
   const working = resolve(root, "../macchiato-work");
   await mkdir(working, { recursive: true });
@@ -174,9 +174,10 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   if (downloaded) assert.deepEqual(downloads, ["html", "markdown", "python", "rust", "sql", "yaml", "cpp", "javascript", "json", "css", "vue", "svelte"]
     .map(name => `language-${name}.bin`));
   if (process.env.MACCHIATO_EDITOR_TIMINGS && !downloaded) {
-    // Measure real keyboard input in the shipped runtime, outside any builds
-    // or profiler. Round-trip timings include Playwright overhead, not just VM
-    // time. Keep full-document inspection outside each measured key pair.
+    // Measure real keyboard input in the shipped runtime, outside any builds.
+    // Optional CDP profiles are diagnostic runs, not comparable timing runs.
+    // Round trips include Playwright overhead; full-document inspection stays
+    // outside each measured key pair.
     const source = await readFile(new URL("../../website/content-form-client.js", import.meta.url), "utf8");
     const lines = source.split("\n");
     const profileDirectory = process.env.MACCHIATO_EDITOR_PROFILE;
@@ -185,7 +186,16 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       await mkdir(profileDirectory, { recursive: true });
       await profiler.send("Profiler.enable");
     }
-    for (const line of [0, Math.floor(lines.length / 2), lines.length - 1]) {
+    const compare = !!process.env.MACCHIATO_EDITOR_ENCODER_COMPARE;
+    assert.ok(!(compare && profiler), "Run encoder comparisons without the profiler");
+    if (compare) {
+      const encoding = await page.evaluate(text => window.callGuest("measureTextEncoding", { text }), source);
+      assert.ok(encoding.every(result => result.end === encoding[0].end));
+      t.diagnostic(JSON.stringify({ benchmark: "wire-text-only", characters: source.length, writes: 20, encoding }));
+    }
+    for (const nativeText of compare ? [false, true, true, false] : [true])
+    for (const line of compare ? [0] : [0, Math.floor(lines.length / 2), lines.length - 1]) {
+      await page.evaluate(native => window.callGuest("selectTextWriter", { native }), nativeText);
       const position = lines.slice(0, line).reduce((sum, text) => sum + text.length + 1, 0);
       const content = source.slice(0, position) + "// sample: \n" + source.slice(position);
       const started = performance.now();
@@ -195,7 +205,7 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       await page.waitForTimeout(150);
       const samples = [];
       if (profiler) await profiler.send("Profiler.start");
-      for (let key = 0; key < 22; key++) {
+      for (let key = 0; key < (compare ? 12 : 22); key++) {
         const start = performance.now();
         await page.keyboard.type("x");
         await page.keyboard.press("Backspace");
@@ -209,10 +219,11 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       assert.equal(state.document, content, "repeated edits must preserve the rest of the large file");
       assert.equal(state.selection.head, position + 11);
       const sorted = [...samples].sort((a, b) => a - b);
-      t.diagnostic(JSON.stringify({ benchmark: "large-project-javascript", profiled: !!profiler, lines: lines.length,
+      t.diagnostic(JSON.stringify({ benchmark: "large-project-javascript", profiled: !!profiler, nativeText, lines: lines.length,
         characters: content.length, line, selectedMs, keyPairMs: samples,
-        median: sorted[10], p95: sorted[18], maximum: sorted[19] }));
+        median: sorted[Math.floor(sorted.length / 2)], p95: sorted[Math.ceil(sorted.length * 0.95) - 1], maximum: sorted.at(-1) }));
     }
+    await page.evaluate(() => window.callGuest("selectTextWriter", { native: true }));
     if (profiler) await profiler.detach();
   }
   // The editor runs in MicroQuickJS, but project JavaScript runs in QuickJS.

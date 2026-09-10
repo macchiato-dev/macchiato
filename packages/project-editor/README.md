@@ -44,6 +44,19 @@ For optional large-file keyboard timings, run the language browser test with
 `MACCHIATO_EDITOR_TIMINGS=1`. It edits the actual workspace form source at the
 beginning, middle, and end, checks the resulting document, and reports keyboard
 round-trip timings (including Playwright overhead) without a fixed CI threshold.
+Set `MACCHIATO_EDITOR_PROFILE` to a diagnostics directory alongside the
+repository to also collect a DevTools CPU profile for each typing position.
+Those profiled timings are not interchangeable with unprofiled runs. Keep
+builds and other browser tests out of the measurement window, and retain the
+document/selection assertions when changing the benchmark.
+`MACCHIATO_EDITOR_ENCODER_COMPARE=1` with timings enabled instead compares
+JavaScript/native text writers in A–B–B–A order in the same built editor. It
+also measures text encoding separately. On a September 2026 development VM,
+20 writes of the 109 KB workspace source took about 1.9–2.0 seconds in the
+JavaScript fallback and 3 ms in the native writer. Whole-editor key-pair
+medians in that run were 481–628 ms versus 230–277 ms, respectively. Other
+runs varied substantially: this is evidence for avoiding interpreted encoding,
+not a promised end-to-end latency or a completed performance target.
 
 Inline SVG keeps its namespace and drawing attributes. An embedded SVG in a
 CSS background becomes a semantic SVG tree in the stylesheet wire message.
