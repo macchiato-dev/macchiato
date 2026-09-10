@@ -222,6 +222,8 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     const before = await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color);
     await assert.rejects(load(boundaryFiles), /root.*sibling|outside.*scope/i, selector);
     assert.equal(await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color), before);
+    assert.equal(await surface.innerText(), '[true,true,true]',
+      'a rejected stylesheet must preserve the active application');
   }
   boundaryFiles[0].content = '<main></main><script src="boundary.js"></script>';
   boundaryFiles[1].content = `

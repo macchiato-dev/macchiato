@@ -770,8 +770,25 @@ function scopeSelector(selector, scopeClass) {
   const scope = `.${scopeClass}`;
   return selectorParts(selector).map((part) => {
     const trimmed = part.trim();
-    if (/^(?::root|html|body)(?=$|[.#[:\s>+~])/i.test(trimmed)) {
-      return trimmed.replace(/^(?::root|html|body)/i, scope);
+    const root = trimmed.match(/^(?::root|html|body)(?=$|[.#[:\s>+~])/i);
+    if (root) {
+      let depth = 0, quote = "";
+      for (let at = root[0].length; at < trimmed.length; at++) {
+        const character = trimmed[at];
+        if (quote) {
+          if (character === "\\") at++;
+          else if (character === quote) quote = "";
+        } else if (character === '"' || character === "'") quote = character;
+        else if (character === "(" || character === "[") depth++;
+        else if (character === ")" || character === "]") depth--;
+        else if (depth === 0 && /[\s>+~]/.test(character)) {
+          if (/^[+~]/.test(trimmed.slice(at).trimStart())) {
+            fail("CSS root sibling selector is outside the granted scope");
+          }
+          break;
+        }
+      }
+      return scope + trimmed.slice(root[0].length);
     }
     return `${scope} ${trimmed}`;
   }).join(", ");

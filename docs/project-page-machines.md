@@ -1416,6 +1416,30 @@ is retained under `/root/archive/2026/09/10/`. No Bunny deployment or stored
 project edit was made. The broader performance and host-containment audit is
 not declared complete by this appearance checkpoint.
 
+### Container CSS root-sibling boundary
+
+The raw-guest browser test demonstrated that mapping `body`/`html`/`:root` to
+the container class could make a root-level `+` or `~` selector style unrelated
+host siblings. Five probes changed the neighboring element's color before the
+fix. The host now rejects that first top-level sibling combinator after a
+mapped root. It skips quoted attributes and balanced functional predicates when
+locating the combinator, preserving ordinary root rules and descendant sibling
+selectors. This does not add a raw CSS application path or network authority.
+
+All 195 targeted regressions pass, including raw CSS calls, both project output
+integrations, foreign references, scoped observers/input, and inherited markup.
+The project loader tests also require rejected replacements to preserve the
+existing application. This is a concrete containment fix, not a full CSS audit.
+
+The next selector audit must cover contextual predicates such as `:has`, `:is`,
+and `:not`, plus DOM `querySelector`/`matches`: an in-scope matching element does
+not imply every ancestor/sibling inspected by a selector was in scope. Replacing
+prefixing with `@scope` alone would not prove that property; the
+[CSS cascade specification](https://drafts.csswg.org/css-cascade-6/#scoped-rules)
+explicitly leaves non-subject selector context unrestricted. This must be
+resolved without treating a returned in-scope node as proof of complete query
+isolation or quietly moving guest selector parsing into a large host parser.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
