@@ -1369,9 +1369,14 @@ function readValue(reader) {
   if (tag === 4) return ["r", reader.uint()];
   if (tag === 5) return ["s", reader.uint()];
   if (tag === 6) {
-    var length = reader.uint(),
-      bytes = new Uint8Array(length);
-    for (var index = 0; index < length; index++) bytes[index] = reader.byte();
+    var length = reader.uint();
+    if (length > reader.length - reader.at) {
+      reader.at = reader.length;
+      throw new RangeError("truncated wire message");
+    }
+    var bytes = new Uint8Array(length);
+    bytes.set(reader.bytes.subarray(reader.at, reader.at + length));
+    reader.at += length;
     return bytes;
   }
   if (tag === 7) return reader.text();

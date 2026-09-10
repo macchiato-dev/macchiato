@@ -881,6 +881,23 @@ byte-getter calls so the copy cannot silently regress to an interpreted loop.
 In the focused MicroQuickJS run, 32 copies of 64 KiB took about 398 ms before
 and 1 ms after. This is a codec measurement, not a whole-editor speedup claim.
 
+Two unprofiled workspace repetitions after the change measured 215–217 ms
+median insert/backspace pairs, compared with 219 ms before. Clipboard insertion
+remained about 1.3 seconds. These samples do not establish a material improvement
+in whole-editor typing latency; most of that work remains elsewhere.
+
+The rebuilt artifacts passed all 68 editor/output regression checks and the
+compressed backend execution test. A fresh live-owner browser check also passed
+native divider dragging, modern JavaScript editing, and invalid-to-valid font
+CSS recovery without reloading: 144 tiles, no stale error, and no page exceptions.
+All live project writes, including three attempted autosaves, were intercepted.
+
+Export `9832b74` also passed checks of all four owner projects using its built
+assets, including 50 tour slides, keyboard input, SQLite fragment navigation,
+theme changes, and mobile/desktop panes. The refreshed deployment archive is
+`/root/resources-bunny.tar.gz`; the preceding export is preserved under
+`/root/archive/2026/09/10/`. This is local verification, not a Bunny deployment.
+
 ### September 10 output appearance inheritance
 
 Live first-paint sampling found that explicit Resources.co light/dark choices
