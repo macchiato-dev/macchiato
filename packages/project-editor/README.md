@@ -57,6 +57,11 @@ JavaScript fallback and 3 ms in the native writer. Whole-editor key-pair
 medians in that run were 481–628 ms versus 230–277 ms, respectively. Other
 runs varied substantially: this is evidence for avoiding interpreted encoding,
 not a promised end-to-end latency or a completed performance target.
+`MACCHIATO_EDITOR_NOTIFICATION_COMPARE=1` instead compares serialized and
+same-guest notification delivery in A–B–B–A order. It retains only the latest
+local notification and verifies its full document outside the timed interval.
+This isolates notification transport, not the surrounding Resources workspace's
+snapshot/history work. Do not combine it with encoding comparisons or profiling.
 
 When the workspace lives in the editor's own guest, it installs
 `__codeEditorNotify(message)` and receives freshly constructed notification

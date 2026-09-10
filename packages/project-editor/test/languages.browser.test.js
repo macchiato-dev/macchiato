@@ -6,7 +6,7 @@ import test from "node:test";
 import { chromium } from "playwright";
 import { editorLanguages } from "../src/languages.js";
 
-for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${downloaded ? "downloaded" : "stamped"} language bytecode and Markdown fences`, { timeout: process.env.MACCHIATO_EDITOR_ENCODER_COMPARE ? 120_000 : 60_000 }, async (t) => {
+for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${downloaded ? "downloaded" : "stamped"} language bytecode and Markdown fences`, { timeout: process.env.MACCHIATO_EDITOR_ENCODER_COMPARE || process.env.MACCHIATO_EDITOR_NOTIFICATION_COMPARE ? 120_000 : 60_000 }, async (t) => {
   const root = new URL("../../../", import.meta.url).pathname;
   const working = resolve(root, "../macchiato-work");
   await mkdir(working, { recursive: true });
@@ -197,14 +197,18 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       await profiler.send("Profiler.enable");
     }
     const compare = !!process.env.MACCHIATO_EDITOR_ENCODER_COMPARE;
-    assert.ok(!(compare && profiler), "Run encoder comparisons without the profiler");
+    const compareNotifications = !!process.env.MACCHIATO_EDITOR_NOTIFICATION_COMPARE;
+    assert.ok(Number(compare) + Number(compareNotifications) + Number(!!profiler) <= 1,
+      "Run encoder, notification, and profiler diagnostics separately");
     if (compare) {
       const encoding = await page.evaluate(text => window.callGuest("measureTextEncoding", { text }), source);
       assert.ok(encoding.every(result => result.end === encoding[0].end));
       t.diagnostic(JSON.stringify({ benchmark: "wire-text-only", characters: source.length, writes: 20, encoding }));
     }
+    for (const localNotifications of compareNotifications ? [false, true, true, false] : [false])
     for (const nativeText of compare ? [false, true, true, false] : [true])
-    for (const line of compare ? [0] : [0, Math.floor(lines.length / 2), lines.length - 1]) {
+    for (const line of compare || compareNotifications ? [0] : [0, Math.floor(lines.length / 2), lines.length - 1]) {
+      await page.evaluate(enabled => window.callGuest("localNotifications", { enabled, latestOnly: true }), localNotifications);
       await page.evaluate(native => window.callGuest("selectTextWriter", { native }), nativeText);
       const position = lines.slice(0, line).reduce((sum, text) => sum + text.length + 1, 0);
       const content = source.slice(0, position) + "// sample: \n" + source.slice(position);
@@ -215,7 +219,7 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       await page.waitForTimeout(150);
       const samples = [];
       if (profiler) await profiler.send("Profiler.start");
-      for (let key = 0; key < (compare ? 12 : 22); key++) {
+      for (let key = 0; key < (compare || compareNotifications ? 12 : 22); key++) {
         const start = performance.now();
         await page.keyboard.type("x");
         await page.keyboard.press("Backspace");
@@ -228,8 +232,11 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       const state = await page.evaluate(() => window.callGuest("inspectEditor", {}));
       assert.equal(state.document, content, "repeated edits must preserve the rest of the large file");
       assert.equal(state.selection.head, position + 11);
+      const notices = await page.evaluate(() => window.callGuest("localNotifications", { enabled: false }));
+      if (localNotifications) assert.equal(notices.at(-1)?.content, content,
+        "local notification carries the complete final document");
       const sorted = [...samples].sort((a, b) => a - b);
-      t.diagnostic(JSON.stringify({ benchmark: "large-project-javascript", profiled: !!profiler, nativeText, lines: lines.length,
+      t.diagnostic(JSON.stringify({ benchmark: "large-project-javascript", profiled: !!profiler, nativeText, localNotifications, lines: lines.length,
         characters: content.length, line, selectedMs, keyPairMs: samples,
         median: sorted[Math.floor(sorted.length / 2)], p95: sorted[Math.ceil(sorted.length * 0.95) - 1], maximum: sorted.at(-1) }));
     }

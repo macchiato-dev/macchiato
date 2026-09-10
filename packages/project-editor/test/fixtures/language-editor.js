@@ -5,14 +5,15 @@ var nativeTextWriter = globalThis.__wwcWriteText;
 var localNotices = [];
 
 function localNotifications(json) {
-  var enabled = JSON.parse(json).enabled;
-  globalThis.__codeEditorNotify = enabled ? function (message) {
+  var request = JSON.parse(json);
+  globalThis.__codeEditorNotify = request.enabled ? function (message) {
     if (!message || typeof message !== "object") throw new Error("notification is not an object");
-    localNotices.push(message);
+    if (request.latestOnly) localNotices[0] = message;
+    else localNotices.push(message);
   } : undefined;
   __wwcPostMessage("__wwcResponse:" + JSON.stringify(localNotices));
   flush();
-  if (!enabled) localNotices = [];
+  if (!request.enabled) localNotices = [];
 }
 
 function selectTextWriter(json) {
