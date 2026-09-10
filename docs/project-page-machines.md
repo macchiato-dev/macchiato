@@ -760,6 +760,29 @@ Nothing was deployed to Bunny. The next performance comparison should match
 the native control's surrounding layout to the workspace before attributing
 the remaining difference to the interpreter.
 
+### September 10 native layout comparison and tab stops
+
+A diagnostic copies the live workspace's layout and active CSS, removes its
+scripts and form values, and mounts native CodeMirror into the same editor
+slot. The first 109 KB insertion sample took 17 seconds there, compared with
+7 seconds in the minimal native page. This first sample still used an older
+local Mahjong starting document; the diagnostic now captures the actual
+starting document too. These controls are not production code and do not
+save changes to the real project.
+
+Comparing computed styles uncovered a guest API mismatch independently of
+timing: `CSSStyleDeclaration.tabSize` was missing. CodeMirror's feature probe
+therefore chose `-moz-tab-size`, which the CSS adapter intentionally ignores,
+and the browser kept its default eight-space tabs. The standard `tab-size`
+declaration was already supported by the semantic CSS renderer and host.
+Adding the property to the guest's existing style facade fixes the probe;
+there is no new host permission or CodeMirror customization.
+
+Both stamped and downloaded-language tests failed before the change with an
+empty inline tab-size value. They now check 2-, 8-, and 4-space state facets,
+the inline/computed CSS values, and actual tab width measured with a native
+Range. Both pass, including the existing event-lifetime and selection tests.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
