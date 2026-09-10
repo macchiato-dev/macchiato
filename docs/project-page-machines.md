@@ -977,6 +977,18 @@ expanded 161-case raw-markup suite passes, including positive and negative
 list values, overflow, and invalid text across all three assignment paths.
 The initial export stopped at slide 9 and was not promoted to the archive.
 
+Final export `e0bfc15` passed all 234 regression checks in one uninterrupted
+run, the 151-file manifest verification, and compressed backend execution.
+All four stored owner projects passed the exported-browser check, including
+50 successive tour slides, embedded keyboard navigation, SQLite fragments,
+theme switches, and phone/desktop panes. The separate live Mahjong check
+verified divider dragging and invalid-to-valid font CSS recovery with all
+144 tiles, without reloading; all writes, including autosaves, were blocked.
+Screenshots were reviewed. The local server and `/root/resources-bunny.tar.gz`
+now use this export; the archive also passed verification after extraction.
+The preceding archive remains under `/root/archive/2026/09/10/`. No Bunny
+deployment was performed, so production edge startup remains unverified.
+
 ### September 10 binary reply copies
 
 A fresh DevTools sample of the 109 KB native insertion spent about 69% outside

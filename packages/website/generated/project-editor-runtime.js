@@ -1240,8 +1240,11 @@ var WasmWebBridge = class {
       if (args[0] === "tabindex" && !["-1", "0"].includes(args[1])) {
         fail("tabindex must use normal or programmatic focus order");
       }
-      if (args[0] === "value" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement || object.tagName === "OPTION") || args[1].length > 2048)) {
+      if (args[0] === "value" && (!(object instanceof HTMLInputElement || object instanceof HTMLButtonElement || object instanceof HTMLLIElement || object.tagName === "OPTION") || args[1].length > 2048)) {
         fail("value attribute is not allowed on this element");
+      }
+      if (args[0] === "value" && object instanceof HTMLLIElement && (!/^-?\d{1,10}$/.test(args[1]) || Number(args[1]) < -2147483648 || Number(args[1]) > 2147483647)) {
+        fail("list value must be a signed 32-bit integer");
       }
       if (args[0] === "placeholder" && (!(object instanceof HTMLInputElement || object instanceof HTMLTextAreaElement) || args[1].length > 512)) {
         fail("placeholder is not allowed on this element");
