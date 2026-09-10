@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
-import { buildResourcesSiteRoutesForRuntime } from "../../../packages/website/seed.js";
+import { buildResourcesSiteRoutesForRuntime, validateResourcesStylesheet } from "../../../packages/website/seed.js";
 import { createResourcesTheme, RESOURCES_EXPERIMENTAL_THEME, resourcesThemeCss } from "../../../packages/website/theme.js";
 import { RESOURCES_RUNTIME_PROFILES, resourcesRuntimeProfile } from "../../../packages/website/runtime.js";
 import { themeBootstrapCsp, themeBootstrapHtml, themeBootstrapScript } from "../../website/theme-bootstrap.js";
@@ -24,6 +24,15 @@ test("Resources.co runtime profiles select behavior without changing models", ()
   assert.equal(routes[0].transition.mode, "document");
   assert.doesNotMatch(routes[0].html, /<script/);
   for (const route of routes) assert.equal(route.head, themeBootstrapHtml);
+});
+
+test("output color schemes accept only the two resolved appearance values", () => {
+  for (const value of ["light", "dark"]) {
+    assert.doesNotThrow(() => validateResourcesStylesheet(`.project-editor__output-frame { color-scheme: ${value}; }`));
+  }
+  for (const value of ["normal", "light dark", "url(https://outside.test/)"]) {
+    assert.throws(() => validateResourcesStylesheet(`.project-editor__output-frame { color-scheme: ${value}; }`));
+  }
 });
 
 test("the initial-theme script has an exact CSP grant, without allowing other inline scripts", () => {

@@ -42,6 +42,12 @@ test("appearance is correct before the frontend loads, including document naviga
         // Serve the real generated documents and CSP, but no frontend machine.
         // First paint must not depend on its download or startup completing.
         await context.route("http://theme.test/**", (route) => {
+          if (new URL(route.request().url()).pathname === "/output-probe.html") {
+            return route.fulfill({ contentType: "text/html", body: `<!doctype html>
+              <style>body { background: #112233; }
+                @media (prefers-color-scheme: light) { body { background: #ddeeff; } }
+              </style><body>Output theme probe</body>` });
+          }
           const body = documents.get(new URL(route.request().url()).pathname);
           return route.fulfill({ status: body ? 200 : 404,
             headers: Object.fromEntries(publicResponseHeaders("index.html")), body: body || "" });
@@ -113,6 +119,26 @@ test("appearance is correct before the frontend loads, including document naviga
           assert.equal(pane.display, "grid");
           if (pane.visible) assert.ok(pane.width > 100 && pane.height > 100 && pane.inset <= 2, JSON.stringify(pane));
         }
+        // Playwright's explicit media override also overrides the embedded
+        // document's inherited scheme. Main-document first paint was checked
+        // above; clear that override to test real iframe scheme propagation.
+        // No frontend is running here, so the resolved root theme stays put.
+        await page.emulateMedia({ colorScheme: null });
+        await page.evaluate(() => new Promise(resolve => {
+          const frame = document.createElement("iframe");
+          frame.className = "project-editor__output-frame";
+          frame.onload = resolve;
+          frame.src = "/output-probe.html";
+          document.querySelector("[data-project-preview]").append(frame);
+        }));
+        const output = page.frames().find(frame => frame.url().endsWith("/output-probe.html"));
+        const outputTheme = await output.evaluate(() => ({
+          light: matchMedia("(prefers-color-scheme: light)").matches,
+          background: getComputedStyle(document.body).backgroundColor,
+        }));
+        assert.deepEqual(outputTheme, { light: expected === "light",
+          background: expected === "light" ? "rgb(221, 238, 255)" : "rgb(17, 34, 51)" },
+          "iframe media follows the selected page theme even when it differs from the OS");
         if (process.env.MACCHIATO_TEST_ARTIFACTS) {
           await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
           await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS,

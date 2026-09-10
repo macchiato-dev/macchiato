@@ -307,6 +307,9 @@
         "contain": {
           "enum": ["size"]
         },
+        "color-scheme": {
+          "enum": ["light", "dark"]
+        },
         "display": {
           "$ref": "display"
         },

@@ -15,7 +15,8 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   const frameController = await readFile(new URL("generated/project-output-frame-controller.js", website), "utf8");
   const browser = await chromium.launch();
   t.after(() => browser.close());
-  const page = await browser.newPage();
+  // Explicit media emulation bypasses iframe color-scheme inheritance.
+  const page = await browser.newPage({ colorScheme: iframe ? null : "light" });
   await page.addInitScript(() => {
     window.outputInstances = 0;
     WebAssembly.Instance = new Proxy(WebAssembly.Instance, {
@@ -115,6 +116,33 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   ]);
   const surface = iframe ? page.frameLocator("iframe").locator("main") : page.locator("#guest main");
   assert.equal(await surface.innerText(), "UTF-8 checked");
+  await load([
+    { path: "index.html", content: `<style>
+        main { background: #112233; }
+        @media (prefers-color-scheme: light) { main { background: #ddeeff; } }
+      </style><main></main><script src="appearance.js"></script>` },
+    { path: "appearance.js", content: `
+      var media = matchMedia("(prefers-color-scheme: light)"), changes = 0;
+      function showAppearance() {
+        document.querySelector("main").textContent = (media.matches ? "light" : "dark") + ":" + changes;
+      }
+      media.addEventListener("change", function () { changes++; showAppearance(); });
+      showAppearance();` },
+  ]);
+  const appearanceInstances = await page.evaluate(() => outputInstances);
+  const initialTheme = (await surface.innerText()).split(":")[0];
+  const oppositeTheme = initialTheme === "light" ? "dark" : "light";
+  let changes = 0;
+  for (const theme of [oppositeTheme, initialTheme, oppositeTheme, initialTheme]) {
+    if (iframe) await page.locator("iframe").evaluate((frame, theme) => { frame.style.colorScheme = theme; }, theme);
+    else await page.emulateMedia({ colorScheme: theme });
+    changes++;
+    await surface.filter({ hasText: `${theme}:${changes}` }).waitFor();
+    assert.equal(await surface.evaluate(node => getComputedStyle(node).backgroundColor),
+      theme === "light" ? "rgb(221, 238, 255)" : "rgb(17, 34, 51)");
+    assert.equal(await page.evaluate(() => outputInstances), appearanceInstances,
+      "appearance changes notify the existing guest instead of restarting the game");
+  }
   await load(files);
   assert.equal(await surface.innerText(), "42");
   assert.equal(await page.evaluate(() => window.onlyInGuest), undefined);

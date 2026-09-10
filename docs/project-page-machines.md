@@ -760,6 +760,25 @@ Nothing was deployed to Bunny. The next performance comparison should match
 the native control's surrounding layout to the workspace before attributing
 the remaining difference to the interpreter.
 
+### September 10 output appearance inheritance
+
+Live first-paint sampling found that explicit Resources.co light/dark choices
+did not reach the output iframe: its computed `color-scheme` was `normal`, and
+Cat Memory followed the operating system instead. Two scoped stylesheet rules
+now set the iframe's scheme from the already-resolved page theme. The browser
+then updates embedded CSS media queries and native `matchMedia` change events,
+which the existing machine ABI forwards to the existing guest. No replacement
+VM, new message protocol, or new host permission is involved. The website's
+stylesheet schema accepts only `light` and `dark` for this property.
+
+The static first-paint tests cover explicit/system preferences, navigation,
+reload, unavailable storage, and desktop/phone loading panes before frontend
+startup. Their iframe probe clears Playwright's explicit media emulation after
+checking the page: that override otherwise supersedes the browser's embedded
+scheme inheritance. Separate direct/iframe QuickJS tests repeatedly switch
+appearance, check both CSS colors and guest `matchMedia` notifications, and
+assert that the Wasm instance count does not change.
+
 ### September 10 sibling-read experiments
 
 The guest's `nextSibling` and `previousSibling` getters scanned its cached

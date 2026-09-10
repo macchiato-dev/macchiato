@@ -1049,6 +1049,10 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor__preview { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
 .project-editor__preview > [data-project-preview] { min-height: 0; overflow: auto; }
 .project-editor__preview-surface, [data-project-output-mount], .project-editor__output-frame { width: 100%; height: 100%; min-height: 0; }
+/* Embedded media queries inherit this resolved scheme, including native
+   matchMedia change events forwarded to the existing output guest. */
+html[data-theme="light"] .project-editor__output-frame { color-scheme: light; }
+html[data-theme="dark"] .project-editor__output-frame { color-scheme: dark; }
 html[data-theme="light"] .project-editor__preview,
 html[data-theme="light"] .project-editor__preview > [data-project-preview] { background: #e7ecff; }
 .project-editor__present-close { display: none; }
