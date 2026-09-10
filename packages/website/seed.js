@@ -462,6 +462,10 @@ function css(theme = {}) {
 
 ${base}
 
+/* Server-rendered content is ready to read; do not replay the prototype's
+   fade/slide entrance on every document load or content replacement. */
+#content > * { animation: none; }
+
 button:not(:disabled) { cursor: pointer; }
 
 .crumb a {

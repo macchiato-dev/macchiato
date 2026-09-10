@@ -93,7 +93,7 @@
       "pattern": "^[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s(?:\\s+(?:ease|linear|ease-in|ease-out|ease-in-out|cubic-bezier\\([0-9.,\\s]+\\)))?(?:\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s)?(?:,\\s*[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s(?:\\s+(?:ease|linear|ease-in|ease-out|ease-in-out|cubic-bezier\\([0-9.,\\s]+\\)))?(?:\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s)?)*$"
     },
     "animation": {
-      "pattern": "^[a-zA-Z0-9_-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s\\s+(?:ease|linear|ease-in|ease-out|ease-in-out)(?:\\s+(?:both|forwards|backwards|infinite|\\d+)){0,2}$"
+      "pattern": "^(?:none|[a-zA-Z0-9_-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s\\s+(?:ease|linear|ease-in|ease-out|ease-in-out)(?:\\s+(?:both|forwards|backwards|infinite|\\d+)){0,2})$"
     },
     "time": {
       "pattern": "^(?:\\d+(?:\\.\\d+)?|\\.\\d+)s$"

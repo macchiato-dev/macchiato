@@ -35,6 +35,13 @@ test("output color schemes accept only the two resolved appearance values", () =
   }
 });
 
+test("page content can disable entrance animation without broadening animation syntax", () => {
+  assert.doesNotThrow(() => validateResourcesStylesheet('#content > * { animation: none; }'));
+  for (const value of ['none, slide 1s', 'url(https://outside.test/)', 'arbitrary']) {
+    assert.throws(() => validateResourcesStylesheet(`#content > * { animation: ${value}; }`));
+  }
+});
+
 test("the initial-theme script has an exact CSP grant, without allowing other inline scripts", () => {
   assert.equal(themeBootstrapCsp, `sha256-${createHash("sha256").update(themeBootstrapScript).digest("base64")}`);
   const csp = publicResponseHeaders("index.html").get("content-security-policy");

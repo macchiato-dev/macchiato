@@ -1384,6 +1384,28 @@ attempts were intercepted; no real project data changed.
 again after extraction. The previous `1b5e535` archive is retained in
 `/root/archive/2026/09/10/`. Nothing was deployed to Bunny.
 
+### September 10 full-page appearance and readable first paint
+
+The static appearance regression now visits every built blog article and a
+signed-in dashboard rendered by the actual document machine, in addition to
+the public home, blog index, and project form. It checks seven preference cases
+on desktop and phone. Test storage setup applies only to the top-level site;
+sandboxed article examples neither receive that setup nor load external assets.
+
+A read-only live run checked 24 page/mode combinations through real frontend
+startup, including delayed controller delivery, public and authenticated home,
+blog, an article, and Mahjong. Palette sampling found no theme flash. However,
+reviewing the early screenshots revealed a separate fade/slide inherited from
+the original site prototype, which made already-rendered content temporarily
+faint on every navigation. Resources now disables that content entrance, not
+the loading indicators or interactive transitions. Its stylesheet allowlist
+adds only the literal `none` to the existing animation rule.
+
+The new opacity/transform assertion failed in all 14 first-paint cases before
+the change. All 20 appearance tests pass afterward, including both pane loaders,
+iframe scheme inheritance, unavailable storage, and the exact bootstrap CSP
+grant. There is no additional client script or host API for this change.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

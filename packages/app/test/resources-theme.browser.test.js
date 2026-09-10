@@ -84,6 +84,10 @@ test("appearance is correct before the frontend loads, including document naviga
             if (document.body) window.paints.push({
               theme: document.documentElement.dataset.theme,
               background: getComputedStyle(document.documentElement).getPropertyValue("--bg-color").trim(),
+              content: [...document.querySelectorAll('#content > *')].map(node => ({
+                opacity: getComputedStyle(node).opacity,
+                transform: getComputedStyle(node).transform,
+              })),
             });
             if (window.paints.length < 6) requestAnimationFrame(sample);
           }
@@ -97,6 +101,9 @@ test("appearance is correct before the frontend loads, including document naviga
           const paints = await page.evaluate(() => window.paints);
           assert.ok(paints.every((paint) => paint.theme === expected
             && paint.background === (expected === "light" ? "#e7ecff" : "#1a1aa2")), JSON.stringify(paints));
+          assert.ok(paints.every(paint => paint.content.every(block =>
+            block.opacity === '1' && block.transform === 'none')),
+          'server-rendered content must be fully readable at first paint: ' + JSON.stringify(paints));
         }
         await page.goto("http://theme.test/");
         await checkPaint();
