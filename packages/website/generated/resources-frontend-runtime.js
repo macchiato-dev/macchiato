@@ -2274,6 +2274,17 @@ GuestDocument.prototype.dispatchEvent = function (event) {
 GuestElement.prototype.showModal = function () {
   immediate([3, this.reference, stringIndex("showModal"), []]);
 };
+Object.defineProperty(GuestElement.prototype, "open", {
+  get: function get() {
+    return hostGet(this.reference, "open");
+  }
+});
+Object.defineProperty(GuestElement.prototype, "form", {
+  get: function get() {
+    var value = hostGet(this.reference, "form");
+    return value === null ? null : nodeForReference(value[1]);
+  }
+});
 GuestElement.prototype.close = function (value) {
   immediate([3, this.reference, stringIndex("close"), value === undefined ? [] : [encode(String(value))]]);
 };

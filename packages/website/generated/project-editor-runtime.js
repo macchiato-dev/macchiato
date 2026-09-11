@@ -1281,6 +1281,10 @@ var WasmWebBridge = class {
       }
       if (object instanceof HTMLTextAreaElement && (name === "selectionStart" || name === "selectionEnd")) return object[name];
       if ((object instanceof HTMLInputElement || object instanceof HTMLSelectElement || object instanceof HTMLTextAreaElement) && name === "value") return object.value;
+      if ((object instanceof HTMLInputElement || object instanceof HTMLSelectElement || object instanceof HTMLTextAreaElement || object instanceof HTMLButtonElement) && name === "form") {
+        const form = object.form;
+        return form && accessibleNode(form) ? reference(form) : null;
+      }
       if (object instanceof HTMLInputElement && name === "checked") return object.checked;
       if (object instanceof HTMLDialogElement && name === "open") return object.open;
       if (object instanceof HTMLCanvasElement && ["height", "width"].includes(name)) {
