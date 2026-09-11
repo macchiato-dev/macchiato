@@ -1907,11 +1907,13 @@ test("large project files remain readable without exceeding the editor service b
       const next = node.querySelector("button:last-child").getBoundingClientRect();
       return { bottom: rect.bottom, right: rect.right, width: innerWidth, height: innerHeight,
         nextBottom: next.bottom, nextRight: next.right, background: getComputedStyle(node).backgroundColor,
-        scrollable: pre.scrollHeight > pre.clientHeight, overflow: getComputedStyle(pre).overflowY };
+        scrollable: pre.scrollHeight > pre.clientHeight, overflow: getComputedStyle(pre).overflowY,
+        fontFamily: getComputedStyle(pre).fontFamily };
     });
     assert.ok(bounds.bottom <= bounds.height + 1 && bounds.right <= bounds.width + 1, JSON.stringify(bounds));
     assert.ok(bounds.nextBottom <= bounds.height + 1 && bounds.nextRight <= bounds.width + 1, JSON.stringify(bounds));
     assert.equal(bounds.overflow, "auto");
+    assert.equal(bounds.fontFamily, "monospace");
     assert.equal(bounds.scrollable, true);
     assert.equal(bounds.background, colorScheme === "light" ? "rgb(217, 225, 227)" : "rgb(29, 32, 32)");
     assert.equal(await panel.locator("img").count(), 0, "source markup is text, never active DOM");
@@ -1936,7 +1938,11 @@ test("large project files remain readable without exceeding the editor service b
   const downloading = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Export ZIP" }).click();
   const exported = await decodeProjectArchive(await readFile(await (await downloading).path()));
-  assert.deepEqual(exported.files, snapshot.files, "reading never rewrites the exported source");
+  assert.deepEqual(exported.files.map(file => file.path).sort(), snapshot.files.map(file => file.path).sort());
+  for (const file of snapshot.files) {
+    assert.ok(exported.files.find(entry => entry.path === file.path)?.content === file.content,
+      `reading never rewrites the exported bytes of ${file.path}`);
+  }
   await page.locator('[data-tab-path="index.html"] [role="tab"]').click();
   await page.locator(".cm-content").click();
   await page.locator(".cm-content").press("Control+End");

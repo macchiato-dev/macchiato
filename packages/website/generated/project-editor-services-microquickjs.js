@@ -583,20 +583,52 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   }
   function _mountResourcesProjectEditor() {
     _mountResourcesProjectEditor = _asyncToGenerator(_regenerator().m(function _callee(options) {
-      var lastContent, lastValue;
+      var lastContent, lastValue, firstChunk, chunk;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
+            chunk = function _chunk(content, offset) {
+              if (offset === void 0) {
+                offset = 0;
+              }
+              if (content !== lastContent) {
+                lastContent = content;
+                lastValue = firstChunk = void 0;
+              }
+              if (offset === 0 && firstChunk) return firstChunk;
+              var result2 = content.startsWith(PROJECT_RESOURCE_PREFIX) ? callHost("resource.read", {
+                content: content,
+                offset: offset
+              }) : {
+                content: content.slice(offset, offset + 64 * 1024),
+                length: content.length,
+                lines: offset === 0 ? content.split("\n").length : void 0
+              };
+              if (result2.error) throw new Error(result2.error);
+              if (offset === 0) firstChunk = result2;
+              return result2;
+            };
             listeners = options;
             return _context.a(2, Object.freeze({
-              readContent: function readContent(content) {
-                if (content === lastContent) return lastValue;
-                var value = content.startsWith(PROJECT_RESOURCE_PREFIX) ? callHost("resource.read", {
-                  content: content
-                }) : content;
-                lastContent = content;
-                lastValue = value;
-                return value;
+              contentInfo: function contentInfo(content) {
+                return chunk(content);
+              },
+              readContent: function readContent(content, offset) {
+                if (!content.startsWith(PROJECT_RESOURCE_PREFIX)) {
+                  return offset === void 0 ? content : content.slice(offset, offset + 64 * 1024);
+                }
+                if (offset !== void 0) return chunk(content, offset).content;
+                if (content === lastContent && lastValue !== void 0) return lastValue;
+                var first = chunk(content),
+                  parts = [first.content];
+                var at = first.content.length;
+                while (at < first.length) {
+                  var part = chunk(content, at).content;
+                  if (!part.length) throw new Error("Project resource ended before its declared length");
+                  parts.push(part);
+                  at += part.length;
+                }
+                return lastValue = parts.join("");
               },
               prepareSubmit: function prepareSubmit() {
                 return callHost("project.prepareSubmit");
@@ -1500,7 +1532,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -1709,7 +1741,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 _ref9$syntaxErrors = _ref9.syntaxErrors,
                 syntaxErrors = _ref9$syntaxErrors === void 0 ? false : _ref9$syntaxErrors;
               if (typeof content !== "string") return;
-              if (readOnly || selected === "config" || content === selectedContent()) return;
+              if (readOnly || editorMount.hidden || selected === "config" || content === selectedContent()) return;
               try {
                 clearNotice();
                 if (updateSnapshot({
@@ -2355,7 +2387,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             _mountEditorMachine = function _mountEditorMachine3() {
               _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee5(reason) {
                 var _editorController7;
-                var generation, _controller$inspect, controller, _t4;
+                var generation, _inspection$machine, controller, inspection, _t4;
                 return _regenerator().w(function (_context5) {
                   while (1) switch (_context5.p = _context5.n) {
                     case 0:
@@ -2403,7 +2435,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       editorController = controller;
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "snapshot");
                       editorController.setSnapshot(state);
-                      __resourcesDatasetSet(root, "data-editor-machine-id", ((_controller$inspect = controller.inspect()) == null || (_controller$inspect = _controller$inspect.machine) == null ? void 0 : _controller$inspect.machineId) || "quickjs-editor");
+                      inspection = controller.inspect();
+                      editorDocumentLimits = inspection == null ? void 0 : inspection.limits;
+                      __resourcesDatasetSet(root, "data-editor-machine-id", (inspection == null || (_inspection$machine = inspection.machine) == null ? void 0 : _inspection$machine.machineId) || "quickjs-editor");
                       __resourcesDatasetSet(root, "data-editor-machine-state", "ready");
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "history");
                       if (localHistory && historyInEditorMachine) localHistory = editorController.history.initialize(localHistory);
@@ -2448,7 +2482,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               (_editorController3 = editorController) == null || _editorController3.renderSnapshot();
             };
             sendContent = function _sendContent(_temp3) {
-              var _editorMount$parentEl, _editorMount$parentEl2;
+              var _info$content, _editorMount$parentEl, _editorMount$parentEl2;
               var _ref5 = _temp3 === void 0 ? {} : _temp3,
                 _ref5$resetHistoryOnE = _ref5.resetHistoryOnEdit,
                 resetHistoryOnEdit = _ref5$resetHistoryOnE === void 0 ? false : _ref5$resetHistoryOnE;
@@ -2457,16 +2491,24 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               var file = state.files.find(function (file2) {
                 return file2.path === selected;
               });
+              var source = selectedSource();
+              var info = editorController.contentInfo == null ? void 0 : editorController.contentInfo(source);
               var selectedFile = file && _extends({}, file, {
-                content: selectedContent()
+                content: (_info$content = info == null ? void 0 : info.content) != null ? _info$content : selectedContent()
               });
               (_editorMount$parentEl = editorMount.parentElement.querySelector(".project-editor__image-view")) == null || _editorMount$parentEl.remove();
               (_editorMount$parentEl2 = editorMount.parentElement.querySelector(".project-editor__asset-view")) == null || _editorMount$parentEl2.remove();
-              editorMount.hidden = isProjectImage(selectedFile);
+              var largeSource = info && !isProjectImage(selectedFile) && editorDocumentLimits && (info.length > editorDocumentLimits.maxCharacters || info.lines > editorDocumentLimits.maxLines);
+              editorMount.hidden = isProjectImage(selectedFile) || Boolean(largeSource);
+              if (largeSource) {
+                showSourcePages(source, info);
+                __resourcesDatasetDelete(root, "data-editor-loading");
+                return;
+              }
               if (isProjectImage(selectedFile)) {
                 var image = document.createElement("img");
                 image.className = "project-editor__image-view";
-                image.src = selectedFile.content;
+                image.src = source;
                 image.alt = selectedFile.path;
                 editorMount.parentElement.append(image);
                 __resourcesDatasetDelete(root, "data-editor-loading");
@@ -2485,13 +2527,83 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             mode = function _mode() {
               return selected.endsWith(".md") ? "markdown" : "code";
             };
+            showSourcePages = function _showSourcePages(source, info) {
+              var panel = document.createElement("section");
+              panel.className = "project-editor__asset-view";
+              var heading = document.createElement("strong");
+              heading.textContent = selected;
+              var summary = document.createElement("p");
+              var count = function count(value) {
+                return String(value).replace(new RegExp("\\B(?=(\\d{3})+(?!\\d))", "g"), ",");
+              };
+              summary.textContent = "Read-only source \xB7 " + count(info.length) + " characters \xB7 " + count(info.lines) + " lines";
+              var text = document.createElement("div");
+              text.className = "project-editor__source-page";
+              text.setAttribute("role", "document");
+              text.tabIndex = 0;
+              text.setAttribute("aria-label", "File source");
+              var controls = document.createElement("div");
+              var previous = document.createElement("button"),
+                next = document.createElement("button");
+              previous.type = next.type = "button";
+              previous.textContent = "Previous";
+              next.textContent = "Next";
+              previous.setAttribute("aria-label", "Previous section");
+              next.setAttribute("aria-label", "Next section");
+              var position = document.createElement("span");
+              position.className = "project-editor__source-position";
+              position.setAttribute("aria-live", "polite");
+              controls.append(previous, position, next);
+              panel.append(heading, summary, text, controls);
+              editorMount.parentElement.append(panel);
+              var pages = [{
+                offset: 0,
+                line: 1
+              }];
+              var page = 0,
+                following;
+              function render() {
+                var _pages$page = pages[page],
+                  offset = _pages$page.offset,
+                  line = _pages$page.line;
+                var value = editorController.readContent ? editorController.readContent(source, offset) : source.slice(offset, offset + 64 * 1024);
+                if (offset + value.length < info.length) {
+                  var newline = value.lastIndexOf("\n");
+                  if (newline >= 0) value = value.slice(0, newline + 1);else if (/[\uD800-\uDBFF]$/.test(value)) value = value.slice(0, -1);
+                }
+                var newlines = value.split("\n").length - 1;
+                following = {
+                  offset: offset + value.length,
+                  line: line + newlines
+                };
+                text.textContent = value;
+                text.scrollTop = 0;
+                var lastLine = line + newlines - (value.endsWith("\n") ? 1 : 0);
+                position.textContent = "Lines " + line + "\u2013" + Math.max(line, lastLine);
+                previous.disabled = page === 0;
+                next.disabled = following.offset >= info.length;
+              }
+              previous.addEventListener("click", function () {
+                page--;
+                render();
+              });
+              next.addEventListener("click", function () {
+                pages[++page] = following;
+                render();
+              });
+              render();
+            };
             selectedContent = function _selectedContent() {
-              var _state$files$find$con, _state$files$find, _editorController;
+              var _editorController;
+              var content = selectedSource();
+              return (_editorController = editorController) != null && _editorController.readContent ? editorController.readContent(content) : content;
+            };
+            selectedSource = function _selectedSource() {
+              var _state$files$find$con, _state$files$find;
               if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
-              var content = (_state$files$find$con = (_state$files$find = state.files.find(function (file) {
+              return (_state$files$find$con = (_state$files$find = state.files.find(function (file) {
                 return file.path === selected;
               })) == null ? void 0 : _state$files$find.content) != null ? _state$files$find$con : "";
-              return (_editorController = editorController) != null && _editorController.readContent ? editorController.readContent(content) : content;
             };
             showSelectedVersion = function _showSelectedVersion(label, timestamp) {
               currentVersion.textContent = label;
@@ -2700,6 +2812,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               (_root$closest6 = root.closest("form")) == null || (_root$closest6 = _root$closest6.querySelector("[data-draft-actions]")) == null || _root$closest6.removeAttribute("hidden");
               (_root$closest7 = root.closest("form")) == null || (_root$closest7 = _root$closest7.querySelector("[data-new-draft-flash]")) == null || _root$closest7.removeAttribute("hidden");
             }
+            editorDocumentLimits = null;
             openTabList = root.querySelector("[data-project-tabs]");
             tabScrollBack = document.createElement("button");
             tabScrollForward = document.createElement("button");

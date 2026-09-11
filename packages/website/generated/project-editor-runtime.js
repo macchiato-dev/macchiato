@@ -3262,6 +3262,7 @@ async function createProjectEditorMachine({
   onRequest,
   services,
   limits,
+  resolveImage,
   allowNavigate = false
 }) {
   const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
@@ -3290,6 +3291,7 @@ async function createProjectEditorMachine({
   }
   const machine = new WasmWebMachine(module, root, {
     allowNavigate,
+    resolveImage,
     stamp: sections.length === 1 ? new Uint8Array(sections[0]) : void 0,
     services,
     onMessage(text) {

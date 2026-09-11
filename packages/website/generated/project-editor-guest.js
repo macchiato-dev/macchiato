@@ -27376,14 +27376,41 @@ function writeProjectRecovery(key, value) {
 }
 async function mountResourcesProjectEditor(options) {
   listeners = options;
-  let lastContent, lastValue;
-  return Object.freeze({
-    readContent(content2) {
-      if (content2 === lastContent) return lastValue;
-      const value = content2.startsWith(PROJECT_RESOURCE_PREFIX) ? callHost("resource.read", { content: content2 }) : content2;
+  let lastContent, lastValue, firstChunk;
+  function chunk(content2, offset = 0) {
+    if (content2 !== lastContent) {
       lastContent = content2;
-      lastValue = value;
-      return value;
+      lastValue = firstChunk = void 0;
+    }
+    if (offset === 0 && firstChunk) return firstChunk;
+    const result2 = content2.startsWith(PROJECT_RESOURCE_PREFIX) ? callHost("resource.read", { content: content2, offset }) : {
+      content: content2.slice(offset, offset + 64 * 1024),
+      length: content2.length,
+      lines: offset === 0 ? content2.split("\n").length : void 0
+    };
+    if (result2.error) throw new Error(result2.error);
+    if (offset === 0) firstChunk = result2;
+    return result2;
+  }
+  return Object.freeze({
+    contentInfo(content2) {
+      return chunk(content2);
+    },
+    readContent(content2, offset) {
+      if (!content2.startsWith(PROJECT_RESOURCE_PREFIX)) {
+        return offset === void 0 ? content2 : content2.slice(offset, offset + 64 * 1024);
+      }
+      if (offset !== void 0) return chunk(content2, offset).content;
+      if (content2 === lastContent && lastValue !== void 0) return lastValue;
+      const first = chunk(content2), parts = [first.content];
+      let at = first.content.length;
+      while (at < first.length) {
+        const part = chunk(content2, at).content;
+        if (!part.length) throw new Error("Project resource ended before its declared length");
+        parts.push(part);
+        at += part.length;
+      }
+      return lastValue = parts.join("");
     },
     prepareSubmit() {
       return callHost("project.prepareSubmit");
@@ -28059,10 +28086,69 @@ async function mountProjectRoot(root) {
     root.closest("form")?.querySelector("[data-draft-actions]")?.removeAttribute("hidden");
     root.closest("form")?.querySelector("[data-new-draft-flash]")?.removeAttribute("hidden");
   }
-  function selectedContent() {
+  let editorDocumentLimits = null;
+  function selectedSource() {
     if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
-    const content2 = state.files.find((file) => file.path === selected)?.content ?? "";
+    return state.files.find((file) => file.path === selected)?.content ?? "";
+  }
+  function selectedContent() {
+    const content2 = selectedSource();
     return editorController?.readContent ? editorController.readContent(content2) : content2;
+  }
+  function showSourcePages(source, info) {
+    const panel = document.createElement("section");
+    panel.className = "project-editor__asset-view";
+    const heading2 = document.createElement("strong");
+    heading2.textContent = selected;
+    const summary = document.createElement("p");
+    const count = (value) => String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    summary.textContent = `Read-only source \xB7 ${count(info.length)} characters \xB7 ${count(info.lines)} lines`;
+    const text = document.createElement("div");
+    text.className = "project-editor__source-page";
+    text.setAttribute("role", "document");
+    text.tabIndex = 0;
+    text.setAttribute("aria-label", "File source");
+    const controls = document.createElement("div");
+    const previous = document.createElement("button"), next = document.createElement("button");
+    previous.type = next.type = "button";
+    previous.textContent = "Previous";
+    next.textContent = "Next";
+    previous.setAttribute("aria-label", "Previous section");
+    next.setAttribute("aria-label", "Next section");
+    const position = document.createElement("span");
+    position.className = "project-editor__source-position";
+    position.setAttribute("aria-live", "polite");
+    controls.append(previous, position, next);
+    panel.append(heading2, summary, text, controls);
+    editorMount.parentElement.append(panel);
+    const pages = [{ offset: 0, line: 1 }];
+    let page = 0, following;
+    function render() {
+      const { offset, line } = pages[page];
+      let value = editorController.readContent ? editorController.readContent(source, offset) : source.slice(offset, offset + 64 * 1024);
+      if (offset + value.length < info.length) {
+        const newline = value.lastIndexOf("\n");
+        if (newline >= 0) value = value.slice(0, newline + 1);
+        else if (/[\uD800-\uDBFF]$/.test(value)) value = value.slice(0, -1);
+      }
+      const newlines = value.split("\n").length - 1;
+      following = { offset: offset + value.length, line: line + newlines };
+      text.textContent = value;
+      text.scrollTop = 0;
+      const lastLine = line + newlines - (value.endsWith("\n") ? 1 : 0);
+      position.textContent = `Lines ${line}\u2013${Math.max(line, lastLine)}`;
+      previous.disabled = page === 0;
+      next.disabled = following.offset >= info.length;
+    }
+    previous.addEventListener("click", () => {
+      page--;
+      render();
+    });
+    next.addEventListener("click", () => {
+      pages[++page] = following;
+      render();
+    });
+    render();
   }
   function mode() {
     return selected.endsWith(".md") ? "markdown" : "code";
@@ -28074,14 +28160,22 @@ async function mountProjectRoot(root) {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
     const file = state.files.find((file2) => file2.path === selected);
-    const selectedFile = file && { ...file, content: selectedContent() };
+    const source = selectedSource();
+    const info = editorController.contentInfo?.(source);
+    const selectedFile = file && { ...file, content: info?.content ?? selectedContent() };
     editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
     editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
-    editorMount.hidden = isProjectImage(selectedFile);
+    const largeSource = info && !isProjectImage(selectedFile) && editorDocumentLimits && (info.length > editorDocumentLimits.maxCharacters || info.lines > editorDocumentLimits.maxLines);
+    editorMount.hidden = isProjectImage(selectedFile) || Boolean(largeSource);
+    if (largeSource) {
+      showSourcePages(source, info);
+      delete root.dataset.editorLoading;
+      return;
+    }
     if (isProjectImage(selectedFile)) {
       const image = document.createElement("img");
       image.className = "project-editor__image-view";
-      image.src = selectedFile.content;
+      image.src = source;
       image.alt = selectedFile.path;
       editorMount.parentElement.append(image);
       delete root.dataset.editorLoading;
@@ -28133,7 +28227,9 @@ async function mountProjectRoot(root) {
       editorController = controller;
       root.dataset.editorMachineStage = "snapshot";
       editorController.setSnapshot(state);
-      root.dataset.editorMachineId = controller.inspect()?.machine?.machineId || "quickjs-editor";
+      const inspection = controller.inspect();
+      editorDocumentLimits = inspection?.limits;
+      root.dataset.editorMachineId = inspection?.machine?.machineId || "quickjs-editor";
       root.dataset.editorMachineState = "ready";
       root.dataset.editorMachineStage = "history";
       if (localHistory && historyInEditorMachine) localHistory = editorController.history.initialize(localHistory);
@@ -28566,7 +28662,7 @@ async function mountProjectRoot(root) {
   }
   function receiveEditorChange(content2, { syntaxErrors = false } = {}) {
     if (typeof content2 !== "string") return;
-    if (readOnly2 || selected === "config" || content2 === selectedContent()) return;
+    if (readOnly2 || editorMount.hidden || selected === "config" || content2 === selectedContent()) return;
     try {
       clearNotice();
       if (updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content: content2 } : file), config: state.config })) templateOnlyPending = false;
