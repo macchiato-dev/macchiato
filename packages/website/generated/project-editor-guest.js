@@ -27680,7 +27680,7 @@ function mountContentNameFields() {
     slug.setAttribute("aria-invalid", invalid ? "true" : "false");
     error.hidden = !invalid || !touched;
   }
-  document.addEventListener("input", (event) => {
+  function onInput(event) {
     const source = event.target.closest?.("[data-slug-source], #project-name, #organization-name");
     if (source) {
       const id2 = source.dataset.slugSource || (source.id === "project-name" ? "project-slug" : source.id === "organization-name" ? "organization-slug" : "");
@@ -27696,11 +27696,19 @@ function mountContentNameFields() {
     }
     const slug = event.target.closest?.(slugSelector);
     if (slug) validate(slug);
-  });
-  document.addEventListener("focusout", (event) => {
+  }
+  function onFocusOut(event) {
     const slug = event.target.closest?.(slugSelector);
     if (slug) validate(slug);
-  });
+  }
+  for (const field of document.querySelectorAll(
+    `[data-slug-source], #project-name, #organization-name, ${slugSelector}`
+  )) {
+    field.addEventListener("input", onInput);
+  }
+  for (const field of document.querySelectorAll(slugSelector)) {
+    field.addEventListener("focusout", onFocusOut);
+  }
 }
 
 // packages/website/content-form-client.js

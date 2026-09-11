@@ -107,9 +107,14 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
 
   let releaseEditor;
   const editorDownload = new Promise(resolve => { releaseEditor = resolve; });
+  const editorArtifact = process.env.MACCHIATO_TEST_EDITOR_FILE
+    ? await readFile(process.env.MACCHIATO_TEST_EDITOR_FILE) : null;
   await page.route("**/project-editor-quickjs-runtime.wasm*", async route => {
     await editorDownload;
-    if (!page.isClosed()) await route.continue();
+    if (!page.isClosed()) {
+      if (editorArtifact) await route.fulfill({ body: editorArtifact, contentType: "application/wasm" });
+      else await route.continue();
+    }
   });
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
   const editor = page.locator("[data-project-editor]");

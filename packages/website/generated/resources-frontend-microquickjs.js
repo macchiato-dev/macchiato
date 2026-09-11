@@ -36,7 +36,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
               slug.setAttribute("aria-invalid", invalid ? "true" : "false");
               error.hidden = !invalid || !touched;
             }
-            document.addEventListener("input", function (event) {
+            function onInput(event) {
               var source = event.target.closest == null ? void 0 : event.target.closest("[data-slug-source], #project-name, #organization-name");
               if (source) {
                 var _generatedSlugs$get;
@@ -53,11 +53,19 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
               }
               var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
               if (slug) validate(slug);
-            });
-            document.addEventListener("focusout", function (event) {
+            }
+            function onFocusOut(event) {
               var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
               if (slug) validate(slug);
-            });
+            }
+            for (var _iterator7 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-slug-source], #project-name, #organization-name, " + slugSelector)), _step7; !(_step7 = _iterator7()).done;) {
+              var field = _step7.value;
+              field.addEventListener("input", onInput);
+            }
+            for (var _iterator8 = _createForOfIteratorHelperLoose(document.querySelectorAll(slugSelector)), _step8; !(_step8 = _iterator8()).done;) {
+              var _field = _step8.value;
+              _field.addEventListener("focusout", onFocusOut);
+            }
           };
           mountProjectPresentation = function _mountProjectPresenta(root3) {
             var button = root3.querySelector("[data-project-present]");

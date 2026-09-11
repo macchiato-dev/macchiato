@@ -1136,7 +1136,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       slug.setAttribute("aria-invalid", invalid ? "true" : "false");
       error.hidden = !invalid || !touched;
     }
-    document.addEventListener("input", function (event) {
+    function onInput(event) {
       var source = event.target.closest == null ? void 0 : event.target.closest("[data-slug-source], #project-name, #organization-name");
       if (source) {
         var _generatedSlugs$get;
@@ -1153,11 +1153,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }
       var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
       if (slug) validate(slug);
-    });
-    document.addEventListener("focusout", function (event) {
+    }
+    function onFocusOut(event) {
       var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
       if (slug) validate(slug);
-    });
+    }
+    for (var _iterator9 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-slug-source], #project-name, #organization-name, " + slugSelector)), _step9; !(_step9 = _iterator9()).done;) {
+      var field = _step9.value;
+      field.addEventListener("input", onInput);
+    }
+    for (var _iterator0 = _createForOfIteratorHelperLoose(document.querySelectorAll(slugSelector)), _step0; !(_step0 = _iterator0()).done;) {
+      var _field = _step0.value;
+      _field.addEventListener("focusout", onFocusOut);
+    }
   }
   var PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
   function isProjectImage(file) {
@@ -1176,7 +1184,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     return href.startsWith("/") && !href.startsWith("//") ? href : null;
   }
   var _loop = function _loop() {
-    var split = _step9.value;
+    var split = _step1.value;
     var trigger = split.querySelector("[data-save-menu-trigger]");
     var menu = split.querySelector("[data-save-menu]");
     trigger.addEventListener("click", function () {
@@ -1191,7 +1199,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }
     });
   };
-  for (var _iterator9 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-save-split]")), _step9; !(_step9 = _iterator9()).done;) {
+  for (var _iterator1 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-save-split]")), _step1; !(_step1 = _iterator1()).done;) {
     _loop();
   }
   document.addEventListener("click", function (event) {
@@ -1209,7 +1217,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     }
   });
   var _loop2 = function _loop2() {
-    var close = _step0.value;
+    var close = _step10.value;
     var stack = [];
     try {
       stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || [];
@@ -1222,11 +1230,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
     });
   };
-  for (var _iterator0 = _createForOfIteratorHelperLoose(document.querySelectorAll(".project-close")), _step0; !(_step0 = _iterator0()).done;) {
+  for (var _iterator10 = _createForOfIteratorHelperLoose(document.querySelectorAll(".project-close")), _step10; !(_step10 = _iterator10()).done;) {
     _loop2();
   }
   var _loop3 = function _loop3() {
-    var overflow = _step1.value;
+    var overflow = _step11.value;
     var trigger = overflow.querySelector("[data-project-overflow-trigger]");
     var menu = overflow.querySelector("[data-project-overflow-menu]");
     trigger.addEventListener("click", function () {
@@ -1241,12 +1249,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }
     });
   };
-  for (var _iterator1 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-overflow]")), _step1; !(_step1 = _iterator1()).done;) {
+  for (var _iterator11 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-overflow]")), _step11; !(_step11 = _iterator11()).done;) {
     _loop3();
   }
   var _loop4 = function _loop4() {
     var _fields$querySelector;
-    var fields = _step10.value;
+    var fields = _step12.value;
     var modal = fields.querySelector("[data-version-title-modal]");
     if (!modal) return 1;
     var input = modal.querySelector("[data-version-title-input]");
@@ -1271,7 +1279,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       if (event.target === modal) close();
     });
   };
-  for (var _iterator10 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-fields]")), _step10; !(_step10 = _iterator10()).done;) {
+  for (var _iterator12 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-fields]")), _step12; !(_step12 = _iterator12()).done;) {
     if (_loop4()) continue;
   }
   var DRAFT_KEY = "resources_project_draft_v5";
@@ -1615,8 +1623,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       }
     }
   });
-  for (var _iterator11 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-template]")), _step11; !(_step11 = _iterator11()).done;) {
-    var select = _step11.value;
+  for (var _iterator13 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-template]")), _step13; !(_step13 = _iterator13()).done;) {
+    var select = _step13.value;
     var before = select.querySelector('option[value="vue"]');
     for (var _i3 = 0, _arr = [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]; _i3 < _arr.length; _i3++) {
       var _arr$_i = _slicedToArray(_arr[_i3], 2),
@@ -1687,8 +1695,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     button.addEventListener("blur", hide);
     button.addEventListener("instanttooltiphide", hide);
   }
-  for (var _iterator12 = _createForOfIteratorHelperLoose(document.querySelectorAll("button[data-instant-tooltip]")), _step12; !(_step12 = _iterator12()).done;) {
-    var button = _step12.value;
+  for (var _iterator14 = _createForOfIteratorHelperLoose(document.querySelectorAll("button[data-instant-tooltip]")), _step14; !(_step14 = _iterator14()).done;) {
+    var button = _step14.value;
     attachInstantTooltip(button);
   }
   document.addEventListener("click", function (event) {
@@ -1721,8 +1729,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       sequence = patches.length;
     }
     var snapshot = emptyProjectSnapshot();
-    for (var _iterator13 = _createForOfIteratorHelperLoose(patches.slice(0, sequence)), _step13; !(_step13 = _iterator13()).done;) {
-      var patch = _step13.value;
+    for (var _iterator15 = _createForOfIteratorHelperLoose(patches.slice(0, sequence)), _step15; !(_step15 = _iterator15()).done;) {
+      var patch = _step15.value;
       snapshot = applyProjectPatch(snapshot, patch);
     }
     return snapshot;
@@ -1819,7 +1827,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee10(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, positionHistory, openVersionHistory, _t0, _t1;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator24, _step24, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator26, _step26, _iterator27, _step27, field, closeHistory, positionHistory, openVersionHistory, _t0, _t1;
       return _regenerator().w(function (_context14) {
         while (1) switch (_context14.p = _context14.n) {
           case 0:
@@ -1924,8 +1932,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 placeProjectClose(true);
               }
               __resourcesDatasetSet(workspace, "data-view", view);
-              for (var _iterator23 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step23; !(_step23 = _iterator23()).done;) {
-                var item = _step23.value;
+              for (var _iterator25 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step25; !(_step25 = _iterator25()).done;) {
+                var item = _step25.value;
                 item.setAttribute("aria-pressed", item === selectedButton ? "true" : "false");
               }
               renderStatusState();
@@ -1973,14 +1981,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             filterProjectFiles = function _filterProjectFiles() {
               var query = fileFilter.value.trim().toLowerCase();
               var visible = 0;
-              for (var _iterator20 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll('[role="menuitemradio"]')), _step20; !(_step20 = _iterator20()).done;) {
-                var _option = _step20.value;
+              for (var _iterator22 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll('[role="menuitemradio"]')), _step22; !(_step22 = _iterator22()).done;) {
+                var _option = _step22.value;
                 var row = _option.closest(".project-editor__file-option-row");
                 row.hidden = Boolean(query && !_option.textContent.toLowerCase().includes(query));
                 if (!row.hidden) visible += 1;
               }
-              for (var _iterator21 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll("[data-project-file-available], [data-project-open-files]")), _step21; !(_step21 = _iterator21()).done;) {
-                var group = _step21.value;
+              for (var _iterator23 = _createForOfIteratorHelperLoose(fileMenu.querySelectorAll("[data-project-file-available], [data-project-open-files]")), _step23; !(_step23 = _iterator23()).done;) {
+                var group = _step23.value;
                 group.hidden = !group.querySelector(".project-editor__file-option-row:not([hidden])");
               }
               fileEmpty.hidden = visible !== 0;
@@ -2059,7 +2067,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             _renderStoredVersions = function _renderStoredVersions3() {
               _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee1() {
-                var response, _yield$response$json, versions, current, _loop8, _iterator35, _step35;
+                var response, _yield$response$json, versions, current, _loop8, _iterator37, _step37;
                 return _regenerator().w(function (_context11) {
                   while (1) switch (_context11.n) {
                     case 0:
@@ -2105,7 +2113,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         return _regenerator().w(function (_context10) {
                           while (1) switch (_context10.n) {
                             case 0:
-                              version = _step35.value;
+                              version = _step37.value;
                               timestamp = version.savedAt || version.createdAt;
                               button = versionChoice(relativeVersionTime(timestamp), timestamp, {
                                 sequence: version.sequence,
@@ -2158,9 +2166,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           }
                         }, _loop8);
                       });
-                      _iterator35 = _createForOfIteratorHelperLoose(versions);
+                      _iterator37 = _createForOfIteratorHelperLoose(versions);
                     case 4:
-                      if ((_step35 = _iterator35()).done) {
+                      if ((_step37 = _iterator37()).done) {
                         _context11.n = 6;
                         break;
                       }
@@ -2513,8 +2521,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
               sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
               menu.replaceChildren();
-              for (var _iterator16 = _createForOfIteratorHelperLoose(tabs.querySelectorAll("[data-instant-tooltip-attached='true']")), _step16; !(_step16 = _iterator16()).done;) {
-                var _button = _step16.value;
+              for (var _iterator18 = _createForOfIteratorHelperLoose(tabs.querySelectorAll("[data-instant-tooltip-attached='true']")), _step18; !(_step18 = _iterator18()).done;) {
+                var _button = _step18.value;
                 _button._hideInstantTooltip == null || _button._hideInstantTooltip();
               }
               tabs.replaceChildren();
@@ -2567,8 +2575,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 }
                 (open ? openChoices : availableChoices).append(row);
               }
-              for (var _iterator17 = _createForOfIteratorHelperLoose(state.files), _step17; !(_step17 = _iterator17()).done;) {
-                var file = _step17.value;
+              for (var _iterator19 = _createForOfIteratorHelperLoose(state.files), _step19; !(_step19 = _iterator19()).done;) {
+                var file = _step19.value;
                 if (!openTabs.includes(file.path)) addChoice({
                   path: file.path,
                   label: file.path
@@ -2579,7 +2587,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 config: true
               });
               var _loop5 = function _loop5() {
-                var path = _step18.value;
+                var path = _step20.value;
                 var file = state.files.find(function (candidate) {
                   return candidate.path === path;
                 });
@@ -2590,11 +2598,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   open: true
                 });
               };
-              for (var _iterator18 = _createForOfIteratorHelperLoose(openTabs), _step18; !(_step18 = _iterator18()).done;) {
+              for (var _iterator20 = _createForOfIteratorHelperLoose(openTabs), _step20; !(_step20 = _iterator20()).done;) {
                 _loop5();
               }
               var _loop6 = function _loop6() {
-                var path = _step19.value;
+                var path = _step21.value;
                 var tab = document.createElement("div");
                 tab.className = "project-editor__open-tab";
                 __resourcesDatasetSet(tab, "data-tab-path", path);
@@ -2622,7 +2630,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 }
                 tabs.append(tab);
               };
-              for (var _iterator19 = _createForOfIteratorHelperLoose(openTabs), _step19; !(_step19 = _iterator19()).done;) {
+              for (var _iterator21 = _createForOfIteratorHelperLoose(openTabs), _step21; !(_step21 = _iterator21()).done;) {
                 _loop6();
               }
               root.querySelector("[data-project-file-current]").textContent = selected === "config" ? __resourcesDatasetGet(root, "data-config-label") || "Configuration" : selected;
@@ -2750,7 +2758,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             _renderPreview = function _renderPreview3() {
               _renderPreview = _asyncToGenerator(_regenerator().m(function _callee7() {
                 var _state$config8, _previewState$config, _previewState$files$f, _exec2, _previewState$config2, _previewState$config9;
-                var _editorController5, _editorController6, generation, _editorController7, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator28, _step28, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator32, _step32, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator34, _step34, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t5, _t6;
+                var _editorController5, _editorController6, generation, _editorController7, previewState, entry, source, title, outputOptions, useOutputFrame, surfaceHost, surfaceRoot, surfaceBody, parsed, allowed, _i6, _Object$keys2, _previewState$config3, name, scripts, violations, structuralElement, reject, projectFile, resolveModulePath, _bundleProjectModule, _iterator30, _step30, script, ancestor, blocked, src, module, _path, file, fragment, projectedAttributes, copy, _iterator34, _step34, child, staging, _serializeOutputNode, outputTree, index, stylesheetPaths, links, _index2, styles, cssParts, _index3, _loop7, _iterator36, _step36, css, renderedCss, stagedRoot, _surfaceHost$contentD, _t5, _t6;
                 return _regenerator().w(function (_context8) {
                   while (1) switch (_context8.p = _context8.n) {
                     case 0:
@@ -2769,8 +2777,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                             return;
                           }
                           if (["html", "body"].includes(name)) {
-                            for (var _iterator29 = _createForOfIteratorHelperLoose(node.childNodes), _step29; !(_step29 = _iterator29()).done;) {
-                              var child = _step29.value;
+                            for (var _iterator31 = _createForOfIteratorHelperLoose(node.childNodes), _step31; !(_step31 = _iterator31()).done;) {
+                              var child = _step31.value;
                               copy(child, parent2);
                             }
                           }
@@ -2803,13 +2811,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         }
                         if (node.namespaceURI === "http://www.w3.org/2000/svg") {
                           var svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id", "offset", "stop-color", "gradientUnits"]);
-                          for (var _iterator30 = _createForOfIteratorHelperLoose(node.attributes), _step30; !(_step30 = _iterator30()).done;) {
-                            var _attribute2 = _step30.value;
+                          for (var _iterator32 = _createForOfIteratorHelperLoose(node.attributes), _step32; !(_step32 = _iterator32()).done;) {
+                            var _attribute2 = _step32.value;
                             if (svgAttributes.has(_attribute2.name) && /^[- A-Za-z0-9.,#()%]+$/.test(_attribute2.value)) element.setAttribute(_attribute2.name, _attribute2.value);
                           }
                         }
-                        for (var _iterator31 = _createForOfIteratorHelperLoose(node.childNodes), _step31; !(_step31 = _iterator31()).done;) {
-                          var _child = _step31.value;
+                        for (var _iterator33 = _createForOfIteratorHelperLoose(node.childNodes), _step33; !(_step33 = _iterator33()).done;) {
+                          var _child = _step33.value;
                           copy(_child, element);
                         }
                         parent2.append(element);
@@ -2958,8 +2966,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       resolveModulePath = function resolveModulePath(from, specifier) {
                         var parts = from.split("/");
                         parts.pop();
-                        for (var _iterator27 = _createForOfIteratorHelperLoose(specifier.split("/")), _step27; !(_step27 = _iterator27()).done;) {
-                          var part = _step27.value;
+                        for (var _iterator29 = _createForOfIteratorHelperLoose(specifier.split("/")), _step29; !(_step29 = _iterator29()).done;) {
+                          var part = _step29.value;
                           if (!part || part === ".") continue;
                           if (part === "..") parts.pop();else parts.push(part);
                         }
@@ -2983,13 +2991,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         if (new RegExp("^\\s*export\\s", "m").test(body)) throw new Error("Unsupported module export in " + path);
                         return imports.join("\n") + "\n" + body;
                       };
-                      _iterator28 = _createForOfIteratorHelperLoose(parsed.querySelectorAll("script"));
+                      _iterator30 = _createForOfIteratorHelperLoose(parsed.querySelectorAll("script"));
                     case 11:
-                      if ((_step28 = _iterator28()).done) {
+                      if ((_step30 = _iterator30()).done) {
                         _context8.n = 17;
                         break;
                       }
-                      script = _step28.value;
+                      script = _step30.value;
                       ancestor = script.parentElement;
                       blocked = false;
                     case 12:
@@ -3033,8 +3041,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     case 17:
                       fragment = document.createDocumentFragment();
                       projectedAttributes = new WeakMap();
-                      for (_iterator32 = _createForOfIteratorHelperLoose(parsed.body.childNodes); !(_step32 = _iterator32()).done;) {
-                        child = _step32.value;
+                      for (_iterator34 = _createForOfIteratorHelperLoose(parsed.body.childNodes); !(_step34 = _iterator34()).done;) {
+                        child = _step34.value;
                         copy(child, fragment);
                       }
                       staging = document.createElement("div");
@@ -3046,8 +3054,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           var attribute = node.attributes[index];
                           attributes.push([attribute.name, attribute.value]);
                         }
-                        for (var _iterator33 = _createForOfIteratorHelperLoose(projectedAttributes.get(node) || []), _step33; !(_step33 = _iterator33()).done;) {
-                          var _attribute3 = _step33.value;
+                        for (var _iterator35 = _createForOfIteratorHelperLoose(projectedAttributes.get(node) || []), _step35; !(_step35 = _iterator35()).done;) {
+                          var _attribute3 = _step35.value;
                           attributes.push(_attribute3);
                         }
                         var children = [];
@@ -3076,7 +3084,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         return _regenerator().w(function (_context7) {
                           while (1) switch (_context7.n) {
                             case 0:
-                              path = _step34.value;
+                              path = _step36.value;
                               file = previewState.files.find(function (candidate) {
                                 return candidate.path === path;
                               });
@@ -3086,9 +3094,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           }
                         }, _loop7);
                       });
-                      _iterator34 = _createForOfIteratorHelperLoose(stylesheetPaths);
+                      _iterator36 = _createForOfIteratorHelperLoose(stylesheetPaths);
                     case 18:
-                      if ((_step34 = _iterator34()).done) {
+                      if ((_step36 = _iterator36()).done) {
                         _context8.n = 20;
                         break;
                       }
@@ -3839,7 +3847,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               return _regenerator().w(function (_context12) {
                 while (1) switch (_context12.n) {
                   case 0:
-                    button = _step22.value;
+                    button = _step24.value;
                     button.addEventListener("click", function () {
                       var _editorController9;
                       var detailsButton = projectDetails;
@@ -3858,8 +3866,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       } else {
                         __resourcesDatasetDelete(projectLayout, "data-mobile-view");
                         __resourcesDatasetSet(workspace, "data-view", __resourcesDatasetGet(button, "data-project-view"));
-                        for (var _iterator36 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step36; !(_step36 = _iterator36()).done;) {
-                          var item = _step36.value;
+                        for (var _iterator38 = _createForOfIteratorHelperLoose(root.querySelectorAll(".project-view-segments [data-project-view]")), _step38; !(_step38 = _iterator38()).done;) {
+                          var item = _step38.value;
                           item.setAttribute("aria-pressed", item === button ? "true" : "false");
                         }
                         if (narrowWorkspace.matches) {
@@ -3875,9 +3883,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 }
               }, _loop9);
             });
-            _iterator22 = _createForOfIteratorHelperLoose(root.querySelectorAll("[data-project-view]"));
+            _iterator24 = _createForOfIteratorHelperLoose(root.querySelectorAll("[data-project-view]"));
           case 10:
-            if ((_step22 = _iterator22()).done) {
+            if ((_step24 = _iterator24()).done) {
               _context14.n = 12;
               break;
             }
@@ -3957,7 +3965,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               return _regenerator().w(function (_context13) {
                 while (1) switch (_context13.n) {
                   case 0:
-                    textarea = _step24.value;
+                    textarea = _step26.value;
                     textarea.addEventListener("input", function () {
                       return growTextarea(textarea);
                     });
@@ -3967,9 +3975,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 }
               }, _loop0);
             });
-            _iterator24 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("textarea[data-autogrow]")) || []);
+            _iterator26 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("textarea[data-autogrow]")) || []);
           case 13:
-            if ((_step24 = _iterator24()).done) {
+            if ((_step26 = _iterator26()).done) {
               _context14.n = 15;
               break;
             }
@@ -3979,13 +3987,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             break;
           case 15:
             linkPatterns == null || linkPatterns.addEventListener("input", updateContainer);
-            _iterator25 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select")) || []);
+            _iterator27 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select")) || []);
           case 16:
-            if ((_step25 = _iterator25()).done) {
+            if ((_step27 = _iterator27()).done) {
               _context14.n = 19;
               break;
             }
-            field = _step25.value;
+            field = _step27.value;
             if (!field.matches("[data-project-template], #project-link-patterns, [data-version-title-input]")) {
               _context14.n = 17;
               break;
@@ -4043,9 +4051,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               if (draft || memoryOnly) checkpointDraft();else if (pending2) save();
             }, CHECKPOINT_MS);
             setInterval(function () {
-              for (var _iterator26 = _createForOfIteratorHelperLoose(((_root$closest0 = root.closest(".project-create__layout")) == null ? void 0 : _root$closest0.querySelectorAll("[data-version-time]")) || []), _step26; !(_step26 = _iterator26()).done;) {
+              for (var _iterator28 = _createForOfIteratorHelperLoose(((_root$closest0 = root.closest(".project-create__layout")) == null ? void 0 : _root$closest0.querySelectorAll("[data-version-time]")) || []), _step28; !(_step28 = _iterator28()).done;) {
                 var _root$closest0;
-                var _label2 = _step26.value;
+                var _label2 = _step28.value;
                 _label2.textContent = relativeVersionTime(__resourcesDatasetGet(_label2, "data-version-time"));
               }
             }, 3e4);
@@ -4069,14 +4077,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     }));
     return _mountProjectRoot.apply(this, arguments);
   }
-  for (var _iterator14 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-editor]")), _step14; !(_step14 = _iterator14()).done;) {
-    var root = _step14.value;
+  for (var _iterator16 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-editor]")), _step16; !(_step16 = _iterator16()).done;) {
+    var root = _step16.value;
     mountProjectRoot(root).catch(function (error) {
       return globalThis.__wwcReportError == null ? void 0 : globalThis.__wwcReportError((error == null ? void 0 : error.stack) || (error == null ? void 0 : error.message) || String(error));
     });
   }
   var _loop1 = function _loop1() {
-    var figure = _step15.value;
+    var figure = _step17.value;
     var focusBlogPresentation = function focusBlogPresentation() {
         var _frame$contentWindow;
         if (!presentationReady) return;
@@ -4151,7 +4159,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       once: true
     });
   };
-  for (var _iterator15 = _createForOfIteratorHelperLoose(document.querySelectorAll(".blog-example-block")), _step15; !(_step15 = _iterator15()).done;) {
+  for (var _iterator17 = _createForOfIteratorHelperLoose(document.querySelectorAll(".blog-example-block")), _step17; !(_step17 = _iterator17()).done;) {
     if (_loop1()) continue;
   }
 })();
