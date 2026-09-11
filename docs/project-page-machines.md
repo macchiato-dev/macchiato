@@ -3574,3 +3574,19 @@ test continues to detect the original defect. Production CodeMirror is unchanged
 Evidence: `native-resize-stress*`, `native-resize-owner-*`,
 `native-resize-final-boundaries*`, `native-resize-pane-timing*`, and
 `native-resize-quiet-baseline.log` in `/root/macchiato-work`.
+
+The candidate has now replaced the local native-idle deployment. The live host,
+controller, frontend/editor/output Wasm, and iframe HTML match the export
+byte-for-byte (`native-resize-live-assets.log`). Its extracted tar also passes
+all 152 manifest checks. `/root/resources-bunny.tar.gz` has SHA-256
+`57f2a59f3c07170e932aae6d602dddf569a4edfa93debdfccfbcdace00c16b10`.
+The former archive is preserved at
+`/root/archive/2026/09/11/resources-bunny-cce29ab-before-native-resize.tar.gz`.
+Nothing was deployed to Bunny. Canvas/background and root-font fidelity,
+large-file costs, and remaining guest-API fidelity gaps keep the broader goal
+open; this checkpoint does not claim the entire objective is finished.
+
+Fresh authenticated checks of both saved games pass on the actual restarted
+server with asset overrides disabled, including iframe output, editors, theme
+changes, and phone layouts (`native-resize-live-mahjong.log` and
+`native-resize-live-cat.log`). These make no owner saves.
