@@ -1836,7 +1836,22 @@ GuestStorage.prototype.removeItem = function (name) {
 GuestStorage.prototype.listen = function (name, callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   var index = allocateCallback(callback, false);
-  immediate([3, document.reference, stringIndex("storageListen"), [encode(this.kind), encode(String(name)), encode(index)]]);
+  try {
+    var result = immediate([3, document.reference, stringIndex("storageListen"), [encode(this.kind), encode(String(name)), encode(index)]]);
+    if (result !== null) {
+      var reader = new Reader(result, result.length);
+      reader.at = 0;
+      var errorName = readValue(reader),
+        message = readValue(reader);
+      var ErrorType = errorName === "TypeError" ? TypeError : errorName === "RangeError" ? RangeError : Error;
+      var failure = new ErrorType(message);
+      failure.name = errorName;
+      throw failure;
+    }
+  } catch (_error3) {
+    releaseCallback(index);
+    throw _error3;
+  }
 };
 function resolved(value) {
   return {
@@ -1969,8 +1984,8 @@ function encodeCss(source, includeFonts) {
     var result = new Uint8Array(writer.at - 4);
     for (var index = 4; index < writer.at; index++) result[index - 4] = writer.bytes[index];
     return result;
-  } catch (_error3) {
-    throw new SyntaxError("CSS " + phase + " failed: " + String(_error3));
+  } catch (_error4) {
+    throw new SyntaxError("CSS " + phase + " failed: " + String(_error4));
   }
 }
 GuestDocument.prototype.installStylesheet = function (source) {
@@ -3488,11 +3503,11 @@ function allocateElementCallback(callback, target) {
     if (!state.active || !current) return releaseCallback(index);
     try {
       current.call(target, event);
-    } catch (_error4) {
-      var message = String(_error4),
-        stack = _error4 && _error4.stack;
+    } catch (_error5) {
+      var message = String(_error5),
+        stack = _error5 && _error5.stack;
       globalThis.__wwcReportError(stack && stack.indexOf(message) < 0 ? message + "\n" + stack : stack || message);
-      throw _error4;
+      throw _error5;
     }
   };
   return index;

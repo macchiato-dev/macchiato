@@ -2017,12 +2017,19 @@ var WasmWebBridge = class {
         return null;
       }
       if (object === hostDocument && name === "storageListen") {
-        if (!options.services?.storage) fail("storage is not available");
         const callback = args[2];
-        if (!Number.isInteger(callback)) fail("storage callback is not allowed");
-        const stop = options.services.storage.listen(args[0], args[1], () => deliver(callback));
-        if (typeof stop === "function") serviceSubscriptions.add(stop);
-        return null;
+        if (!Number.isInteger(callback) || callback < 0 || callback >= 4096) fail("storage callback is not allowed");
+        try {
+          if (!options.services?.storage) throw new Error("storage is not available");
+          const stop = options.services.storage.listen(args[0], args[1], () => deliver(callback));
+          if (typeof stop === "function") serviceSubscriptions.add(stop);
+          return null;
+        } catch (error) {
+          const reply = new Writer();
+          reply.value(String(error?.name || "Error").slice(0, 64));
+          reply.value(String(error?.message || error).slice(0, 4096));
+          return Uint8Array.from(reply.bytes);
+        }
       }
       if (object === hostDocument && name === "routeGet") {
         if (!options.services?.route) fail("routing is not available");
