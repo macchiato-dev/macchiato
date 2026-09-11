@@ -17,6 +17,9 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const directory = await mkdtemp(join(work, "bulk-input-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const generated = join(root, "packages/website/generated");
+  // Compare a previous DOM environment without changing the editor, language,
+  // document, or input sequence. Production artifacts always use the default.
+  const environment = process.env.MACCHIATO_TEST_ENVIRONMENT_FILE || join(generated, "project-editor-runtime.bin");
   const runtime = join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/microquickjs-guest-runtime");
   const application = join(directory, "application.js");
   const setup = '__codeEditorSetContent(JSON.stringify({language:"html",content:"<p>Initial</p>"}));';
@@ -25,7 +28,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", join(directory, "application.bin"), application]);
   execFileSync(process.execPath, [join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/stamp-wasm.js"),
     join(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
-    join(directory, "editor.wasm"), `runtime.bin=${join(generated, "project-editor-runtime.bin")}`,
+    join(directory, "editor.wasm"), `runtime.bin=${environment}`,
     `application.bin=${join(directory, "application.bin")}`, `editor.bin=${join(generated, "project-editor-core.bin")}`,
     `html.bin=${join(generated, "project-editor-language-html.bin")}`]);
   const wasm = await readFile(join(directory, "editor.wasm"));
