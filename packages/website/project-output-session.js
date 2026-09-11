@@ -1,4 +1,5 @@
 import { QuickJSRuntime } from "../../dev/wasm-web-runtimes/quickjs/context-runtime.js";
+import { storageResponse } from "./storage-service.js";
 
 const encoder = new TextEncoder();
 function message(name, payload) {
@@ -27,6 +28,7 @@ class OutputSession {
       onError: error => this.report(error),
       services: { ...options.services, call(name, path) {
         if (name === "module.source") return JSON.stringify(files.get(path) ?? null);
+        if (name === "storage.request") return JSON.stringify(storageResponse(options.services?.storage, JSON.parse(path)));
         if (typeof options.services?.call === "function") return options.services.call(name, path);
         throw new Error(`Project service is unavailable: ${name}`);
       } },

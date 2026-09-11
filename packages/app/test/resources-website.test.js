@@ -1067,6 +1067,69 @@ test("project output fetches supplied files and rejects outside requests through
   assert.deepEqual(errors, []);
 });
 
+test("project guests catch storage failures without escaping their namespace", { timeout: 90000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  for (const denied of [false, true]) {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    await page.addInitScript(denied => {
+      if (location.pathname.endsWith("/project-output-frame.html") && denied) {
+        for (const name of ["localStorage", "sessionStorage"]) Object.defineProperty(window, name, {
+          get() { throw new DOMException("Storage denied", "SecurityError"); },
+        });
+      } else if (window === top) localStorage.setItem("website-only", "not a project resource");
+    }, denied);
+    await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
+    await page.locator(".cm-content").waitFor();
+    const source = `<h1 id="result">Waiting</h1><button id="again">Continue</button><script>
+const results = [];
+function attempt(action) {
+  try { action(); results.push("unexpected success"); }
+  catch (error) { results.push(error.name); }
+}
+if (${denied}) {
+  attempt(() => localStorage.getItem("key"));
+  attempt(() => sessionStorage.setItem("key", "value"));
+  attempt(() => localStorage.removeItem("key"));
+} else {
+  results.push(String(localStorage.getItem("website-only")));
+  localStorage.removeItem("website-only");
+  localStorage.setItem("kept", "original");
+  attempt(() => localStorage.setItem("kept", "é".repeat(4096)));
+  attempt(() => sessionStorage.setItem("big", "x".repeat(128 * 1024)));
+  attempt(() => localStorage.getItem("x".repeat(1025)));
+  attempt(() => sessionStorage.setItem("huge", "x".repeat(3 * 1024 * 1024)));
+  results.push(localStorage.getItem("kept"));
+  localStorage.setItem("kept", "updated");
+  results.push(localStorage.getItem("kept"));
+  localStorage.removeItem("kept");
+  results.push(String(localStorage.getItem("kept")));
+}
+document.getElementById("result").textContent = results.join(",");
+document.getElementById("again").addEventListener("click", () => {
+  document.getElementById("result").textContent = "Still running";
+});
+</script>`;
+    await page.locator(".cm-content").fill(source);
+    const output = page.frameLocator("[data-project-output-mount] iframe");
+    await output.locator("#result").waitFor({ timeout: 10000 });
+    assert.equal(await output.locator("#result").textContent(), denied
+      ? "SecurityError,SecurityError,SecurityError"
+      : "null,RangeError,RangeError,TypeError,RangeError,original,updated,null");
+    await output.getByRole("button", { name: "Continue", exact: true }).click();
+    assert.equal(await output.locator("#result").textContent(), "Still running");
+    assert.equal(await page.evaluate(() => localStorage.getItem("website-only")), "not a project resource");
+    assert.deepEqual(errors, []);
+    await page.close();
+  }
+});
+
 test("Resources editor remains usable when browser storage access is denied", { timeout: 60000 }, async t => {
   const port = await getPort(), dataDir = await tempDir();
   const app = startApp(port, dataDir);

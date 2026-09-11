@@ -1,8 +1,11 @@
 // Browser storage can be denied even on an otherwise usable page. Transfer
 // failures as data so try/catch runs inside the guest, not across a Wasm trap.
 export function storageRequest(operation, kind, key, value) {
-  const result = JSON.parse(globalThis.__wwcServiceCall("storage.request",
-    JSON.stringify({ operation, kind, key: String(key), value })));
+  const text = JSON.stringify({ operation, kind, key: String(key), value });
+  // Reject before entering the host's bounded text reader, so the application
+  // can catch even a request much larger than its storage quota.
+  if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
+  const result = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
   if (result.error) {
     const error = new Error(result.error.message);
     error.name = result.error.name;

@@ -54,6 +54,11 @@ test("storage errors return through the service and are thrown inside the guest"
     assert.equal(values.get("theme"), "dark");
   }
   denied = full = false;
+  for (const oversized of ["x".repeat(3 * 1024 * 1024), "\0".repeat(400000)]) {
+    returned = false;
+    assert.throws(() => context.sessionStorage.setItem("large", oversized), /Storage request exceeds its text limit/);
+    assert.equal(returned, false, "an oversized request never enters the host reader");
+  }
   context.localStorage.setItem("theme", "light");
   assert.equal(context.localStorage.getItem("theme"), "light");
   context.localStorage.removeItem("theme");

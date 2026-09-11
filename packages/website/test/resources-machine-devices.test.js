@@ -76,11 +76,11 @@ test("recovery presence does not decode assets and recovery errors cross as data
   const window = storageWindow();
   const storage = new ResourcesStorageDevice(window, new ResourcesProjectResourceDevice());
   const key = pendingProjectSnapshotKey("expired");
-  assert.equal(storage.hasSessionValue(key), false);
+  assert.equal(storage.has("session", key), false);
   assert.deepEqual(storage.readRecovery(key), { value: null, error: null });
   const expired = JSON.stringify({ files: [{ path: "tile.svg", content: "\0resources-project-resource:1" }] });
   window.sessionStorage.setItem(key, expired);
-  assert.equal(storage.hasSessionValue(key), true);
+  assert.equal(storage.has("session", key), true);
   assert.deepEqual(storage.readRecovery(key), { value: null, error: "Project recovery resource is unavailable" });
   assert.equal(window.sessionStorage.getItem(key), expired);
 });

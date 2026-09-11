@@ -150,6 +150,14 @@ await writeFile(join(outputDirectory, "project-editor-runtime.js"), runtime);
 await writeFile(join(outputDirectory, "project-editor-guest.js"), guest);
 await writeFile(join(outputDirectory, "project-builder-guest.js"), builder);
 
+// The output bootstrap shares the application's storage-error adapter. Its
+// imports are compiled into guest code, never loaded into the browser realm.
+await build({
+  entryPoints: [join(directory, "project-output-bootstrap.js")],
+  bundle: true, format: "iife", platform: "neutral", target: "es2022",
+  outfile: join(outputDirectory, "project-output-bootstrap.js"),
+});
+
 execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
   cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
   env: {
@@ -172,7 +180,7 @@ execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"]
     WWC_CANONICAL_HOST: "1",
     WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "examples", "codemirror", "generated", "canonical-dom.js"),
     WWC_MULTICONTEXT: "1",
-    WWC_APPLICATION_SOURCE: join(directory, "project-output-bootstrap.js"),
+    WWC_APPLICATION_SOURCE: join(outputDirectory, "project-output-bootstrap.js"),
   },
   stdio: "inherit",
 });

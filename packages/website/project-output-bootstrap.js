@@ -1,3 +1,5 @@
+import "./resources-storage-client.js";
+
 // Project code arrives later through the QuickJS runtime's tagged message.
 let nextFetch = 1;
 const pendingFetches = new Map();

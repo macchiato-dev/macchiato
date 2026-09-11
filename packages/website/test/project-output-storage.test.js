@@ -24,6 +24,10 @@ test("project output storage isolates keys, enforces byte quotas and cleans up l
   const first = new ProjectOutputStorage(window, "first"), second = new ProjectOutputStorage(window, "second");
   first.set("session", "notes", "Saved notes");
   assert.equal(first.get("session", "notes"), "Saved notes");
+  assert.deepEqual(first.request({ operation: "has", kind: "session", key: "notes" }), { value: true });
+  assert.deepEqual(second.request({ operation: "get", kind: "session", key: "notes" }), { value: null });
+  assert.equal(first.request({ operation: "set", kind: "session", key: "notes", value: "x".repeat(128 * 1024) }).error.name, "RangeError");
+  assert.deepEqual(first.request({ operation: "get", kind: "session", key: "notes" }), { value: "Saved notes" });
   assert.equal(second.get("session", "notes"), null);
   assert.equal(first.get("local", "resources_session"), null);
   first.delete("local", "resources_session");

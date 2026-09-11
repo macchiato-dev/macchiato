@@ -1,3 +1,5 @@
+import { storageResponse } from "./storage-service.js";
+
 const encoder = new TextEncoder();
 const limits = { local: 8192, session: 128 * 1024 };
 
@@ -28,6 +30,8 @@ export class ProjectOutputStorage {
     return this.prefix + key;
   }
   get(kind, key) { return this.area(kind).getItem(this.key(key)); }
+  has(kind, key) { return this.get(kind, key) !== null; }
+  request(payload) { return storageResponse(this, payload); }
   set(kind, key, value) {
     const area = this.area(kind), target = this.key(key);
     if (typeof value !== "string") throw new TypeError("Project storage values must be strings");
