@@ -3194,10 +3194,22 @@ var ProjectOutput = class {
   destroy = () => {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.remove(this.preparing);
-    this.remove(this.active);
+    const entries = [this.preparing, this.active];
     this.preparing = this.active = null;
-    this.runtime.destroy();
+    const errors = [];
+    for (const entry of entries) {
+      try {
+        this.remove(entry);
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    try {
+      this.runtime.destroy();
+    } catch (error) {
+      errors.push(error);
+    }
+    if (errors.length) throw errors[0];
   };
 };
 
