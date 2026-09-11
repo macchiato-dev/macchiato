@@ -27301,7 +27301,9 @@ function callGuest(name2, payload = {}) {
   }
 }
 function callHost(name2, payload = {}) {
-  return JSON.parse(globalThis.__wwcServiceCall(name2, JSON.stringify(payload)));
+  const text = JSON.stringify(payload);
+  if (text.length > 2 * 1024 * 1024) throw new Error("Editor service request exceeds its text limit");
+  return JSON.parse(globalThis.__wwcServiceCall(name2, text));
 }
 function requestHost(name2, payload = {}) {
   const id2 = nextRequest++;
@@ -28257,7 +28259,7 @@ async function mountProjectRoot(root) {
     status.dataset.state = activeError ? "error" : activeNotice || recoveryWriteError ? "warning" : persistenceState;
     const persistenceWarning = !activeError && !activeNotice && (persistenceState === "warning" || Boolean(recoveryWriteError));
     const workspaceView = root.querySelector(".project-editor__workspace")?.dataset.view;
-    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" || persistenceWarning && recoveryWriteError ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
+    const targetSurface = workspaceView !== "preview" && (activeStatusSurface === "editor" || workspaceView === "editor" || persistenceWarning && recoveryWriteError) ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
     if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
     status.hidden = !(activeError || activeNotice || persistenceWarning);
     statusNotice.hidden = !activeNotice || Boolean(activeError);
@@ -28269,10 +28271,7 @@ async function mountProjectRoot(root) {
       retry.type = "button";
       retry.className = "project-editor__status-action";
       retry.textContent = "Retry";
-      retry.addEventListener("click", () => {
-        clearTimeout(saveTimer);
-        save();
-      });
+      retry.addEventListener("click", retryRecovery);
       statusSave.append(document.createTextNode(" "), retry);
     }
     statusError.replaceChildren();
@@ -28335,6 +28334,18 @@ async function mountProjectRoot(root) {
       renderStatusState();
     }
     return !error;
+  }
+  function retryRecovery() {
+    clearTimeout(saveTimer);
+    if (!storeRecovery(
+      draft ? DRAFT_KEY : pendingSnapshotKey,
+      JSON.stringify(draft ? localHistory : currentSnapshot)
+    )) return;
+    if (pending2 && !viewingHistorical) save();
+    else if (draft) {
+      root.dataset.draftState = "saved";
+      setStatus("Draft saved in this session");
+    }
   }
   function updateSnapshot(next, { destructive = false } = {}) {
     const normalized = normalizeProjectSnapshot(next);

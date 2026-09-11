@@ -480,7 +480,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     if (payload === void 0) {
       payload = {};
     }
-    return JSON.parse(globalThis.__wwcServiceCall(name, JSON.stringify(payload)));
+    var text = JSON.stringify(payload);
+    if (text.length > 2 * 1024 * 1024) throw new Error("Editor service request exceeds its text limit");
+    return JSON.parse(globalThis.__wwcServiceCall(name, text));
   }
   function requestHost(name, payload) {
     if (payload === void 0) {
@@ -1498,7 +1500,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -2113,6 +2115,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               saveTimer = setTimeout(save, 1500);
               return true;
             };
+            retryRecovery = function _retryRecovery() {
+              clearTimeout(saveTimer);
+              if (!storeRecovery(draft ? DRAFT_KEY : pendingSnapshotKey, JSON.stringify(draft ? localHistory : currentSnapshot))) return;
+              if (pending2 && !viewingHistorical) save();else if (draft) {
+                __resourcesDatasetSet(root, "data-draft-state", "saved");
+                setStatus("Draft saved in this session");
+              }
+            };
             storeRecovery = function _storeRecovery(key, value) {
               var error = "";
               try {
@@ -2181,7 +2191,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               __resourcesDatasetSet(status, "data-state", activeError ? "error" : activeNotice || recoveryWriteError ? "warning" : persistenceState);
               var persistenceWarning = !activeError && !activeNotice && (persistenceState === "warning" || Boolean(recoveryWriteError));
               var workspaceView = (_root$querySelector2 = root.querySelector(".project-editor__workspace")) == null ? void 0 : __resourcesDatasetGet(_root$querySelector2, "data-view");
-              var targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" || persistenceWarning && recoveryWriteError ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
+              var targetSurface = workspaceView !== "preview" && (activeStatusSurface === "editor" || workspaceView === "editor" || persistenceWarning && recoveryWriteError) ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
               if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
               status.hidden = !(activeError || activeNotice || persistenceWarning);
               statusNotice.hidden = !activeNotice || Boolean(activeError);
@@ -2193,10 +2203,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 retry.type = "button";
                 retry.className = "project-editor__status-action";
                 retry.textContent = "Retry";
-                retry.addEventListener("click", function () {
-                  clearTimeout(saveTimer);
-                  save();
-                });
+                retry.addEventListener("click", retryRecovery);
                 statusSave.append(document.createTextNode(" "), retry);
               }
               statusError.replaceChildren();
