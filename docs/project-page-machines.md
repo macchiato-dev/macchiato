@@ -2743,6 +2743,30 @@ Nothing was deployed to Bunny. Wrapper-attribute fidelity, bulk-edit performance
 and the remaining service-boundary cases above are still open; these checks do
 not establish completion of the overall project-page goal.
 
+### Inert HTML attribute boundaries
+
+The source parser previously stopped a start tag at the first `>`, including
+one inside a quoted attribute. A native-template comparison reproduces the
+failure before the fix. The parser now scans quotes to find the delimiter,
+keeps the first duplicate attribute, and distinguishes a standalone closing
+slash from a trailing slash in an unquoted value. SVG retains self-closing
+syntax; non-void HTML must still have its closing tag in this strict parser.
+
+Nine inert fixtures match browser attributes, namespaces, and text trees.
+Seven compiler fixtures compare the complete source-compiler result with the
+rebuilt QuickJS/Wasm compiler, including malformed attributes, a CSS rule
+breakout, a remote image URL, and successful compilation after those errors.
+Output tests confirm the quoted value survives content updates and the first
+class value continues to select the contained stylesheet. No host APIs changed.
+
+Document-wrapper fidelity remains open. The current container grant aliases
+`documentElement` and `body`, and selector rendering maps both to that grant.
+Blindly merging their attributes would lose distinct inline styles, classes,
+and inheritance. A follow-up must preserve those distinctions and test them
+against a native document, rather than silently choosing which wrapper wins.
+The inert parser is not a complete HTML parser; character references and
+browser error recovery also need explicit fidelity work.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

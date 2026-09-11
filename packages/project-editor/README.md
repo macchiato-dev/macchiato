@@ -49,6 +49,13 @@ assignments. The host checks rendered values with `CSS.supports`, since valid
 shorthands can have empty CSSOM shorthand readbacks. Images remain restricted to
 background declarations, and arithmetic operators have their own wire tag.
 
+The inert HTML parser scans quoted attributes before finding a tag's closing
+`>`. Duplicate attributes keep the first value, as in the browser. A slash in
+an unquoted value is data, not a self-closing marker; self-closing syntax closes
+SVG elements but does not implicitly close ordinary non-void HTML elements.
+Browser comparisons check these boundaries, and the built Wasm compiler must
+return the same complete result or error as the source compiler.
+
 Source-limit accounting walks CodeMirror's immutable text tree and weakly
 caches each subtree's code-point count and longest line. Edits reuse unchanged
 subtrees; discarded history does not remain pinned by this cache. DOM,

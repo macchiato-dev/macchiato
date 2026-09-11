@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
+import { build } from "esbuild";
 import { chromium } from "playwright";
 import { parseProjectHtml } from "../project-html-parser.js";
+import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
 
 // Compare inert parsing, not rendering. Never attach these fixtures to the
 // active document: URL-valued attributes must not start resource requests.
@@ -42,4 +45,53 @@ test("inert HTML parsing preserves quoted delimiters and attribute boundaries", 
   for (const source of ['<p title="never closed>Text</p>', '<p title="closed"', '<p/>']) {
     assert.throws(() => parseProjectHtml(source), SyntaxError, source);
   }
+});
+
+test("the built Wasm compiler agrees with the source compiler on attribute parsing", async t => {
+  const javascript = (await build({
+    entryPoints: [new URL("../project-machines.js", import.meta.url).pathname],
+    bundle: true, format: "esm", platform: "browser", write: false,
+  })).outputFiles[0].text;
+  const wasm = await readFile(new URL("../generated/project-builder-quickjs-runtime.wasm", import.meta.url));
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage(), errors = [], unexpected = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("**/*", route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/") return route.fulfill({ body: "<!doctype html><title>Compiler parity</title>", contentType: "text/html" });
+    if (path === "/module.js") return route.fulfill({ body: javascript, contentType: "text/javascript" });
+    if (path === "/-/resources-site/project-builder-quickjs-runtime.wasm") {
+      return route.fulfill({ body: wasm, contentType: "application/wasm" });
+    }
+    unexpected.push(route.request().url());
+    return route.abort();
+  });
+  await page.goto("http://compiler.test/");
+  const sources = [
+    '<p data-label="a > b" class="first" CLASS="ignored">Text</p>',
+    '<p style=\'color:red; --label:"a > b";\'>Text</p>',
+    '<svg viewBox="0 0 24 24"><path d="M1 2 L3 4" /></svg>',
+    '<p data-label="unterminated>Text</p>',
+    '<p style=\'color:red; } p { color:blue;\'>Text</p>',
+    '<p style=\'background:url("https://outside.test/pixel")\'>Text</p>',
+    '<p data-label="recovered > failure">Text</p>',
+  ];
+  const expected = sources.map(content => {
+    try { return { value: compileProjectFiles([{ path: "index.html", content }]) }; }
+    catch (error) { return { error: error.message }; }
+  });
+  const actual = await page.evaluate(async sources => {
+    const { createProjectBuildMachine } = await import("/module.js");
+    const builder = await createProjectBuildMachine();
+    try {
+      return sources.map(content => {
+        try { return { value: builder.compileFiles([{ path: "index.html", content }], {}) }; }
+        catch (error) { return { error: error.message }; }
+      });
+    } finally { builder.destroy(); }
+  }, sources);
+  assert.deepEqual(actual, expected);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(unexpected, []);
 });

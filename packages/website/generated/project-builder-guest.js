@@ -10647,14 +10647,38 @@
   var rawElements = /* @__PURE__ */ new Set(["script", "style", "textarea", "title"]);
   function parsedAttributes(source2) {
     const entries = [];
+    const names = /* @__PURE__ */ new Set();
     let rest2 = source2.trim();
     while (rest2) {
+      if (rest2 === "/") return { entries, selfClosing: true };
       const match = /^([A-Za-z_:][A-Za-z0-9_.:-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?\s*/.exec(rest2);
       if (!match) throw new SyntaxError(`HTML attribute input was not consumed: ${rest2.slice(0, 32)}`);
-      entries.push([match[1].toLowerCase(), match[2] ?? match[3] ?? match[4] ?? ""]);
+      const name = match[1].toLowerCase();
+      if (!names.has(name)) entries.push([name, match[2] ?? match[3] ?? match[4] ?? ""]);
+      names.add(name);
       rest2 = rest2.slice(match[0].length);
     }
-    return entries;
+    return { entries, selfClosing: false };
+  }
+  function openingTag(source2, at2) {
+    const name = /^<\s*([A-Za-z][A-Za-z0-9-]*)/.exec(source2.slice(at2));
+    if (!name) throw new SyntaxError(`HTML tag input was not consumed at offset ${at2}`);
+    const start = at2 + name[0].length;
+    let quote2 = "";
+    for (let end = start; end < source2.length; end++) {
+      const character = source2[end];
+      if (quote2) {
+        if (character === quote2) quote2 = "";
+      } else if (character === '"' || character === "'") quote2 = character;
+      else if (character === ">") {
+        return {
+          name: name[1].toLowerCase(),
+          end: end + 1,
+          ...parsedAttributes(source2.slice(start, end))
+        };
+      }
+    }
+    throw new SyntaxError(`HTML start tag is not closed at offset ${at2}`);
   }
   function parseProjectHtml(source2) {
     const document2 = new ParsedNode(9);
@@ -10693,14 +10717,13 @@
         at2 += close2[0].length;
         continue;
       }
-      const open2 = /^<\s*([A-Za-z][A-Za-z0-9-]*)([^>]*)>/.exec(source2.slice(at2));
-      if (!open2) throw new SyntaxError(`HTML tag input was not consumed at byte ${at2}`);
-      const name = open2[1].toLowerCase();
-      const selfClosing = /\/\s*$/.test(open2[2]);
-      const node2 = new ParsedNode(1, name, "", parsedAttributes(open2[2].replace(/\/\s*$/, "")));
+      const open2 = openingTag(source2, at2);
+      const name = open2.name;
+      const node2 = new ParsedNode(1, name, "", open2.entries);
       node2.namespaceURI = stack2.some((parent) => parent.localName === "svg") || name === "svg" ? "http://www.w3.org/2000/svg" : "http://www.w3.org/1999/xhtml";
+      const selfClosing = open2.selfClosing && node2.namespaceURI === "http://www.w3.org/2000/svg";
       stack2.at(-1).append(node2);
-      at2 += open2[0].length;
+      at2 = open2.end;
       if (rawElements.has(name) && !selfClosing) {
         const expression = new RegExp(`<\\/\\s*${name}\\s*>`, "ig");
         expression.lastIndex = at2;
