@@ -3216,3 +3216,27 @@ byte-for-byte. The preceding archive is retained at
 No owner data was changed and no Bunny deployment was performed. Subscription
 error handling, other service replies, viewport/`rem` fidelity, and bulk-input
 performance remain open; these checks do not prove the overall goal complete.
+
+### Mutation-parent lookup and current bulk-input attribution
+
+A fresh trace of the `cd95394` workspace passes the full editing stress case.
+Its profiled native insertion takes about 20 seconds, with 7,841 layout passes
+(6.46 seconds) and 7,844 style/layout-tree updates (2.97 seconds). About 17.3
+seconds of CPU samples are outside JavaScript. The timeline and CPU categories
+overlap and must not be added together. This still points to substantial
+browser work; it does not justify replacing CodeMirror's native input behavior.
+Evidence is under `recovery-envelope-profile*` in `/root/macchiato-work`.
+
+The guest's mutation-batch reader nevertheless had an avoidable growing-array
+scan when collecting distinct changed parents. It now indexes their live
+reference IDs in a batch-local null-prototype object and retains a separate
+array for first-seen order. All native records, intermediate sibling values,
+reference releases, and final-tree reconciliation remain unchanged. A focused
+regression exercises 4,000 records over 2,000 parents, checks order and releases,
+and rejects repeated linear searches without relying on a timing threshold.
+
+Using `Set` here would not eliminate the scaling issue in the current
+MicroQuickJS build: its native `collection_table_find` still scans entries.
+The existing property table supplies hashed lookup without changing the
+interpreter or adding a host operation. This removes one guest-side scan, not
+the thousands of browser layout passes or the overall large-input bottleneck.
