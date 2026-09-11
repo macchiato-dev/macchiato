@@ -338,6 +338,7 @@ var CSS_VALUE_FUNCTIONS = /* @__PURE__ */ new Set([
   "minmax",
   "radial-gradient",
   "repeat",
+  "rgb",
   "rgba",
   "rotate",
   "rotateX",

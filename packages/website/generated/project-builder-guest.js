@@ -11264,6 +11264,7 @@
     "minmax",
     "radial-gradient",
     "repeat",
+    "rgb",
     "rgba",
     "rotate",
     "rotateX",
