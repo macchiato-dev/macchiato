@@ -3370,19 +3370,44 @@ globalThis.queueMicrotask = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   Promise.resolve().then(callback);
 };
-globalThis.requestIdleCallback = function (callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  var started = Date.now();
-  return setTimeout(function () {
-    callback({
-      didTimeout: false,
-      timeRemaining: function timeRemaining() {
-        return Math.max(0, 50 - (Date.now() - started));
-      }
-    });
-  }, 0);
-};
-globalThis.cancelIdleCallback = globalThis.clearTimeout;
+if (hostGet(document.reference, "supportsIdleCallback")) {
+  var idleCallbacks = Object.create(null);
+  globalThis.requestIdleCallback = function (callback, options) {
+    if (typeof callback !== "function") throw new TypeError("callback required");
+    var timeout = options && options.timeout !== undefined ? Number(options.timeout) >>> 0 : -1;
+    var handle;
+    var index = allocateCallback(function (deadline) {
+      delete idleCallbacks[handle];
+      var value = {
+        timeRemaining: function timeRemaining() {
+          return hostCall(deadline.reference, "timeRemaining", []) / 1000;
+        }
+      };
+      Object.defineProperty(value, "didTimeout", {
+        get: function get() {
+          return hostGet(deadline.reference, "didTimeout");
+        }
+      });
+      callback(value);
+    }, true);
+    try {
+      handle = hostCall(document.reference, "idleCallback", [timeout, index]);
+    } catch (_error5) {
+      releaseCallback(index);
+      throw _error5;
+    }
+    idleCallbacks[handle] = index;
+    return handle;
+  };
+  globalThis.cancelIdleCallback = function (handle) {
+    handle = Number(handle);
+    var index = idleCallbacks[handle];
+    if (index === undefined) return;
+    hostCall(document.reference, "cancelIdleCallback", [handle]);
+    delete idleCallbacks[handle];
+    releaseCallback(index);
+  };
+}
 function reportConsole() {
   var parts = [];
   for (var index = 0; index < arguments.length; index++) {
@@ -3503,11 +3528,11 @@ function allocateElementCallback(callback, target) {
     if (!state.active || !current) return releaseCallback(index);
     try {
       current.call(target, event);
-    } catch (_error5) {
-      var message = String(_error5),
-        stack = _error5 && _error5.stack;
+    } catch (_error6) {
+      var message = String(_error6),
+        stack = _error6 && _error6.stack;
       globalThis.__wwcReportError(stack && stack.indexOf(message) < 0 ? message + "\n" + stack : stack || message);
-      throw _error5;
+      throw _error6;
     }
   };
   return index;

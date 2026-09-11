@@ -985,6 +985,7 @@ var WasmWebBridge = class {
       HTMLTemplateElement,
       HTMLTextAreaElement,
       HTMLTitleElement,
+      IdleDeadline,
       InputEvent,
       KeyboardEvent,
       MediaQueryList,
@@ -1040,6 +1041,8 @@ var WasmWebBridge = class {
     const timers = /* @__PURE__ */ new Map();
     const frames = /* @__PURE__ */ new Map();
     let nextFrame = 1;
+    const idleCallbacks = /* @__PURE__ */ new Map();
+    let nextIdleCallback = 1;
     const cleanupCallbacks = /* @__PURE__ */ new Map();
     let nextTimer = 1;
     let nextCleanupCallback = 1;
@@ -1225,6 +1228,12 @@ var WasmWebBridge = class {
     };
     if (!messagesOnly) realm.addEventListener("submit", guardSubmit);
     function get(object, name) {
+      if (object === hostDocument && name === "supportsIdleCallback") {
+        return typeof realm.requestIdleCallback === "function" && typeof realm.cancelIdleCallback === "function";
+      }
+      if (typeof IdleDeadline === "function" && object instanceof IdleDeadline && name === "didTimeout") {
+        return object.didTimeout;
+      }
       if (object instanceof Node && object !== hostDocument && name !== "nodeType" && name !== "nodeName" && name !== "parentNode" && name !== "parentElement") requireNode(object);
       if ((object instanceof MediaQueryList || object instanceof MediaQueryListEvent) && (name === "matches" || name === "media")) return object[name];
       if (object === hostDocument && name === "profiling" && options.development === true) {
@@ -1538,6 +1547,27 @@ var WasmWebBridge = class {
       frames.delete(id);
     }
     function call(object, name, args) {
+      if (typeof IdleDeadline === "function" && object instanceof IdleDeadline && name === "timeRemaining" && args.length === 0) {
+        return Math.floor(object.timeRemaining() * 1e3);
+      }
+      if (object === hostDocument && name === "idleCallback" && args.length === 2) {
+        if (typeof realm.requestIdleCallback !== "function" || typeof realm.cancelIdleCallback !== "function" || !Number.isInteger(args[0]) || args[0] < -1 || args[0] > 4294967295 || !Number.isInteger(args[1]) || args[1] < 0 || args[1] > 4095 || idleCallbacks.size >= 1024) fail("idle callback is not allowed");
+        const id = nextIdleCallback++;
+        const handle = realm.requestIdleCallback((deadline) => {
+          idleCallbacks.delete(id);
+          deliver(args[1], deadline);
+        }, args[0] === -1 ? void 0 : { timeout: args[0] });
+        idleCallbacks.set(id, handle);
+        return id;
+      }
+      if (object === hostDocument && name === "cancelIdleCallback" && args.length === 1 && Number.isInteger(args[0])) {
+        const handle = idleCallbacks.get(args[0]);
+        if (handle !== void 0) {
+          realm.cancelIdleCallback(handle);
+          idleCallbacks.delete(args[0]);
+        }
+        return null;
+      }
       if (object instanceof Node && object !== hostDocument && name !== "contains" && name !== "closest") requireNode(object);
       if (object instanceof Element && ["setPointerCapture", "releasePointerCapture", "hasPointerCapture"].includes(name)) {
         if (args.length !== 1 || !Number.isInteger(args[0])) fail("pointer ID must be an integer");
@@ -2695,6 +2725,8 @@ var WasmWebBridge = class {
       for (const timer of timers.values()) realm.clearTimeout(timer);
       timers.clear();
       for (const id of frames.keys()) cancelFrame(id);
+      for (const handle of idleCallbacks.values()) realm.cancelIdleCallback(handle);
+      idleCallbacks.clear();
       for (const handle of cleanupCallbacks.values()) {
         if (typeof cancelIdleCallback === "function") cancelIdleCallback(handle);
         else clearTimeout(handle);
