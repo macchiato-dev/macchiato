@@ -362,12 +362,12 @@ GuestElement.prototype.matches = function (selector) {
 };
 // Native editing can change text before observer delivery, or without any
 // observer. Read the current value and flush earlier guest writes in order.
-["nodeValue", "textContent"].forEach(function (name) {
+["data", "nodeValue", "textContent"].forEach(function (name) {
   Object.defineProperty(GuestObject.prototype, name, {
     get: function () { return hostGet(this.reference, name); },
     set: function (value) {
       // Nullable DOMString setters treat null as empty text, not "null".
-      value = value == null ? "" : String(value);
+      value = name !== "data" && value == null ? "" : String(value);
       pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
     }
   });

@@ -20,7 +20,10 @@ function mutationCommand(json) {
     mutationReport({ records: describeMutations(records), identity: observer === mutationObserver,
       receiver: this === mutationObserver });
   });
-  if (action === "multiple") {
+  if (action === "named-write") {
+    // No explicit flush and no observer callback to accidentally flush this.
+    a.textContent = "visible when the named call returns";
+  } else if (action === "multiple") {
     mutationObserver.observe(a, { attributes: true, attributeOldValue: true });
     a.setAttribute("data-keep", "first");
     mutationObserver.observe(b, { attributes: true, attributeOldValue: true });
@@ -41,6 +44,37 @@ function mutationCommand(json) {
   } else if (action === "character-default") {
     mutationObserver.observe(a.firstChild, { characterDataOldValue: true });
     a.firstChild.data = "changed text";
+  } else if (action === "false-default") {
+    mutationObserver.observe(a, { attributeOldValue: false });
+    a.setAttribute("data-keep", "oldValue omitted from records");
+  } else if (action === "set-filter") {
+    mutationObserver.observe(a, { attributeFilter: new Set(["data-keep"]) });
+    a.setAttribute("data-ignore", "not in the set");
+    a.setAttribute("data-keep", "in the set");
+  } else if (action === "option-getters") {
+    var reads = [], options = {}, iterable = {};
+    Object.defineProperty(iterable, Symbol.iterator, { get: function () {
+      reads.push("iterator getter");
+      return function () {
+        reads.push("iterator call");
+        var done = false;
+        return { next: function () {
+          if (done) return { done: true };
+          done = true;
+          return { done: false, value: "data-keep" };
+        } };
+      };
+    } });
+    ["attributeFilter", "attributeOldValue", "attributes", "characterData",
+      "characterDataOldValue", "childList", "subtree"].forEach(function (name) {
+      Object.defineProperty(options, name, { get: function () {
+        reads.push(name);
+        return name === "attributeFilter" ? iterable : undefined;
+      } });
+    });
+    mutationObserver.observe(a, options);
+    mutationReport({ reads: reads });
+    a.setAttribute("data-keep", "once per dictionary member");
   } else if (action === "empty-filter") {
     mutationObserver.observe(a, { attributeFilter: [], childList: true });
     a.setAttribute("data-keep", "ignored again");

@@ -704,6 +704,7 @@ static void call_named(const uint8_t *bytes, uint32_t length)
     JS_PushArg(context, global);
     result = JS_Call(context, 1);
     if (JS_IsException(result)) report_guest_error(context, 4);
+    else dispatch(UINT32_MAX); /* Commit writes before returning to the host. */
 }
 
 /* Tag 3 installs a trusted compiler artifact supplied by the controller:

@@ -71,7 +71,8 @@ test("mutation observations preserve native registrations, queues, and options",
             window.dispose = () => { machine.destroy(); runtime?.destroy(); };
           }
         }, { mode, source });
-        for (const action of ["multiple", "replace-options", "defaults-filter", "character-default", "empty-filter", "drain", "invalid", "recycle"]) {
+        for (const action of ["multiple", "replace-options", "defaults-filter", "character-default",
+          "false-default", "set-filter", "option-getters", "empty-filter", "drain", "invalid", "recycle", "named-write"]) {
           const result = await target.evaluate(async action => {
             notices.length = 0;
             command({ action });
@@ -86,6 +87,8 @@ test("mutation observations preserve native registrations, queues, and options",
           }
           if (mode === "native") expected[action] = result;
           else assert.deepEqual(result, expected[action], action);
+          if (action === "named-write") assert.equal(await target.locator("#a").textContent(),
+            "visible when the named call returns");
         }
         await target.evaluate(() => window.dispose?.());
         assert.deepEqual(errors, []);
