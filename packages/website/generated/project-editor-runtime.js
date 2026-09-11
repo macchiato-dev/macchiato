@@ -67,7 +67,7 @@ function readSelector(reader) {
   if (reader.uint() !== 1) fail2();
   return group(0);
 }
-function renderSelector(list, scopeClass, logicalRoot = false) {
+function renderSelector(list, scopeClass, logicalRoot = false, documentSubtree = false) {
   let remaining = 512;
   const fail2 = () => {
     throw new Error("selector data is not representable");
@@ -96,7 +96,7 @@ function renderSelector(list, scopeClass, logicalRoot = false) {
             if (term.length !== 2) fail2();
             if (kind === "tag") {
               if (termIndex !== 0) fail2();
-              if (scope && logicalRoot && /^(html|body)$/i.test(term[1])) return `:where(${scope}):is(${term[1]}, *)`;
+              if (scope && logicalRoot && (term[1].toLowerCase() === "html" || !documentSubtree && term[1].toLowerCase() === "body")) return `:where(${scope}):is(${term[1]}, *)`;
               return term[1] === "*" ? "*" : identifier(term[1]);
             }
             return (kind === "id" ? "#" : ".") + identifier(term[1]);
@@ -111,7 +111,7 @@ function renderSelector(list, scopeClass, logicalRoot = false) {
             if (term.length !== 2) fail2();
             if (positionalPseudos.has(term[1])) return position(":" + term[1], true);
             if (!localPseudos.has(term[1])) fail2();
-            if (scope && logicalRoot && (term[1] === "root" || term[1] === "scope")) return scope;
+            if (scope && ((logicalRoot || documentSubtree) && term[1] === "root" || logicalRoot && term[1] === "scope")) return scope;
             return ":" + term[1];
           }
           if (kind === "element") {
@@ -991,7 +991,12 @@ var WasmWebBridge = class {
     } = realm;
     const hostNavigator = realm.navigator;
     const primaryRoot = documentTarget || messagesOnly ? hostDocument.body : targetRoots[0];
-    const logicalHead = documentTarget ? hostDocument.head : portalRoots[0] || primaryRoot;
+    const documentSubtree = !documentTarget && !messagesOnly && targetRoots.length === 1 && primaryRoot.localName === "html" && primaryRoot.namespaceURI === "http://www.w3.org/1999/xhtml";
+    const documentPart = (name) => Array.from(primaryRoot.children).find((node) => node.localName === name && node.namespaceURI === "http://www.w3.org/1999/xhtml") || null;
+    if (documentSubtree && (!documentPart("head") || !documentPart("body"))) {
+      fail("an HTML document subtree requires a direct head and body");
+    }
+    const logicalHead = documentTarget ? hostDocument.head : documentSubtree ? documentPart("head") : portalRoots[0] || primaryRoot;
     let scopeClass = null;
     if (!documentTarget && !messagesOnly) do {
       scopeClass = `wwm-${Array.from(
@@ -1149,7 +1154,7 @@ var WasmWebBridge = class {
       if (reader.at !== reader.bytes.length) fail("trailing selector operation data");
       const tree = node.getRootNode();
       const detachedGrant = tree !== hostDocument && accessibleNode(tree);
-      return renderSelector(selector, detachedGrant ? null : scopeClass);
+      return renderSelector(selector, detachedGrant ? null : scopeClass, node === hostDocument, documentSubtree);
     }
     function requireRange(range) {
       requireNode(range.startContainer);
@@ -1213,6 +1218,10 @@ var WasmWebBridge = class {
         return options.profiling === true;
       }
       if (object === hostDocument && (name === "documentElement" || name === "head" || name === "body")) {
+        if (documentSubtree && name !== "documentElement") {
+          const part = documentPart(name);
+          return part ? reference(part) : null;
+        }
         return reference(name === "head" ? logicalHead : name === "documentElement" && documentTarget ? hostDocument.documentElement : primaryRoot);
       }
       if (object === hostDocument && name === "navigator") return reference(hostNavigator);
@@ -2111,13 +2120,13 @@ var WasmWebBridge = class {
       if (object instanceof Element && name === "getBoundingClientRect" && args.length === 0) {
         return reference(object.getBoundingClientRect());
       }
-      if (object instanceof Element && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name)) {
+      if ((object instanceof Element || object === hostDocument) && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name)) {
         const selector = querySelectorText(object, args);
         if (name === "querySelector") {
           const found2 = object.querySelector(selector);
-          return found2 ? reference(found2) : null;
+          return found2 && insideDocument(found2) ? reference(found2) : null;
         }
-        const found = Array.from(object.querySelectorAll(selector));
+        const found = Array.from(object.querySelectorAll(selector)).filter(insideDocument);
         if (name === "querySelectorAll") return reference(found);
         const bytes = new Uint8Array(4 + found.length * 4);
         const view = new DataView(bytes.buffer);
@@ -2430,8 +2439,8 @@ var WasmWebBridge = class {
       reject: fail,
       scopeClass,
       readSelector,
-      renderSelector,
-      renderSvg
+      renderSvg,
+      renderSelector: (selector, scope, logicalRoot) => renderSelector(selector, scope, logicalRoot, documentSubtree)
     });
     function readValue(reader) {
       const tag = reader.byte();

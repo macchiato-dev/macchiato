@@ -2839,12 +2839,8 @@ GuestElement.prototype.querySelectorAll = function (selector) {
   }
   return nodes;
 };
-GuestDocument.prototype.querySelector = function (selector) {
-  return this.body.querySelector(selector);
-};
-GuestDocument.prototype.querySelectorAll = function (selector) {
-  return this.body.querySelectorAll(selector);
-};
+GuestDocument.prototype.querySelector = GuestElement.prototype.querySelector;
+GuestDocument.prototype.querySelectorAll = GuestElement.prototype.querySelectorAll;
 GuestElement.prototype.hasAttribute = function (name) {
   return hostCall(this.reference, "hasAttribute", [String(name)]);
 };

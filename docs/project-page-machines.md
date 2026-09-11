@@ -2891,6 +2891,41 @@ changed, and there was no Bunny deployment. Recordings/screenshots are under
 paths. The larger goal remains open, notably native document-root semantics,
 bulk-edit latency, and the remaining service-boundary checks.
 
+### Distinct document parts: bridge groundwork
+
+The output compiler still flattens HTML/head/body wrappers. Applying all their
+attributes to the one current surface would be incorrect: it loses separate
+inheritance, compound selectors such as `html.page > body.app`, and distinct
+guest object identities. The next integration step must carry root metadata
+through compilation and updates, and apply it to distinct elements before app
+scripts run, rather than silently merging classes or styles.
+
+The machine now recognizes a caller-granted HTML subtree with direct head/body
+children. Those real children provide its logical document parts, while the
+HTML element remains the containment boundary. Ordinary div grants keep their
+single-root meaning. The browser comparison test in
+`packages/website/test/project-document-root.browser.test.js` compares the
+subtree with a native iframe for inherited color, font size, margins, opacity,
+and root/body selectors. It also checks that host neighbors and parents stay
+unavailable and that styles go into the logical head. This is groundwork, not
+a claim that Resources currently preserves its source root attributes, nor
+that nested elements reproduce viewport canvas propagation or `rem` sizing.
+
+That test also exposed two generally applicable bugs. Guest document queries
+searched only the body's descendants; they now forward the same semantic
+selector operation to the document capability, including roots and logical
+heads while retaining context guards and result filtering. And replacing root
+classes removed the machine's private scope marker, disabling scoped CSS and
+queries. Class assignment/removal now retains that marker synchronously,
+without a mutation observer. Exact class-attribute selectors still deserve
+separate fidelity work because the marker shares the native class attribute.
+
+The archived old host/runtime reproduce the aliased root identities. The new
+host/guest pair passes the comparison and 93 selector, reference, range, and
+containment checks. Logs and the baseline checkout are under
+`/root/macchiato-work/document-root-*`. The test accepts optional baseline host
+source and output-runtime paths; it does not alter production behavior.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

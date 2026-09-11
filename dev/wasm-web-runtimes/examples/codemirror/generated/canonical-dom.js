@@ -2026,12 +2026,10 @@ GuestElement.prototype.querySelectorAll = function (selector) {
   }
   return nodes;
 };
-GuestDocument.prototype.querySelector = function (selector) {
-  return this.body.querySelector(selector);
-};
-GuestDocument.prototype.querySelectorAll = function (selector) {
-  return this.body.querySelectorAll(selector);
-};
+// Document queries include the granted root and head, not just body children.
+// The host renders the same scoped selector protocol and filters the results.
+GuestDocument.prototype.querySelector = GuestElement.prototype.querySelector;
+GuestDocument.prototype.querySelectorAll = GuestElement.prototype.querySelectorAll;
 GuestElement.prototype.hasAttribute = function (name) {
   return hostCall(this.reference, "hasAttribute", [String(name)]);
 };
