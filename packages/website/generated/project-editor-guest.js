@@ -27235,10 +27235,9 @@ globalThis.__resourcesProjectStatusInspect = () => projectStatusResult();
 
 // packages/website/resources-storage-client.js
 function storageRequest(operation, kind, key, value) {
-  const result2 = JSON.parse(globalThis.__wwcServiceCall(
-    "storage.request",
-    JSON.stringify({ operation, kind, key: String(key), value })
-  ));
+  const text = JSON.stringify({ operation, kind, key: String(key), value });
+  if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
+  const result2 = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
   if (result2.error) {
     const error = new Error(result2.error.message);
     error.name = result2.error.name;

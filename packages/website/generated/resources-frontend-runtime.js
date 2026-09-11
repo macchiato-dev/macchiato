@@ -1758,8 +1758,8 @@ GuestElement.prototype.scrollIntoView = function () {
 GuestElement.prototype.requestFullscreen = function () {
   return immediate([3, this.reference, stringIndex("requestFullscreen"), []]);
 };
-GuestElement.prototype.focus = function () {
-  immediate([3, this.reference, stringIndex("focus"), []]);
+GuestElement.prototype.focus = function (options) {
+  immediate([3, this.reference, stringIndex("focus"), options === undefined ? [] : [!!(options && options.preventScroll)]]);
 };
 GuestElement.prototype.select = function () {
   immediate([3, this.reference, stringIndex("select"), []]);
@@ -2844,8 +2844,8 @@ GuestWebGLContext.prototype.drawArrays = function (mode, first, count) {
 GuestWebGPUContext.prototype.renderTriangle = function () {
   hostCall(this.reference, "renderTriangle", []);
 };
-GuestElement.prototype.focus = function () {
-  hostCall(this.reference, "focus", []);
+GuestElement.prototype.focus = function (options) {
+  hostCall(this.reference, "focus", options === undefined ? [] : [!!(options && options.preventScroll)]);
 };
 GuestElement.prototype.blur = function () {
   hostCall(this.reference, "blur", []);

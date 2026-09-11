@@ -2588,6 +2588,46 @@ quota errors there needs its own test and implementation. General native
 exception forwarding and oversized service responses are not proven by this
 application-specific adapter either.
 
+### Catchable output storage errors and stable first-click focus
+
+Project output now uses the same small storage-error adapter as the Resources
+application. The output bootstrap bundles it into the guest, rather than loading
+another browser-realm script. Its service dispatcher calls the project's existing
+namespaced storage device, so it does not grant access to website keys or change
+the 8 KiB local / 128 KiB session limits. Invalid keys, quota failures, and denied
+browser storage access return as data and become catchable errors inside the
+guest. Oversized requests are rejected before entering the bounded service-call
+buffer. This does not establish general native-exception forwarding or bound all
+possible service responses.
+
+Testing an error followed by a real button click revealed a separate focus bug.
+On the first click into an overflowing output, the frame's focus handoff focused
+the application root and scrolled the document by 21 pixels between pointerdown
+and pointerup. The button was not replaced: pointerdown targeted the button,
+but pointerup targeted its parent. There was no guest exception to report.
+
+The guest focus facade now lowers `FocusOptions.preventScroll` to one boolean
+on the existing method-call wire. The Machine Host constructs the native focus
+dictionary; no timer, synthetic click, retry, or cached layout is involved. The
+output handoff uses `preventScroll: true`. Ordinary `focus()` and explicit false
+retain native scrolling, and only elements inside the granted surface can be
+focused. The browser regression deliberately retains the overflowing content
+and requires the first real click to run its guest handler and catch another
+storage failure.
+
+The separate focus test checks explicit true, explicit false, and no options,
+including the browser's actual active element and scroll position. Both focus
+tests pass, as do denied-storage application startup and the save/recovery/ZIP
+workflow. The session-runtime test compiles the bundled bootstrap before its C
+build; importing that source directly would no longer be a valid build input.
+
+An additional compiler gap surfaced while writing the focus fixture: HTML
+`style` attributes are currently omitted by the single-file compiler. The
+focus fixture uses a stylesheet so it tests focus independently; preserving
+inline declarations through semantic CSS compilation remains unfinished work.
+Storage subscription failures and unusually large service responses are also
+outside these checks.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

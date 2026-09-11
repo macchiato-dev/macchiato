@@ -1147,9 +1147,10 @@ test("project focus options preserve native scroll behavior", { timeout: 60000 }
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
-  await page.locator(".cm-content").fill(`<button id="still">Keep position</button>
+  await page.locator(".cm-content").fill(`<style>#destination { display: block; margin-top: 1200px; }</style>
+<button id="still">Keep position</button>
 <button id="scroll">Scroll to input</button><button id="default">Default focus</button>
-<input id="destination" style="display: block; margin-top: 1200px;">
+<input id="destination">
 <script>
 const target = document.getElementById("destination");
 document.getElementById("still").addEventListener("click", () => target.focus({ preventScroll: true }));
@@ -1160,7 +1161,7 @@ document.getElementById("default").addEventListener("click", () => target.focus(
   for (const [id, shouldScroll] of [["still", false], ["scroll", true], ["default", true]]) {
     await output.locator("#" + id).click();
     assert.equal(await output.locator("#destination").evaluate(node => document.activeElement === node), true);
-    assert.equal(await output.locator("#destination").evaluate(() => window.scrollY > 500), shouldScroll);
+    assert.equal(await output.locator("#destination").evaluate(() => window.scrollY > 500), shouldScroll, id);
   }
   assert.deepEqual(errors, []);
 });

@@ -2084,8 +2084,8 @@ var WasmWebBridge = class {
         void object.requestFullscreen();
         return null;
       }
-      if (object instanceof HTMLElement && name === "focus" && args.length === 0) {
-        object.focus();
+      if (object instanceof HTMLElement && name === "focus" && (args.length === 0 || args.length === 1 && typeof args[0] === "boolean")) {
+        object.focus(args.length ? { preventScroll: args[0] } : void 0);
         return null;
       }
       if (object instanceof HTMLElement && name === "blur" && args.length === 0) {
@@ -2826,6 +2826,31 @@ var QuickJSRuntime = class {
   }
 };
 
+// packages/website/storage-service.js
+function storageResponse(storage, request) {
+  try {
+    if (!storage) throw new Error("Storage is not available");
+    const { operation, kind, key, value } = request;
+    if (kind !== "session" && kind !== "local") throw new TypeError("Unknown storage area");
+    switch (operation) {
+      case "has":
+        return { value: storage.has(kind, key) };
+      case "get":
+        return { value: storage.get(kind, key) };
+      case "set":
+        storage.set(kind, key, value);
+        return { value: null };
+      case "delete":
+        storage.delete(kind, key);
+        return { value: null };
+      default:
+        throw new TypeError("Unknown storage operation");
+    }
+  } catch (error) {
+    return { error: { name: error.name || "Error", message: error.message || String(error) } };
+  }
+}
+
 // packages/website/project-output-session.js
 var encoder2 = new TextEncoder();
 function message(name, payload) {
@@ -2851,6 +2876,7 @@ var OutputSession = class {
       onError: (error) => this.report(error),
       services: { ...options.services, call(name, path) {
         if (name === "module.source") return JSON.stringify(files.get(path) ?? null);
+        if (name === "storage.request") return JSON.stringify(storageResponse(options.services?.storage, JSON.parse(path)));
         if (typeof options.services?.call === "function") return options.services.call(name, path);
         throw new Error(`Project service is unavailable: ${name}`);
       } },

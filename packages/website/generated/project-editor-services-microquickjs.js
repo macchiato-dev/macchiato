@@ -17,12 +17,14 @@ function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" !=
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 (function (_document$querySelect) {
   function storageRequest(operation, kind, key, value) {
-    var result2 = JSON.parse(globalThis.__wwcServiceCall("storage.request", JSON.stringify({
+    var text = JSON.stringify({
       operation: operation,
       kind: kind,
       key: String(key),
       value: value
-    })));
+    });
+    if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
+    var result2 = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
     if (result2.error) {
       var error = new Error(result2.error.message);
       error.name = result2.error.name;

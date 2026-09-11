@@ -49,6 +49,31 @@ function urlMatchesAllowedPatterns(url, patterns) {
   return (patterns || []).some((pattern) => compileAllowedUrlPattern(pattern)(url));
 }
 
+// packages/website/storage-service.js
+function storageResponse(storage2, request) {
+  try {
+    if (!storage2) throw new Error("Storage is not available");
+    const { operation: operation2, kind, key, value } = request;
+    if (kind !== "session" && kind !== "local") throw new TypeError("Unknown storage area");
+    switch (operation2) {
+      case "has":
+        return { value: storage2.has(kind, key) };
+      case "get":
+        return { value: storage2.get(kind, key) };
+      case "set":
+        storage2.set(kind, key, value);
+        return { value: null };
+      case "delete":
+        storage2.delete(kind, key);
+        return { value: null };
+      default:
+        throw new TypeError("Unknown storage operation");
+    }
+  } catch (error) {
+    return { error: { name: error.name || "Error", message: error.message || String(error) } };
+  }
+}
+
 // packages/website/project-output-storage.js
 var encoder = new TextEncoder();
 var limits = { local: 8192, session: 128 * 1024 };
@@ -77,6 +102,12 @@ var ProjectOutputStorage = class {
   }
   get(kind, key) {
     return this.area(kind).getItem(this.key(key));
+  }
+  has(kind, key) {
+    return this.get(kind, key) !== null;
+  }
+  request(payload) {
+    return storageResponse(this, payload);
   }
   set(kind, key, value) {
     const area = this.area(kind), target = this.key(key);
@@ -230,6 +261,7 @@ var OutputSession = class {
       onError: (error) => this.report(error),
       services: { ...options.services, call(name, path) {
         if (name === "module.source") return JSON.stringify(files.get(path) ?? null);
+        if (name === "storage.request") return JSON.stringify(storageResponse(options.services?.storage, JSON.parse(path)));
         if (typeof options.services?.call === "function") return options.services.call(name, path);
         throw new Error(`Project service is unavailable: ${name}`);
       } },

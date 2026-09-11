@@ -225,12 +225,14 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             return ((_trigger$closest = trigger.closest(".userbar")) == null ? void 0 : _trigger$closest.querySelector("[data-command-dialog]")) || document.querySelector("[data-command-dialog]");
           };
           storageRequest = function _storageRequest(operation, kind, key, value) {
-            var result = JSON.parse(globalThis.__wwcServiceCall("storage.request", JSON.stringify({
+            var text = JSON.stringify({
               operation: operation,
               kind: kind,
               key: String(key),
               value: value
-            })));
+            });
+            if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
+            var result = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
             if (result.error) {
               var error = new Error(result.error.message);
               error.name = result.error.name;
