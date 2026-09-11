@@ -38,6 +38,8 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const moduleSource = await readFile(process.env.MACCHIATO_TEST_SOURCE_FILE ||
     join(root, "packages/website/content-form-client.js"), "utf8");
   const text = `<!--\n${moduleSource.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
+  const editorWidth = Number(process.env.MACCHIATO_TEST_EDITOR_WIDTH || 720);
+  assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const results = [];
@@ -53,7 +55,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         : { contentType: "text/html", body: `<style>
           body { margin: 0; --resources-editor-caret: #111; --resources-editor-fg: #111;
             --resources-editor-bg: #eff5ff; }
-          #guest { position: absolute; inset: 56px 50% 0 0; contain: size; }
+          #guest { position: absolute; top: 56px; left: 0; bottom: 0; width: ${editorWidth}px; contain: size; }
           #editor, .cm-editor { height: 100%; }
           .cm-scroller { overflow: auto; }
         </style><div id="guest"><div id="editor"></div></div>` });
@@ -79,6 +81,12 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       }
     }, { mode, setup });
     const content = page.locator(".cm-content");
+    const geometry = await page.locator(".cm-scroller").evaluate(node => {
+      const style = getComputedStyle(node), box = node.getBoundingClientRect();
+      return { width: box.width, height: box.height, font: style.font, lineHeight: style.lineHeight };
+    });
+    results.push({ run, mode, method: "geometry", ...geometry });
+    t.diagnostic(JSON.stringify(results.at(-1)));
     // Warm both the browser input path and editor before measuring bulk work.
     await content.fill("warmup");
     await page.keyboard.press("End"); await page.keyboard.type(" edit");
