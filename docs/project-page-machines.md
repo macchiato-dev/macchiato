@@ -3618,7 +3618,10 @@ callback could flush the remaining writes and create a second delivery; and
 `Text.data` assigned only a guest property. Named calls now use the existing
 flush dispatch before returning successfully. Text and comment data properties
 go through ordinary scoped property access, with their existing size limits.
-Unlike nullable `nodeValue`/`textContent`, the `data` setter stringifies null.
+The subsequent coercion check caught an incorrect assumption: native `data`
+also treats null as empty text, but stringifies undefined. The nullable
+`nodeValue`/`textContent` setters treat both as empty. The guest now follows
+those native results rather than plain DOMString conversion.
 
 All 32 registration, document-scope, and raw-reference checks pass after the
 rebuild. They compare multiple targets, queued records, same-target option

@@ -57,6 +57,7 @@ test("mutation observations preserve native registrations, queues, and options",
             window.__wwcPostMessage = message => notices.push(JSON.parse(message));
             (0, eval)(source);
             window.command = value => mutationCommand(JSON.stringify(value));
+            window.dispose = () => mutationObserver.disconnect();
           } else {
             const { Machine, QuickJSRuntime } = await import("/module.js");
             const module = await WebAssembly.compileStreaming(fetch("/" + mode + ".wasm"));
@@ -71,7 +72,7 @@ test("mutation observations preserve native registrations, queues, and options",
             window.dispose = () => { machine.destroy(); runtime?.destroy(); };
           }
         }, { mode, source });
-        for (const action of ["multiple", "replace-options", "defaults-filter", "character-default",
+        for (const action of ["multiple", "replace-options", "defaults-filter", "character-default", "character-coercion",
           "false-default", "set-filter", "option-getters", "empty-filter", "drain", "invalid", "recycle", "named-write"]) {
           const result = await target.evaluate(async action => {
             notices.length = 0;
@@ -90,7 +91,14 @@ test("mutation observations preserve native registrations, queues, and options",
           if (action === "named-write") assert.equal(await target.locator("#a").textContent(),
             "visible when the named call returns");
         }
-        await target.evaluate(() => window.dispose?.());
+        assert.deepEqual(await target.evaluate(async () => {
+          notices.length = 0;
+          command({ action: "multiple" });
+          dispose();
+          document.getElementById("a").setAttribute("data-keep", "after disposal");
+          await new Promise(resolve => setTimeout(resolve, 0));
+          return notices;
+        }), [], "disposal cancels pending and future deliveries");
         assert.deepEqual(errors, []);
         assert.deepEqual(unexpected, []);
       } finally { await page.close(); }

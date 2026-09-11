@@ -44,6 +44,13 @@ function mutationCommand(json) {
   } else if (action === "character-default") {
     mutationObserver.observe(a.firstChild, { characterDataOldValue: true });
     a.firstChild.data = "changed text";
+  } else if (action === "character-coercion") {
+    mutationObserver.observe(a.firstChild, { characterDataOldValue: true });
+    var text = a.firstChild, values = [];
+    text.data = null; values.push(text.data);
+    text.data = undefined; values.push(text.data);
+    text.textContent = null; values.push(text.data);
+    mutationReport({ values: values });
   } else if (action === "false-default") {
     mutationObserver.observe(a, { attributeOldValue: false });
     a.setAttribute("data-keep", "oldValue omitted from records");
@@ -88,6 +95,7 @@ function mutationCommand(json) {
       empty: mutationObserver.takeRecords().length });
   } else if (action === "invalid") {
     mutationObserver.observe(a, { attributes: true });
+    a.setAttribute("data-keep", "queued before invalid options");
     var failures = [];
     [undefined, null, {}, { attributes: false, attributeOldValue: true },
       { attributes: false, attributeFilter: [] },
