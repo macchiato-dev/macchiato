@@ -117,7 +117,7 @@ GuestElement.prototype.showModal = function () {
 // The browser changes this reflected attribute when a dialog opens/closes.
 // Read it directly rather than relying on guest attribute bookkeeping.
 Object.defineProperty(GuestElement.prototype, "open", {
-  get: function () { return hostCall(this.reference, "hasAttribute", ["open"]); }
+  get: function () { return hostCall(this.reference, "getAttribute", ["open"]) !== null; }
 });
 GuestElement.prototype.close = function (value) {
   immediate([3, this.reference, stringIndex("close"),
