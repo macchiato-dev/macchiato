@@ -8,6 +8,7 @@ function call(name, payload = {}) {
 }
 
 export function hasSessionValue(key) { return call("session.has", { key }); }
+export function navigationType() { return call("navigation.type"); }
 
 export function requestFrontendService(name, payload = {}) {
   const id = nextRequest++;

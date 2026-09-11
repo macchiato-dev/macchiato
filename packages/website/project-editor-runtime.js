@@ -3,6 +3,7 @@ import { createConstrainedFetch, createProjectBuildMachine, createProjectEditorM
 export { createConstrainedFetch, createProjectBuildMachine, createProjectOutputMachine };
 
 export function readProjectRecovery(key) { return sessionStorage.getItem(key); }
+export function navigationType() { return performance.getEntriesByType("navigation")[0]?.type || "navigate"; }
 
 export async function mountResourcesProjectEditor(options) {
   const controller = await createProjectEditorMachine({

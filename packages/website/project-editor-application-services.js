@@ -69,6 +69,7 @@ export function downloadProjectArchive(snapshot, name) { return callHost("archiv
 export function importProjectArchive() { return requestHost("archive.import"); }
 export function replaceFrontendPath(path) { return callHost("route.replace", { path }); }
 export function frontendTheme() { return callHost("appearance.theme"); }
+export function navigationType() { return callHost("navigation.type"); }
 
 export function readProjectRecovery(key) {
   const result = callHost("session.recovery", { key });

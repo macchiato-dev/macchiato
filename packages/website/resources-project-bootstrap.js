@@ -1,4 +1,4 @@
-import { hasSessionValue, requestFrontendService } from "./project-frontend-services.js";
+import { hasSessionValue, navigationType, requestFrontendService } from "./project-frontend-services.js";
 import { mountProjectPresentation } from "./project-presentation.js";
 import { hasProjectRecovery } from "./project-session.js";
 
@@ -8,11 +8,9 @@ import { hasProjectRecovery } from "./project-session.js";
 if (document.querySelector("[data-project-editor]")) {
   const root = document.querySelector("[data-project-editor]");
   mountProjectPresentation(root);
-  const navigation = typeof performance.getEntriesByType === "function"
-    ? performance.getEntriesByType("navigation")[0] : null;
   const deferOutput = hasProjectRecovery({
     projectId: root.dataset.projectId, persistence: root.dataset.persistence,
-    readOnly: root.dataset.readOnly === "true", navigationType: navigation?.type,
+    readOnly: root.dataset.readOnly === "true", navigationType: navigationType(),
   }, { getItem: key => hasSessionValue(key) ? "" : null });
   requestFrontendService("editor.mount", { deferOutput }).catch((error) => {
     document.querySelector("[data-project-editor]")?.setAttribute("data-editor-machine-state", "failed");

@@ -1,6 +1,6 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty, projectSnapshotsEqual } from "/-/resources-site/project-history.js";
 import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
-import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, readProjectRecovery, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
+import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, navigationType, readProjectRecovery, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
 import { editorLanguageForPath } from "../project-editor/src/languages.js";
 import { mountContentNameFields } from "./content-name-fields.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "./project-session.js";
@@ -523,10 +523,8 @@ async function mountProjectRoot(root) {
 
   if (draft || memoryOnly) {
     if (draft) {
-      const navigationEntries = typeof performance.getEntriesByType === "function" ?
-        performance.getEntriesByType("navigation") : [];
-      const navigationType = navigationEntries[0]?.type;
-      if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+      const navigation = navigationType();
+      if (navigation !== "reload" && navigation !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
       try {
         const stored = JSON.parse(readRecovery(DRAFT_KEY));
         if (stored?.patches?.length) {
