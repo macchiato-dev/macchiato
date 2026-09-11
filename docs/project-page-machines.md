@@ -3647,3 +3647,17 @@ resource requests. No additional host restriction was needed.
 Evidence: `native-mutations-final-focused.log`,
 `native-mutations-final-backend.log`, and `native-mutations-markup.log` in
 `/root/macchiato-work`. Full-page and stress verification remain in progress.
+
+The full-page run passed loading-backdrop pixels, repeated theme switching,
+storage-denied editing, and Find/Replace, but resource recovery exceeded its
+existing 120-second deadline. This is recorded as a timeout, not a green suite
+(`native-mutations-full-app.log`). Checkpoints were added without relaxing that
+deadline, together with an optional complete-export asset override. Isolated
+recovery runs then completed every assertion: candidate export 78 seconds,
+previous resize export 72 seconds, and current local assets 73 seconds. Each
+includes publication, byte-exact ZIP export, both storage-quota scenarios,
+history recovery, retry, and reload. Their logs are
+`native-mutations-recovery-{checkpoints,baseline,default}.log`. This does not
+establish the timeout's cause or a performance improvement. Desktop and phone
+quota-warning screenshots were inspected; both retain visible retry controls
+without covering the other pane.
