@@ -82,6 +82,12 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       await content.fill("before");
       await page.keyboard.press("Control+A");
       await page.evaluate(() => { messages.length = 0; events.beforeinput = events.input = 0; });
+      const profileDirectory = process.env.MACCHIATO_CPU_PROFILE_DIR;
+      const profiler = profileDirectory ? await context.newCDPSession(page) : null;
+      if (profiler) {
+        await profiler.send("Profiler.enable");
+        await profiler.send("Profiler.start");
+      }
       const started = performance.now();
       if (method === "insertText") await page.keyboard.insertText(text);
       else await content.evaluate((node, value) => {
@@ -91,6 +97,12 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         if (!event.defaultPrevented) throw new Error("Paste was not handled");
       }, text);
       const elapsed = performance.now() - started;
+      if (profiler) {
+        const { profile } = await profiler.send("Profiler.stop");
+        await mkdir(profileDirectory, { recursive: true });
+        await writeFile(join(profileDirectory, `${run}-${mode}-${method}.cpuprofile`), JSON.stringify(profile));
+        await profiler.detach();
+      }
       const state = await page.evaluate(() => ({
         events, changes: messages.filter(message => message.type === "change").length,
         text: messages.filter(message => message.type === "change").at(-1)?.content,
@@ -104,6 +116,22 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       await page.keyboard.press("Control+y");
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), text);
     }
+    // A large document must also remain useful for ordinary first-page edits.
+    // Type a short phrase, make a typo, and correct it using real key events.
+    await page.keyboard.press("Control+Home");
+    for (let index = 0; index < 4; index++) await page.keyboard.press("ArrowRight");
+    let inserted = "";
+    const keyMilliseconds = [];
+    for (const key of [..." hellp", "Backspace", "o"]) {
+      const started = performance.now();
+      await page.keyboard.press(key === " " ? "Space" : key);
+      keyMilliseconds.push(Math.round(performance.now() - started));
+      inserted = key === "Backspace" ? inserted.slice(0, -1) : inserted + key;
+      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
+        text.slice(0, 4) + inserted + text.slice(4));
+    }
+    results.push({ run, mode, method: "first-page-typing", characters: text.length, keyMilliseconds });
+    t.diagnostic(JSON.stringify(results.at(-1)));
     assert.deepEqual(errors, []);
     await page.evaluate(() => window.machine?.destroy());
     await context.close();

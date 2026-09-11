@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -437,6 +437,13 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     const before = JSON.parse(await page.locator("[data-project-snapshot]").inputValue()).files[0].content;
     await content.click();
     await page.keyboard.press("Control+a");
+    const profileDirectory = process.env.MACCHIATO_CPU_PROFILE_DIR;
+    const profiler = profileDirectory ? await page.context().newCDPSession(page) : null;
+    if (profiler) {
+      await profiler.send("Profiler.enable");
+      await profiler.send("Profiler.start");
+      await profiler.send("Tracing.start", { categories: "devtools.timeline", transferMode: "ReturnAsStream" });
+    }
     const started = performance.now();
     if (native) await page.keyboard.insertText(text);
     else await content.evaluate((node, value) => {
@@ -447,6 +454,23 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       if (!event.defaultPrevented) throw new Error("Paste was not handled");
     }, text);
     t.diagnostic(`${native ? "native insertion" : "paste"}: ${text.length} characters in ${Math.round(performance.now() - started)} ms`);
+    if (profiler) {
+      const { profile } = await profiler.send("Profiler.stop");
+      await mkdir(profileDirectory, { recursive: true });
+      await writeFile(join(profileDirectory, `workspace-${native ? "insertText" : "paste"}.cpuprofile`), JSON.stringify(profile));
+      const completed = new Promise(resolve => profiler.once("Tracing.tracingComplete", resolve));
+      await profiler.send("Tracing.end");
+      const { stream } = await completed;
+      let trace = "";
+      for (;;) {
+        const part = await profiler.send("IO.read", { handle: stream });
+        trace += part.data;
+        if (part.eof) break;
+      }
+      await profiler.send("IO.close", { handle: stream });
+      await writeFile(join(profileDirectory, `workspace-${native ? "insertText" : "paste"}.trace.json`), trace);
+      await profiler.detach();
+    }
     const snapshotText = () => page.locator("[data-project-snapshot]").inputValue()
       .then(value => JSON.parse(value).files[0].content);
     assert.equal(await snapshotText(), text);
