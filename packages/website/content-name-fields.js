@@ -52,6 +52,9 @@ export function mountContentNameFields() {
   for (const field of document.querySelectorAll(
     `[data-slug-source], #project-name, #organization-name, ${slugSelector}`)) {
     field.addEventListener("input", onInput);
+    // Static forms are usable while the guest loads. Adopt an already typed
+    // title, but preserve any name the user entered before listeners existed.
+    if (field.value) onInput({ target: field });
   }
   for (const field of document.querySelectorAll(slugSelector)) {
     field.addEventListener("focusout", onFocusOut);

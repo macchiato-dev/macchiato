@@ -1035,6 +1035,57 @@ test("project output fetches supplied files and rejects outside requests through
   assert.deepEqual(errors, []);
 });
 
+test("organization naming adopts input typed before the outer guest is ready", { timeout: 45000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const account = await createAccountStore(createNodeSqliteClient(db)).authenticateIdentity({
+    provider: "github", providerUserId: "early-name", login: "early-dev", name: "Early Dev",
+    email: "early@example.test", emailVerified: true,
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const context = await browser.newContext();
+  await context.addCookies([{ name: "resources_session", value: session, domain: "resources-edge.localhost",
+    path: "/", httpOnly: true, sameSite: "Lax" }]);
+  for (const manual of [false, true]) {
+    const page = await context.newPage(), errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    let release, requested;
+    const gate = new Promise(resolve => { release = resolve; });
+    const loading = new Promise(resolve => { requested = resolve; });
+    await page.route(url => url.pathname.endsWith("/resources-frontend-microquickjs.wasm"), async route => {
+      requested();
+      await gate;
+      await route.continue();
+    });
+    try {
+      await page.goto(`http://resources-edge.localhost:${port}/organizations/new`, { waitUntil: "commit" });
+      let timer;
+      try {
+        await Promise.race([loading, new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("Outer runtime request was not intercepted")), 5000);
+        })]);
+      } finally { clearTimeout(timer); }
+      await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/early-name-before-hydration.png") });
+      await page.getByLabel("Title", { exact: true }).fill("Early tools");
+      if (manual) await page.getByLabel("Name", { exact: true }).fill("my-tools");
+      assert.equal(await page.getByLabel("Name", { exact: true }).inputValue(), manual ? "my-tools" : "");
+      release();
+      await page.waitForFunction(() => document.documentElement.dataset.resourcesFrontendMachineState === "ready");
+      assert.equal(await page.getByLabel("Name", { exact: true }).inputValue(), manual ? "my-tools" : "early-tools");
+      await page.getByLabel("Title", { exact: true }).fill("Later tools");
+      assert.equal(await page.getByLabel("Name", { exact: true }).inputValue(), manual ? "my-tools" : "later-tools");
+      assert.deepEqual(errors, []);
+    } finally { release(); await page.close(); }
+  }
+});
+
 test("Resources.co edge account creates organizations and projects in a real browser", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
