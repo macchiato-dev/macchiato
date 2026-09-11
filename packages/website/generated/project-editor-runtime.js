@@ -1347,6 +1347,9 @@ var WasmWebBridge = class {
       }
       fail(`property get ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
+    function retainScope(node) {
+      if (scopeClass && roots.includes(node)) node.classList.add(scopeClass);
+    }
     function setAttribute(object, args) {
       requireContentTarget(object);
       if (!isAllowedAttribute(args[0]) || typeof args[1] !== "string") {
@@ -1413,6 +1416,7 @@ var WasmWebBridge = class {
         fail("translate value is not allowed");
       }
       object.setAttribute(args[0], args[1]);
+      if (args[0] === "class") retainScope(object);
       return null;
     }
     function set(object, name, next) {
@@ -1492,6 +1496,7 @@ var WasmWebBridge = class {
       }
       if (object instanceof HTMLElement && name === "className" && typeof next === "string" && /^(?:(?:[a-z_][a-z0-9_-]*)(?:\s+[a-z_][a-z0-9_-]*)*)?$/i.test(next)) {
         object.className = next;
+        retainScope(object);
         return null;
       }
       if (object instanceof HTMLElement && ["textContent", "title"].includes(name) && typeof next === "string") {
@@ -2071,6 +2076,7 @@ var WasmWebBridge = class {
         }
         if (!isRemovableAttribute(args[0]) && object.hasAttribute(args[0])) fail(`attribute removal is not allowed: ${args[0]}`);
         object.removeAttribute(args[0]);
+        if (args[0] === "class") retainScope(object);
         return null;
       }
       if (object instanceof Node && name === "closest") {
