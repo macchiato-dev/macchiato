@@ -76,6 +76,8 @@ export async function startResourcesMachineController() {
   synchronousServices = Object.freeze({
     "appearance.theme": () => document.documentElement.dataset.theme === "light" ? "light" : "dark",
     "archive.download": (payload) => archiveDevice.download(payload),
+    "resource.read": (payload) => projectResources.read(payload.content),
+    "project.prepareSubmit": () => editorDevice.prepareSubmission(),
     "editor.workspace.initial": () => editorDevice.getInitialSnapshot(),
     "route.replace": (payload) => {
       const path = String(payload.path || "");

@@ -1,5 +1,6 @@
 export const DRAFT_KEY = "resources_project_draft_v5";
 export const PENDING_KEY_PREFIX = "resources_project_pending_v1:";
+export const PROJECT_RESOURCE_PREFIX = "\u0000resources-project-resource:";
 
 export function pendingProjectSnapshotKey(projectId) {
   return projectId ? `${PENDING_KEY_PREFIX}${projectId}` : "";

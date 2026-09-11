@@ -2,12 +2,11 @@ import { createProjectBuildMachine, createProjectEditorMachine, createProjectOut
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 import { decodeProjectArchive, encodeProjectArchive, projectArchiveFilename } from "../hub/src/project-archive.js";
 import { ProjectOutputStorage } from "./project-output-storage.js";
-import { DRAFT_KEY, PENDING_KEY_PREFIX } from "./project-session.js";
+import { DRAFT_KEY, PENDING_KEY_PREFIX, PROJECT_RESOURCE_PREFIX as projectResourcePrefix } from "./project-session.js";
 
 const encoder = new TextEncoder();
 const allowedMethods = new Set(["GET", "POST", "DELETE"]);
 const responseHeaders = new Set(["content-type", "content-length", "etag", "last-modified"]);
-const projectResourcePrefix = "\u0000resources-project-resource:";
 const projectSessionFormat = "resources-project-session-v1";
 
 function sessionReferences(text) {
@@ -50,6 +49,9 @@ export class ResourcesProjectResourceDevice {
       if (value === undefined) throw new Error(`Project resource is unavailable: ${file.path}`);
       return { ...file, content: value };
     });
+  }
+  read(content) {
+    return this.hydrateFiles([{ path: "selected file", content }])[0].content;
   }
   compilationFiles(files, entry = "index.html") {
     return this.hydrateFiles(files).map(file => {
@@ -162,7 +164,8 @@ export class ResourcesFetchDevice {
     const headers = new Headers(payload.headers || {});
     if ([...headers].length > 32) throw new Error("Frontend fetch has too many headers");
     let body = payload.body == null ? undefined : String(payload.body);
-    if (body && /\/\-\/projects\//.test(url.pathname) && /application\/json/i.test(headers.get("content-type") || "")) {
+    const projectApi = /^\/(?:api|-)\/projects\//.test(url.pathname);
+    if (body && projectApi && /application\/json/i.test(headers.get("content-type") || "")) {
       body = this.projectResources.hydrateText(body);
     }
     if (body && encoder.encode(body).byteLength > 2 * 1024 * 1024) throw new Error("Frontend fetch body is too large");
@@ -170,7 +173,7 @@ export class ResourcesFetchDevice {
       method, headers, body, credentials: "same-origin", redirect: "error", cache: "no-store",
     });
     let text = await response.text();
-    if (text && /\/\-\/projects\//.test(url.pathname) && /application\/json/i.test(response.headers.get("content-type") || "")) {
+    if (text && projectApi && /application\/json/i.test(response.headers.get("content-type") || "")) {
       text = this.projectResources.compactText(text);
     }
     if (encoder.encode(text).byteLength > 2 * 1024 * 1024) throw new Error("Frontend fetch response is too large");
@@ -338,6 +341,13 @@ export class ResourcesEditorDevice {
     if (!this.initialSnapshot) throw new Error("Initial project snapshot is unavailable");
     return { snapshot: this.initialSnapshot, outputId: this.initialOutputId,
       deferOutput: this.deferInitialOutput };
+  }
+  prepareSubmission() {
+    const field = this.document.querySelector("[data-project-editor] [data-project-snapshot]");
+    if (!field) throw new Error("Project snapshot field is unavailable");
+    // Native form submission is another persistence boundary. Materialize
+    // there, without copying every unopened resource into the editor guest.
+    field.value = this.projectResources.hydrateText(field.value);
   }
   async mountInitialOutput(root) {
     // The workspace also contains the details form; output state belongs on

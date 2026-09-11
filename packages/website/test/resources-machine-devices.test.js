@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ResourcesProjectResourceDevice, ResourcesStorageDevice } from "../resources-machine-devices.js";
+import { ResourcesProjectResourceDevice, ResourcesStorageDevice, ResourcesFetchDevice } from "../resources-machine-devices.js";
 import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "../project-session.js";
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot } from "../../hub/src/project-history.js";
@@ -35,6 +35,26 @@ test("pending snapshots retain resource bytes across a new page's resource table
   assert.deepEqual(restored, compact, "guest references and history splice positions stay unchanged");
   nextStorage.delete("session", key);
   assert.equal(window.sessionStorage.getItem(key), null);
+});
+
+test("current project API reads compact resources and writes their bytes, never handles", async () => {
+  const resources = new ResourcesProjectResourceDevice();
+  const snapshot = { files: [{ path: "tile.svg", content: "tile bytes" }], config: {} };
+  const requests = [];
+  const device = new ResourcesFetchDevice({ location: { href: "http://site.test/project", origin: "http://site.test" },
+    async fetch(url, options) {
+      requests.push({ path: url.pathname, ...options });
+      return Response.json({ snapshot });
+    } }, resources);
+  for (const prefix of ["/api/projects/fixture", "/-/projects/fixture"]) {
+    const response = await device.request({ url: `${prefix}/workspace` });
+    const compact = JSON.parse(response.body);
+    assert.notEqual(compact.snapshot.files[0].content, "tile bytes");
+    assert.equal(resources.read(compact.snapshot.files[0].content), "tile bytes");
+    await device.request({ url: `${prefix}/snapshot`, method: "POST",
+      headers: { "content-type": "application/json" }, body: response.body });
+    assert.deepEqual(JSON.parse(requests.at(-1).body), { snapshot });
+  }
 });
 
 test("session history preserves resource handles and their splice patches", () => {

@@ -551,7 +551,8 @@ async function mountProjectRoot(root) {
 
   function selectedContent() {
     if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
-    return state.files.find((file) => file.path === selected)?.content ?? "";
+    const content = state.files.find((file) => file.path === selected)?.content ?? "";
+    return editorController?.readContent ? editorController.readContent(content) : content;
   }
 
   function mode() {
@@ -565,7 +566,8 @@ async function mountProjectRoot(root) {
   function sendContent({ resetHistoryOnEdit = false } = {}) {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
-    const selectedFile = state.files.find((file) => file.path === selected);
+    const file = state.files.find((file) => file.path === selected);
+    const selectedFile = file && { ...file, content: selectedContent() };
     editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
     editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
     editorMount.hidden = isProjectImage(selectedFile);
@@ -1535,6 +1537,15 @@ async function mountProjectRoot(root) {
     }
   }, 30_000);
   if (!readOnly && !draft && !memoryOnly) renderStoredVersions();
+  root.closest("form")?.addEventListener("submit", (event) => {
+    try {
+      if (!editorController) throw new Error("The project editor is still loading");
+      editorController.prepareSubmit?.();
+    } catch (error) {
+      event.preventDefault();
+      setStatus(`Save failed: ${error.message || String(error)}`, "error", null, "editor");
+    }
+  });
   renderTabs();
   mountEditorMachine();
   if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);

@@ -1,3 +1,5 @@
+import { PROJECT_RESOURCE_PREFIX } from "./project-session.js";
+
 let listeners = null;
 let nextRequest = 1;
 const pending = new Map();
@@ -70,7 +72,17 @@ export function frontendTheme() { return callHost("appearance.theme"); }
 
 export async function mountResourcesProjectEditor(options) {
   listeners = options;
+  let lastContent, lastValue;
   return Object.freeze({
+    readContent(content) {
+      if (content === lastContent) return lastValue;
+      const value = content.startsWith(PROJECT_RESOURCE_PREFIX)
+        ? callHost("resource.read", { content }) : content;
+      lastContent = content;
+      lastValue = value;
+      return value;
+    },
+    prepareSubmit() { return callHost("project.prepareSubmit"); },
     setContent(content, language = "plain", settings = {}) {
       callGuest("__resourcesProjectSelectFile", { path: settings.path || "" });
       return callGuest("__codeEditorSetContent", { content, language, ...settings });
