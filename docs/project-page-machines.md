@@ -2873,6 +2873,24 @@ after a rejected compile. Logs are under
 `/root/macchiato-work/html-references-*.log`; the `before` run records the
 original native-parity failure.
 
+Export `site/resources-co-82e85a0` passed all 152 manifest checks, including the
+license notice, and the Deno backend artifact test. The decoded-reference
+browser tests passed again after the complete build. The recorded editing
+stress test passed in about 65 seconds, with a 106KB paste taking about 0.9
+seconds and native insertion about 20 seconds. These timings vary between runs;
+the decoder is a fidelity fix, not a demonstrated speed improvement. Its
+compiler Wasm adds about 53KB uncompressed / 27KB gzipped over `8e17e5e`.
+
+The read-only exported-browser check passed both games, 50 successive tour
+slides, and the SQLite reader, including theme changes and phone views. The
+server was restarted, and the archive was extracted and independently verified
+before replacing `/root/resources-bunny.tar.gz`; the preceding `8e17e5e`
+archive is retained under `/root/archive/2026/09/11/`. No owner project was
+changed, and there was no Bunny deployment. Recordings/screenshots are under
+`/root/macchiato-work/html-references-stress/` and the exported-project image
+paths. The larger goal remains open, notably native document-root semantics,
+bulk-edit latency, and the remaining service-boundary checks.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
