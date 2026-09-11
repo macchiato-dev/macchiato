@@ -114,6 +114,23 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.equal(plan[1].accountContent.projects.length, 1);
   assert.equal(plan[1].kind, "project");
   assert.equal(plan[1].shellPath, "/dashboard");
+  for (const pathname of ["/favicon.ico", "/private.txt", "/bad_name", "/owner/file.js",
+    "/bad--name/project", `/${"a".repeat(64)}`]) {
+    const missing = await withTimeout(application.request(["document-plan", {
+      pathname, staticShellExists: false,
+    }]));
+    assert.equal(missing[0], "ok", `${pathname}: ${JSON.stringify(missing)}`);
+    assert.equal(missing[1].kind, "static");
+    assert.equal(missing[1].requestedProject, null);
+    assert.equal(missing[1].shellPath, pathname);
+  }
+  const mixedCase = await withTimeout(application.request(["document-plan", {
+    pathname: "/LATTE/FIRST/embed", session: { sub: "user-1", login: "latte" },
+    staticShellExists: false,
+  }]));
+  assert.equal(mixedCase[0], "ok");
+  assert.equal(mixedCase[1].dynamicProject.id, "project-1");
+  assert.equal(mixedCase[1].requestedProject.embed, true);
   assert.deepEqual(plan[1].csrfActions,
     ["project:project-1", "notifications"]);
   assert.deepEqual(await withTimeout(application.request(["document-plan", {
