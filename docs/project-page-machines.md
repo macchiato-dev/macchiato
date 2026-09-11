@@ -3726,3 +3726,16 @@ exact final source and records protocol acknowledgement delays, not claimed
 paint latency. `MACCHIATO_TEST_INPUT_BURST=1` enables it;
 `MACCHIATO_TEST_DISABLE_INPUT_PENDING=1` removes only the guest's hint for a
 same-runtime comparison. Neither diagnostic changes production behavior.
+
+The fixed-cadence comparisons pass all source assertions but still do not show
+a reliable speedup. With the hint disabled, the two guest runs' final key
+acknowledgements were 297 and 307 ms behind their scheduled times; the clean
+enabled repeat measured 202 and 424 ms. Native controls were much faster. The
+first enabled run overlapped the backend artifact check and is excluded from
+timing conclusions. Logs and JSON are under `input-pending-queued-*` in
+`/root/macchiato-work`. Forwarding the native capability is a verified fidelity
+improvement, not a solution to the remaining interpreter/parser latency.
+
+The complete `42457b9` candidate export passes its 152-file manifest and compressed
+backend execution in Deno. Full-project stress verification is pending. The live
+server and `/root/resources-bunny.tar.gz` have not been replaced by this candidate.
