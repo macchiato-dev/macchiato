@@ -339,6 +339,9 @@ export class ResourcesEditorDevice {
     this.editor = await createProjectEditorMachine({
       root,
       allowNavigate: "self",
+      // The guest supplies the existing resource handle, not megabytes of
+      // image text. The Machine Host still validates the resolved data URL.
+      resolveImage: (source) => this.projectResources.read(source),
       limits: false,
       onChange: (content, details) => this.deliver({ type: "editor-change", content,
         syntaxErrors: details.syntaxErrors }),

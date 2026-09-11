@@ -639,7 +639,7 @@ async function mountProjectRoot(root) {
     if (isProjectImage(selectedFile)) {
       const image = document.createElement("img");
       image.className = "project-editor__image-view";
-      image.src = selectedContent();
+      image.src = source;
       image.alt = selectedFile.path;
       editorMount.parentElement.append(image);
       delete root.dataset.editorLoading;
@@ -1147,7 +1147,7 @@ async function mountProjectRoot(root) {
 
   function receiveEditorChange(content, { syntaxErrors = false } = {}) {
     if (typeof content !== "string") return;
-    if (readOnly || selected === "config" || content === selectedContent()) return;
+    if (readOnly || editorMount.hidden || selected === "config" || content === selectedContent()) return;
     try {
       clearNotice();
       if (updateSnapshot({ files: state.files.map((file) => file.path === selected ? { ...file, content } : file), config: state.config })) templateOnlyPending = false;

@@ -1924,7 +1924,13 @@ test("large project files remain readable without exceeding the editor service b
   assert.equal(await panel.getByRole("button", { name: "Next section" }).isDisabled(), true);
   await page.locator("[data-project-file-trigger]").click();
   await page.locator('[data-project-file="large.png"]').click();
-  await page.waitForFunction(() => document.querySelector(".project-editor__image-view")?.naturalWidth === 1024);
+  try {
+    await page.waitForFunction(() => document.querySelector(".project-editor__image-view")?.naturalWidth === 1024, null, { timeout: 5000 });
+  } catch (error) {
+    t.diagnostic(JSON.stringify({ errors, image: await page.locator(".project-editor__image-view").evaluateAll(nodes =>
+      nodes.map(node => ({ complete: node.complete, length: node.getAttribute("src")?.length, width: node.naturalWidth }))) }));
+    throw error;
+  }
   assert.equal(await page.locator(".project-editor__image-view").getAttribute("src"), image);
   await page.getByRole("button", { name: "Editor menu" }).click();
   const downloading = page.waitForEvent("download");

@@ -2438,6 +2438,31 @@ kept at
 `/root/archive/2026/09/11/resources-bunny-e13d384-before-recovery-quota.tar.gz`.
 No owner project was saved and nothing was deployed to Bunny.
 
+### Bounded project-file reading
+
+Opening a valid 2.25 MB text resource previously unwound the editor with
+`application service result is not bounded text`. Its snapshot was compact,
+but selecting the file hydrated the entire string through one synchronous
+service reply. Resource reads now return at most 64 KiB of source per reply,
+including enough initial metadata to choose the view. Worst-case JSON escaping
+still fits the existing service bound. Invalid references and offsets return
+errors as data, which the application guest can catch.
+
+The UI uses the editor's actual configured document limits. Text beyond its
+character or line budget opens as read-only, scrollable sections, preferring
+whole lines and preserving surrogate pairs when a very long line must split.
+Only the current section crosses the boundary. Images continue to use the image
+view through the Machine Host's existing image-resolution hook: the guest sets
+the opaque resource handle, and the resolved data URL still passes the host's
+image validation. This avoids sending megabytes back through the DOM wire merely
+to display a PNG. Editable text keeps its existing CodeMirror path and
+selected-content cache. No source is truncated or rewritten in the
+snapshot, history, or ZIP export. This bounds transfer size, not the total memory
+needed to display a large image or retain the project's resource table.
+
+The reader uses ordinary owned elements and text content, not parsed source
+markup, host rendering shortcuts, or additional Machine Host permissions.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

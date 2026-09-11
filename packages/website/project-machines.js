@@ -157,7 +157,7 @@ export async function createProjectAppMachine(root) {
   return Object.freeze({ machineId, destroy() { machine.destroy(); runtime.destroy(); } });
 }
 export async function createProjectEditorMachine({ root, onChange, onReady,
-  onLimit, onError, onRequest, services, limits, allowNavigate = false }) {
+  onLimit, onError, onRequest, services, limits, resolveImage, allowNavigate = false }) {
   const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
   const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
   const machineId = `wasm-web-machine-${nextMachine++}`;
@@ -179,6 +179,7 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
   }
   const machine = new WasmWebMachine(module, root, {
     allowNavigate,
+    resolveImage,
     stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
     services,
     onMessage(text) {
