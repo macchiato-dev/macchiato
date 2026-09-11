@@ -61,7 +61,7 @@ export async function startResourcesMachineController() {
     "archive.import": () => archiveDevice.import(),
     "build.compile": (payload) => buildDevice.compile(payload),
     "build.run": (payload) => buildDevice.run(payload),
-    "editor.mount": () => editorDevice.mount(),
+    "editor.mount": (payload) => editorDevice.mount(payload),
     "editor.output.mount": (payload) => editorDevice.mountOutput(payload),
     "fetch": (payload) => fetchDevice.request(payload),
     "output.load": (payload) => outputDevice.load(payload),

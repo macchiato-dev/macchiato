@@ -1759,6 +1759,10 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.match(await page.evaluate(() => sessionStorage.getItem(`resources_project_pending_v1:${document.querySelector("[data-project-editor]").dataset.projectId}`)), /Reload recovery marker/);
   let unloadDialogs = 0;
   page.on("dialog", async (dialog) => { unloadDialogs += 1; await dialog.dismiss(); });
+  const outputStartupContents = [];
+  await page.exposeFunction("recordOutputStartup", text => {
+    if (!outputStartupContents.includes(text)) outputStartupContents.push(text);
+  });
   await page.addInitScript(() => {
     window.editorStartupContents = [];
     const observer = new MutationObserver(() => {
@@ -1767,6 +1771,17 @@ test("Resources project save controls publish titled latest versions", async (t)
       if (document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready") observer.disconnect();
     });
     observer.observe(document, { subtree: true, childList: true, characterData: true });
+    // Init scripts also run inside output frames. Keep the record outside the
+    // frame so replacing a frame cannot erase evidence of stale first output.
+    let previous = "";
+    new MutationObserver(() => {
+      const heading = document.querySelector("#project-output-a h1");
+      const text = heading?.textContent;
+      if (text && text !== previous && heading.getClientRects().length) {
+        previous = text;
+        window.recordOutputStartup(text);
+      }
+    }).observe(document, { subtree: true, childList: true, characterData: true, attributes: true });
   });
   await page.reload({ waitUntil: "networkidle" });
   assert.equal(unloadDialogs, 0, "recoverable project edits should not trigger a browser unload warning");
@@ -1776,6 +1791,11 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.match(await page.locator(".cm-content").innerText(), /Reload recovery marker/);
   assert.deepEqual(await page.evaluate(() => window.editorStartupContents), ["<h1>Reload recovery marker</h1>"],
     "reload must not first render the superseded server snapshot");
+  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+    name: "Reload recovery marker", exact: true,
+  }).waitFor();
+  assert.deepEqual(outputStartupContents, ["Reload recovery marker"],
+    "output must not first show the superseded server snapshot either");
   await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "Saved");
   assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
   await page.getByRole("button", { name: "Editor menu" }).click();

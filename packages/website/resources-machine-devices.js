@@ -175,6 +175,7 @@ export class ResourcesEditorDevice {
     this.editor = null;
     this.initialSnapshot = null;
     this.initialOutputId = null;
+    this.deferInitialOutput = false;
     this.outputIds = new Set();
     this.outputErrors = new Map();
     this.operations = Object.freeze({
@@ -197,7 +198,7 @@ export class ResourcesEditorDevice {
       "editor.theme": (payload) => this.editor.callGuest("__codeEditorSetTheme", payload),
     });
   }
-  async mount() {
+  async mount({ deferOutput = false } = {}) {
     if (this.editor) return { machineId: this.editor.machineId };
     const root = this.document.querySelector("[data-project-editor]")?.closest(".project-workspace");
     if (!root) throw new Error("Project editor mount is unavailable");
@@ -223,10 +224,14 @@ export class ResourcesEditorDevice {
     // requests it explicitly after its browser facade has started.
     snapshotField.value = "";
     snapshotField.textContent = "";
-    await this.mountInitialOutput(root);
-    // Let the browser paint the useful output before CodeMirror evaluates its
-    // comparatively large bytecode program on this same thread.
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    this.deferInitialOutput = deferOutput === true;
+    if (this.deferInitialOutput) {
+      root.querySelector("[data-project-editor]").dataset.outputMachineState = "waiting";
+    } else {
+      await this.mountInitialOutput(root);
+      // Paint useful output before CodeMirror evaluates on the same thread.
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    }
     this.editor = await createProjectEditorMachine({
       root,
       allowNavigate: "self",
@@ -262,7 +267,8 @@ export class ResourcesEditorDevice {
   }
   getInitialSnapshot() {
     if (!this.initialSnapshot) throw new Error("Initial project snapshot is unavailable");
-    return { snapshot: this.initialSnapshot, outputId: this.initialOutputId };
+    return { snapshot: this.initialSnapshot, outputId: this.initialOutputId,
+      deferOutput: this.deferInitialOutput };
   }
   async mountInitialOutput(root) {
     // The workspace also contains the details form; output state belongs on
@@ -330,6 +336,7 @@ export class ResourcesEditorDevice {
     this.editor = null;
     this.initialSnapshot = null;
     this.initialOutputId = null;
+    this.deferInitialOutput = false;
   }
 }
 

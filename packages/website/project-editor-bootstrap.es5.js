@@ -85,7 +85,7 @@
     // The project UI selects the entry and recovers session edits before the
     // first CodeMirror render. Rendering this server snapshot first would
     // briefly expose stale contents and create a needless editor transaction.
-    if (files.length && !outputId) startOutput(activeSnapshot);
+    if (files.length && !outputId && !initialWorkspace.deferOutput) startOutput(activeSnapshot);
     else loadProjectUi();
   }
 

@@ -3,6 +3,7 @@ import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
 import { editorLanguageForPath } from "../project-editor/src/languages.js";
 import { mountContentNameFields } from "./content-name-fields.js";
+import { DRAFT_KEY, pendingProjectSnapshotKey } from "./project-session.js";
 
 const PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
 function isProjectImage(file) {
@@ -92,7 +93,6 @@ for (const fields of document.querySelectorAll("[data-project-fields]")) {
   modal.addEventListener("pointerdown", (event) => { if (event.target === modal) close(); });
 }
 
-const DRAFT_KEY = "resources_project_draft_v5";
 const CHECKPOINT_MS = 300_000;
 const STARTING_POINTS = Object.freeze({
   article: {
@@ -383,7 +383,7 @@ async function mountProjectRoot(root) {
   const draft = persistence === "session";
   const memoryOnly = persistence === "memory";
   const readOnly = root.dataset.readOnly === "true";
-  const pendingSnapshotKey = projectId ? `resources_project_pending_v1:${projectId}` : "";
+  const pendingSnapshotKey = pendingProjectSnapshotKey(projectId);
   const initialProjectLayout = root.closest(".project-create__layout");
   const initialDetailsButton = root.querySelector('[data-project-view="details"]');
   const initiallyNarrow = globalThis.matchMedia?.("(max-width: 760px)").matches === true;
@@ -628,9 +628,10 @@ async function mountProjectRoot(root) {
       if (root.dataset.outputMachineError) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
-      // Bootstrap mounted the server snapshot. Recovered drafts or a chosen
-      // template can replace it during UI startup and must reach output too.
-      if (!projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
+      // Recovery candidates defer initial output until this guest picks the
+      // snapshot. Render even when the candidate was invalid or unchanged.
+      if (root.dataset.outputMachineState === "waiting" ||
+          !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
