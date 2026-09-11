@@ -1883,6 +1883,15 @@ snapshot is archived at
 files and configuration are unchanged. The external repository's modified
 `notes.md` was not touched or committed; tests use isolated session state.
 
+The saved version subsequently passes all 387 slides in split, expanded, and
+phone output views, with no script errors, overflowing content, scrolling, or
+DOM accumulation. Screenshots of the dense readings, directory tree, and code
+comparisons were inspected at phone size. The exported standalone presentation
+has also been regenerated from the same unchanged source snapshot and updated
+stylesheet. This resolves the previously identified 390×688 portrait failure;
+it is not a claim that every possible viewport or all broader editor issues
+have been verified.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
