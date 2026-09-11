@@ -2840,6 +2840,9 @@ GuestElement.prototype.select = function () {
 GuestElement.prototype.setCustomValidity = function (message) {
   hostCall(this.reference, "setCustomValidity", [String(message)]);
 };
+GuestElement.prototype.requestSubmit = function (submitter) {
+  hostCall(this.reference, "requestSubmit", submitter === undefined ? [] : [submitter]);
+};
 GuestElement.prototype.querySelector = function (selector) {
   var result = immediate([3, this.reference, stringIndex("querySelector"), [encode(encodeSelector(selector))]]);
   return result === null ? null : nodeForReference(result[1]);

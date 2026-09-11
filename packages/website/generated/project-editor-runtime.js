@@ -2087,6 +2087,11 @@ var WasmWebBridge = class {
         object.blur();
         return null;
       }
+      if (object instanceof HTMLFormElement && name === "requestSubmit" && args.length <= 1) {
+        if (args.length) requireNode(args[0]);
+        object.requestSubmit(...args);
+        return null;
+      }
       if ((object instanceof HTMLInputElement || object instanceof HTMLTextAreaElement) && name === "select" && args.length === 0) {
         object.select();
         return null;

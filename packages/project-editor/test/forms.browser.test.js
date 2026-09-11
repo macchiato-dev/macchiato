@@ -149,9 +149,9 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
   // Server-rendered website forms use an explicit same-origin grant, unlike
   // a project output's link-pattern callback.
   await page.evaluate(async () => {
-    const { default: Machine } = await import("/machine.js");
-    window.machine = new Machine(await WebAssembly.compileStreaming(fetch("/runtime.wasm")),
-      document, { allowNavigate: "self" });
+    const { default: Machine, QuickJSRuntime } = await import("/machine.js");
+    window.engine = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/runtime.wasm")));
+    window.machine = new Machine(engine.createSession(), document, { allowNavigate: "self" });
     await machine.onmsg(0);
     document.body.innerHTML = '<form id="save" method="post" action="/accepted"><input id="title" name="title" required><button id="save-button" name="intent" value="publish">Create project</button></form>';
   });
