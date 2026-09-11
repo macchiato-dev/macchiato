@@ -83,6 +83,19 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     ...(process.env.MACCHIATO_TEST_ARTIFACTS ? { recordVideo: { dir: artifacts,
       size: { width: 1440, height: 900 } } } : {}),
   });
+  // Swap a complete exported host/guest pair for regression comparisons.
+  // Mixing an older host with newer guest calls is not a valid baseline.
+  if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
+    const directory = resolve(process.env.MACCHIATO_TEST_ASSETS_DIRECTORY);
+    await page.route("**/-/resources-site/**", async route => {
+      const name = new URL(route.request().url()).pathname.slice("/-/resources-site/".length);
+      const body = await readFile(join(directory, name));
+      const contentType = name.endsWith(".js") ? "text/javascript"
+        : name.endsWith(".html") ? "text/html" : name.endsWith(".wasm") ? "application/wasm"
+        : "application/octet-stream";
+      await route.fulfill({ body, contentType });
+    });
+  }
   // Diagnostic A/B runs can substitute a prior host without rebuilding guests
   // or changing the workspace actions. The ordinary regression uses the build.
   if (process.env.MACCHIATO_TEST_MACHINE_FILE) {
@@ -120,7 +133,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     await editorDownload;
     if (!page.isClosed()) {
       if (editorArtifact) await route.fulfill({ body: editorArtifact, contentType: "application/wasm" });
-      else await route.continue();
+      else await route.fallback();
     }
   });
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
@@ -272,6 +285,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await expandedFrame.dispose();
   await outputHeading.dispose();
   await assertDividersAligned("restored expanded view");
+  checkpoint("expanded output restored");
   await content.click();
 
   await page.keyboard.press("Control+z");
@@ -279,6 +293,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.keyboard.press("Control+y");
   await page.waitForFunction(() => document.querySelector(".cm-content").textContent.includes("Editable row 100"));
   assert.equal((await content.innerText()).trim(), source.trim());
+  checkpoint("undo/redo restored source");
 
   await page.keyboard.press("Control+End");
   await content.pressSequentially("\n<!-- typed correction -->", { delay: 2 });
@@ -286,6 +301,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     await page.keyboard.insertText(`<!-- revision ${index + 1} -->`);
     await page.keyboard.press("Enter");
   }
+  checkpoint("80-edit burst completed");
   await page.waitForTimeout(1_200);
   const editedSnapshot = await page.locator("[data-project-snapshot]").inputValue();
   assert.match(editedSnapshot, /<!-- typed correction -->/);
