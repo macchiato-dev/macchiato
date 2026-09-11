@@ -1711,7 +1711,12 @@ async function mountProjectRoot(root) {
       delete projectLayout.dataset.mobileView;
       workspace.dataset.view = button.dataset.projectView;
       for (const item of root.querySelectorAll('.project-view-segments [data-project-view]')) item.setAttribute("aria-pressed", item === button ? "true" : "false");
-      if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
+      if (narrowWorkspace.matches) {
+        detailsButton.setAttribute("aria-pressed", "false");
+        // Leaving Details via a view button hides its pane too. Bring the
+        // toggle and close link back before they disappear with that pane.
+        placeProjectClose(false);
+      }
     }
     renderStatusState();
     if (button.dataset.projectView === "editor") editorController?.focus();
