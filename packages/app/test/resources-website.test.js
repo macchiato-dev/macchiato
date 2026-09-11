@@ -206,7 +206,7 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.locator(".project-create__fields").isVisible(), true);
     assert.equal(await page.locator(".project-view__identity").count(), 0);
     const output = page.frameLocator("[data-project-output-mount] iframe");
-    const surface = output.locator(".project-output-root:not([hidden]):not(:has(.project-output-root))");
+    const surface = output.locator("#project-output-a > :not([inert]) > .project-output-root");
     const preview = surface.locator(previewSelector);
     await preview.waitFor();
     assert.equal(await preview.count(), 1);
@@ -237,7 +237,11 @@ test("Resources.co blog container examples render and surface schema errors in t
       await page.locator('[data-project-file="style.css"]').click();
       await sourceEditor.press("Control+A");
       await sourceEditor.fill("body { background: rgb(12, 34, 56); color: rgb(240, 230, 220); } h1 { font-size: 41px; }");
-      await page.waitForTimeout(1_100);
+      const frame = await (await page.locator("[data-project-output-mount] iframe").elementHandle()).contentFrame();
+      await frame.waitForFunction(() => {
+        const active = document.querySelector("#project-output-a > :not([inert]) > .project-output-root");
+        return active && getComputedStyle(active).backgroundColor === "rgb(12, 34, 56)";
+      });
       assert.equal(await surface.evaluate((node) => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
       assert.equal(await surface.locator("h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
       await page.getByLabel("Template").selectOption("mark");
@@ -249,13 +253,23 @@ test("Resources.co blog container examples render and surface schema errors in t
     }
     await page.close();
   }
+});
+
+test("Resources.co rejected documents retain the last output and recover on edit", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto(`http://resources-edge.localhost:${port}/try?template=article`, { waitUntil: "domcontentloaded" });
   const editor = page.locator(".cm-content");
   await editor.waitFor();
   const output = page.frameLocator("[data-project-output-mount] iframe");
-  const surface = output.locator(".project-output-root:not([hidden]):not(:has(.project-output-root))");
+  const surface = output.locator("#project-output-a > :not([inert]) > .project-output-root");
   await surface.locator("h1").waitFor();
   const originalHeading = await surface.locator("h1").textContent();
   await editor.click();
@@ -275,7 +289,7 @@ test("Resources.co blog container examples render and surface schema errors in t
   await page.getByRole("button", { name: "Split view", exact: true }).click();
   assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__preview");
   assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
-  assert.match(await page.locator("[data-project-error]").textContent(), /iframe/i);
+  assert.match(await page.locator("[data-project-error]").textContent(), /Output stopped: build.compile:/);
   assert.equal(await page.locator("[data-project-save]").textContent(), "");
   await editor.fill('<article><h1 id="allowed">Waiting</h1></article><script>document.getElementById("allowed").textContent = "Allowed guest code still runs";</script>');
   await surface.locator("h1", { hasText: "Allowed guest code still runs" }).waitFor();
@@ -518,9 +532,15 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
   const authCardWidth = await page.locator(".auth-card").evaluate((node) => node.getBoundingClientRect().width);
   assert.ok(authCardWidth >= 400 && authCardWidth <= 440);
 
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const account = await createAccountStore(createNodeSqliteClient(db)).authenticateIdentity({
+    provider: "gitlab", providerUserId: "84", login: "latte-dev", name: "Latte Dev",
+    email: "latte@example.test", emailVerified: true,
+  });
+  db.close();
   const session = await seal({
     v: 1,
-    sub: "gitlab:84",
+    sub: account.id,
     login: "latte-dev",
     name: "Latte Dev",
     iat: Date.now(),

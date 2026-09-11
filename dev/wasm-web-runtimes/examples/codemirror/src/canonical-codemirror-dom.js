@@ -874,7 +874,8 @@ GuestDocument.prototype.createElement = function (tag) {
 };
 GuestDocument.prototype.createElementNS = function (namespace, tag) {
   namespace = String(namespace);
-  tag = String(tag).toLowerCase();
+  // Unlike HTML createElement, namespaced names are case-sensitive.
+  tag = String(tag);
   var result = immediate([3, this.reference, stringIndex("createElementNS"), [
     encode(namespace), encode(tag)
   ]]);
