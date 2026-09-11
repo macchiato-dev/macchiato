@@ -51,7 +51,14 @@ function urlMatchesAllowedPatterns(url, patterns) {
 
 // packages/website/storage-service.js
 var replyLimit = 2 * 1024 * 1024;
-var valueEnvelopeLength = JSON.stringify({ value: "" }).length;
+var smallValueLimit = (replyLimit - JSON.stringify({ value: "", error: null }).length) / 6;
+function boundedStorageReply(reply) {
+  const value = reply.value;
+  if (typeof value === "string" && (value.length > replyLimit || value.length > smallValueLimit && JSON.stringify(reply).length > replyLimit)) {
+    throw new RangeError("Storage response exceeds its text limit");
+  }
+  return reply;
+}
 function storageResponse(storage2, request) {
   try {
     if (!storage2) throw new Error("Storage is not available");
@@ -60,13 +67,8 @@ function storageResponse(storage2, request) {
     switch (operation2) {
       case "has":
         return { value: storage2.has(kind, key) };
-      case "get": {
-        const value2 = storage2.get(kind, key), result = { value: value2 };
-        if (typeof value2 === "string" && (value2.length > replyLimit - valueEnvelopeLength || value2.length > (replyLimit - valueEnvelopeLength) / 6 && JSON.stringify(result).length > replyLimit)) {
-          throw new RangeError("Storage response exceeds its text limit");
-        }
-        return result;
-      }
+      case "get":
+        return boundedStorageReply({ value: storage2.get(kind, key) });
       case "set":
         storage2.set(kind, key, value);
         return { value: null };
