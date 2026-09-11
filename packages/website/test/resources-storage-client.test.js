@@ -103,4 +103,6 @@ test("storage errors return through the service and are thrown inside the guest"
   assert.equal(context.Client.storageRequest("has", "session", "theme"), false);
   assert.equal(device.request({ operation: "clear", kind: "session" }).error.name, "TypeError");
   assert.equal(device.request({ operation: "get", kind: "other" }).error.name, "TypeError");
+  assert.throws(() => context.Client.storageRequest("clear", "session", ""), error =>
+    error.name === "TypeError" && error.constructor.name === "TypeError");
 });

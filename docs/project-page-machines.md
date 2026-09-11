@@ -3133,3 +3133,41 @@ abandoned because `innerText` introduces block separators and was not a valid
 exact-text oracle; none of its timings support these conclusions. These are
 test improvements, not a performance fix or a new production build. The live
 server and deployment archive retain the verified scope-marker build.
+
+### Bounded storage replies and subscription disposal
+
+An oversized storage read could still unwind the machine: the request was
+small, but its JSON-encoded response exceeded the host's 2 MiB service-text
+bound. The regression reproduced the host rejection before the guest could
+catch it. The application storage adapter now returns a small error response
+instead. It checks larger strings against the encoded envelope, including
+escaping expansion, without serializing small replies twice. Stored values
+are never truncated or deleted. The exact response-size boundary remains
+usable, and a later valid operation continues in the same guest.
+
+The guest adapter preserves the native `RangeError` and `TypeError` prototypes
+for validation errors, in addition to their names and messages. Browser-only
+DOMException names still use the guest's ordinary Error object. This does not
+introduce a DOMException facade or broaden the Machine Host's permissions.
+
+The frontend storage device also now returns an unsubscribe function. The
+host already calls these on machine destruction; previously this device
+returned nothing, retaining callbacks belonging to disposed machines. Removing
+one subscription leaves others live, and repeated cleanup cannot remove a
+replacement subscription group. Real QuickJS browser probes, both direct and
+in an iframe, create three subscribing machines, dispose them independently,
+check delivery to the survivors, and confirm the device retains no callbacks
+after the last machine is destroyed. This demonstrates reference release,
+not a measurement of when browser garbage collection reclaims the memory.
+
+The rebuilt focused suite passes 20 tests, including catch/recovery after an
+oversized read and module loading. Five full application workflows pass:
+first paint, repeated theme switches, guest storage failures, storage-denied
+startup, and recovery/API-save/native-publication/ZIP export. The `d795021`
+export verifies all 152 files and runs its compressed backend in Deno.
+Owner-project and full editing checks remain before local promotion.
+
+This closes oversized replies through `storage.request`, not every application
+service or general native exception. Subscription-time storage getter failures
+and other oversized synchronous service replies still need separate handling.
+The viewport/`rem` and input-performance work also remains open.
