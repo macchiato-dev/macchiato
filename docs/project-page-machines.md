@@ -2463,6 +2463,31 @@ needed to display a large image or retain the project's resource table.
 The reader uses ordinary owned elements and text content, not parsed source
 markup, host rendering shortcuts, or additional Machine Host permissions.
 
+Checkpoint `cc6587c` passes sixteen service/artifact tests and the browser case
+with a 2.32 MB source file, a 65,535-character run ending in an emoji, a short
+file beyond the line-count budget, and a 3.6 MB PNG. Every displayed section
+reassembles to the original source; export preserves each file exactly, without
+depending on ZIP entry order. The test also returns to editing and verifies
+that output still updates. Desktop/phone screenshots and computed styles check
+scrolling, controls, monospace text, and both themes, including the recovery
+warning when the fixture's large resources exceed session storage.
+
+The recovery/publication workflow, Find/Replace, twenty appearance tests, and
+the full editing stress test pass as well. The fixed stress input takes 775 ms
+to paste 106,432 characters and 15,856 ms for native insertion of 106,458
+characters. This remains consistent with the earlier layout improvement, not
+a claim that native bulk insertion is fully optimized.
+
+The compressed backend runs in Deno and all 151 export files verify after
+archive extraction. The restarted local server runs all four owner projects,
+including fifty tour slides, keyboard navigation, SQLite fragments, iframe
+output, and theme switching. `/root/resources-bunny.tar.gz` contains this
+export; its predecessor is kept at
+`/root/archive/2026/09/11/resources-bunny-17f8548-before-large-file-reading.tar.gz`.
+No owner content was saved and no Bunny deployment was performed. This does
+not remove the existing host image-size limit or prove arbitrary-size project
+viewing, bounded string-table retention, or recovery with storage disabled.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
