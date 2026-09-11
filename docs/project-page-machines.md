@@ -3785,3 +3785,24 @@ The predecessor is retained at
 No Bunny deployment was performed. The native hint, functional passes, timing
 variation, and interrupted diagnostic teardown are all retained in the history;
 the broader goal is still open.
+
+### Output-session cleanup under failure
+
+`project-output-lifecycle.browser.test.js` runs twelve real QuickJS replacements,
+then destroys the output while a thirteenth session awaits a module timer.
+Retired elements are deliberately retained by the test and clicked/mutated
+afterward to check that removing the visible DOM is not mistaken for cleanup.
+The test also checks reference leases, native mutation/resize callbacks,
+timers, cancellation of the pending load, and disposal of the shared engine.
+
+Normal replacement already released its references. A throwing reference-release
+hook exposed a separate failure: destruction stopped early, leaving the active
+root, eleven leases, and callbacks alive. `ProjectOutput.destroy()` now attempts
+both sessions and the engine before rethrowing the first error. It clears its
+session pointers before cleanup and remains idempotent. This changes failure
+handling, not the normal refresh schedule or interpreter GC policy.
+
+The fixed browser test and document/inline-update regressions pass (five tests).
+Evidence: `/root/macchiato-work/output-lifecycle-{baseline,fixed,regressions}.log`.
+The full export is being rebuilt; this source-level check does not yet establish
+that the live site or deployment archive contains the fix.
