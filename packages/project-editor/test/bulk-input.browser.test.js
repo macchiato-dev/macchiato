@@ -40,6 +40,8 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const text = `<!--\n${moduleSource.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
   const editorWidth = Number(process.env.MACCHIATO_TEST_EDITOR_WIDTH || 720);
   assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
+  const methods = (process.env.MACCHIATO_TEST_INPUT_METHODS || "paste,insertText,replaceText").split(",");
+  assert.ok(methods.length && methods.every(method => ["paste", "insertText", "replaceText"].includes(method)));
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const results = [];
@@ -101,7 +103,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         if (!event.defaultPrevented) throw new Error("Paste was not handled");
       }, value);
     }
-    for (const method of ["paste", "insertText", "replaceText"]) {
+    for (const method of methods) {
       // The workspace replaces an already large document, not just "before".
       // Keep both cases so deletion/layout cost cannot masquerade as a
       // difference between its runtime and this isolated-editor fixture.
@@ -147,6 +149,12 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     for (let index = 0; index < 4; index++) await page.keyboard.press("ArrowRight");
     let inserted = "";
     const keyMilliseconds = [];
+    const typingDirectory = process.env.MACCHIATO_TYPING_CPU_PROFILE_DIR;
+    const typingProfiler = typingDirectory ? await context.newCDPSession(page) : null;
+    if (typingProfiler) {
+      await typingProfiler.send("Profiler.enable");
+      await typingProfiler.send("Profiler.start");
+    }
     for (const key of [..." hellp", "Backspace", "o"]) {
       const started = performance.now();
       await page.keyboard.press(key === " " ? "Space" : key);
@@ -154,6 +162,12 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       inserted = key === "Backspace" ? inserted.slice(0, -1) : inserted + key;
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
         text.slice(0, 4) + inserted + text.slice(4));
+    }
+    if (typingProfiler) {
+      const { profile } = await typingProfiler.send("Profiler.stop");
+      await mkdir(typingDirectory, { recursive: true });
+      await writeFile(join(typingDirectory, `${run}-${mode}-typing.cpuprofile`), JSON.stringify(profile));
+      await typingProfiler.detach();
     }
     results.push({ run, mode, method: "first-page-typing", characters: text.length, keyMilliseconds });
     t.diagnostic(JSON.stringify(results.at(-1)));
