@@ -1846,13 +1846,33 @@ test("large project files remain readable without exceeding the editor service b
     domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  const large = "First line\n" + ("source " + "x".repeat(180) + "\n").repeat(12000) + "Last line\n";
+  const large = "First line\n" + "y".repeat(65535) + "😀\n" +
+    '<img src="https://example.invalid/not-a-request">\n' +
+    ("source " + "x".repeat(180) + "\n").repeat(12000) + "Last line\n";
   const snapshot = { files: [
     { path: "index.html", content: "<h1>Large file fixture</h1>" },
     { path: "large.txt", content: large },
+    { path: "many-lines.txt", content: "line\n".repeat(6000) },
   ], config: { entry: "index.html", template: "html" } };
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
   await page.locator(".cm-content").waitFor();
+  const image = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024; canvas.height = 768;
+    const context = canvas.getContext("2d"), pixels = context.createImageData(canvas.width, canvas.height);
+    let random = 1;
+    for (let at = 0; at < pixels.data.length; at += 4) {
+      random ^= random << 13; random ^= random >>> 17; random ^= random << 5;
+      pixels.data[at] = random & 255;
+      pixels.data[at + 1] = random >>> 8 & 255;
+      pixels.data[at + 2] = random >>> 16 & 255;
+      pixels.data[at + 3] = 255;
+    }
+    context.putImageData(pixels, 0, 0);
+    return canvas.toDataURL("image/png");
+  });
+  assert.ok(image.length > 2 * 1024 * 1024, "the image also crosses the service boundary");
+  snapshot.files.push({ path: "large.png", content: image });
   await page.locator("[data-project-archive-file]").setInputFiles({ name: "large.zip",
     mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
   await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", { name: "Large file fixture" }).waitFor();
@@ -1864,6 +1884,58 @@ test("large project files remain readable without exceeding the editor service b
     t.diagnostic(JSON.stringify({ errors, status: await page.locator("[data-project-status]").textContent() }));
     throw error;
   }
+  const panel = page.locator(".project-editor__asset-view");
+  const source = panel.getByLabel("File source");
+  const parts = [];
+  for (;;) {
+    const part = await source.textContent();
+    assert.ok(part.length <= 64 * 1024);
+    parts.push(part);
+    if (await panel.getByRole("button", { name: "Next section" }).isDisabled()) break;
+    await panel.getByRole("button", { name: "Next section" }).click();
+  }
+  assert.equal(parts.join(""), large, "paging presents every original character once");
+  await panel.getByRole("button", { name: "Previous section" }).click();
+  assert.equal(await source.textContent(), parts.at(-2));
+  for (const colorScheme of ["light", "dark"]) for (const width of [1440, 390]) {
+    await page.emulateMedia({ colorScheme });
+    await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, colorScheme);
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    if (width === 390) await page.getByRole("button", { name: "Editor", exact: true }).click();
+    const bounds = await panel.evaluate(node => {
+      const rect = node.getBoundingClientRect(), pre = node.querySelector("[role=document]");
+      const next = node.querySelector("button:last-child").getBoundingClientRect();
+      return { bottom: rect.bottom, right: rect.right, width: innerWidth, height: innerHeight,
+        nextBottom: next.bottom, nextRight: next.right, background: getComputedStyle(node).backgroundColor,
+        scrollable: pre.scrollHeight > pre.clientHeight, overflow: getComputedStyle(pre).overflowY };
+    });
+    assert.ok(bounds.bottom <= bounds.height + 1 && bounds.right <= bounds.width + 1, JSON.stringify(bounds));
+    assert.ok(bounds.nextBottom <= bounds.height + 1 && bounds.nextRight <= bounds.width + 1, JSON.stringify(bounds));
+    assert.equal(bounds.overflow, "auto");
+    assert.equal(bounds.scrollable, true);
+    assert.equal(bounds.background, colorScheme === "light" ? "rgb(217, 225, 227)" : "rgb(29, 32, 32)");
+    assert.equal(await panel.locator("img").count(), 0, "source markup is text, never active DOM");
+    await page.screenshot({ path: resolve(repoRoot, `../macchiato-work/large-source-${colorScheme}-${width}.png`) });
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.locator("[data-project-file-trigger]").click();
+  await page.locator('[data-project-file="many-lines.txt"]').click();
+  assert.equal(await source.textContent(), snapshot.files[2].content);
+  assert.equal(await panel.getByRole("button", { name: "Next section" }).isDisabled(), true);
+  await page.locator("[data-project-file-trigger]").click();
+  await page.locator('[data-project-file="large.png"]').click();
+  await page.waitForFunction(() => document.querySelector(".project-editor__image-view")?.naturalWidth === 1024);
+  assert.equal(await page.locator(".project-editor__image-view").getAttribute("src"), image);
+  await page.getByRole("button", { name: "Editor menu" }).click();
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Export ZIP" }).click();
+  const exported = await decodeProjectArchive(await readFile(await (await downloading).path()));
+  assert.deepEqual(exported.files, snapshot.files, "reading never rewrites the exported source");
+  await page.locator('[data-tab-path="index.html"] [role="tab"]').click();
+  await page.locator(".cm-content").click();
+  await page.locator(".cm-content").press("Control+End");
+  await page.keyboard.insertText("<p>Still editable</p>");
+  await page.frameLocator("[data-project-output-mount] iframe").getByText("Still editable").waitFor();
   assert.deepEqual(errors, []);
 });
 

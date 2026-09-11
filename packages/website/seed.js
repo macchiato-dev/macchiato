@@ -1074,12 +1074,15 @@ html[data-theme="light"] .project-editor__mount { --resources-editor-fg: #263338
 .project-editor__mount, .project-editor__mount .cm-editor { height: 100%; min-height: 0; }
 .project-editor__mount[hidden] { display: none; }
 .project-editor__image-view { display: block; width: 100%; height: 100%; object-fit: contain; background: #101212; }
-.project-editor__asset-view { display: flex; height: 100%; min-height: 0; min-width: 0; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; color: var(--muted); background: var(--resources-editor-bg); }
+.project-editor__asset-view { --resources-editor-bg: #1d2020; --resources-editor-fg: #abb2bf; display: flex; height: 100%; min-height: 0; min-width: 0; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; color: var(--muted); background: var(--resources-editor-bg); }
+html[data-theme="light"] .project-editor__asset-view { --resources-editor-bg: #d9e1e3; --resources-editor-fg: #263338; }
 .project-editor__asset-view strong { color: var(--text); }
 .project-editor__asset-view p { margin: 0; }
-.project-editor__asset-view pre { flex: 1; min-height: 0; margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--resources-editor-fg); font: 13px/1.5 ui-monospace, monospace; }
-.project-editor__asset-view > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.project-editor__asset-view .project-editor__source-page { display: block; flex: 1; min-height: 0; margin: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--resources-editor-fg); font-family: monospace; font-size: 13px; line-height: 1.5; }
+.project-editor__asset-view > div:last-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.project-editor__source-position { white-space: nowrap; font-size: 12px; }
 .project-editor__asset-view button { padding: 6px 9px; border: 1px solid var(--track-border); border-radius: 6px; color: var(--text); background: var(--hover); font: inherit; cursor: pointer; }
+.project-editor__asset-view button:disabled { opacity: 0.5; cursor: default; }
 .project-editor__large-source { box-sizing: border-box; width: 100%; min-height: 0; flex: 1 1 auto; resize: none; border: 1px solid var(--track-border); border-radius: 3px; padding: 10px; color: #cbd3d1; background: #1d2020; font-family: monospace; font-size: 12px; line-height: 1.55; overflow: auto; }
 .project-editor__presentation-frame { display: block; width: 100%; height: 100%; border: none; background: #101212; }
 .project-editor__preview > [data-project-preview][data-preview-runtime="presentation-use"] { box-sizing: border-box; width: 100%; height: 100%; padding: 0; overflow: hidden; }

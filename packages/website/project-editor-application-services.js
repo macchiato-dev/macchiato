@@ -107,6 +107,9 @@ export async function mountResourcesProjectEditor(options) {
   return Object.freeze({
     contentInfo(content) { return chunk(content); },
     readContent(content, offset) {
+      if (!content.startsWith(PROJECT_RESOURCE_PREFIX)) {
+        return offset === undefined ? content : content.slice(offset, offset + 64 * 1024);
+      }
       if (offset !== undefined) return chunk(content, offset).content;
       if (content === lastContent && lastValue !== undefined) return lastValue;
       const first = chunk(content), parts = [first.content];
