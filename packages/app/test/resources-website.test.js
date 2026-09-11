@@ -1826,6 +1826,123 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.deepEqual(errors, []);
 });
 
+test("project resources survive session recovery, API saves, native publication, and ZIP export", { timeout: 120_000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const account = await createAccountStore(createNodeSqliteClient(db)).authenticateIdentity({
+    provider: "github", providerUserId: "asset-recovery", login: "asset-dev", name: "Asset Dev",
+    email: "asset@example.test", emailVerified: true,
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.context().addCookies([{ name: "resources_session", value: session,
+    domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  const source = name => ({ files: [
+    { path: "index.html", content: '<h1 id="result">Loading resource</h1><script src="data.js"></script>' },
+    { path: "data.js", content: `/*${"x".repeat(70 * 1024)}*/\ndocument.getElementById("result").textContent = "${name}";` },
+    { path: "tile.svg", content: `<svg viewBox="0 0 24 24"><title>${name}</title><circle r="4"/></svg>` },
+  ], config: { entry: "index.html", template: "html" } });
+  const original = source("Original resource"), changed = source("Recovered resource");
+  const output = page.frameLocator("[data-project-output-mount] iframe");
+  const filesOf = snapshot => Object.fromEntries(snapshot.files.map(file => [file.path, file.content]));
+  async function importSnapshot(snapshot) {
+    await page.locator("[data-project-archive-file]").setInputFiles({ name: "resource.zip",
+      mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
+    await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "ZIP imported");
+  }
+  async function exportedFiles() {
+    await page.getByRole("button", { name: "Editor menu" }).click();
+    const downloading = page.waitForEvent("download");
+    await page.getByRole("menuitem", { name: "Export ZIP" }).click();
+    return filesOf(decodeProjectArchive(await readFile(await (await downloading).path())));
+  }
+  await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
+  await page.locator(".cm-content").waitFor();
+  await importSnapshot(original);
+  await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
+  await page.getByLabel("Title", { exact: true }).fill("Resource recovery");
+  const creating = page.waitForResponse(response => response.request().method() === "POST" &&
+    new URL(response.url()).pathname === "/projects");
+  await page.getByRole("button", { name: "Create project" }).click();
+  const created = await creating;
+  const submitted = JSON.parse(new URLSearchParams(created.request().postData()).get("snapshot"));
+  assert.deepEqual(filesOf(submitted), filesOf(original), "native creation must not persist handles");
+  assert.equal(created.status(), 303);
+  await page.waitForLoadState("networkidle");
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
+  await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
+
+  // Keep the server checkpoint unchanged while staging a new asset-bearing
+  // snapshot. This failure is confined to the disposable fixture's autosave.
+  let rejectSave = true;
+  await page.route("**/api/projects/*/snapshot", route => rejectSave
+    ? route.fulfill({ status: 503, contentType: "application/json", body: '{"message":"Fixture autosave held"}' })
+    : route.continue());
+  await importSnapshot(changed);
+  const key = await page.locator("[data-project-editor]").getAttribute("data-project-id")
+    .then(id => `resources_project_pending_v1:${id}`);
+  const pending = await page.evaluate(key => JSON.parse(sessionStorage.getItem(key)), key);
+  assert.equal(pending.format, "resources-project-session-v1");
+  assert.equal(pending.resources.length, 2);
+  assert.ok(pending.value.length < 5000, "the guest snapshot stays compact");
+  rejectSave = false;
+  await page.reload({ waitUntil: "networkidle" });
+  await output.getByRole("heading", { name: "Recovered resource", exact: true }).waitFor();
+  await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "Saved");
+  assert.equal(await page.evaluate(key => sessionStorage.getItem(key), key), null);
+  const workspaceUrl = await page.locator("[data-project-snapshot-url]").getAttribute("data-project-snapshot-url");
+  const workspace = await (await page.request.get(new URL(workspaceUrl, page.url()).href)).json();
+  assert.deepEqual(filesOf(workspace.snapshot), filesOf(changed), "autosave sends actual resource bytes");
+  assert.deepEqual(await exportedFiles(), filesOf(changed));
+
+  await page.locator("[data-project-file-trigger]").click();
+  await page.locator('[data-project-file="data.js"]').click();
+  await page.locator(".cm-content").press("Control+End");
+  await page.locator(".cm-content").getByText(/Recovered resource/).waitFor();
+  assert.doesNotMatch(await page.locator(".cm-content").textContent(), /resources-project-resource:/);
+  const publishing = page.waitForResponse(response => response.request().method() === "POST" &&
+    new URL(response.url()).pathname.startsWith("/projects/"));
+  await page.getByRole("button", { name: "Save project", exact: true }).click();
+  const published = await publishing;
+  assert.deepEqual(filesOf(JSON.parse(new URLSearchParams(published.request().postData()).get("snapshot"))),
+    filesOf(changed), "native publication also sends bytes");
+  assert.equal(published.status(), 303);
+  await page.waitForLoadState("networkidle");
+
+  const expired = JSON.stringify({ ...changed, files: changed.files.map(file =>
+    file.path === "tile.svg" ? { ...file, content: "\0resources-project-resource:1" } : file) });
+  await page.evaluate(({ key, expired }) => sessionStorage.setItem(key, expired), { key, expired });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByText(/Draft recovery failed:.*Stored recovery data was kept/).waitFor();
+  assert.equal(await page.evaluate(key => sessionStorage.getItem(key), key), expired);
+  await output.getByRole("heading", { name: "Recovered resource", exact: true }).waitFor();
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-warning.png") });
+  await page.evaluate(key => sessionStorage.removeItem(key), key);
+
+  // Unsaved-project history uses the same transport without flattening its
+  // patches or copying all resource bytes into the MicroQuickJS application.
+  await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
+  await page.locator(".cm-content").waitFor();
+  for (const snapshot of [original, changed]) {
+    await importSnapshot(snapshot);
+    await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftState === "saved");
+  }
+  await page.reload({ waitUntil: "networkidle" });
+  await output.getByRole("heading", { name: "Recovered resource", exact: true }).waitFor();
+  assert.deepEqual(await exportedFiles(), filesOf(changed));
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-draft.png") });
+  assert.deepEqual(errors, []);
+});
+
 test("CodeMirror Find/Replace remains usable in both themes and narrow workspaces", async (t) => {
   const port = await getPort(), dataDir = await tempDir();
   const app = startApp(port, dataDir);
