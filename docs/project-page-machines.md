@@ -2628,6 +2628,28 @@ inline declarations through semantic CSS compilation remains unfinished work.
 Storage subscription failures and unusually large service responses are also
 outside these checks.
 
+Two full editing stress runs pass after this change, including keyboard edits,
+selection/dragging, undo/redo, error recovery, history, and phone layouts. With
+the same fixed 106 KiB source and video capture, paste took 933/930 ms and native
+insertion took 24,663/21,875 ms. Substituting only the previous `7e92166` editor
+artifact in the same test also passed, at 1,294/31,331 ms respectively. These
+varying runs do not establish a speedup or attribute the increase over the
+earlier 16-second measurement to this change. Bulk insertion remains a known
+performance gap and needs more controlled profiling.
+
+The `01f8efe` deployment export verifies all 151 files, including after archive
+extraction, and its compressed backend runs in Deno. Read-only owner checks pass
+for Mahjong, Cat Memory Match, fifty tour slides with keyboard navigation, and
+SQLite fragment navigation, including desktop/phone layouts and theme switches.
+The session test still uses one Wasm instance, isolates globals and callbacks,
+returns leases from five to zero, and stays at 9,175,040 bytes through 24 cycles.
+
+The local server and `/root/resources-bunny.tar.gz` now use this export. The
+previous archive is preserved at
+`/root/archive/2026/09/11/resources-bunny-7e92166-before-output-focus.tar.gz`.
+No owner project was saved and no Bunny deployment was performed. These checks
+do not close the broader performance, compiler-fidelity, and containment audit.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
