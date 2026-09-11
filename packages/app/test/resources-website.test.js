@@ -209,9 +209,11 @@ test("Resources.co blog container examples render and surface schema errors in t
     const surface = output.locator("#project-output-a > :not([inert]) > .project-output-root");
     const preview = surface.locator(previewSelector);
     await preview.waitFor();
-    if (template === "mark") await page.screenshot({
-      path: resolve(repoRoot, "../macchiato-work/template-mark.png"),
-    });
+    if (template === "mark") {
+      await surface.getByRole("img", { name: "Logo mark" }).waitFor();
+      assert.equal(await surface.locator("svg title").textContent(), "Logo mark");
+      await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-mark.png") });
+    }
     assert.equal(await preview.count(), 1);
     assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
     assert.equal(await page.locator("[data-project-status]").isHidden(), true);

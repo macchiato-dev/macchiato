@@ -11784,7 +11784,8 @@
     "path",
     "rect",
     "stop",
-    "text"
+    "text",
+    "title"
   ].map((name) => [name.toLowerCase(), name]));
   var SVG_ATTRIBUTES = /* @__PURE__ */ new Set([
     "cx",
@@ -11897,8 +11898,8 @@
         if (value.nodeType === 3) return [[0, value.textContent]];
         if (value.nodeType !== 1) return [];
         if (WRAPPERS.has(value.localName)) return value.childNodes.flatMap(nodes);
-        if (OMITTED.has(value.localName)) return [];
         const svg = value.namespaceURI === "http://www.w3.org/2000/svg";
+        if (OMITTED.has(value.localName) && (!svg || value.localName !== "title")) return [];
         const name = svg ? SVG_ELEMENTS.get(value.localName) : value.localName;
         if (!name || !svg && !ELEMENTS.has(name)) throw new Error(`<${value.localName}> is not available in the project surface`);
         const attributes = value.attributeEntries.map(([key2, data2]) => [svg ? { viewbox: "viewBox", gradientunits: "gradientUnits" }[key2] || key2 : key2, data2]).filter(([key2, data2]) => (ATTRIBUTES.has(key2) || /^(aria|data)-[a-z][a-z0-9-]*$/.test(key2) || svg && SVG_ATTRIBUTES.has(key2)) && data2.length <= 2e3);
