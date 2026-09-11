@@ -67,7 +67,7 @@ function readSelector(reader) {
   if (reader.uint() !== 1) fail2();
   return group(0);
 }
-function renderSelector(list, scopeClass, logicalRoot = false, documentSubtree = false) {
+function renderSelector(list, scopeId, logicalRoot = false, documentSubtree = false) {
   let remaining = 512;
   const fail2 = () => {
     throw new Error("selector data is not representable");
@@ -76,7 +76,7 @@ function renderSelector(list, scopeClass, logicalRoot = false, documentSubtree =
     if (typeof value !== "string" || !value || value.length > 256) fail2();
     return CSS.escape(value);
   }
-  const scope = scopeClass === null ? "" : "." + identifier(scopeClass);
+  const scope = scopeId === null ? "" : `[data-wwm-scope~="${identifier(scopeId)}"]`;
   const guard = scope ? `:where(${scope}, ${scope} *)` : "";
   function position(native, rootMatches) {
     if (!scope) return native;
@@ -376,7 +376,7 @@ function createCssRenderer(dependencies) {
     options,
     pendingChecks,
     reject: fail2,
-    scopeClass,
+    scopeId,
     readSelector: readSelector2,
     renderSelector: renderSelector2,
     renderSvg
@@ -601,7 +601,7 @@ ${nested.join("\n\n")}
           if (targetStyle) fail2("inline style cannot contain keyframes");
           const name = reader.text();
           if (!/^[a-z_][a-z0-9_-]*$/i.test(name)) fail2("keyframe name is not representable");
-          const scopedName = scopeClass ? `${scopeClass.slice(1)}--${name}` : name;
+          const scopedName = scopeId ? `${scopeId}--${name}` : name;
           keyframeNames.set(name, scopedName);
           originalKeyframeNames.set(scopedName, name);
           const frameCount = reader.uint();
@@ -625,7 +625,7 @@ ${frames.join("\n")}
         if (itemKind !== 1) fail2("stylesheet item is not representable");
         const selector = readSelector2(reader);
         const declarationCount = reader.uint();
-        const renderedSelector = renderSelector2(selector, scopeClass, true);
+        const renderedSelector = renderSelector2(selector, scopeId, true);
         let index;
         try {
           index = probe.insertRule(`${renderedSelector}{}`, probe.cssRules.length);
@@ -785,6 +785,14 @@ var decoder = new TextDecoder("utf-8", { fatal: true });
 var encoder = new TextEncoder();
 var CHUNK_SIZE = 8192;
 var CHUNK_COUNT = 128;
+var SCOPE_ATTRIBUTE = "data-wwm-scope";
+var activeScopes = /* @__PURE__ */ new Set();
+function markRoot(root, id, add) {
+  const current = (root.getAttribute(SCOPE_ATTRIBUTE) || "").split(" ").filter(Boolean);
+  const next = add ? [...current, id] : current.filter((value) => value !== id);
+  if (next.length) root.setAttribute(SCOPE_ATTRIBUTE, next.join(" "));
+  else root.removeAttribute(SCOPE_ATTRIBUTE);
+}
 var ELEMENTS = /* @__PURE__ */ new Set([
   "a",
   "article",
@@ -905,7 +913,7 @@ function fail(message2) {
   throw new Error(`wasm-web-machine: ${message2}`);
 }
 function isAllowedAttribute(name) {
-  return ATTRIBUTES.has(name) || /^(?:aria|data)-[a-z][a-z0-9-]{0,63}$/.test(name);
+  return name !== SCOPE_ATTRIBUTE && (ATTRIBUTES.has(name) || /^(?:aria|data)-[a-z][a-z0-9-]{0,63}$/.test(name));
 }
 function isRemovableAttribute(name) {
   return isAllowedAttribute(name) || name === "open" || name === "style";
@@ -999,14 +1007,17 @@ var WasmWebBridge = class {
       fail("an HTML document subtree requires a direct head and body");
     }
     const logicalHead = documentTarget ? hostDocument.head : documentSubtree ? documentPart("head") : portalRoots[0] || primaryRoot;
-    let scopeClass = null;
+    let scopeId = null;
     if (!documentTarget && !messagesOnly) do {
-      scopeClass = `wwm-${Array.from(
+      scopeId = `wwm-${Array.from(
         crypto.getRandomValues(new Uint8Array(3)),
         (byte) => byte.toString(16).padStart(2, "0")
       ).join("").slice(0, 5)}`;
-    } while (hostDocument.querySelector(`.${scopeClass}`));
-    if (scopeClass) roots.forEach((root) => root.classList.add(scopeClass));
+    } while (activeScopes.has(scopeId) || hostDocument.querySelector(`[${SCOPE_ATTRIBUTE}~="${scopeId}"]`));
+    if (scopeId) {
+      activeScopes.add(scopeId);
+      roots.forEach((root) => markRoot(root, scopeId, true));
+    }
     const installedStyles = /* @__PURE__ */ new Set();
     const messageRoot = Object.freeze({});
     const rootCapability = messagesOnly ? messageRoot : hostDocument;
@@ -1156,7 +1167,7 @@ var WasmWebBridge = class {
       if (reader.at !== reader.bytes.length) fail("trailing selector operation data");
       const tree = node.getRootNode();
       const detachedGrant = tree !== hostDocument && accessibleNode(tree);
-      return renderSelector(selector, detachedGrant ? null : scopeClass, node === hostDocument, documentSubtree);
+      return renderSelector(selector, detachedGrant ? null : scopeId, node === hostDocument, documentSubtree);
     }
     function requireRange(range) {
       requireNode(range.startContainer);
@@ -1349,10 +1360,6 @@ var WasmWebBridge = class {
       }
       fail(`property get ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
-    function scopedClass(node, value2) {
-      if (!scopeClass || !roots.includes(node) || value2.split(/[\t\n\f\r ]+/).includes(scopeClass)) return value2;
-      return value2 + (value2 ? " " : "") + scopeClass;
-    }
     function setAttribute(object, args) {
       requireContentTarget(object);
       if (!isAllowedAttribute(args[0]) || typeof args[1] !== "string") {
@@ -1418,7 +1425,7 @@ var WasmWebBridge = class {
       if (args[0] === "translate" && !["no", "yes"].includes(args[1])) {
         fail("translate value is not allowed");
       }
-      object.setAttribute(args[0], args[0] === "class" ? scopedClass(object, args[1]) : args[1]);
+      object.setAttribute(args[0], args[1]);
       return null;
     }
     function set(object, name, next) {
@@ -1497,7 +1504,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof HTMLElement && name === "className" && typeof next === "string" && /^(?:(?:[a-z_][a-z0-9_-]*)(?:\s+[a-z_][a-z0-9_-]*)*)?$/i.test(next)) {
-        object.className = scopedClass(object, next);
+        object.className = next;
         return null;
       }
       if (object instanceof HTMLElement && ["textContent", "title"].includes(name) && typeof next === "string") {
@@ -1903,7 +1910,12 @@ var WasmWebBridge = class {
         else if (object instanceof Element && !contentElement(object)) {
           fail(`cloning ${object.localName} is not allowed`);
         }
-        return reference(ownNode(object.cloneNode(args[0])));
+        const copy = object.cloneNode(args[0]);
+        if (copy instanceof Element) copy.removeAttribute(SCOPE_ATTRIBUTE);
+        if (args[0] && (copy instanceof Element || copy instanceof realm.DocumentFragment)) {
+          copy.querySelectorAll(`[${SCOPE_ATTRIBUTE}]`).forEach((node) => node.removeAttribute(SCOPE_ATTRIBUTE));
+        }
+        return reference(ownNode(copy));
       }
       if (object instanceof Node && name === "childNodes" && args.length === 0 && accessibleNode(object)) {
         return reference(Array.from(object.childNodes));
@@ -2076,9 +2088,7 @@ var WasmWebBridge = class {
           fail(`attribute removal is not allowed: ${String(args[0])}`);
         }
         if (!isRemovableAttribute(args[0]) && object.hasAttribute(args[0])) fail(`attribute removal is not allowed: ${args[0]}`);
-        const retained = args[0] === "class" ? scopedClass(object, "") : "";
-        if (retained) object.setAttribute("class", retained);
-        else object.removeAttribute(args[0]);
+        object.removeAttribute(args[0]);
         return null;
       }
       if (object instanceof Node && name === "closest") {
@@ -2445,7 +2455,7 @@ var WasmWebBridge = class {
       options,
       pendingChecks,
       reject: fail,
-      scopeClass,
+      scopeId,
       readSelector,
       renderSvg,
       renderSelector: (selector, scope, logicalRoot) => renderSelector(selector, scope, logicalRoot, documentSubtree)
@@ -2685,7 +2695,11 @@ var WasmWebBridge = class {
       cleanupCallbacks.clear();
       installedStyles.forEach((style) => style.remove());
       installedStyles.clear();
-      if (scopeClass) roots.forEach((root) => root.classList.remove(scopeClass));
+      if (scopeId) {
+        roots.forEach((root) => markRoot(root, scopeId, false));
+        activeScopes.delete(scopeId);
+        scopeId = null;
+      }
       instance = void 0;
       delivery = void 0;
     };

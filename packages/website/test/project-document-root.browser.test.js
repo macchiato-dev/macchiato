@@ -105,8 +105,29 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
         document.body.appendChild(copy);
         __wwcPostMessage("clones:" + document.querySelectorAll(":root").length + ":" + copy.matches(":root"));`);
       const clone = reports.pop();
+      // A descendant may itself have a host grant. Deep copies must not retain
+      // that nested boundary either, including copies made through a fragment.
+      run(`var nestedChild = document.createElement("div");
+        nestedChild.setAttribute("id", "nested-grant");
+        document.body.appendChild(nestedChild);`);
+      const nested = new Machine(new WebAssembly.Module(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0])),
+        body.querySelector("#nested-grant"));
+      let deepScopes, fragmentScopes;
+      try {
+        run(`var deepCopy = document.body.cloneNode(true);
+          deepCopy.setAttribute("id", "deep-copy");
+          document.body.appendChild(deepCopy);
+          var fragment = document.createDocumentFragment();
+          fragment.appendChild(nestedChild);
+          var fragmentCopy = fragment.cloneNode(true);
+          document.body.appendChild(fragmentCopy);
+          document.body.appendChild(fragment);`);
+        deepScopes = body.querySelector("#deep-copy").querySelectorAll("[data-wwm-scope]").length;
+        fragmentScopes = [...body.children].filter(node => node.id === "nested-grant")
+          .map(node => node.hasAttribute("data-wwm-scope"));
+      } finally { nested.destroy(); }
       const result = { reports: reports.filter(value => value.startsWith("{")).map(JSON.parse),
-        actual, mutations, records,
+        actual, mutations, records, deepScopes, fragmentScopes,
         clone, cloneClass: body.querySelector("#cloned-root").getAttribute("class"),
         cloneScope: body.querySelector("#cloned-root").hasAttribute("data-wwm-scope"),
         expected: [frame.contentDocument.documentElement, frame.contentDocument.body,
@@ -128,6 +149,8 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
   assert.equal(result.clone, "clones:1:false");
   assert.equal(result.cloneClass, "page");
   assert.equal(result.cloneScope, false);
+  assert.equal(result.deepScopes, 0);
+  assert.deepEqual(result.fragmentScopes, [false, true], "only the original retains its nested host grant");
   assert.deepEqual(result.cleanup, { class: "page", scope: false });
   assert.equal(result.stylesInHead, 1);
   assert.equal(result.stylesInBody, 0);
