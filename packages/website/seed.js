@@ -1048,9 +1048,11 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .project-editor:has(.project-editor__workspace[data-view="editor"]) .project-editor__preview-toolbar > [data-preview-title] { visibility: hidden; }
 .project-editor__source, .project-editor__preview { position: relative; min-width: 0; min-height: 0; overflow: auto; }
 .project-editor__source { display: grid; grid-template-rows: minmax(0, 1fr) auto; padding: 0; overflow: hidden; }
-/* The grid assigns this mount its size. Editor content must not participate
-   in ancestor intrinsic sizing on every native input/line insertion. */
-.project-editor__source > .project-editor__mount { min-height: 0; overflow: hidden; contain: size; }
+/* Keep native contenteditable mutations out of the grid's sizing algorithm.
+   An absolute grid child still uses its assigned cell as the containing block,
+   so the split remains responsive and the status row keeps its own space. */
+.project-editor__source > .project-editor__mount { position: absolute; top: 0; right: 0; bottom: 0; left: 0; grid-row: 1; grid-row-end: 2; grid-column: 1; height: auto; min-height: 0; overflow: hidden; contain: size; }
+.project-editor__source > .project-editor__status { grid-row: 2; grid-column: 1; }
 .project-editor__preview { display: grid; grid-template-rows: minmax(0, 1fr) auto; overflow: hidden; }
 .project-editor__preview > [data-project-preview] { min-height: 0; overflow: auto; }
 .project-editor__preview-surface, [data-project-output-mount], .project-editor__output-frame { width: 100%; height: 100%; min-height: 0; }

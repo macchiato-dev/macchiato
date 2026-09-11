@@ -1994,6 +1994,30 @@ test("CodeMirror Find/Replace remains usable in both themes and narrow workspace
     await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS || dataDir, `search-${colorScheme}-${width}.png`) });
     await page.keyboard.press("Escape");
     assert.equal(await search.count(), 0);
+    const mount = page.locator(".project-editor__source > .project-editor__mount");
+    assert.equal(await mount.evaluate(node => getComputedStyle(node).position), "absolute");
+    const beforeWarning = await mount.boundingBox();
+    // Exercise a wrapped status row without crashing a machine just to expose
+    // the layout. It must reserve space, not overlay the editor's last line.
+    await page.locator(".project-editor__source").evaluate(source => {
+      const warning = document.createElement("div");
+      warning.className = "project-editor__status";
+      warning.dataset.state = "error";
+      warning.dataset.layoutFixture = "true";
+      warning.textContent = "A recoverable editor error with enough detail to wrap on a narrow screen. Your draft is still available.";
+      source.append(warning);
+    });
+    const bounds = await mount.evaluate(node => {
+      const editor = node.getBoundingClientRect(), source = node.parentElement.getBoundingClientRect();
+      const status = node.parentElement.querySelector("[data-layout-fixture]").getBoundingClientRect();
+      return { editorBottom: editor.bottom, editorHeight: editor.height, statusTop: status.top,
+        statusBottom: status.bottom, sourceBottom: source.bottom };
+    });
+    assert.ok(bounds.editorHeight > 200 && bounds.editorHeight < beforeWarning.height, JSON.stringify({ bounds, beforeWarning }));
+    assert.ok(bounds.editorBottom <= bounds.statusTop && bounds.statusBottom <= bounds.sourceBottom);
+    await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS || dataDir, `editor-status-${colorScheme}-${width}.png`) });
+    await page.locator("[data-layout-fixture]").evaluate(node => node.remove());
+    assert.ok(Math.abs((await mount.boundingBox()).height - beforeWarning.height) < 1);
     assert.deepEqual(errors, []);
     await page.close();
   }

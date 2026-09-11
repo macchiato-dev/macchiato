@@ -458,7 +458,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   if (process.env.MACCHIATO_EDITOR_STATIC_LAYOUT) {
     await mount.evaluate((node, mode) => {
       if (mode === "grid-absolute") {
-        Object.assign(node.style, { position: "absolute", inset: "0", gridRow: "1", gridColumn: "1", height: "auto" });
+        Object.assign(node.style, { position: "absolute", inset: "0", gridRow: "1 / 2", gridColumn: "1", height: "auto" });
         return;
       }
       if (mode === "absolute") {

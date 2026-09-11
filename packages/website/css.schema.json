@@ -351,6 +351,12 @@
         "grid-row": {
           "$ref": "integer"
         },
+        "grid-column": {
+          "$ref": "integer"
+        },
+        "grid-row-end": {
+          "$ref": "integer"
+        },
         "justify-content": {
           "$ref": "align"
         },
