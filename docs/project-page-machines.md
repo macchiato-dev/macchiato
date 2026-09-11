@@ -3804,5 +3804,24 @@ handling, not the normal refresh schedule or interpreter GC policy.
 
 The fixed browser test and document/inline-update regressions pass (five tests).
 Evidence: `/root/macchiato-work/output-lifecycle-{baseline,fixed,regressions}.log`.
-The full export is being rebuilt; this source-level check does not yet establish
-that the live site or deployment archive contains the fix.
+The rebuilt `80adaab` export passes all 152 manifest checks and the compressed
+backend execution test in Deno. Its full editor stress test passes in 84 seconds:
+the 80-edit checkpoint finishes at 24.9 seconds, the 106 KB paste takes 1.12
+seconds, and native insertion takes 30.9 seconds. This is a cleanup correction,
+not evidence of a typing speedup. The run also verifies undo/redo, scrolling,
+theme changes, saved-project reload, output-error recovery, and phone layouts.
+The light/dark screenshots were inspected. Evidence: `output-lifecycle-stress*`.
+
+Read-only saved cat and Mahjong checks pass against the export and again against
+the restarted live server. The cat check plays all eight pairs and resets;
+the Mahjong check verifies its 144 tiles, full-height surface, and theme/phone
+layouts, not an entire game. No owner project was saved. Six live host,
+controller, runtime, and frame artifacts match the export byte-for-byte.
+Evidence: `output-lifecycle-owner-*`, `output-lifecycle-live-*`.
+
+The extracted archive passes its manifest. `/root/resources-bunny.tar.gz` has
+SHA-256 `658be157a612c6f78aee8272777e38beca70aec4dccb905d4ee2dc6248d47bf7`.
+Its predecessor is preserved as
+`/root/archive/2026/09/11/resources-bunny-42457b9-before-output-lifecycle.tar.gz`.
+No Bunny deployment was performed. Native-document sizing/painting and parser
+latency remain unresolved; this checkpoint does not complete the broader goal.
