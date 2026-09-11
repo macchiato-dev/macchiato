@@ -2963,6 +2963,27 @@ baseline. The profile and logs are `document-query-*` under the work directory.
 `MACCHIATO_TEST_CPU_PROFILE` enables sampling only in the Playwright harness;
 the production host and guests contain no profiler or memory probe.
 
+The complete rebuilt `1e60725` export then passed the unprofiled editing run
+with retained screenshots and video disabled: 139 seconds total, 16.49 seconds
+for the 80-edit burst, 1.58 seconds paste, and 60.12 seconds native insertion.
+The optional `MACCHIATO_TEST_VIDEO=0` preserves screenshot artifacts without
+recording overhead. Visual review covered light/dark editing, phone output,
+and both saved games. Read-only owner checks also passed fifty consecutive
+tour slides, embedded/expanded keyboard navigation, and SQLite fragment links.
+No owner content was saved.
+
+The same build passes 97 parser, output, selector, range, and reference checks,
+plus both delayed-editor backing and repeated system/explicit theme tests.
+Backing pixels remain `[21,23,23,255]` in dark mode and `[231,236,255,255]` in
+light mode before and after startup, including reloads. Its 152-file inventory
+passes before and after archive extraction, and the compressed backend runs
+in Deno. The local 3030 server now serves this pair; live machine, frontend,
+editor, and frame bytes match the verified export. `/root/resources-bunny.tar.gz`
+contains it, with the prior archive retained at
+`/root/archive/2026/09/11/resources-bunny-82e85a0-before-document-query.tar.gz`.
+Nothing was deployed to Bunny. Bulk-input latency and native source-root
+attribute integration remain unresolved; these checks do not close the goal.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
