@@ -462,6 +462,46 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     assert.ok(state.fragmentParent && state.fragmentParentElement,
       "a DocumentFragment is a parentNode, not a parentElement");
   }
+  const textStates = await page.evaluate(async () => {
+    const initial = window.callGuest("startTextProbe", {});
+    const parent = document.querySelector("#text-probe");
+    const text = parent.firstChild;
+    text.nodeValue = "native without observer";
+    const unobserved = window.callGuest("inspectTextProbe", {});
+    window.callGuest("observeTextProbe", {});
+    text.nodeValue = "native before delivery";
+    const immediate = window.callGuest("inspectTextProbe", {});
+    await new Promise(resolve => setTimeout(resolve, 0));
+    const delivered = window.callGuest("inspectTextProbe", {});
+    parent.remove();
+    text.textContent = "detached native text";
+    const detached = window.callGuest("inspectTextProbe", {});
+    const guestWrites = [];
+    for (const property of ["nodeValue", "textContent"]) {
+      for (const value of ["guest text", "", null]) {
+        const result = window.callGuest("writeTextProbe", { property, value });
+        guestWrites.push({ property, value, result, native: text.nodeValue });
+      }
+    }
+    return { initial, unobserved, immediate, delivered, detached, guestWrites };
+  });
+  for (const [state, expected] of [
+    ["initial", "initial"], ["unobserved", "native without observer"],
+    ["immediate", "native before delivery"], ["delivered", "native before delivery"],
+    ["detached", "detached native text"],
+  ]) {
+    assert.equal(textStates[state].nodeValue, expected, `${state}: nodeValue is native`);
+    assert.equal(textStates[state].textContent, expected, `${state}: textContent is native`);
+    assert.equal(textStates[state].parentText, expected, `${state}: parent agrees`);
+  }
+  assert.deepEqual(textStates.immediate.oldValues, [], "text reads do not force observer delivery");
+  assert.deepEqual(textStates.delivered.oldValues, ["native without observer"]);
+  for (const { property, value, result, native } of textStates.guestWrites) {
+    const expected = value === null ? "" : value;
+    assert.equal(result.nodeValue, expected, `${property}: read flushes the pending guest write`);
+    assert.equal(result.textContent, expected);
+    assert.equal(native, expected);
+  }
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });

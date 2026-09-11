@@ -1737,6 +1737,21 @@ build, and archive extraction was verified before replacement. The previous
 `8dbeaa1` archive remains under `/root/archive/2026/09/11/`. Nothing was deployed
 to Bunny. Collection and text-cache fidelity remain separate open work.
 
+### September 11 synchronous text reads
+
+The text probe failed in both language delivery modes: after native mutation
+without an observer, the guest kept returning the original text. Text getters
+now read through the existing synchronous bridge, flushing pending guest writes
+first. There is no extra host permission, observer, or invalidation mechanism;
+the obsolete text cache and its observer invalidation are removed. Nullable
+text setters also send empty text for null rather than the literal `"null"`.
+
+The focused browser checks cover unobserved mutations, reads before observer
+delivery, retained detached text, old mutation values, and pending guest writes
+through both properties. They pass for stamped and downloaded language modules.
+Performance and integration checks are pending at this source checkpoint;
+collection and attribute caches still need independent fidelity checks.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

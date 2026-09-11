@@ -216,6 +216,36 @@ function inspectMutationProbe() {
   flush();
 }
 
+var textProbe, textProbeParent, textProbeObserver, textProbeRecords;
+function startTextProbe() {
+  textProbeParent = document.createElement("div");
+  textProbeParent.setAttribute("id", "text-probe");
+  textProbe = document.createTextNode("initial");
+  textProbeParent.appendChild(textProbe);
+  document.body.appendChild(textProbeParent);
+  textProbeRecords = [];
+  inspectTextProbe();
+}
+function observeTextProbe() {
+  textProbeObserver = new MutationObserver(function (records) {
+    textProbeRecords = records.map(function (record) { return record.oldValue; });
+  });
+  textProbeObserver.observe(textProbe, { characterData: true, characterDataOldValue: true });
+  inspectTextProbe();
+}
+function writeTextProbe(json) {
+  var change = JSON.parse(json);
+  textProbe[change.property] = change.value;
+  inspectTextProbe();
+}
+function inspectTextProbe() {
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify({
+    nodeValue: textProbe.nodeValue, textContent: textProbe.textContent,
+    parentText: textProbeParent.textContent, oldValues: textProbeRecords
+  }));
+  flush();
+}
+
 var siblingNodes, siblingParent, siblingObserver, siblingFragment, siblingFragmentChild;
 function startSiblingProbe() {
   siblingParent = document.createElement("div");

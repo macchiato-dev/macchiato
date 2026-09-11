@@ -1727,28 +1727,17 @@ GuestElement.prototype.matches = function (selector) {
     encode(encodeSelector(selector))
   ]]);
 };
-Object.defineProperty(GuestObject.prototype, "nodeValue", {
-  get: function () {
-    if (this._nodeValue === undefined) {
-      this._nodeValue = immediate([1, this.reference, stringIndex("nodeValue")]);
+// Native editing can change text before observer delivery, or without any
+// observer. Read the current value and flush earlier guest writes in order.
+["nodeValue", "textContent"].forEach(function (name) {
+  Object.defineProperty(GuestObject.prototype, name, {
+    get: function () { return hostGet(this.reference, name); },
+    set: function (value) {
+      // Nullable DOMString setters treat null as empty text, not "null".
+      value = value == null ? "" : String(value);
+      pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
     }
-    return this._nodeValue;
-  },
-  set: function (value) {
-    this._nodeValue = String(value);
-    pendingOperations.push([2, this.reference, stringIndex("nodeValue"), encode(this._nodeValue)]);
-  }
-});
-Object.defineProperty(GuestObject.prototype, "textContent", {
-  get: function () {
-    if (this._nodeType === 3 && this._nodeValue !== undefined) return this._nodeValue;
-    return immediate([1, this.reference, stringIndex("textContent")]);
-  },
-  set: function (value) {
-    value = String(value);
-    if (this._nodeType === 3) this._nodeValue = value;
-    pendingOperations.push([2, this.reference, stringIndex("textContent"), encode(value)]);
-  }
+  });
 });
 function childrenOf(node) {
   return node._guestChildren || (node._guestChildren = []);
@@ -2122,7 +2111,6 @@ GuestDocument.prototype.createTextNode = function (text) {
   var node = rememberNode(new GuestObject(result[1]));
   node._nodeType = 3;
   node._nodeName = "#text";
-  node._nodeValue = text;
   return node;
 };
 GuestDocument.prototype.createRange = function () {
@@ -2386,9 +2374,6 @@ function readMutationBatch(batchReference, batchToken) {
       if (changedParents.indexOf(record.target) < 0) changedParents.push(record.target);
     } else if (type === "characterData") {
       record.oldValue = hostGet(reference, "oldValue");
-      // Browser editing changed this node outside the guest. Its previously
-      // cached value is no longer authoritative; read the host value lazily.
-      record.target._nodeValue = undefined;
     } else if (type === "attributes") {
       record.attributeName = hostGet(reference, "attributeName");
       record.oldValue = hostGet(reference, "oldValue");
