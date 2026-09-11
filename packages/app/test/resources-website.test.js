@@ -1922,7 +1922,13 @@ test("project resources survive session recovery, API saves, native publication,
     file.path === "tile.svg" ? { ...file, content: "\0resources-project-resource:1" } : file) });
   await page.evaluate(({ key, expired }) => sessionStorage.setItem(key, expired), { key, expired });
   await page.reload({ waitUntil: "networkidle" });
-  await page.getByText(/Draft recovery failed:.*Stored recovery data was kept/).waitFor();
+  try {
+    await page.getByText(/Draft recovery failed:.*Stored recovery data was kept/).waitFor({ timeout: 10_000 });
+  } catch (error) {
+    t.diagnostic(JSON.stringify({ errors, text: await page.locator("[data-project-editor]").innerText() }));
+    await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-warning-failure.png") });
+    throw error;
+  }
   assert.equal(await page.evaluate(key => sessionStorage.getItem(key), key), expired);
   await output.getByRole("heading", { name: "Recovered resource", exact: true }).waitFor();
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-warning.png") });

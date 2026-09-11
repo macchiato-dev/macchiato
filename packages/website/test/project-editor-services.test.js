@@ -12,8 +12,12 @@ test("output errors do not resolve an unrelated pending editor service request",
   const context = {
     __wwcPostMessage: text => requests.push(JSON.parse(text)),
     __resourcesEditorReceive: text => { events.push(JSON.parse(text)); return "null"; },
+    __wwcServiceCall: name => JSON.stringify(name === "navigation.type" ? "reload" :
+      { value: null, error: "Project recovery resource is unavailable" }),
   };
   runInNewContext(bundle.outputFiles[0].text, context);
+  assert.equal(context.Services.navigationType(), "reload");
+  assert.throws(() => context.Services.readProjectRecovery("expired"), /Project recovery resource is unavailable/);
   const imported = context.Services.importProjectArchive();
   assert.equal(requests.length, 1);
   const { id } = requests[0];
