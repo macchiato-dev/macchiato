@@ -27,7 +27,7 @@ function idleCommand(json) {
     var invalid = false;
     try { requestIdleCallback(null); } catch (error) { invalid = error instanceof TypeError; }
     var invalidOptions = false;
-    try { requestIdleCallback(function () {}, 1); } catch (error) { invalidOptions = error instanceof TypeError; }
+    try { requestIdleCallback(function () {}, 1); } catch (optionsError) { invalidOptions = optionsError instanceof TypeError; }
     var reads = 0;
     var options = {};
     Object.defineProperty(options, "timeout", { get: function () { reads++; return 20; } });

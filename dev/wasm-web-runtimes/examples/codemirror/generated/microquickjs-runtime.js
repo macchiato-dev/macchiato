@@ -3374,7 +3374,11 @@ if (hostGet(document.reference, "supportsIdleCallback")) {
   var idleCallbacks = Object.create(null);
   globalThis.requestIdleCallback = function (callback, options) {
     if (typeof callback !== "function") throw new TypeError("callback required");
-    var timeout = options && options.timeout !== undefined ? Number(options.timeout) >>> 0 : -1;
+    if (options != null && typeof options !== "object" && typeof options !== "function") {
+      throw new TypeError("options must be an object");
+    }
+    var timeout = options == null ? undefined : options.timeout;
+    timeout = timeout === undefined ? -1 : Number(timeout) >>> 0;
     var handle;
     var index = allocateCallback(function (deadline) {
       delete idleCallbacks[handle];
