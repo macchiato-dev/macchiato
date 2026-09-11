@@ -3540,3 +3540,15 @@ afterward. The inspected narrow and wide screenshots are byte-for-byte equal
 between native and MicroQuickJS. Evidence is in `resize-observer-corrected.log`,
 `resize-observer-lifecycle.log`, `pane-resize-baseline.log`, and
 `pane-resize-native*`. Full-project and packaged-deployment checks are pending.
+
+The matching Resources build now passes its 152-file deployment inventory and
+the compressed backend's routing, document rendering, and SQL-policy test in
+Deno. Fourteen focused regressions pass for idle callbacks, language loading,
+live child lists, module isolation, and storage replies. Five full-project
+browser workflows also pass: saved iframe backing, repeated system/explicit
+theme changes, denied browser storage, session recovery/save/export, and
+Find/Replace in both themes and narrow panes. These use disposable accounts,
+not edits to saved owner projects. The candidate export is
+`/root/macchiato-work/resources-bunny-native-resize` (revision `165a650`);
+evidence is `resize-focused-editing.log` and `native-resize-full-app.log`.
+Heavy editing, owner-content checks, and local activation are still pending.
