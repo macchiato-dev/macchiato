@@ -2538,6 +2538,56 @@ Passing the current focused workflows does not make that old test or the full
 deployment-readiness goal complete. Bulk native insertion performance, live
 DOM collection fidelity, and startup with storage disabled remain open too.
 
+### Storage denied at application startup
+
+The Resources application now treats denial of browser storage access as a
+recoverable failure. Previously a `SecurityError` from the host's storage
+getter unwound Wasm before the guest's existing `try/catch` could run. The outer
+guest stopped before creating the editor, leaving the server-rendered workspace
+empty. This was different from exhausting a storage area's quota during editing.
+
+The Resources storage service returns synchronous operation failures as data.
+Its small application-side adapter throws an error inside the guest, preserving
+the error name and message. The adapter replaces only `getItem`, `setItem`, and
+`removeItem` on the runtime's existing storage objects; subscriptions remain
+unchanged. The recovery-presence check uses the same path, without unpacking
+resource records merely to check their presence. This adds no Machine Host
+operation or new permission and does not change other runtimes' storage ABI.
+
+Optional tab-layout and close-path persistence may fail without blocking the
+interface. Recovery writes still report failure and never mark an unsaved
+draft as saved. A recovery-read warning is nonfatal, so it cannot obscure a
+later write warning. Successful server autosave remains successful when local
+recovery cleanup is denied; the status explicitly distinguishes those outcomes.
+
+The browser regression denies both native storage getters before any frontend
+code loads, including inside frames. It edits in Try, switches files and themes
+through their actual controls, edits a new project, checks the warning, exports
+the exact unsaved source, reloads, creates the project, and confirms server
+autosave with a local-cleanup warning. Normal publication/history and the real
+quota/resource/recovery workflow also pass. Unit tests verify that denied
+reads and quota-exceeded writes return normally from the host service before
+throwing in the guest, preserving existing values and allowing later recovery.
+
+The full editing stress test passes with 106,432 characters pasted in 805 ms
+and 106,458 characters inserted natively in 16,273 ms. No additional speedup is
+claimed. The compressed `7e92166` backend runs in Deno, and all 151 deployment
+files verify both before and after archive extraction.
+
+The local server and `/root/resources-bunny.tar.gz` use this export. Read-only
+owner checks pass for Mahjong, Cat Memory Match, fifty tour slides and keyboard
+navigation, SQLite fragments, and desktop/phone appearance. The previous
+tarball is kept at
+`/root/archive/2026/09/11/resources-bunny-2bff6eb-before-storage-denied.tar.gz`.
+No owner project was saved and no Bunny deployment was performed.
+
+This closes the denied-storage startup case for the Resources application,
+not for arbitrary project JavaScript. The output runtime still forwards its
+own storage operations directly; guest-side handling of denied access and
+quota errors there needs its own test and implementation. General native
+exception forwarding and oversized service responses are not proven by this
+application-specific adapter either.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

@@ -1114,6 +1114,14 @@ test("Resources editor remains usable when browser storage access is denied", { 
   await page.getByRole("menuitemradio", { name: "style.css", exact: true }).click();
   await page.getByRole("tab", { name: "index.html", exact: true }).click();
   assert.match(await page.locator(".cm-content").innerText(), /Editing without storage/);
+  for (const choice of ["dark", "light"]) {
+    const button = page.locator(`button[data-theme-choice="${choice}"]`);
+    if (!await button.isVisible()) await page.getByLabel("Account menu", { exact: true }).click();
+    await button.click();
+    assert.equal(await page.locator("html").getAttribute("data-theme"), choice);
+    const expected = choice === "dark" ? "rgb(29, 32, 32)" : "rgb(217, 225, 227)";
+    await page.waitForFunction(expected => getComputedStyle(document.querySelector(".cm-editor")).backgroundColor === expected, expected);
+  }
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
   await page.locator(".cm-content").waitFor();
   await page.locator(".cm-content").fill("<h1>Unsaved without storage</h1>");
