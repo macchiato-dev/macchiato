@@ -1116,6 +1116,49 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     });
     return entry ? entry.name : "plain";
   }
+  function mountContentNameFields() {
+    var generatedSlugs = new WeakMap();
+    var pattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    var slugSelector = "#project-slug, #organization-slug";
+    function slugify(value) {
+      var text = String(value || "");
+      var normalized = typeof text.normalize === "function" ? text.normalize("NFKD") : text;
+      return normalized.replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().replace(new RegExp("[\u2019']", "g"), "").replace(new RegExp("[^a-z0-9]+", "g"), "-").replace(new RegExp("^-+|-+$", "g"), "").slice(0, 63).replace(new RegExp("-+$", "g"), "");
+    }
+    function validate(slug, touched) {
+      if (touched === void 0) {
+        touched = true;
+      }
+      var error = document.getElementById(slug.getAttribute("aria-describedby"));
+      if (!error) return;
+      var invalid = slug.value !== "" && !pattern.test(slug.value);
+      slug.setCustomValidity(invalid ? __resourcesDatasetGet(error, "data-message") : "");
+      slug.setAttribute("aria-invalid", invalid ? "true" : "false");
+      error.hidden = !invalid || !touched;
+    }
+    document.addEventListener("input", function (event) {
+      var source = event.target.closest == null ? void 0 : event.target.closest("[data-slug-source], #project-name, #organization-name");
+      if (source) {
+        var _generatedSlugs$get;
+        var id = __resourcesDatasetGet(source, "data-slug-source") || (source.id === "project-name" ? "project-slug" : source.id === "organization-name" ? "organization-slug" : "");
+        var slug2 = document.getElementById(id);
+        if (!slug2) return;
+        var previous = (_generatedSlugs$get = generatedSlugs.get(source)) != null ? _generatedSlugs$get : "";
+        if (slug2.value !== "" && slug2.value !== previous) return;
+        var generated = slugify(source.value);
+        generatedSlugs.set(source, generated);
+        slug2.value = generated;
+        validate(slug2, false);
+        return;
+      }
+      var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
+      if (slug) validate(slug);
+    });
+    document.addEventListener("focusout", function (event) {
+      var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
+      if (slug) validate(slug);
+    });
+  }
   var PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
   function isProjectImage(file) {
     var extension = String((file == null ? void 0 : file.path) || "").split(".").at(-1).toLowerCase();
@@ -1230,12 +1273,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   };
   for (var _iterator10 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-fields]")), _step10; !(_step10 = _iterator10()).done;) {
     if (_loop4()) continue;
-  }
-  var slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-  function slugify(value) {
-    var text = String(value || "");
-    var normalized = typeof text.normalize === "function" ? text.normalize("NFKD") : text;
-    return normalized.replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().replace(new RegExp("[\u2019']", "g"), "").replace(new RegExp("[^a-z0-9]+", "g"), "-").replace(new RegExp("^-+|-+$", "g"), "").slice(0, 63).replace(new RegExp("-+$", "g"), "");
   }
   var DRAFT_KEY = "resources_project_draft_v5";
   var CHECKPOINT_MS = 3e5;
@@ -1592,50 +1629,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       select.insertBefore(option, before);
     }
   }
-  var generatedSlugs = new WeakMap();
-  function slugPair(source) {
-    var slugId = __resourcesDatasetGet(source, "data-slug-source") || (source.id === "project-name" ? "project-slug" : source.id === "organization-name" ? "organization-slug" : "");
-    var slug = document.getElementById(slugId);
-    var error = document.getElementById(slug == null ? void 0 : slug.getAttribute("aria-describedby"));
-    return slug && error ? {
-      slug: slug,
-      error: error
-    } : null;
-  }
-  function validateSlug(slug, error, touched) {
-    if (touched === void 0) {
-      touched = true;
-    }
-    var invalid = slug.value !== "" && !slugPattern.test(slug.value);
-    slug.setCustomValidity(invalid ? __resourcesDatasetGet(error, "data-message") : "");
-    slug.setAttribute("aria-invalid", invalid ? "true" : "false");
-    error.hidden = !invalid || !touched;
-  }
-  document.addEventListener("input", function (event) {
-    var source = event.target.closest == null ? void 0 : event.target.closest("[data-slug-source], #project-name, #organization-name");
-    if (source) {
-      var _generatedSlugs$get;
-      var pair = slugPair(source);
-      if (!pair) return;
-      var previous = (_generatedSlugs$get = generatedSlugs.get(source)) != null ? _generatedSlugs$get : pair.slug.value;
-      if (pair.slug.value !== "" && pair.slug.value !== previous) return;
-      var generated = slugify(source.value);
-      generatedSlugs.set(source, generated);
-      pair.slug.value = generated;
-      validateSlug(pair.slug, pair.error, false);
-      return;
-    }
-    var slug = event.target.closest == null ? void 0 : event.target.closest("#project-slug, #organization-slug");
-    if (!slug) return;
-    var error = document.getElementById(slug.getAttribute("aria-describedby"));
-    if (error) validateSlug(slug, error);
-  });
-  document.addEventListener("focusout", function (event) {
-    var slug = event.target.closest == null ? void 0 : event.target.closest("#project-slug, #organization-slug");
-    if (!slug) return;
-    var error = document.getElementById(slug.getAttribute("aria-describedby"));
-    if (error) validateSlug(slug, error);
-  });
+  mountContentNameFields();
   (_document$querySelect = document.querySelector("[data-try-form]")) == null || _document$querySelect.addEventListener("submit", function (event) {
     return event.preventDefault();
   });
@@ -3868,7 +3862,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           var item = _step36.value;
                           item.setAttribute("aria-pressed", item === button ? "true" : "false");
                         }
-                        if (narrowWorkspace.matches) detailsButton.setAttribute("aria-pressed", "false");
+                        if (narrowWorkspace.matches) {
+                          detailsButton.setAttribute("aria-pressed", "false");
+                          placeProjectClose(false);
+                        }
                       }
                       renderStatusState();
                       if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController9 = editorController) == null || _editorController9.focus();
