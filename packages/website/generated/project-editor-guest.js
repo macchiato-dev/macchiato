@@ -27233,6 +27233,29 @@ globalThis.__resourcesProjectStatusReport = (json) => {
 };
 globalThis.__resourcesProjectStatusInspect = () => projectStatusResult();
 
+// packages/website/resources-storage-client.js
+function storageRequest(operation, kind, key, value) {
+  const result2 = JSON.parse(globalThis.__wwcServiceCall(
+    "storage.request",
+    JSON.stringify({ operation, kind, key: String(key), value })
+  ));
+  if (result2.error) {
+    const error = new Error(result2.error.message);
+    error.name = result2.error.name;
+    throw error;
+  }
+  return result2.value;
+}
+for (const [kind, area] of [["local", localStorage], ["session", sessionStorage]]) {
+  area.getItem = (key) => storageRequest("get", kind, key);
+  area.setItem = (key, value) => {
+    storageRequest("set", kind, key, String(value));
+  };
+  area.removeItem = (key) => {
+    storageRequest("delete", kind, key);
+  };
+}
+
 // packages/hub/src/url-pattern.js
 var HOST_LABEL = /^(?:\*|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$/i;
 function wildcardSource(value, { dotAware = false } = {}) {
@@ -27540,6 +27563,12 @@ function internalHref(link) {
   const href = link?.getAttribute?.("href") || "";
   return href.startsWith("/") && !href.startsWith("//") ? href : null;
 }
+function rememberSession(key, value) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {
+  }
+}
 for (const split of document.querySelectorAll("[data-save-split]")) {
   const trigger = split.querySelector("[data-save-menu-trigger]");
   const menu = split.querySelector("[data-save-menu]");
@@ -27567,7 +27596,7 @@ document.addEventListener("click", (event) => {
     }
     const current = location.pathname + location.search;
     if (stack.at(-1) !== current) stack.push(current);
-    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
+    rememberSession("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
   }
 });
 for (const close of document.querySelectorAll(".project-close")) {
@@ -27581,7 +27610,7 @@ for (const close of document.querySelectorAll(".project-close")) {
   close.setAttribute("href", typeof previous === "string" && previous.startsWith("/") && !previous.startsWith("//") ? previous : "/");
   close.addEventListener("click", () => {
     stack.pop();
-    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
+    rememberSession("resources-project-close-stack", JSON.stringify(stack));
   });
 }
 for (const overflow of document.querySelectorAll("[data-project-overflow]")) {
@@ -27975,6 +28004,15 @@ async function mountProjectRoot(root) {
   let recoveredPendingSnapshot = false;
   let recoveryFailure = "";
   let recoveryWriteError = "";
+  function removeRecovery(key) {
+    try {
+      sessionStorage.removeItem(key);
+      return true;
+    } catch (error) {
+      recoveryFailure = error.message || String(error);
+      return false;
+    }
+  }
   function readRecovery(key) {
     try {
       return readProjectRecovery(key);
@@ -27993,11 +28031,11 @@ async function mountProjectRoot(root) {
           snapshotField.value = JSON.stringify(state);
           recoveredPendingSnapshot = true;
         } else {
-          sessionStorage.removeItem(pendingSnapshotKey);
+          removeRecovery(pendingSnapshotKey);
         }
       }
     } catch {
-      sessionStorage.removeItem(pendingSnapshotKey);
+      removeRecovery(pendingSnapshotKey);
     }
   }
   if (workspacePayload) {
@@ -28065,7 +28103,7 @@ async function mountProjectRoot(root) {
   if (draft || memoryOnly) {
     if (draft) {
       const navigation = navigationType();
-      if (navigation !== "reload" && navigation !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+      if (navigation !== "reload" && navigation !== "back_forward") removeRecovery(DRAFT_KEY);
       try {
         const stored = JSON.parse(readRecovery(DRAFT_KEY));
         if (stored?.patches?.length) {
@@ -28076,7 +28114,7 @@ async function mountProjectRoot(root) {
           state = normalizeProjectSnapshot(stored.snapshot);
         }
       } catch {
-        sessionStorage.removeItem(DRAFT_KEY);
+        removeRecovery(DRAFT_KEY);
       }
     }
     localHistory ||= draftHistory(state);
@@ -28244,7 +28282,7 @@ async function mountProjectRoot(root) {
       if (root.dataset.outputMachineState === "waiting" || !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
       if (recoveryFailure) setStatus(
         `Draft recovery failed: ${recoveryFailure}. Stored recovery data was kept.`,
-        "error",
+        "warning",
         null,
         "editor"
       );
@@ -28266,7 +28304,7 @@ async function mountProjectRoot(root) {
     openTabs = openTabs.filter((path, index) => available.has(path) && openTabs.indexOf(path) === index);
     if (!openTabs.length) openTabs.push(selectedAvailable ? selected : state.files[0]?.path || "config");
     if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
-    sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
+    rememberSession(tabSessionKey, JSON.stringify(openTabs));
     menu.replaceChildren();
     for (const button of tabs.querySelectorAll("[data-instant-tooltip-attached='true']")) {
       button._hideInstantTooltip?.();
@@ -28550,9 +28588,12 @@ async function mountProjectRoot(root) {
         templateOnlyPending = false;
         delete root.dataset.draftDirty;
         root.dataset.draftState = "saved";
-        if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
+        const cleared = !pendingSnapshotKey || removeRecovery(pendingSnapshotKey);
         recoveryWriteError = "";
-        setStatus("Saved");
+        setStatus(
+          cleared ? "Saved" : `Draft saved on server, but local recovery could not be cleared: ${recoveryFailure}.`,
+          cleared ? "normal" : "warning"
+        );
       } else {
         setStatus("Saving\u2026");
       }

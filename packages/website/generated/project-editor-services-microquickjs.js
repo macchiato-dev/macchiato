@@ -3,19 +3,50 @@ function _regenerator() { var e, t, r = "function" == typeof Symbol ? Symbol : {
 function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (_e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (_n) { return void e(_n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
-function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
-function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (_r) { o = !0, n = _r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
-function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
 function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
 function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
 function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
 function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
+function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
 function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (_r) { o = !0, n = _r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
+function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 (function (_document$querySelect) {
+  function storageRequest(operation, kind, key, value) {
+    var result2 = JSON.parse(globalThis.__wwcServiceCall("storage.request", JSON.stringify({
+      operation: operation,
+      kind: kind,
+      key: String(key),
+      value: value
+    })));
+    if (result2.error) {
+      var error = new Error(result2.error.message);
+      error.name = result2.error.name;
+      throw error;
+    }
+    return result2.value;
+  }
+  var _loop = function _loop() {
+    var _arr$_i = _slicedToArray(_arr[_i], 2),
+      kind = _arr$_i[0],
+      area = _arr$_i[1];
+    area.getItem = function (key) {
+      return storageRequest("get", kind, key);
+    };
+    area.setItem = function (key, value) {
+      storageRequest("set", kind, key, String(value));
+    };
+    area.removeItem = function (key) {
+      storageRequest("delete", kind, key);
+    };
+  };
+  for (var _i = 0, _arr = [["local", localStorage], ["session", sessionStorage]]; _i < _arr.length; _i++) {
+    _loop();
+  }
   globalThis.__resourcesDatasetGet = function (element, name) {
     var value = element.getAttribute(name);
     return value === null ? void 0 : value;
@@ -892,7 +923,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     var href = (link == null || link.getAttribute == null ? void 0 : link.getAttribute("href")) || "";
     return href.startsWith("/") && !href.startsWith("//") ? href : null;
   }
-  var _loop = function _loop() {
+  function rememberSession(key, value) {
+    try {
+      sessionStorage.setItem(key, value);
+    } catch (_unused2) {}
+  }
+  var _loop2 = function _loop2() {
     var split = _step0.value;
     var trigger = split.querySelector("[data-save-menu-trigger]");
     var menu = split.querySelector("[data-save-menu]");
@@ -909,7 +945,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     });
   };
   for (var _iterator0 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-save-split]")), _step0; !(_step0 = _iterator0()).done;) {
-    _loop();
+    _loop2();
   }
   document.addEventListener("click", function (event) {
     var link = event.target.closest == null ? void 0 : event.target.closest("a[href]");
@@ -919,30 +955,30 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var stack = [];
       try {
         stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || [];
-      } catch (_unused2) {}
+      } catch (_unused3) {}
       var current = location.pathname + location.search;
       if (stack.at(-1) !== current) stack.push(current);
-      sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
+      rememberSession("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
     }
   });
-  var _loop2 = function _loop2() {
+  var _loop3 = function _loop3() {
     var close = _step1.value;
     var stack = [];
     try {
       stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || [];
-    } catch (_unused9) {}
+    } catch (_unused0) {}
     if (!Array.isArray(stack)) stack = [];
     var previous = stack.at(-1);
     close.setAttribute("href", typeof previous === "string" && previous.startsWith("/") && !previous.startsWith("//") ? previous : "/");
     close.addEventListener("click", function () {
       stack.pop();
-      sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
+      rememberSession("resources-project-close-stack", JSON.stringify(stack));
     });
   };
   for (var _iterator1 = _createForOfIteratorHelperLoose(document.querySelectorAll(".project-close")), _step1; !(_step1 = _iterator1()).done;) {
-    _loop2();
+    _loop3();
   }
-  var _loop3 = function _loop3() {
+  var _loop4 = function _loop4() {
     var overflow = _step10.value;
     var trigger = overflow.querySelector("[data-project-overflow-trigger]");
     var menu = overflow.querySelector("[data-project-overflow-menu]");
@@ -959,9 +995,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     });
   };
   for (var _iterator10 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-overflow]")), _step10; !(_step10 = _iterator10()).done;) {
-    _loop3();
+    _loop4();
   }
-  var _loop4 = function _loop4() {
+  var _loop5 = function _loop5() {
     var _fields$querySelector;
     var fields = _step11.value;
     var modal = fields.querySelector("[data-version-title-modal]");
@@ -989,7 +1025,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     });
   };
   for (var _iterator11 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-fields]")), _step11; !(_step11 = _iterator11()).done;) {
-    if (_loop4()) continue;
+    if (_loop5()) continue;
   }
   var CHECKPOINT_MS = 3e5;
   var STARTING_POINTS = Object.freeze({
@@ -1334,10 +1370,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   for (var _iterator12 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-template]")), _step12; !(_step12 = _iterator12()).done;) {
     var select = _step12.value;
     var before = select.querySelector('option[value="vue"]');
-    for (var _i = 0, _arr = [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]; _i < _arr.length; _i++) {
-      var _arr$_i = _slicedToArray(_arr[_i], 2),
-        value = _arr$_i[0],
-        label = _arr$_i[1];
+    for (var _i2 = 0, _arr2 = [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]; _i2 < _arr2.length; _i2++) {
+      var _arr2$_i = _slicedToArray(_arr2[_i2], 2),
+        value = _arr2$_i[0],
+        label = _arr2$_i[1];
       if (select.querySelector("option[value=\"" + value + "\"]")) continue;
       var option = document.createElement("option");
       option.value = value;
@@ -1535,7 +1571,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i3, _arr3, _arr3$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i4, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -1592,8 +1628,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 validateAllowedUrlPatterns(allowedLinkPatterns);
                 linkPatterns == null || linkPatterns.setCustomValidity("");
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "false");
-              } catch (_error18) {
-                linkPatterns == null || linkPatterns.setCustomValidity(_error18.message);
+              } catch (_error21) {
+                linkPatterns == null || linkPatterns.setCustomValidity(_error21.message);
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "true");
                 return;
               }
@@ -1768,13 +1804,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     return (_editorController5 = editorController) == null ? void 0 : _editorController5.renderSnapshot();
                   }, debounceMs);
                 }
-              } catch (_error17) {
-                setStatus("Editor update failed: " + (_error17.message || String(_error17)), "error", null, "editor");
+              } catch (_error20) {
+                setStatus("Editor update failed: " + (_error20.message || String(_error20)), "error", null, "editor");
               }
             };
             _renderStoredVersions = function _renderStoredVersions3() {
               _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee8() {
-                var response, _yield$response$json, versions, current, _loop7, _iterator28, _step28;
+                var response, _yield$response$json, versions, current, _loop8, _iterator28, _step28;
                 return _regenerator().w(function (_context9) {
                   while (1) switch (_context9.n) {
                     case 0:
@@ -1815,7 +1851,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         setStatus("Current version");
                       });
                       versionList.append(current);
-                      _loop7 = _regenerator().m(function _loop7() {
+                      _loop8 = _regenerator().m(function _loop8() {
                         var version, timestamp, button;
                         return _regenerator().w(function (_context8) {
                           while (1) switch (_context8.n) {
@@ -1871,7 +1907,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                             case 1:
                               return _context8.a(2);
                           }
-                        }, _loop7);
+                        }, _loop8);
                       });
                       _iterator28 = _createForOfIteratorHelperLoose(versions);
                     case 4:
@@ -1879,7 +1915,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         _context9.n = 6;
                         break;
                       }
-                      return _context9.d(_regeneratorValues(_loop7()), 5);
+                      return _context9.d(_regeneratorValues(_loop8()), 5);
                     case 5:
                       _context9.n = 4;
                       break;
@@ -1943,7 +1979,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             _save = function _save3() {
               _save = _asyncToGenerator(_regenerator().m(function _callee6() {
-                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure2, result2, _t5, _t6;
+                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure2, result2, cleared, _t5, _t6;
                 return _regenerator().w(function (_context6) {
                   while (1) switch (_context6.p = _context6.n) {
                     case 0:
@@ -2058,9 +2094,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         templateOnlyPending = false;
                         __resourcesDatasetDelete(root, "data-draft-dirty");
                         __resourcesDatasetSet(root, "data-draft-state", "saved");
-                        if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
+                        cleared = !pendingSnapshotKey || removeRecovery(pendingSnapshotKey);
                         recoveryWriteError = "";
-                        setStatus("Saved");
+                        setStatus(cleared ? "Saved" : "Draft saved on server, but local recovery could not be cleared: " + recoveryFailure + ".", cleared ? "normal" : "warning");
                       } else {
                         setStatus("Saving\u2026");
                       }
@@ -2265,7 +2301,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               });
               if (!openTabs.length) openTabs.push(selectedAvailable ? selected : ((_state$files$2 = state.files[0]) == null ? void 0 : _state$files$2.path) || "config");
               if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
-              sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
+              rememberSession(tabSessionKey, JSON.stringify(openTabs));
               menu.replaceChildren();
               for (var _iterator17 = _createForOfIteratorHelperLoose(tabs.querySelectorAll("[data-instant-tooltip-attached='true']")), _step17; !(_step17 = _iterator17()).done;) {
                 var _button = _step17.value;
@@ -2332,7 +2368,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 label: __resourcesDatasetGet(root, "data-config-label") || "Configuration",
                 config: true
               });
-              var _loop5 = function _loop5() {
+              var _loop6 = function _loop6() {
                 var path = _step19.value;
                 var file = state.files.find(function (candidate) {
                   return candidate.path === path;
@@ -2345,9 +2381,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 });
               };
               for (var _iterator19 = _createForOfIteratorHelperLoose(openTabs), _step19; !(_step19 = _iterator19()).done;) {
-                _loop5();
+                _loop6();
               }
-              var _loop6 = function _loop6() {
+              var _loop7 = function _loop7() {
                 var path = _step20.value;
                 var tab = document.createElement("div");
                 tab.className = "project-editor__open-tab";
@@ -2377,7 +2413,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 tabs.append(tab);
               };
               for (var _iterator20 = _createForOfIteratorHelperLoose(openTabs), _step20; !(_step20 = _iterator20()).done;) {
-                _loop6();
+                _loop7();
               }
               root.querySelector("[data-project-file-current]").textContent = selected === "config" ? __resourcesDatasetGet(root, "data-config-label") || "Configuration" : selected;
             };
@@ -2452,7 +2488,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         setStatus("Output stopped: " + __resourcesDatasetGet(root, "data-output-machine-error"), "error", null, "output");
                       }
                       if (__resourcesDatasetGet(root, "data-output-machine-state") === "waiting" || !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
-                      if (recoveryFailure) setStatus("Draft recovery failed: " + recoveryFailure + ". Stored recovery data was kept.", "error", null, "editor");
+                      if (recoveryFailure) setStatus("Draft recovery failed: " + recoveryFailure + ". Stored recovery data was kept.", "warning", null, "editor");
                       _context5.n = 6;
                       break;
                     case 4:
@@ -2631,9 +2667,18 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             readRecovery = function _readRecovery(key) {
               try {
                 return readProjectRecovery(key);
-              } catch (_error16) {
-                recoveryFailure = _error16.message || String(_error16);
+              } catch (_error19) {
+                recoveryFailure = _error19.message || String(_error19);
                 return null;
+              }
+            };
+            removeRecovery = function _removeRecovery(key) {
+              try {
+                sessionStorage.removeItem(key);
+                return true;
+              } catch (_error18) {
+                recoveryFailure = _error18.message || String(_error18);
+                return false;
               }
             };
             editorMount = root.querySelector("[data-project-editor-mount]");
@@ -2735,11 +2780,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     snapshotField.value = JSON.stringify(state);
                     recoveredPendingSnapshot = true;
                   } else {
-                    sessionStorage.removeItem(pendingSnapshotKey);
+                    removeRecovery(pendingSnapshotKey);
                   }
                 }
-              } catch (_unused6) {
-                sessionStorage.removeItem(pendingSnapshotKey);
+              } catch (_unused7) {
+                removeRecovery(pendingSnapshotKey);
               }
             }
             if (workspacePayload) {
@@ -2764,7 +2809,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             openTabs = [];
             try {
               openTabs = JSON.parse(sessionStorage.getItem(tabSessionKey)) || [];
-            } catch (_unused7) {}
+            } catch (_unused8) {}
             if (!openTabs.length) openTabs = Array.isArray((_state$config4 = state.config) == null ? void 0 : _state$config4.editorTabs) ? _toConsumableArray(state.config.editorTabs) : [selected];
             ready = false;
             pending2 = recoveredPendingSnapshot;
@@ -2789,7 +2834,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             if (draft || memoryOnly) {
               if (draft) {
                 navigation = navigationType();
-                if (navigation !== "reload" && navigation !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+                if (navigation !== "reload" && navigation !== "back_forward") removeRecovery(DRAFT_KEY);
                 try {
                   stored = JSON.parse(readRecovery(DRAFT_KEY));
                   if (stored != null && (_stored$patches = stored.patches) != null && _stored$patches.length) {
@@ -2803,8 +2848,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     }));
                     state = normalizeProjectSnapshot(stored.snapshot);
                   }
-                } catch (_unused8) {
-                  sessionStorage.removeItem(DRAFT_KEY);
+                } catch (_unused9) {
+                  removeRecovery(DRAFT_KEY);
                 }
               }
               localHistory || (localHistory = draftHistory(state));
@@ -2819,8 +2864,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             openTabList = root.querySelector("[data-project-tabs]");
             tabScrollBack = document.createElement("button");
             tabScrollForward = document.createElement("button");
-            for (_i2 = 0, _arr2 = [[tabScrollBack, "Scroll tabs left", "\u2039"], [tabScrollForward, "Scroll tabs right", "\u203A"]]; _i2 < _arr2.length; _i2++) {
-              _arr2$_i = _slicedToArray(_arr2[_i2], 3), _button2 = _arr2$_i[0], _label = _arr2$_i[1], text = _arr2$_i[2];
+            for (_i3 = 0, _arr3 = [[tabScrollBack, "Scroll tabs left", "\u2039"], [tabScrollForward, "Scroll tabs right", "\u203A"]]; _i3 < _arr3.length; _i3++) {
+              _arr3$_i = _slicedToArray(_arr3[_i3], 3), _button2 = _arr3$_i[0], _label = _arr3$_i[1], text = _arr3$_i[2];
               _button2.type = "button";
               _button2.className = "project-editor__tab-scroll";
               _button2.setAttribute("aria-label", _label);
@@ -2887,8 +2932,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             fileTrigger = root.querySelector("[data-project-file-trigger]");
             fileTriggerIcon = fileTrigger.querySelector("svg");
             fileTriggerIcon.replaceChildren();
-            for (_i3 = 0, _arr3 = ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]; _i3 < _arr3.length; _i3++) {
-              d = _arr3[_i3];
+            for (_i4 = 0, _arr4 = ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]; _i4 < _arr4.length; _i4++) {
+              d = _arr4[_i4];
               path = document.createElementNS("http://www.w3.org/2000/svg", "path");
               path.setAttribute("d", d);
               fileTriggerIcon.append(path);
@@ -2994,8 +3039,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 var _root$closest9;
                 var projectName = String(((_root$closest9 = root.closest("form")) == null || (_root$closest9 = _root$closest9.elements) == null || (_root$closest9 = _root$closest9.namedItem("slug")) == null ? void 0 : _root$closest9.value) || __resourcesDatasetGet(root, "data-project-slug") || "").trim();
                 downloadProjectArchive(state, projectName);
-              } catch (_error14) {
-                setStatus(_error14.message, "error");
+              } catch (_error16) {
+                setStatus(_error16.message, "error");
               }
             });
             archiveInput.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee2() {
@@ -3108,7 +3153,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               root.style.setProperty("--source-width", next + "%");
               splitter.setAttribute("aria-valuenow", String(next));
             });
-            _loop8 = _regenerator().m(function _loop8() {
+            _loop9 = _regenerator().m(function _loop9() {
               var button;
               return _regenerator().w(function (_context0) {
                 while (1) switch (_context0.n) {
@@ -3147,7 +3192,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   case 1:
                     return _context0.a(2);
                 }
-              }, _loop8);
+              }, _loop9);
             });
             _iterator23 = _createForOfIteratorHelperLoose(root.querySelectorAll("[data-project-view]"));
           case 10:
@@ -3155,7 +3200,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               _context10.n = 12;
               break;
             }
-            return _context10.d(_regeneratorValues(_loop8()), 11);
+            return _context10.d(_regeneratorValues(_loop9()), 11);
           case 11:
             _context10.n = 10;
             break;
@@ -3226,7 +3271,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 }
               }, _callee4);
             })));
-            _loop9 = _regenerator().m(function _loop9() {
+            _loop0 = _regenerator().m(function _loop0() {
               var textarea;
               return _regenerator().w(function (_context1) {
                 while (1) switch (_context1.n) {
@@ -3239,7 +3284,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   case 1:
                     return _context1.a(2);
                 }
-              }, _loop9);
+              }, _loop0);
             });
             _iterator25 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("textarea[data-autogrow]")) || []);
           case 13:
@@ -3247,7 +3292,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               _context10.n = 15;
               break;
             }
-            return _context10.d(_regeneratorValues(_loop9()), 14);
+            return _context10.d(_regeneratorValues(_loop0()), 14);
           case 14:
             _context10.n = 13;
             break;
@@ -3328,9 +3373,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               try {
                 if (!editorController) throw new Error("The project editor is still loading");
                 editorController.prepareSubmit == null || editorController.prepareSubmit();
-              } catch (_error15) {
+              } catch (_error17) {
                 event.preventDefault();
-                setStatus("Save failed: " + (_error15.message || String(_error15)), "error", null, "editor");
+                setStatus("Save failed: " + (_error17.message || String(_error17)), "error", null, "editor");
               }
             });
             renderTabs();
@@ -3358,7 +3403,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       return globalThis.__wwcReportError == null ? void 0 : globalThis.__wwcReportError((error == null ? void 0 : error.stack) || (error == null ? void 0 : error.message) || String(error));
     });
   }
-  var _loop0 = function _loop0() {
+  var _loop1 = function _loop1() {
     var figure = _step16.value;
     var focusBlogPresentation = function focusBlogPresentation() {
         var _frame$contentWindow;
@@ -3435,6 +3480,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     });
   };
   for (var _iterator16 = _createForOfIteratorHelperLoose(document.querySelectorAll(".blog-example-block")), _step16; !(_step16 = _iterator16()).done;) {
-    if (_loop0()) continue;
+    if (_loop1()) continue;
   }
 })();

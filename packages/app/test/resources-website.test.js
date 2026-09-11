@@ -1125,7 +1125,7 @@ test("Resources editor remains usable when browser storage access is denied", { 
   await page.getByRole("button", { name: "Editor menu", exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Export ZIP", exact: true }).click();
-  const snapshot = decodeProjectArchive(await readFile(await (await download).path()));
+  const snapshot = await decodeProjectArchive(await readFile(await (await download).path()));
   assert.equal(snapshot.files.find(file => file.path === "index.html").content, "<h1>Unsaved without storage</h1>");
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/storage-denied-draft.png") });
   // Reload takes the outer guest's recovery-presence path as well. It must
