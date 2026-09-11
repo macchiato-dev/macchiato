@@ -2794,6 +2794,38 @@ detect this interval. Add a stalled-editor reload check of the actual iframe's
 backing before considering the initial-paint requirement satisfied; inspect
 the frame's own color scheme as well as the inherited media-query preference.
 
+### Output iframe canvas during initial load
+
+The late stress recording exposed an iframe canvas mismatch, not just a missing
+background declaration. The parent iframe used `color-scheme: dark` while the
+frame document used `normal`. Even with transparent HTML/body backgrounds,
+Chromium painted an opaque white canvas; this also reproduced after editor
+startup. The [CSS Color Adjustment specification](https://www.w3.org/TR/css-color-adjust-1/)
+requires an opaque canvas when the embedding element and embedded root use
+different schemes, to preserve contrast.
+
+The frame's initial HTML now declares `:root { color-scheme: light dark; }`.
+Its used scheme follows the embedding element, so transparent areas expose the
+existing themed workspace backing from first paint. Guest CSS still controls
+the guest surface. No host callback, new guest permission, parser, or theme
+message is added.
+
+A saved-project browser regression withholds the editor Wasm on both initial
+navigation and reload. It samples a rendered pixel in the app's 32px margin
+before and after the editor starts: dark is `[21,23,23,255]`, light is
+`[231,236,255,255]`. The unfixed dark case produced `[255,255,255,255]`. The test
+also checks phone layout and repeated selections without replacing the iframe.
+An actual guest `matchMedia` listener updates its content through the existing
+bridge when preferences change.
+
+Native inheritance checks disable Playwright's default media emulation with
+`colorScheme: null`. DevTools emulation forces preferences in descendant frames
+independently, as confirmed with a plain native iframe, so using it to test a
+manual theme choice opposite to the forced scheme gives a false failure.
+Separate emulated-system cases cover dark/light startup and system changes.
+Screenshots and logs are retained in `/root/macchiato-work/output-backing-shots/`
+and `/root/macchiato-work/output-backing-*.log`.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

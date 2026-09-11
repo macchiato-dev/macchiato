@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -15,6 +15,7 @@ import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStyleshe
 import { seal } from "../../../packages/website/auth/session.js";
 import { themeBootstrapScript } from "../../../packages/website/theme-bootstrap.js";
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
+import { createContentStore } from "../../hub/src/content.js";
 import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
 const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
@@ -979,6 +980,118 @@ test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the proje
   await canvas.waitFor();
   await canvas.and(output.locator('[data-webgpu-status="ready"]')).waitFor({ timeout: 15_000 }).catch(async () => assert.fail(
       `WebGPU did not render: ${await canvas.getAttribute("data-webgpu-status")}\n${errors.join("\n")}`));
+});
+
+test("saved project output keeps its backing while the editor is still loading", { timeout: 180_000 }, async t => {
+  const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS;
+  if (artifacts) await mkdir(artifacts, { recursive: true });
+  const port = await getPort(), dataDir = await tempDir(), app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const client = createNodeSqliteClient(db);
+  const account = await createAccountStore(client).authenticateIdentity({ provider: "github",
+    providerUserId: "paint-test", login: "paint-test", name: "Paint Test",
+    email: "paint-test@example.test", emailVerified: true });
+  await createContentStore(client).createProject(account.id, { userSlug: account.login, name: "Paint fixture", slug: "paint-fixture",
+    template: "article", snapshot: { files: [{ path: "index.html", content:
+      '<style>body { margin:32px; background:#e8f2ff; color:#17243a; } h1 { margin:0; }</style>' +
+      '<h1>Paint fixture</h1><p id="scheme"></p><script>' +
+      'var query = matchMedia("(prefers-color-scheme: dark)");' +
+      'function showScheme() { document.getElementById("scheme").textContent = query.matches ? "dark" : "light"; }' +
+      'query.addEventListener("change", showScheme); showScheme();</script>' }], config: {} } });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  async function backing(page) {
+    const output = page.frameLocator(".project-editor__output-frame");
+    const frame = page.locator(".project-editor__output-frame"), box = await frame.boundingBox();
+    // The guest's margin exposes the iframe canvas. Computed transparent CSS
+    // alone cannot tell whether the browser paints an opaque canvas behind it.
+    const png = await page.screenshot({ clip: { x: Math.floor(box.x + 8), y: Math.floor(box.y + 8), width: 1, height: 1 } });
+    const pixel = await page.evaluate(async bytes => {
+      const image = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 1;
+      const context = canvas.getContext("2d");
+      context.drawImage(image, 0, 0); image.close();
+      return [...context.getImageData(0, 0, 1, 1).data];
+    }, [...png]);
+    return { pixel, outer: await frame.evaluate(node => getComputedStyle(node).colorScheme),
+      inner: await output.locator("html").evaluate(node => getComputedStyle(node).colorScheme) };
+  }
+  const colors = { dark: [21, 23, 23, 255], light: [231, 236, 255, 255] };
+  // DevTools media emulation overrides every frame independently. Test native
+  // inheritance with emulation disabled, then test emulated system preferences
+  // separately (without pretending an explicit choice overrides DevTools).
+  for (const [emulated, choice] of [[null, "system"], [null, "dark"], [null, "light"], ["dark", "system"], ["light", "system"]]) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: emulated });
+    const system = await page.evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    const expected = choice === "system" ? system : choice;
+    const label = `${emulated || "native"}-${choice}`;
+    await page.context().addCookies([{ name: "resources_session", value: session,
+      domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+    await page.addInitScript(choice => localStorage.setItem("macchiato-theme", choice), choice);
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    let release = () => {}, delayed;
+    await page.route("**/project-editor-quickjs-runtime.wasm*", async route => {
+      await delayed;
+      if (!page.isClosed()) await route.continue();
+    });
+    try {
+      for (const reload of [false, true]) {
+        delayed = new Promise(resolve => { release = resolve; });
+        if (reload) await page.reload();
+        else await page.goto(`http://resources-edge.localhost:${port}/paint-test/paint-fixture`);
+        const output = page.frameLocator(".project-editor__output-frame");
+        await output.getByRole("heading", { name: "Paint fixture", exact: true }).waitFor();
+        await output.locator("#scheme").filter({ hasText: expected }).waitFor();
+        assert.equal(await page.locator(".cm-editor").count(), 0, "output paints before CodeMirror loads");
+        const before = await backing(page);
+        if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-${reload ? "reload" : "first"}-waiting.png`) });
+        release();
+        await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.editorMachineStage === 'ready');
+        const after = await backing(page);
+        if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-${reload ? "reload" : "first"}-ready.png`) });
+        t.diagnostic(JSON.stringify({ system, emulated, choice, reload, before, after }));
+        assert.deepEqual(before.pixel, colors[expected], "initial iframe canvas exposes the themed backing");
+        assert.deepEqual(after.pixel, before.pixel, "editor startup must not change the output backing");
+      }
+      await page.evaluate(() => { window.paintFrame = document.querySelector(".project-editor__output-frame"); });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.waitForFunction(() => document.querySelector('.project-editor__workspace').dataset.view === 'preview');
+      assert.deepEqual((await backing(page)).pixel, colors[expected], "phone output keeps the same backing");
+      if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-phone.png`) });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.waitForFunction(() => document.querySelector('.project-editor__workspace').dataset.view === 'split');
+      for (const selected of emulated ? [] : ["light", "dark", "system", "light", "system"]) {
+        await page.locator(`[data-theme-choice="${selected}"]`).first().evaluate(button => button.click());
+        const resolved = selected === "system" ? system : selected;
+        await page.frameLocator(".project-editor__output-frame").locator("#scheme").filter({ hasText: resolved }).waitFor({ timeout: 5000 }).catch(async error => {
+          t.diagnostic(JSON.stringify({ selected, resolved, errors, backing: await backing(page),
+            outerTheme: await page.locator("html").getAttribute("data-theme"),
+            nativeDark: await page.frameLocator(".project-editor__output-frame").locator("html").evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches),
+            guest: await page.frameLocator(".project-editor__output-frame").locator("#scheme").textContent() }));
+          throw error;
+        });
+        assert.deepEqual((await backing(page)).pixel, colors[resolved]);
+        assert.equal(await page.evaluate(() => window.paintFrame === document.querySelector(".project-editor__output-frame")), true);
+      }
+      if (emulated) {
+        for (const next of ["light", "dark", "light"]) {
+          await page.emulateMedia({ colorScheme: next });
+          await page.frameLocator(".project-editor__output-frame").locator("#scheme").filter({ hasText: next }).waitFor();
+          await page.waitForFunction(next => document.documentElement.dataset.theme === next, next);
+          assert.deepEqual((await backing(page)).pixel, colors[next]);
+          assert.equal(await page.evaluate(() => window.paintFrame === document.querySelector(".project-editor__output-frame")), true);
+        }
+      }
+      assert.deepEqual(errors, []);
+    } finally { release(); await page.close(); }
+  }
 });
 
 test("Resources project CodeMirror follows repeated explicit and system theme changes", async (t) => {

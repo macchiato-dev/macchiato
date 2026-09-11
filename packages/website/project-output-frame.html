@@ -6,6 +6,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Project output</title>
   <style>
+    /* Match the embedding page's chosen scheme from the first frame paint.
+       Otherwise the browser can put a white canvas behind transparent CSS. */
+    :root { color-scheme: light dark; }
     html, body { min-height: 100%; margin: 0; background: transparent; }
     /* A guest document fills this frame even through auto-height staging
        wrappers. Its own body styles can override this low-specificity default. */
