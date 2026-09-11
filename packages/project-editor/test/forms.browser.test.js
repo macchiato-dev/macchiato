@@ -115,7 +115,9 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
       button.textContent = event.defaultPrevented ? 'Cancelled too early' : 'Guest received submit';
     });
     document.body.appendChild(form);
+    input.setAttribute('data-form-match', String(input.form === form));
   `));
+  assert.equal(await page.locator('input[name="secret"]').getAttribute('data-form-match'), 'true');
   await page.getByRole("button", { name: "Submit", exact: true }).click();
   await page.getByRole("button", { name: "Guest received submit" }).waitFor();
   await page.locator('input[name="secret"]').press("Enter");
@@ -155,6 +157,12 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     document.getElementById("guest").append(associated);
   });
   await page.getByRole("button", { name: "Associated control", exact: true }).click();
+  await page.evaluate(() => run(`
+    var associated = document.querySelector('button[form="outside"]');
+    associated.setAttribute('data-form-visible', String(associated.form !== null));
+  `));
+  assert.equal(await page.getByRole("button", { name: "Associated control", exact: true })
+    .getAttribute('data-form-visible'), String(documentMode), 'form association does not grant access outside the roots');
   await page.waitForTimeout(100);
   assert.deepEqual(requests.slice(before), [], "native form actions must not issue requests");
   assert.equal(page.url(), "http://forms.test/");

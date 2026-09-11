@@ -118,6 +118,12 @@ GuestElement.prototype.showModal = function () {
 Object.defineProperty(GuestElement.prototype, "open", {
   get: function () { return hostGet(this.reference, "open"); }
 });
+Object.defineProperty(GuestElement.prototype, "form", {
+  get: function () {
+    var value = hostGet(this.reference, "form");
+    return value === null ? null : nodeForReference(value[1]);
+  }
+});
 GuestElement.prototype.close = function (value) {
   immediate([3, this.reference, stringIndex("close"),
     value === undefined ? [] : [encode(String(value))]]);
