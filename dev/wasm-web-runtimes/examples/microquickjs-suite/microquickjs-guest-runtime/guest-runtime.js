@@ -566,9 +566,9 @@ GuestStorage.prototype.listen = function (name, callback) {
       var reader = new Reader(result, result.length);
       var errorName = readValue(reader), message = readValue(reader);
       var ErrorType = errorName === "TypeError" ? TypeError : errorName === "RangeError" ? RangeError : Error;
-      var error = new ErrorType(message);
-      error.name = errorName;
-      throw error;
+      var failure = new ErrorType(message);
+      failure.name = errorName;
+      throw failure;
     }
   } catch (error) {
     // No host subscription owns this slot when registration failed.
