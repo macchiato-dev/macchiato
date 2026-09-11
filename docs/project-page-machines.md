@@ -3552,3 +3552,25 @@ not edits to saved owner projects. The candidate export is
 `/root/macchiato-work/resources-bunny-native-resize` (revision `165a650`);
 evidence is `resize-focused-editing.log` and `native-resize-full-app.log`.
 Heavy editing, owner-content checks, and local activation are still pending.
+
+The unprofiled editing run passes in 102.4 seconds, including 80 edits,
+scrolling, undo/redo, error recovery, saving, and phone layouts. Pasting 106,432
+characters takes 1,360 ms; native insertion of 106,458 characters takes 36.7
+seconds. These timings vary substantially and do not establish a speedup.
+Inspected light/dark and phone screenshots still expose the previously noted
+body-background propagation limitation. Each saved owner project passes a
+separate exported-asset run: Mahjong, cat memory, the tour (50 slides and
+keyboard navigation), and SQLite (fragment navigation). No owner saves occur.
+
+The final scope/API/inline-update run initially passes the guest cases but
+intermittently fails the native pane-resize control at width 350. Eight native
+and guest repeats with callback-timing diagnostics pass, so its precise trigger
+is not proven. CodeMirror's own resize callback has a 75-ms recent-update guard;
+the isolated-pane fixture now waits until its last document update is over
+100 ms old before each resize, without requesting measurement or injecting
+events. All 28 final checks then pass. Importantly, the same revised test still
+fails with the old empty-observer guest while its native control passes, so the
+test continues to detect the original defect. Production CodeMirror is unchanged.
+Evidence: `native-resize-stress*`, `native-resize-owner-*`,
+`native-resize-final-boundaries*`, `native-resize-pane-timing*`, and
+`native-resize-quiet-baseline.log` in `/root/macchiato-work`.

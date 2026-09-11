@@ -6,6 +6,7 @@ globalThis.__codeEditorSetContent(JSON.stringify({ language: "plain", content: r
 function readPaneState() {
   var view = globalThis.__codeEditorView;
   __browserUseNotify(JSON.stringify({ type: "pane-state", width: view.viewState.contentDOMWidth,
-    height: view.contentHeight, document: view.state.doc.toString() }));
+    height: view.contentHeight, document: view.state.doc.toString(),
+    lastUpdate: view.docView.lastUpdate, now: Date.now() }));
   if (typeof flush === "function") flush();
 }

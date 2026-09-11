@@ -46,6 +46,17 @@ test("CodeMirror remeasures wrapping and gutters when only its pane changes size
         window.notices = []; window.windowResizes = 0;
         addEventListener("resize", () => windowResizes++);
         if (mode === "native") {
+          const NativeResizeObserver = globalThis.ResizeObserver;
+          window.resizeDeliveries = [];
+          globalThis.ResizeObserver = class extends NativeResizeObserver {
+            constructor(callback) {
+              super((entries, observer) => {
+                resizeDeliveries.push({ now: Date.now(), lastUpdate: globalThis.__codeEditorView?.docView.lastUpdate,
+                  widths: entries.map(entry => entry.contentRect.width) });
+                callback.call(observer, entries, observer);
+              });
+            }
+          };
           globalThis.__CODE_EDITOR_DEFER_START__ = true;
           globalThis.__browserUseNotify = message => notices.push(JSON.parse(message));
           await import("/editor.js"); (0, eval)(fixture);
@@ -71,12 +82,20 @@ test("CodeMirror remeasures wrapping and gutters when only its pane changes size
       await page.waitForTimeout(250);
       const original = await page.evaluate(() => inspectPane().document);
       for (const width of [260, 900, 350, 700]) {
+        // CodeMirror ignores resize notifications within 75 ms of its last
+        // document update. Isolate pane resizing from that upstream guard;
+        // waiting reads state only, without requesting a redraw in either VM.
+        await page.waitForFunction(() => {
+          const state = inspectPane();
+          return state.now - state.lastUpdate > 100;
+        });
         await page.locator("#pane").evaluate((node, width) => node.style.width = width + "px", width);
         await page.waitForFunction(() => {
           const state = inspectPane();
           return Math.abs(state.width - state.actualWidth) < 1 && Math.abs(state.height - state.actualHeight) < 2;
         }, null, { timeout: 3000 }).catch(async error => {
-          t.diagnostic(JSON.stringify({ mode, width, state: await page.evaluate(() => inspectPane()) }));
+          t.diagnostic(JSON.stringify({ mode, width, state: await page.evaluate(() => inspectPane()),
+            deliveries: await page.evaluate(() => window.resizeDeliveries) }));
           throw error;
         });
         const state = await page.evaluate(() => inspectPane());
