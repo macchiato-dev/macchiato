@@ -177,7 +177,12 @@ export class ResourcesStorageDevice {
   delete(kind, key) { this.area(kind).removeItem(key); }
   listen(kind, _key, listener) {
     if (!this.listeners.has(kind)) this.listeners.set(kind, new Set());
-    this.listeners.get(kind).add(listener);
+    const listeners = this.listeners.get(kind);
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+      if (!listeners.size && this.listeners.get(kind) === listeners) this.listeners.delete(kind);
+    };
   }
 }
 
