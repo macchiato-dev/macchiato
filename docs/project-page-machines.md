@@ -3263,3 +3263,25 @@ That failure is not counted as a pass. The test now captures status, loaded
 file identities, machine state, errors, and a screenshot on failure, and is
 being rerun separately before promotion. The live editor bytes and the Bunny
 archive still match the preceding `cd95394` export.
+
+The isolated retry captured a successful import and working output, with no
+page errors: autosave had replaced the status with `Draft saved in this
+session`. The test now waits for the import input to be cleared and exports
+the resulting project, comparing every file's bytes with the input snapshot.
+This verifies a persistent result rather than the timing of a transient label.
+The complete recovery/export workflow then passes in 68.4 seconds, including
+oversized-draft recovery, saves, publication, and quota recovery. The original
+timeout and its screenshot remain available as evidence; they were not
+reclassified as a passing run.
+
+All four saved owner projects pass read-only exported-asset checks, including
+50 tour slides, embedded/expanded keyboard navigation, SQLite fragments,
+themes, and phone views. Editor screenshots were inspected. The extracted
+`26ae6b0` export verifies all 152 files and its compressed backend runs in Deno.
+It is now served locally: six live assets match the export byte-for-byte, and
+`/root/resources-bunny.tar.gz` contains that same verified package. The previous
+archive is retained at
+`/root/archive/2026/09/11/resources-bunny-cd95394-before-mutation-parents.tar.gz`.
+No owner project was saved and nothing was deployed to Bunny. Bulk-input
+latency, broader service-error handling, and viewport/`rem` fidelity remain
+open; this is not completion of the full goal.
