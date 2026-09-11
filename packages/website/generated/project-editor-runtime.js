@@ -1222,7 +1222,7 @@ var WasmWebBridge = class {
       if (object === hostDocument && ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].includes(name)) {
         return Math.round(globalThis[name]);
       }
-      if (object instanceof Node && ["parentNode", "parentElement", "nextSibling", "previousSibling"].includes(name)) {
+      if (object instanceof Node && ["parentNode", "parentElement", "firstChild", "lastChild", "nextSibling", "previousSibling"].includes(name)) {
         const node = object[name];
         return node && insideDocument(node) ? reference(node) : null;
       }
