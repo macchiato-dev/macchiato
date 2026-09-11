@@ -1797,6 +1797,23 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.deepEqual(outputStartupContents, ["Reload recovery marker"],
     "output must not first show the superseded server snapshot either");
   await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "Saved");
+  // A candidate is not necessarily a valid or different snapshot. Deferring
+  // output must not strand these cases behind their loading indicator.
+  for (const candidate of ["malformed", "unchanged"]) {
+    await page.evaluate(candidate => {
+      const root = document.querySelector("[data-project-editor]");
+      sessionStorage.setItem(`resources_project_pending_v1:${root.dataset.projectId}`,
+        candidate === "malformed" ? "{" : root.querySelector("[data-project-snapshot]").value);
+    }, candidate);
+    outputStartupContents.length = 0;
+    await page.reload({ waitUntil: "networkidle" });
+    await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+      name: "Reload recovery marker", exact: true,
+    }).waitFor();
+    assert.deepEqual(outputStartupContents, ["Reload recovery marker"], candidate);
+    assert.equal(await page.evaluate(() => sessionStorage.getItem(
+      `resources_project_pending_v1:${document.querySelector("[data-project-editor]").dataset.projectId}`)), null);
+  }
   assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
   await page.getByRole("button", { name: "Editor menu" }).click();
   await page.getByRole("menuitem", { name: "Save tab configuration" }).click();
