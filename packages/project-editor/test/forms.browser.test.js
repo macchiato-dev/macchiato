@@ -71,6 +71,18 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     await run(`disabledProbe.setAttribute('data-observed', String(disabledProbe.disabled));`);
   });
   assert.equal(await disabledProbe.getAttribute('data-observed'), 'false');
+  await page.evaluate(async () => {
+    // Native changes must be visible synchronously, without an observer.
+    const probe = document.getElementById('disabled-probe');
+    probe.append(document.createTextNode('text'), document.createElement('span'));
+    await run(`disabledProbe.setAttribute('data-count', String(disabledProbe.childElementCount));`);
+  });
+  assert.equal(await disabledProbe.getAttribute('data-count'), '1');
+  await page.evaluate(async () => {
+    document.querySelector('#disabled-probe span').remove();
+    await run(`disabledProbe.setAttribute('data-count', String(disabledProbe.childElementCount));`);
+  });
+  assert.equal(await disabledProbe.getAttribute('data-count'), '0');
   await page.evaluate(() => run(`disabledProbe.remove();`));
   const html = '<dialog id="modal"><form method="dialog"><button value="cancel">Cancel</button></form></dialog>';
   const project = compileProjectFiles([{ path: "index.html", content: html }]);

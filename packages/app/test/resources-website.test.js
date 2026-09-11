@@ -1447,6 +1447,40 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(new URL(page.url()).pathname, "/projects");
 });
 
+test("Public project cards and palette searches navigate from the outer guest", async (t) => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const errors = [], requests = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => requests.push(request.url()));
+  await page.route("**/api/public-projects", route => route.fulfill({ json: [
+    { namespace: "catalog", slug: "example", name: "Example project", description: "A public project" },
+  ] }));
+  await page.route("**/catalog/example", route => route.fulfill({ contentType: "text/html", body: "Project reached" }));
+  await page.route("**/browse?*", route => route.fulfill({ contentType: "text/html", body: "Search reached" }));
+  const origin = `http://resources-edge.localhost:${port}`;
+  await page.goto(origin);
+  const card = page.locator("[data-public-projects] .account-card");
+  await card.waitFor();
+  assert.equal(await card.getAttribute("href"), "/catalog/example");
+  await card.click();
+  await page.waitForURL(`${origin}/catalog/example`);
+  await page.goto(origin);
+  await page.waitForFunction(() => document.documentElement.dataset.resourcesFrontendMachineState === "ready");
+  await page.locator("[data-command-open]").click();
+  await page.locator("[data-command-input]").fill("tiles & cats");
+  await page.locator("[data-search-elsewhere]").click();
+  await page.waitForURL(`${origin}/browse?q=tiles%20%26%20cats`);
+  assert.deepEqual(errors, []);
+  assert.equal(requests.some(url => /project-editor.*\.(?:wasm|bin)/.test(url)), false,
+    "ordinary links do not require an editor guest");
+});
+
 test("Resources project save controls publish titled latest versions", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();

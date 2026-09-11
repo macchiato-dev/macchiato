@@ -32,7 +32,7 @@ document.addEventListener("click", (event) => {
   if (search) {
     const dialog = search.closest("[data-command-dialog]");
     const query = dialog?.querySelector("[data-command-input]")?.value.trim() || "";
-    search.href = query ? `/browse?q=${encodeURIComponent(query)}` : "/browse";
+    search.setAttribute("href", query ? `/browse?q=${encodeURIComponent(query)}` : "/browse");
   }
 });
 

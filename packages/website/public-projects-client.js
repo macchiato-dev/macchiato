@@ -16,7 +16,7 @@ if (root) {
       const link = document.createElement("a");
       link.className = "account-card";
       link.dataset.projectLink = "";
-      link.href = `/${encodeURIComponent(project.namespace)}/${encodeURIComponent(project.slug)}`;
+      link.setAttribute("href", `/${encodeURIComponent(project.namespace)}/${encodeURIComponent(project.slug)}`);
       const title = document.createElement("h3");
       title.textContent = String(project.name || project.slug);
       const namespace = document.createElement("span");
