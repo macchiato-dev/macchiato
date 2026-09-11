@@ -1669,14 +1669,10 @@ async function mountProjectRoot(root) {
     finally { archiveInput.value = ""; }
   });
   const workspace = root.querySelector(".project-editor__workspace");
-  const presentButton = root.querySelector("[data-project-present]");
-  const presentClose = root.querySelector("[data-project-present-close]");
-  const previewSection = root.querySelector(".project-editor__preview");
   const outputOverflow = root.querySelector("[data-output-overflow]");
   const outputOverflowTrigger = root.querySelector("[data-output-overflow-trigger]");
   const outputOverflowMenu = root.querySelector("[data-output-overflow-menu]");
   const fullscreenButton = root.querySelector("[data-project-fullscreen]");
-  const projectContentBlock = root.closest(".content-block");
   function closeOutputOverflow({ focus = false } = {}) {
     outputOverflowMenu.hidden = true;
     outputOverflowTrigger.setAttribute("aria-expanded", "false");
@@ -1702,41 +1698,6 @@ async function mountProjectRoot(root) {
   });
   document.addEventListener("pointerdown", (event) => {
     if (!outputOverflow.contains(event.target)) closeOutputOverflow();
-  });
-  function closePresentation() {
-    delete root.dataset.presenting;
-    document.body.classList.remove("project-presenting");
-    previewSection.classList.remove("project-editor__preview--presenting");
-    projectContentBlock?.style.removeProperty("animation");
-    projectContentBlock?.style.removeProperty("backdrop-filter");
-    projectContentBlock?.style.removeProperty("transform");
-    presentButton.setAttribute("aria-pressed", "false");
-  }
-  function openPresentation({ keyboard = false } = {}) {
-    root.dataset.presenting = "true";
-    document.body.classList.add("project-presenting");
-    previewSection.classList.add("project-editor__preview--presenting");
-    projectContentBlock?.style.setProperty("animation", "none");
-    projectContentBlock?.style.setProperty("backdrop-filter", "none");
-    projectContentBlock?.style.setProperty("transform", "none");
-    presentButton.setAttribute("aria-pressed", "true");
-    presentClose.blur();
-    requestAnimationFrame(() => previewController?.focus?.());
-  }
-  presentButton.addEventListener("click", (event) => openPresentation({ keyboard: event.detail === 0 }));
-  presentClose.addEventListener("click", (event) => {
-    closePresentation();
-    if (event.detail === 0) presentButton.focus();
-    else presentButton.blur();
-  });
-  document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && root.dataset.presenting === "true") {
-      event.preventDefault();
-      closePresentation();
-      presentButton.focus();
-    } else if (event.key === "Escape" && parent !== window) {
-      parent.postMessage({ protocol: "resources-project-presentation-v1", type: "escape" }, "*");
-    }
   });
   addEventListener("message", (event) => {
     if (event.source !== parent || event.data?.protocol !== "resources-project-presentation-v1" || event.data.type !== "focus") return;

@@ -105,9 +105,36 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.context().addCookies([{ name: "resources_session", value: session,
     domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
 
-  await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
+  let releaseEditor;
+  const editorDownload = new Promise(resolve => { releaseEditor = resolve; });
+  await page.route("**/project-editor-quickjs-runtime.wasm*", async route => {
+    await editorDownload;
+    if (!page.isClosed()) await route.continue();
+  });
+  await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
   const editor = page.locator("[data-project-editor]");
   const content = editor.locator(".cm-content");
+  let earlyOutput;
+  try {
+    await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.outputMachineState === 'ready');
+    assert.equal(await content.count(), 0, "the editor download is still pending");
+    earlyOutput = await page.locator('iframe.project-editor__output-frame').elementHandle();
+    await editor.locator('[data-project-present]').click();
+    await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.presenting === 'true', null, { timeout: 5000 });
+    const bounds = await earlyOutput.boundingBox();
+    assert.ok(bounds.width > 1435 && bounds.height > 895, "output expands without waiting for CodeMirror");
+    await page.screenshot({ path: join(artifacts, 'output-before-editor.png') });
+    await editor.locator('[data-project-present-close]').click();
+    assert.equal(await editor.getAttribute('data-presenting'), null);
+    assert.ok(await earlyOutput.evaluate(node => node === document.querySelector('iframe.project-editor__output-frame')),
+      "early expand/close preserves the output frame");
+    await editor.locator('[data-project-present]').click();
+  } finally { releaseEditor(); }
+  await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.editorMachineStage === 'ready');
+  assert.equal(await editor.getAttribute('data-presenting'), 'true', "editor startup preserves expanded output");
+  assert.ok(await earlyOutput.evaluate(node => node === document.querySelector('iframe.project-editor__output-frame')));
+  await editor.locator('[data-project-present-close]').click();
+  await earlyOutput.dispose();
   await content.waitFor().catch(async (error) => {
     t.diagnostic(JSON.stringify({ url: page.url(), errors,
       page: (await page.locator("body").innerText()).slice(-1500) }));
