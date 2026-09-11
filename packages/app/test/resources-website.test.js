@@ -1153,7 +1153,7 @@ test("project inline styles match native precedence and reject external URLs", {
 .sample { color: green !important; padding: 20px; }
 @keyframes pulse { from { opacity: 1; } to { opacity: 0.8; } }
 </style>
-<div id="sample" class="sample" style="color: red !important; color: blue; padding: 4px !important; padding: 9px; margin: 8px 12px; border: 2px solid; width: 200px; height: 40px; animation: pulse 10s linear infinite;">Inline styles</div>
+<div id="sample" class="sample" style="color: red !important; color: blue; padding: 4px !important; padding: 9px; margin: 8px 12px; border: 2px solid black; width: 200px; height: 40px; animation: pulse 10s linear infinite;">Inline styles</div>
 <button id="change">Change padding</button>
 <script>
 document.getElementById("change").addEventListener("click", () => {
@@ -1171,7 +1171,12 @@ document.getElementById("change").addEventListener("click", () => {
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
   await page.locator(".cm-content").fill(source);
   const output = page.frameLocator("[data-project-output-mount] iframe");
-  await output.locator("#sample").waitFor();
+  await output.locator("#sample").waitFor({ timeout: 10000 }).catch(async error => {
+    throw new Error(JSON.stringify({ errors,
+      status: await page.locator("[data-project-status]").textContent(),
+      outputError: await page.locator("[data-project-editor]").getAttribute("data-output-machine-error"),
+    }), { cause: error });
+  });
   assert.deepEqual(await output.locator("#sample").evaluate(appearance), expected);
   assert.equal(await output.locator("#sample").evaluate(node => node.getAnimations().length), 1,
     "the inline animation resolves the scoped stylesheet keyframe");

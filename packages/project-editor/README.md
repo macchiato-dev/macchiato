@@ -25,6 +25,21 @@ saved Resources projects. The Resources build guest explicitly selects a
 retain their smaller default budget. Neither changes the machine's DOM or
 network authority.
 
+Inline `style` attributes use the same semantic CSS encoding as stylesheets.
+The compiled element tuple is `[1, tag, svg, attributes, children, inline?]`;
+the optional final field contains declaration-operation bytes, not CSS source.
+The output guest applies them to the element's style capability. This preserves
+inline specificity instead of converting attributes into ordinary class rules.
+Empty declarations clear a previous inline style. Stylesheets establish scoped
+keyframe names before inline animations are applied, and content updates keep
+the machine-owned stylesheet nodes intact.
+
+The compiler rejects external CSS URLs and attempts to insert extra rules in
+an attribute. Embedded SVG is converted into semantic image data. The host
+still checks the bytes independently and formats the CSS; compiler success
+does not grant additional authority. Multiple inline declarations use native
+cascade handling so a later normal value cannot erase an earlier `!important`.
+
 Source-limit accounting walks CodeMirror's immutable text tree and weakly
 caches each subtree's code-point count and longest line. Edits reuse unchanged
 subtrees; discarded history does not remain pinned by this cache. DOM,

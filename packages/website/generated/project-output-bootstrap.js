@@ -60,7 +60,9 @@
     if (value[0] === 0) return node.nodeType === 3 && node.nodeValue === String(value[1]);
     if (node.nodeType !== 1 || node.localName !== value[1]) return false;
     const attributes = value[3] || [];
-    if (node.attributes.length !== attributes.length) return false;
+    if (!value[5] && node.getAttribute("style") !== null) return false;
+    const existingAttributes = node.attributes.filter((attribute) => !value[5] || attribute.name !== "style");
+    if (existingAttributes.length !== attributes.length) return false;
     for (const attribute of attributes) {
       if (node.getAttribute(attribute[0]) !== String(attribute[1])) return false;
     }
@@ -71,18 +73,37 @@
     }
     return true;
   }
-  globalThis.__resourcesOutputSetContent = (json) => {
-    const nodes = JSON.parse(json);
-    const existing = document.body.childNodes;
-    if (existing.length === nodes.length && nodes.every((node, index) => outputNodeMatches(existing[index], node))) {
-      return JSON.stringify({ mounted: nodes.length, hydrated: true });
+  function outputInlineStyles(node, value) {
+    if (value[0] !== 1) return;
+    if (value[5]) node.style.installDeclarationOperations(new Uint8Array(value[5]));
+    for (let index = 0; index < value[4].length; index++) {
+      outputInlineStyles(node.childNodes[index], value[4][index]);
     }
-    document.body.replaceChildren(...nodes.map(outputNode));
-    return JSON.stringify({ mounted: nodes.length, hydrated: false });
+  }
+  function setOutputContent(nodes, inline = true) {
+    const all = document.body.childNodes;
+    const existing = all.filter((node) => node.nodeType !== 1 || node.localName !== "style");
+    const hydrated = existing.length === nodes.length && nodes.every((node, index) => outputNodeMatches(existing[index], node));
+    let mounted = existing;
+    if (!hydrated) {
+      mounted = nodes.map(outputNode);
+      if (existing.length === all.length) document.body.replaceChildren(...mounted);
+      else {
+        existing.forEach((node) => document.body.removeChild(node));
+        document.body.append(...mounted);
+      }
+    }
+    if (inline) nodes.forEach((node, index) => outputInlineStyles(mounted[index], node));
+    return { mounted: nodes.length, hydrated, nodes: mounted };
+  }
+  globalThis.__resourcesOutputSetContent = (json) => {
+    const result = setOutputContent(JSON.parse(json));
+    return JSON.stringify({ mounted: result.mounted, hydrated: result.hydrated });
   };
   globalThis.__resourcesOutputLoad = (json) => {
     const project = JSON.parse(json);
-    const mounted = JSON.parse(globalThis.__resourcesOutputSetContent(JSON.stringify(project.tree || [])));
+    const tree = project.tree || [];
+    const result = setOutputContent(tree, false);
     for (const stylesheet of project.stylesheets || []) {
       if (stylesheet && Array.isArray(stylesheet.operations)) {
         document.installStylesheetOperations(new Uint8Array(stylesheet.operations));
@@ -90,7 +111,8 @@
         document.installStylesheetSource(String(stylesheet && stylesheet.source !== void 0 ? stylesheet.source : stylesheet));
       }
     }
-    return JSON.stringify(mounted);
+    tree.forEach((node, index) => outputInlineStyles(result.nodes[index], node));
+    return JSON.stringify({ mounted: result.mounted, hydrated: result.hydrated });
   };
   globalThis.__wwcFetchMissing = (url) => new Promise((resolve, reject) => {
     const id = nextFetch++;

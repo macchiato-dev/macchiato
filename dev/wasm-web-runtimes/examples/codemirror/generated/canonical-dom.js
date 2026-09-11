@@ -2297,6 +2297,10 @@ GuestDocument.prototype.elementFromPoint = function (x, y) {
 function inlineCssBytes(source) {
   return encodeCss(".wwc-inline { " + source + " }");
 }
+GuestStyle.prototype.installDeclarationOperations = function (bytes) {
+  if (!(bytes instanceof Uint8Array)) throw new TypeError("inline style operations must be bytes");
+  pendingOperations.push([3, this.reference, stringIndex("replaceDeclarations"), [encode(bytes)]]);
+};
 Object.defineProperty(GuestStyle.prototype, "cssText", {
   get: function () {
     return immediate([1, this.reference, stringIndex("cssText")]);

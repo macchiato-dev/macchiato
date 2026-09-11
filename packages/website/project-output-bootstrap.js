@@ -45,6 +45,7 @@ function outputNodeMatches(node, value) {
   if (value[0] === 0) return node.nodeType === 3 && node.nodeValue === String(value[1]);
   if (node.nodeType !== 1 || node.localName !== value[1]) return false;
   const attributes = value[3] || [];
+  if (!value[5] && node.getAttribute("style") !== null) return false;
   // Inline declarations are checked and replaced after structural matching.
   // Their native serialized spelling need not match the original HTML.
   const existingAttributes = node.attributes.filter(attribute => !value[5] || attribute.name !== "style");

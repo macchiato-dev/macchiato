@@ -52,6 +52,8 @@ test("embedded CSS SVG becomes semantic image data, not a forwarded URL", () => 
   const bytes = new Uint8Array(compile(source).stylesheets[0].operations);
   assert.ok(bytes.length > 0);
   assert.doesNotMatch(new TextDecoder().decode(bytes), /data:image|xmlns|http/);
+  const inline = compile(`<div style='background-image:url("data:image/svg+xml,${encodeURIComponent(svg)}")'></div>`).tree[0][5];
+  assert.doesNotMatch(new TextDecoder().decode(new Uint8Array(inline)), /data:image|xmlns|http/);
   for (const url of ["https://example.test/tile.svg", "//example.test/tile.svg", "/tile.svg"]) {
     assert.throws(() => compile(`<style>.card{background-image:url("${url}")}</style>`), /external URLs/);
   }

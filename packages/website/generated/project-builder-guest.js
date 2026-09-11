@@ -11853,6 +11853,16 @@
     }
     return rules;
   }
+  function inlineStyle(source2) {
+    const rules = cssImages(parseCss(`.wwc-inline { ${source2} }`));
+    if (rules.length !== 1 || rules[0].selector !== ".wwc-inline") {
+      throw new SyntaxError("Inline style must contain only declarations");
+    }
+    validateConstrainedCssRules(rules);
+    const bytes = encodeConstrainedCssRules(rules);
+    if (bytes.length > 128 * 1024) throw new RangeError("Inline style operations are too large");
+    return [...bytes];
+  }
   var SingleFileProjectCompiler = class {
     constructor({ limits = SOURCE_LIMITS } = {}) {
       this.limits = Object.freeze({ ...limits });
@@ -11914,7 +11924,10 @@
             attributes.push(["target", "_blank"], ["rel", "noopener noreferrer"]);
           }
         }
-        return [[1, name, svg ? 1 : 0, attributes, value.childNodes.flatMap(nodes)]];
+        const node2 = [1, name, svg ? 1 : 0, attributes, value.childNodes.flatMap(nodes)];
+        const style = value.getAttribute("style");
+        if (style !== null) node2.push(inlineStyle(style));
+        return [node2];
       };
       const tree = parsed.body.childNodes.flatMap(nodes);
       return { tree, stylesheets: stylesheet ? [{ operations: stylesheet }] : [], scripts, usage };

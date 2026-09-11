@@ -540,6 +540,7 @@ function createCssRenderer(dependencies) {
         if (!declaration.getPropertyValue(property)) continue;
         declarations.push(`  ${property}: ${value}${important ? " !important" : ""};`);
       }
+      if (targetStyle && declarations.length > 1) declaration.cssText = declarations.join("\n");
       return declarations;
     }
     function readItems(itemCount2, output2) {
