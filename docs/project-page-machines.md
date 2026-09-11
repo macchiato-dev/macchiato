@@ -3327,3 +3327,18 @@ variable timings do not establish a speedup from storage error handling.
 Light and dark editor screenshots were inspected. Evidence is under
 `subscription-corrected-*` and `subscription-policy-unit.log` in
 `/root/macchiato-work`.
+
+All four saved owner projects pass the exported-asset checks without any
+project saves: both games, 50 successive tour slides with keyboard navigation,
+SQLite fragment links, repeated themes, and phone views. The Mahjong and
+editor screenshots were inspected. The extracted deployment archive verifies
+all 152 files. After restarting the local server, the actual
+`resources-edge.localhost:3030` URLs for the host, controller, three runtime
+artifacts, and output frame match the export byte-for-byte. The updated
+`/root/resources-bunny.tar.gz` has SHA-256
+`651b7baf88e691cd60a2d41db3079c609a1150e59c06ee4902b1a26a5773218d`.
+The previous archive is retained at
+`/root/archive/2026/09/11/resources-bunny-26ae6b0-before-subscription-recovery.tar.gz`.
+Nothing was deployed to Bunny. Native bulk-input latency, viewport/`rem`
+fidelity, and other service failure paths remain open; this is not completion
+of the broader goal.
