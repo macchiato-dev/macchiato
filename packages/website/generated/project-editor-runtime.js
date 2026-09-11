@@ -1347,8 +1347,9 @@ var WasmWebBridge = class {
       }
       fail(`property get ${name} is not allowed on ${object?.constructor?.name || typeof object}`);
     }
-    function retainScope(node) {
-      if (scopeClass && roots.includes(node)) node.classList.add(scopeClass);
+    function scopedClass(node, value2) {
+      if (!scopeClass || !roots.includes(node) || value2.split(/[\t\n\f\r ]+/).includes(scopeClass)) return value2;
+      return value2 + (value2 ? " " : "") + scopeClass;
     }
     function setAttribute(object, args) {
       requireContentTarget(object);
@@ -1415,8 +1416,7 @@ var WasmWebBridge = class {
       if (args[0] === "translate" && !["no", "yes"].includes(args[1])) {
         fail("translate value is not allowed");
       }
-      object.setAttribute(args[0], args[1]);
-      if (args[0] === "class") retainScope(object);
+      object.setAttribute(args[0], args[0] === "class" ? scopedClass(object, args[1]) : args[1]);
       return null;
     }
     function set(object, name, next) {
@@ -1495,8 +1495,7 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof HTMLElement && name === "className" && typeof next === "string" && /^(?:(?:[a-z_][a-z0-9_-]*)(?:\s+[a-z_][a-z0-9_-]*)*)?$/i.test(next)) {
-        object.className = next;
-        retainScope(object);
+        object.className = scopedClass(object, next);
         return null;
       }
       if (object instanceof HTMLElement && ["textContent", "title"].includes(name) && typeof next === "string") {
@@ -2075,8 +2074,9 @@ var WasmWebBridge = class {
           fail(`attribute removal is not allowed: ${String(args[0])}`);
         }
         if (!isRemovableAttribute(args[0]) && object.hasAttribute(args[0])) fail(`attribute removal is not allowed: ${args[0]}`);
-        object.removeAttribute(args[0]);
-        if (args[0] === "class") retainScope(object);
+        const retained = args[0] === "class" ? scopedClass(object, "") : "";
+        if (retained) object.setAttribute("class", retained);
+        else object.removeAttribute(args[0]);
         return null;
       }
       if (object instanceof Node && name === "closest") {
