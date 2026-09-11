@@ -22,7 +22,7 @@ export function mountContentNameFields() {
     error.hidden = !invalid || !touched;
   }
 
-  document.addEventListener("input", (event) => {
+  function onInput(event) {
     const source = event.target.closest?.("[data-slug-source], #project-name, #organization-name");
     if (source) {
       const id = source.dataset.slugSource || (source.id === "project-name"
@@ -41,9 +41,19 @@ export function mountContentNameFields() {
     }
     const slug = event.target.closest?.(slugSelector);
     if (slug) validate(slug);
-  });
-  document.addEventListener("focusout", (event) => {
+  }
+  function onFocusOut(event) {
     const slug = event.target.closest?.(slugSelector);
     if (slug) validate(slug);
-  });
+  }
+  // These fields already exist when their page/form is mounted. Listening on
+  // them avoids forwarding every CodeMirror input event through unrelated
+  // name validation, especially during a large native insertion.
+  for (const field of document.querySelectorAll(
+    `[data-slug-source], #project-name, #organization-name, ${slugSelector}`)) {
+    field.addEventListener("input", onInput);
+  }
+  for (const field of document.querySelectorAll(slugSelector)) {
+    field.addEventListener("focusout", onFocusOut);
+  }
 }
