@@ -1854,6 +1854,20 @@ test("project resources survive session recovery, API saves, native publication,
   const original = source("Original resource"), changed = source("Recovered resource");
   const output = page.frameLocator("[data-project-output-mount] iframe");
   const filesOf = snapshot => Object.fromEntries(snapshot.files.map(file => [file.path, file.content]));
+  async function fillSessionStorage() {
+    const quota = await page.evaluate(() => {
+      let filler = "", errorName;
+      for (let step = 128 * 1024; step >= 1; step /= 2) {
+        for (;;) {
+          const next = filler + "x".repeat(step);
+          try { sessionStorage.setItem("quota-fixture", next); filler = next; }
+          catch (error) { errorName = error.name; break; }
+        }
+      }
+      return errorName;
+    });
+    assert.equal(quota, "QuotaExceededError", "exercise the browser's real storage quota");
+  }
   async function importSnapshot(snapshot) {
     await page.locator("[data-project-archive-file]").setInputFiles({ name: "resource.zip",
       mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
@@ -1918,6 +1932,25 @@ test("project resources survive session recovery, API saves, native publication,
   assert.equal(published.status(), 303);
   await page.waitForLoadState("networkidle");
 
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
+  await page.locator('[data-tab-path="index.html"] [role="tab"]').click();
+  await fillSessionStorage();
+  const savedUnderQuota = structuredClone(changed);
+  savedUnderQuota.files.find(file => file.path === "index.html").content += '<!--' + "x".repeat(4096) + '-->';
+  await page.locator(".cm-content").click();
+  await page.locator(".cm-content").press("Control+a");
+  await page.keyboard.insertText(savedUnderQuota.files.find(file => file.path === "index.html").content);
+  await page.getByText(/Draft recovery could not be saved/).waitFor();
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftState === "saved");
+  await page.getByText(/Draft recovery could not be saved/).waitFor({ state: "hidden" });
+  const autosavedUnderQuota = await (await page.request.get(new URL(workspaceUrl, page.url()).href)).json();
+  assert.deepEqual(filesOf(autosavedUnderQuota.snapshot),
+    filesOf(savedUnderQuota), "server autosave continues when the local recovery write fails");
+  await page.evaluate(() => sessionStorage.removeItem("quota-fixture"));
+  await page.locator(".cm-content").press("Control+a");
+  await page.keyboard.insertText(changed.files.find(file => file.path === "index.html").content);
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftState === "saved");
+
   const expired = JSON.stringify({ ...changed, files: changed.files.map(file =>
     file.path === "tile.svg" ? { ...file, content: "\0resources-project-resource:1" } : file) });
   await page.evaluate(({ key, expired }) => sessionStorage.setItem(key, expired), { key, expired });
@@ -1948,18 +1981,7 @@ test("project resources survive session recovery, API saves, native publication,
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-draft.png") });
 
   const retained = await page.evaluate(() => sessionStorage.getItem("resources_project_draft_v5"));
-  const quota = await page.evaluate(() => {
-    let filler = "", errorName;
-    for (let step = 128 * 1024; step >= 1; step /= 2) {
-      for (;;) {
-        const next = filler + "x".repeat(step);
-        try { sessionStorage.setItem("quota-fixture", next); filler = next; }
-        catch (error) { errorName = error.name; break; }
-      }
-    }
-    return errorName;
-  });
-  assert.equal(quota, "QuotaExceededError", "exercise the browser's real storage quota");
+  await fillSessionStorage();
   const unsaved = '<h1>After quota</h1><!--' + "x".repeat(4096) + '-->';
   const content = page.locator(".cm-content");
   await content.click();
