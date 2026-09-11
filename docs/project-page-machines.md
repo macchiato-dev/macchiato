@@ -2202,12 +2202,30 @@ previous archive is retained at
 `/root/archive/2026/09/11/resources-bunny-15880ea-before-live-children.tar.gz`.
 Nothing was deployed to Bunny.
 
-Another size/complexity audit remains: `content-form-client.js` retains an
-alternate DOM-rendering path after the editor-owned output early return.
-`project-editor-bootstrap.es5.js` sets that ownership before the application
-starts. Check other consumers before removing or separating the old path;
-optimizing a renderer the current workspace never calls would not improve the
-actual loading or editing path.
+### One project output lifecycle
+
+The project UI no longer includes the obsolete alternate DOM/iframe renderer.
+Its bootstrap already owns compilation and output lifetime through the machine
+devices; the UI now requests that path directly. This removes about 400 authored
+lines and reduces the shipped UI bytecode from 209,652 to 164,028 bytes. The
+combined editor Wasm shrinks by the same 45,624 bytes. The host is unchanged.
+
+Output errors still go to the bootstrap before request-ID lookup: output IDs
+and UI-service request IDs are separate namespaces and can collide. A regression
+test delivers an output error while an import with the same ID is pending and
+checks that only the real import response settles it. Artifact checks compare
+the compiled UI bytecode with `project.bin` inside the shipped Wasm and reject
+the obsolete renderer/iframe transport in the generated UI.
+
+The final build passes 29 focused checks, five workspace/account workflows,
+11 template/workspace scenarios, 20 first-paint/theme checks, and 67 backend
+checks. Read-only exported-asset tests cover all four owner projects, 50 tour
+slides, theme switches, and SQLite fragments; tour and SQLite screenshots were
+reviewed. Export `b558e93` passes the compressed-backend Deno test and all 151
+artifact checks after archive extraction. No Bunny deployment was performed.
+Large-input comparisons use the previous 106 KB source explicitly, so removing
+source lines cannot make the benchmark input smaller. The byte savings alone
+do not establish a typing-latency improvement.
 
 ### Standalone compiler parity
 
