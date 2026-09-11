@@ -1935,6 +1935,40 @@ suite or a declaration that staging is ready. In particular, save/close,
 account interactions, and the remaining example/UI tests need current-browser
 verification instead of blanket expectation changes.
 
+The custom-build, Vue/Svelte, and graphics tests were targeting the outer
+document or a retired frame class. They now inspect the active root inside the
+output iframe. Custom build output, reactive framework counters, Canvas paint,
+WebGL/Three.js pixel checks, and WebGPU readiness all pass. The editor's repeated
+theme-switch test also passes with the current shared gutter palette rather
+than the old One Dark gutter value.
+
+The close-link check found a real bug: `close.href = ...` only assigned a guest
+wrapper property, leaving the native anchor unchanged. The application now uses
+its supported `setAttribute` API. Server-rendered project close links also start
+at `/`, not `/projects`, before the guest loads. A browser regression first
+reproduced the stale link, then verified the saved return path, actual navigation,
+and stack removal after the fix. This checks a restored stack; recording every
+entry path and command-palette transition still needs separate coverage.
+
+The combined rebuild passes 67 backend tests, five focused browser tests, and
+16 editing/first-paint tests. The latter cover desktop and phone, explicit and
+system appearance, unavailable/invalid preferences, and document navigation.
+Screenshots show matching light loading surfaces and separate centered spinners;
+scrolled source remains rendered with aligned gutters. Large-input performance
+is still an open issue: this run pasted 108,261 characters in 839 ms, but native
+insertion of 108,287 characters took 22,049 ms. Passing the editing stress test
+does not make that latency acceptable or close the broader goal.
+
+Export `66294b0` contains these fixes. Its compressed backend executes in Deno,
+and all 151 deployment files verify after archive extraction. Read-only owner
+checks using that export's browser artifacts pass for Mahjong, Cat Memory, the
+tour (50 slides plus embedded/expanded keyboard navigation), and SQLite's
+fragment navigation, without missing assets or project writes. The local server
+uses the rebuilt artifacts. `/root/resources-bunny.tar.gz` now contains this
+export; the previous `57911ab` archive is retained under
+`/root/archive/2026/09/11/`. Nothing has been deployed to Bunny, and the remaining
+broader-suite failures and performance/fidelity work are not waived.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
