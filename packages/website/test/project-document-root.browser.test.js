@@ -20,6 +20,7 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
     html.page { color: purple; font-size: 18px; }
     body.app { color: green; font-size: 20px; margin: 12px; }
     html.page > body.app > p { color: #123456; font-size: 1.25em; }
+    html[class="page"] > body[class="app"] > p { color: #345678; }
     :root > body > p { opacity: .75; }
     html:has(+ #outside) p, body + #outside { color: red; }
   `;
@@ -60,6 +61,8 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
           distinct: document.documentElement !== document.body && document.head !== document.body,
           rootTag: document.documentElement.localName, bodyTag: document.body.localName,
           headTag: document.head.localName,
+          rootClass: document.documentElement.getAttribute("class"),
+          exactClass: document.querySelector('html[class="page"]') === document.documentElement,
           bodyQuery: document.querySelector("html > body") === document.body,
           rootQuery: document.querySelector(":root") === document.documentElement,
           scopeQuery: document.body.querySelector(":scope > p") === document.querySelector("p"),
@@ -83,28 +86,49 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
       observer.observe(own, { attributes: true, attributeFilter: ["class"] });
       for (const change of [
         'document.documentElement.removeAttribute("class")',
+        'document.documentElement.setAttribute("class", "")',
         'document.documentElement.setAttribute("class", "page")',
         'immediate([2, document.documentElement.reference, stringIndex("className"), encode("page")])',
       ]) {
-        run(change + '; __wwcPostMessage("scope:" + (document.querySelector(":root") === document.documentElement));');
-        mutations.push(reports.pop());
+        run(change + `; var value = document.documentElement.getAttribute("class");
+          __wwcPostMessage(JSON.stringify({
+            scope: document.querySelector(":root") === document.documentElement,
+            value: value,
+            exact: document.documentElement.matches(value === null ? ':not([class])' : '[class="' + value + '"]')
+          }));`);
+        mutations.push(JSON.parse(reports.pop()));
         records.push(observer.takeRecords().length);
       }
       observer.disconnect();
-      return { reports: reports.filter(value => value.startsWith("{")).map(JSON.parse),
+      run(`var copy = document.documentElement.cloneNode(false);
+        copy.setAttribute("id", "cloned-root");
+        document.body.appendChild(copy);
+        __wwcPostMessage("clones:" + document.querySelectorAll(":root").length + ":" + copy.matches(":root"));`);
+      const clone = reports.pop();
+      const result = { reports: reports.filter(value => value.startsWith("{")).map(JSON.parse),
         actual, mutations, records,
+        clone, cloneClass: body.querySelector("#cloned-root").getAttribute("class"),
+        cloneScope: body.querySelector("#cloned-root").hasAttribute("data-wwm-scope"),
         expected: [frame.contentDocument.documentElement, frame.contentDocument.body,
           frame.contentDocument.querySelector("p")].map(appearance),
         stylesInHead: head.querySelectorAll("style").length,
         stylesInBody: body.querySelectorAll("style").length,
         host: appearance(document.querySelector("#outside")), hostTitle: document.title };
+      machine.destroy();
+      result.cleanup = { class: own.getAttribute("class"), scope: own.hasAttribute("data-wwm-scope") };
+      return result;
     } finally { machine.destroy(); runtime.destroy(); }
   }, { program, css });
   assert.deepEqual(result.reports, [{ distinct: true, rootTag: "html", bodyTag: "body", headTag: "head",
+    rootClass: "page", exactClass: true,
     bodyQuery: true, rootQuery: true, scopeQuery: true, parent: true, outside: true, rootParent: true }]);
   assert.deepEqual(result.actual, result.expected);
-  assert.deepEqual(result.mutations, ["scope:true", "scope:true", "scope:true"]);
-  assert.deepEqual(result.records, [1, 1, 1]);
+  assert.deepEqual(result.mutations, [null, "", "page", "page"].map(value => ({ scope: true, value, exact: true })));
+  assert.deepEqual(result.records, [1, 1, 1, 1]);
+  assert.equal(result.clone, "clones:1:false");
+  assert.equal(result.cloneClass, "page");
+  assert.equal(result.cloneScope, false);
+  assert.deepEqual(result.cleanup, { class: "page", scope: false });
   assert.equal(result.stylesInHead, 1);
   assert.equal(result.stylesInBody, 0);
   assert.equal(result.host.color, "rgb(0, 0, 0)");

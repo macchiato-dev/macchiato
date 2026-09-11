@@ -201,6 +201,9 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     'document.querySelector("main").style.setProperty("background-image", "url(https://outside.test/background.png)");',
     'document.querySelector("main").innerHTML = \'<img src="https://outside.test/inner.png">\';',
     'document.querySelector("main").innerHTML = \'<svg><image href="https://outside.test/svg.png" /></svg>\';',
+    'document.documentElement.setAttribute("data-wwm-scope", "spoof");',
+    'document.documentElement.removeAttribute("data-wwm-scope");',
+    'document.querySelector("main").innerHTML = \'<div data-wwm-scope="spoof"></div>\';',
   ]) {
     boundaryFiles[1].content = source;
     await assert.rejects(load(boundaryFiles), undefined, source);

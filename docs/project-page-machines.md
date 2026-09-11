@@ -3045,8 +3045,26 @@ Only semantic operations cross from that guest into the DOM display device.
 CSS already active in the initial document was checked before the document was
 sent and is inherited directly.
 
-Container-mode stylesheets are scoped to a unique machine-owned root class.
-Selectors that name `html`, `body`, or `:root` map to that root instead of the
-host document. Document-mode machines remain explicitly page-wide. Browser
+Container-mode stylesheets are scoped with a reserved `data-wwm-scope`
+attribute, not a class added to the application's class list. A staged HTML
+document keeps distinct root, head, and body elements; a div grant retains the
+single-root mapping. Document-mode machines remain explicitly page-wide. Browser
 tests place a matching host element beside output and prove that guest styles
 cannot affect it.
+
+### Native root classes and host-only scope markers
+
+The exact-class regression reproduced the old mismatch before the change:
+the guest read `page wwm-…` instead of `page`, and `html[class="page"]`
+failed. Boundary identifiers now occupy only the reserved host attribute.
+Class removal, empty values, assignment, and exact selectors follow native
+behavior, with one mutation record per write. Cloning strips scope markers;
+guest writes/removal and HTML-based spoofing are rejected. Detached grants
+participate in collision checks, shared roots keep independent identifiers,
+and repeated cleanup cannot remove a later machine's reused identifier.
+
+Type checking and 102 browser checks pass, including direct and iframe module
+loading, CSS/image handling, selector predicates, ranges, references, document
+parts, and inline output updates. The matched Resources export and its full
+application checks are still required before promoting this host locally.
+The viewport/`rem` and bulk-input performance work remains open.

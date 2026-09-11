@@ -49,7 +49,7 @@ test('semantic selector rendering confines native matching context', async t => 
       });
       assert.deepEqual(rendered, [
         'p.note[data-x="a,b"]:hover::before',
-        'p.note[data-x="a,b"]:hover:where(.wwm-12345, .wwm-12345 *)::before',
+        'p.note[data-x="a,b"]:hover:where([data-wwm-scope~="wwm-12345"], [data-wwm-scope~="wwm-12345"] *)::before',
       ]);
     } finally { await page.close(); }
   });
@@ -79,7 +79,7 @@ test('semantic selector rendering confines native matching context', async t => 
       await page.route('http://selector-renderer.test/**', route => route.fulfill(
         new URL(route.request().url()).pathname === '/renderer.js'
           ? { body: bundle.outputFiles[0].text, contentType: 'text/javascript' }
-          : { body: '<body data-private="yes"><div id="before">Host</div><main id="own" class="wwm-12345"><p>First</p><p>Second</p></main><div id="after" data-private="yes">Host</div>', contentType: 'text/html' }));
+          : { body: '<body data-private="yes"><div id="before">Host</div><main id="own" data-wwm-scope="wwm-12345"><p>First</p><p>Second</p></main><div id="after" data-private="yes">Host</div>', contentType: 'text/html' }));
       await page.goto('http://selector-renderer.test/');
       const result = await page.evaluate(async probe => {
         const { renderSelector } = await import('/renderer.js');
@@ -142,7 +142,7 @@ test('semantic selector rendering confines native matching context', async t => 
           style.textContent = rules.map(rule => rule.source + '{color:' + rule.color + '}').join('\n');
           const native = colors();
           document.body.id = ''; document.body.className = '';
-          document.body.innerHTML = '<div>Host sibling</div><main id="own" class="wwm-12345 game text"><p class="text">Text</p></main>';
+          document.body.innerHTML = '<div>Host sibling</div><main id="own" data-wwm-scope="wwm-12345" class="game text"><p class="text">Text</p></main>';
           document.body.append(style);
           style.textContent = rules.map(rule => renderSelector(rule.ast, 'wwm-12345', true) + '{color:' + rule.color + '}').join('\n');
           samples.push({ rules: rules.map(rule => rule.source), native, scoped: colors() });
