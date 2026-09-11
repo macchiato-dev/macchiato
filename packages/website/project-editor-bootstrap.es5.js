@@ -157,7 +157,11 @@
         if (generation !== outputGeneration) return;
         root.setAttribute("data-output-machine-state", "failed");
         root.setAttribute("data-output-machine-error", message);
-        globalThis.__wwcReportError(message);
+        // Invalid project input is an output error, not an interpreter fault.
+        // Keep the editor usable and let its UI place/dismiss the status rail.
+        if (globalThis.__resourcesEditorLocalReceive) {
+          globalThis.__resourcesEditorLocalReceive({ type: "output-error", message: message });
+        }
       }, 5000);
       loadProjectUi();
     });
