@@ -121,6 +121,9 @@ test("resource session writes are atomic and leave ordinary storage alone", () =
   const compact = resources.compactSnapshot({ files: [{ path: "tile.svg", content: "tile" }] });
   assert.throws(() => storage.set("session", key, JSON.stringify(compact)), /Quota exceeded/);
   assert.equal(storage.get("session", key), plain, "a failed write does not delete previous recovery data");
+  window.sessionStorage.setItem = () => { throw new DOMException("full", "QuotaExceededError"); };
+  assert.deepEqual(storage.writeRecovery(key, JSON.stringify(compact)), { error: "Browser session storage is full" });
+  assert.equal(storage.get("session", key), plain, "the application service also preserves the previous record");
 });
 
 test("expired, missing, conflicting, and malformed session resources never change the live table", () => {

@@ -76,6 +76,7 @@ export async function startResourcesMachineController() {
   synchronousServices = Object.freeze({
     "session.has": (payload) => storageDevice.hasSessionValue(payload.key),
     "session.recovery": (payload) => storageDevice.readRecovery(payload.key),
+    "session.writeRecovery": (payload) => storageDevice.writeRecovery(payload.key, payload.value),
     "navigation.type": () => window.performance.getEntriesByType("navigation")[0]?.type || "navigate",
     "appearance.theme": () => document.documentElement.dataset.theme === "light" ? "light" : "dark",
     "archive.download": (payload) => archiveDevice.download(payload),

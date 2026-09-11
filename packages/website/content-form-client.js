@@ -1,6 +1,6 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty, projectSnapshotsEqual } from "/-/resources-site/project-history.js";
 import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
-import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, navigationType, readProjectRecovery, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
+import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, navigationType, readProjectRecovery, replaceFrontendPath, writeProjectRecovery } from "/-/resources-site/project-editor-runtime.js";
 import { editorLanguageForPath } from "../project-editor/src/languages.js";
 import { mountContentNameFields } from "./content-name-fields.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "./project-session.js";
@@ -429,6 +429,7 @@ async function mountProjectRoot(root) {
   const historyInEditorMachine = snapshotField.value.length <= 256_000;
   let recoveredPendingSnapshot = false;
   let recoveryFailure = "";
+  let recoveryWriteError = "";
   function readRecovery(key) {
     try { return readProjectRecovery(key); }
     catch (error) {
@@ -495,6 +496,7 @@ async function mountProjectRoot(root) {
   let activeStatusSurface = "output";
   let activeNotice = false;
   let persistenceState = status.dataset.state || "normal";
+  let persistenceText = statusSave.textContent;
   function showCurrentVersion() {
     currentVersion.textContent = relativeVersionTime(currentUpdatedAt);
     currentVersion.dataset.versionTime = String(currentUpdatedAt);
@@ -754,10 +756,10 @@ async function mountProjectRoot(root) {
   }
 
   function renderStatusState() {
-    status.dataset.state = activeError ? "error" : activeNotice ? "warning" : persistenceState;
-    const persistenceWarning = !activeError && !activeNotice && persistenceState === "warning";
+    status.dataset.state = activeError ? "error" : activeNotice || recoveryWriteError ? "warning" : persistenceState;
+    const persistenceWarning = !activeError && !activeNotice && (persistenceState === "warning" || Boolean(recoveryWriteError));
     const workspaceView = root.querySelector(".project-editor__workspace")?.dataset.view;
-    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor"
+    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" || (persistenceWarning && recoveryWriteError)
       ? editorMount.closest(".project-editor__source")
       : preview.closest(".project-editor__preview");
     if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
@@ -765,6 +767,17 @@ async function mountProjectRoot(root) {
     statusNotice.hidden = !activeNotice || Boolean(activeError);
     statusError.hidden = !activeError;
     statusSave.hidden = !persistenceWarning;
+    statusSave.textContent = recoveryWriteError
+      ? `Draft recovery could not be saved: ${recoveryWriteError}. Your edits remain in this tab. Save the project or export a ZIP before closing it.`
+      : persistenceText;
+    if (recoveryWriteError) {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "project-editor__status-action";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => { clearTimeout(saveTimer); save(); });
+      statusSave.append(document.createTextNode(" "), retry);
+    }
     statusError.replaceChildren();
     if (activeError) statusError.append(document.createTextNode(activeError));
     if (activeErrorAction) {
@@ -807,7 +820,7 @@ async function mountProjectRoot(root) {
     }
     else {
       persistenceState = nextState;
-      statusSave.textContent = text;
+      persistenceText = text;
     }
     renderStatusState();
   }
@@ -817,6 +830,17 @@ async function mountProjectRoot(root) {
     activeErrorAction = null;
     renderStatusState();
     mountEditorMachine("manual-reset");
+  }
+
+  function storeRecovery(key, value) {
+    let error = "";
+    try { writeProjectRecovery(key, value); }
+    catch (failure) { error = failure.message || String(failure); }
+    if (error !== recoveryWriteError) {
+      recoveryWriteError = error;
+      renderStatusState();
+    }
+    return !error;
   }
 
   function updateSnapshot(next, { destructive = false } = {}) {
@@ -834,7 +858,7 @@ async function mountProjectRoot(root) {
     const serialized = JSON.stringify(state);
     snapshotField.value = serialized;
     pending = true;
-    if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, serialized);
+    if (pendingSnapshotKey && !draft && !memoryOnly) storeRecovery(pendingSnapshotKey, serialized);
     root.dataset.draftDirty = "true";
     root.dataset.draftState = "dirty";
     unsavedChangeCount += 1;
@@ -846,7 +870,7 @@ async function mountProjectRoot(root) {
     if (draft || memoryOnly) {
       localHistory.snapshot = state;
       if (editorController && historyInEditorMachine) localHistory = editorController.history.setCurrent(state);
-      if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+      if (draft) storeRecovery(DRAFT_KEY, JSON.stringify(localHistory));
     }
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 1_500);
@@ -854,7 +878,7 @@ async function mountProjectRoot(root) {
   }
 
   function checkpointDraft({ destructive = false } = {}) {
-    if (recoveryFailure) return;
+    if (recoveryFailure) return false;
     const now = Date.now();
     if (editorController && historyInEditorMachine) {
       localHistory = editorController.history.checkpoint(state, {
@@ -862,25 +886,29 @@ async function mountProjectRoot(root) {
         destructive,
         checkpointIntervalMs: CHECKPOINT_MS,
       });
-    } else {
-      if (!destructive && now - localHistory.lastVersionAt < CHECKPOINT_MS) return;
+    } else if (destructive || now - localHistory.lastVersionAt >= CHECKPOINT_MS) {
       const patch = diffProjectSnapshots(localHistory.snapshots.at(-1), state);
-      if (projectPatchIsEmpty(patch)) return;
-      localHistory.patches.push(patch);
-      localHistory.snapshots.push(state);
-      localHistory.versionTimes.push(now);
-      localHistory.checkpoint = state;
-      localHistory.lastVersionAt = now;
-      localHistory.snapshot = state;
+      if (!projectPatchIsEmpty(patch)) {
+        localHistory.patches.push(patch);
+        localHistory.snapshots.push(state);
+        localHistory.versionTimes.push(now);
+        localHistory.checkpoint = state;
+        localHistory.lastVersionAt = now;
+        localHistory.snapshot = state;
+      }
     }
     versionCount.textContent = String(localHistory.patches.length);
-    if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+    return !draft || storeRecovery(DRAFT_KEY, JSON.stringify(localHistory));
   }
 
   async function save() {
     if (!pending || saving) return;
     if (draft || memoryOnly) {
-      if (!templateOnlyPending) checkpointDraft({ destructive: pendingDestructive || selected === "config" });
+      if ((!templateOnlyPending || recoveryWriteError) &&
+          !checkpointDraft({ destructive: pendingDestructive || selected === "config" })) {
+        root.dataset.draftState = "warning";
+        return;
+      }
       pending = false;
       pendingDestructive = false;
       templateOnlyPending = false;
@@ -929,6 +957,7 @@ async function mountProjectRoot(root) {
         delete root.dataset.draftDirty;
         root.dataset.draftState = "saved";
         if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
+        recoveryWriteError = "";
         setStatus("Saved");
       } else {
         setStatus("Saving…");

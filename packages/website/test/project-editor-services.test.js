@@ -18,6 +18,7 @@ test("output errors do not resolve an unrelated pending editor service request",
   runInNewContext(bundle.outputFiles[0].text, context);
   assert.equal(context.Services.navigationType(), "reload");
   assert.throws(() => context.Services.readProjectRecovery("expired"), /Project recovery resource is unavailable/);
+  assert.throws(() => context.Services.writeProjectRecovery("expired", "{}"), /Project recovery resource is unavailable/);
   const imported = context.Services.importProjectArchive();
   assert.equal(requests.length, 1);
   const { id } = requests[0];

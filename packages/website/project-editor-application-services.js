@@ -79,6 +79,11 @@ export function readProjectRecovery(key) {
   return result.value;
 }
 
+export function writeProjectRecovery(key, value) {
+  const result = callHost("session.writeRecovery", { key, value });
+  if (result.error) throw new Error(result.error);
+}
+
 export async function mountResourcesProjectEditor(options) {
   listeners = options;
   let lastContent, lastValue;

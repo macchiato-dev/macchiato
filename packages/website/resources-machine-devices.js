@@ -140,6 +140,12 @@ export class ResourcesStorageDevice {
     try { return { value: this.get("session", key), error: null }; }
     catch (error) { return { value: null, error: error.message || String(error) }; }
   }
+  writeRecovery(key, value) {
+    try { this.set("session", key, value); return { error: null }; }
+    catch (error) {
+      return { error: error.name === "QuotaExceededError" ? "Browser session storage is full" : error.message || String(error) };
+    }
+  }
   get(kind, key) {
     const value = this.area(kind).getItem(key);
     return value !== null && this.projectSession(kind, key)
