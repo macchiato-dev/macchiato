@@ -2351,6 +2351,29 @@ takes about 300 ms. That overhead alone does not explain the bulk-input
 difference. No speculative parser fast path was shipped; browser layout and
 the complete native input sequence need another controlled profile.
 
+### Grid-positioned CodeMirror surface
+
+A controlled full-workspace trace with the fixed 106,432-character input shows
+7,840 layout passes taking 8.55 seconds inside a 22.26-second native insertion.
+The CPU profile attributes most time to browser work, not the Wasm bridge.
+Adding layout containment alone leaves those document-level passes in place.
+
+Positioning the editor mount absolutely within its first grid cell reduces the
+trace's layout time to 4.77 seconds and the native insertion to 15.37 seconds,
+without intercepting input or changing CodeMirror's execution model. The
+mount's offsets are relative to its assigned grid cell, not hardcoded viewport
+coordinates. An explicit ending grid line is necessary: leaving it automatic
+would extend the mount over the separate error row. That error row stays in
+normal grid layout, and image views still use the first row when selected.
+
+The site stylesheet now expresses this placement. Only numeric `grid-column`
+and `grid-row-end` declarations were added to the site's existing CSS schema;
+there is no Machine Host or guest-runtime change. Browser coverage checks
+Find/Replace in both themes at desktop/phone widths and verifies that a wrapped
+error shrinks the editor, remains below it, and releases its space on removal.
+The full editing stress case remains the behavioral check for native insertion,
+paste, history, drag, undo/redo, responsive splits, and machine identity.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
