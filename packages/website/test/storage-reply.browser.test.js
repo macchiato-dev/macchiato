@@ -169,6 +169,35 @@ for (const framed of [false, true]) test(`storage replies and subscription dispo
     id, calls: id === 0 || id === 4095 ? 1 : 0,
     stops: id === 0 || id === 4095 ? 1 : 0, blocked: id !== 0 && id !== 4095,
   })), "invalid callback IDs never reach the storage driver; boundary IDs are cleaned up");
+  const boundedFailure = await target.evaluate(async () => {
+    const { Machine, QuickJSRuntime } = await import("/module.js");
+    const runtime = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/runtime.wasm")));
+    let response;
+    const machine = new Machine(runtime.createSession(), document.querySelector("#mount"), {
+      onMessage: message => { response = JSON.parse(message); },
+      services: { storage: { listen() {
+        const error = new Error("\\\nλ".repeat(2000));
+        error.name = "X".repeat(100);
+        throw error;
+      } } },
+    });
+    try {
+      machine.onmsg(0);
+      const source = new TextEncoder().encode(`
+        try { localStorage.listen("key", function () {}); }
+        catch (error) { __wwcPostMessage(JSON.stringify({
+          name: error.name, message: error.message, isError: error instanceof Error
+        })); }
+      `);
+      const message = new Uint8Array(source.length + 1);
+      message[0] = 1; message.set(source, 1);
+      machine.onmsg(message);
+      return response;
+    } finally { machine.destroy(); runtime.destroy(); }
+  });
+  assert.deepEqual(boundedFailure, { name: "X".repeat(64),
+    message: "\\\nλ".repeat(2000).slice(0, 4096), isError: true },
+  "wire strings preserve escapes and Unicode while bounding service error text");
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);
 });

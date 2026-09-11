@@ -3285,3 +3285,23 @@ archive is retained at
 No owner project was saved and nothing was deployed to Bunny. Bulk-input
 latency, broader service-error handling, and viewport/`rem` fidelity remain
 open; this is not completion of the full goal.
+
+### Storage subscription failures (2026-09-11)
+
+Denied storage access during subscription still escaped through the native
+import rather than becoming a catchable guest exception. The browser test
+reproduced that failure before the change. `storageListen` now returns a small
+binary failure payload containing the error name and message, using the
+existing wire string encoding and limits of 64 and 4096 UTF-16 code units.
+Successful registration still returns null and retains its disposal callback.
+The guest reconstructs the exception and releases the callback slot when
+registration fails. Invalid callback IDs are rejected before the service is
+called; this does not introduce a general exception protocol for all methods.
+
+The first build found a MicroQuickJS catch-binding conflict; the replacement
+error now has a separate variable name. Inspection also caught the nested
+reader incorrectly assuming an outer length header. The browser regression
+confirmed that mismatch as `unknown wire value` with the previous generated
+guest. The nested reader now starts at byte zero. Both fixes require rebuilding
+the host and guest together; the preceding verified export remains live while
+the corrected build is checked.
