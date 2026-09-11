@@ -1,3 +1,5 @@
+import { storageRequest } from "./resources-storage-client.js";
+
 const pending = new Map();
 let nextRequest = 1;
 let editorListeners = null;
@@ -7,7 +9,7 @@ function call(name, payload = {}) {
   return JSON.parse(globalThis.__wwcServiceCall(name, JSON.stringify(payload)));
 }
 
-export function hasSessionValue(key) { return call("session.has", { key }); }
+export function hasSessionValue(key) { return storageRequest("has", "session", key); }
 export function navigationType() { return call("navigation.type"); }
 
 export function requestFrontendService(name, payload = {}) {

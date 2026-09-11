@@ -74,7 +74,7 @@ export async function startResourcesMachineController() {
     "output.mount": (payload) => editorDevice.mountOutput(payload),
   });
   synchronousServices = Object.freeze({
-    "session.has": (payload) => storageDevice.hasSessionValue(payload.key),
+    "storage.request": (payload) => storageDevice.request(payload),
     "session.recovery": (payload) => storageDevice.readRecovery(payload.key),
     "session.writeRecovery": (payload) => storageDevice.writeRecovery(payload.key, payload.value),
     "navigation.type": () => window.performance.getEntriesByType("navigation")[0]?.type || "navigate",

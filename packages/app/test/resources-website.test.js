@@ -1067,6 +1067,46 @@ test("project output fetches supplied files and rejects outside requests through
   assert.deepEqual(errors, []);
 });
 
+test("Resources editor remains usable when browser storage access is denied", { timeout: 60000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.addInitScript(() => {
+    for (const name of ["localStorage", "sessionStorage"]) {
+      Object.defineProperty(window, name, { configurable: true, get() {
+        throw new DOMException("Browser storage access is denied", "SecurityError");
+      } });
+    }
+  });
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
+  try { await page.locator(".cm-content").waitFor({ timeout: 10000 }); }
+  catch (error) {
+    const state = await page.evaluate(() => ({
+      frontend: document.documentElement.dataset.resourcesFrontendMachineState,
+      frontendError: document.documentElement.dataset.resourcesFrontendMachineError,
+      editor: document.querySelector("[data-project-editor]")?.dataset.editorMachineState,
+      editorError: document.querySelector("[data-project-editor]")?.dataset.editorMachineError,
+      status: document.querySelector("[data-project-status]")?.textContent,
+    }));
+    throw new Error(`Editor failed with storage denied: ${JSON.stringify({ errors, state })}`, { cause: error });
+  }
+  await page.locator(".cm-content").fill("<h1>Editing without storage</h1>");
+  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+    name: "Editing without storage", exact: true,
+  }).waitFor();
+  await page.getByRole("button", { name: "Select a file or view" }).click();
+  await page.getByRole("menuitemradio", { name: "style.css", exact: true }).click();
+  await page.getByRole("tab", { name: "index.html", exact: true }).click();
+  assert.match(await page.locator(".cm-content").innerText(), /Editing without storage/);
+  assert.deepEqual(errors, []);
+});
+
 test("organization naming adopts input typed before the outer guest is ready", { timeout: 45000 }, async t => {
   const port = await getPort(), dataDir = await tempDir();
   const app = startApp(port, dataDir);

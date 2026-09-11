@@ -1,3 +1,4 @@
+import "./resources-storage-client.js";
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty, projectSnapshotsEqual } from "/-/resources-site/project-history.js";
 import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, navigationType, readProjectRecovery, replaceFrontendPath, writeProjectRecovery } from "/-/resources-site/project-editor-runtime.js";
@@ -22,6 +23,12 @@ function internalHref(link) {
   return href.startsWith("/") && !href.startsWith("//") ? href : null;
 }
 
+// Tab arrangement and close navigation are optional preferences, not recovery
+// records. Losing their persistence must not prevent editing or navigation.
+function rememberSession(key, value) {
+  try { sessionStorage.setItem(key, value); } catch {}
+}
+
 for (const split of document.querySelectorAll("[data-save-split]")) {
   const trigger = split.querySelector("[data-save-menu-trigger]");
   const menu = split.querySelector("[data-save-menu]");
@@ -44,7 +51,7 @@ document.addEventListener("click", (event) => {
     try { stack = JSON.parse(sessionStorage.getItem("resources-project-close-stack")) || []; } catch {}
     const current = location.pathname + location.search;
     if (stack.at(-1) !== current) stack.push(current);
-    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
+    rememberSession("resources-project-close-stack", JSON.stringify(stack.slice(-20)));
   }
 });
 for (const close of document.querySelectorAll(".project-close")) {
@@ -56,7 +63,7 @@ for (const close of document.querySelectorAll(".project-close")) {
     !previous.startsWith("//") ? previous : "/");
   close.addEventListener("click", () => {
     stack.pop();
-    sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
+    rememberSession("resources-project-close-stack", JSON.stringify(stack));
   });
 }
 
@@ -430,6 +437,10 @@ async function mountProjectRoot(root) {
   let recoveredPendingSnapshot = false;
   let recoveryFailure = "";
   let recoveryWriteError = "";
+  function removeRecovery(key) {
+    try { sessionStorage.removeItem(key); }
+    catch (error) { recoveryFailure = error.message || String(error); }
+  }
   function readRecovery(key) {
     try { return readProjectRecovery(key); }
     catch (error) {
@@ -449,11 +460,11 @@ async function mountProjectRoot(root) {
           snapshotField.value = JSON.stringify(state);
           recoveredPendingSnapshot = true;
         } else {
-          sessionStorage.removeItem(pendingSnapshotKey);
+          removeRecovery(pendingSnapshotKey);
         }
       }
     } catch {
-      sessionStorage.removeItem(pendingSnapshotKey);
+      removeRecovery(pendingSnapshotKey);
     }
   }
   if (workspacePayload) {
@@ -526,7 +537,7 @@ async function mountProjectRoot(root) {
   if (draft || memoryOnly) {
     if (draft) {
       const navigation = navigationType();
-      if (navigation !== "reload" && navigation !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+      if (navigation !== "reload" && navigation !== "back_forward") removeRecovery(DRAFT_KEY);
       try {
         const stored = JSON.parse(readRecovery(DRAFT_KEY));
         if (stored?.patches?.length) {
@@ -537,7 +548,7 @@ async function mountProjectRoot(root) {
           state = normalizeProjectSnapshot(stored.snapshot);
         }
       } catch {
-        sessionStorage.removeItem(DRAFT_KEY);
+        removeRecovery(DRAFT_KEY);
       }
     }
     localHistory ||= draftHistory(state);
@@ -733,7 +744,7 @@ async function mountProjectRoot(root) {
     openTabs = openTabs.filter((path, index) => available.has(path) && openTabs.indexOf(path) === index);
     if (!openTabs.length) openTabs.push(selectedAvailable ? selected : state.files[0]?.path || "config");
     if (selectedAvailable && !openTabs.includes(selected)) openTabs.push(selected);
-    sessionStorage.setItem(tabSessionKey, JSON.stringify(openTabs));
+    rememberSession(tabSessionKey, JSON.stringify(openTabs));
     menu.replaceChildren();
     for (const button of tabs.querySelectorAll("[data-instant-tooltip-attached='true']")) {
       button._hideInstantTooltip?.();

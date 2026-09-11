@@ -153,6 +153,20 @@ export class ResourcesStorageDevice {
       (key === DRAFT_KEY || key.startsWith(PENDING_KEY_PREFIX));
   }
   hasSessionValue(key) { return this.window.sessionStorage.getItem(key) !== null; }
+  request({ operation, kind, key, value }) {
+    try {
+      if (kind !== "session" && kind !== "local") throw new TypeError("Unknown storage area");
+      switch (operation) {
+        case "has": return { value: this.area(kind).getItem(key) !== null };
+        case "get": return { value: this.get(kind, key) };
+        case "set": this.set(kind, key, value); return { value: null };
+        case "delete": this.delete(kind, key); return { value: null };
+        default: throw new TypeError("Unknown storage operation");
+      }
+    } catch (error) {
+      return { error: { name: error.name || "Error", message: error.message || String(error) } };
+    }
+  }
   readRecovery(key) {
     try { return { value: this.get("session", key), error: null }; }
     catch (error) { return { value: null, error: error.message || String(error) }; }

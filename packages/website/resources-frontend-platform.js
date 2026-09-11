@@ -1,3 +1,5 @@
+import "./resources-storage-client.js";
+
 // MicroQuickJS intentionally has no Proxy. The build lowers static dataset
 // access to these ordinary DOM calls, preserving the browser-facing data-* API
 // without adding a proxy implementation to the resident runtime.
