@@ -2458,7 +2458,19 @@ test("project resources survive session recovery, API saves, native publication,
   async function importSnapshot(snapshot) {
     await page.locator("[data-project-archive-file]").setInputFiles({ name: "resource.zip",
       mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
-    await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "ZIP imported");
+    try {
+      await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "ZIP imported");
+    } catch (error) {
+      t.diagnostic(JSON.stringify({ errors, importState: await page.evaluate(() => ({
+        button: document.querySelector("[data-project-save]")?.textContent,
+        status: document.querySelector("[data-project-status]")?.textContent,
+        editor: { ...document.querySelector("[data-project-editor]")?.dataset },
+        files: JSON.parse(document.querySelector("[data-project-snapshot]").value).files
+          .map(file => ({ path: file.path, length: file.content.length })),
+      })) }));
+      await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/project-resource-import-failed.png") });
+      throw error;
+    }
   }
   async function exportedFiles() {
     await page.getByRole("button", { name: "Editor menu" }).click();

@@ -3240,3 +3240,26 @@ MicroQuickJS build: its native `collection_table_find` still scans entries.
 The existing property table supplies hashed lookup without changing the
 interpreter or adding a host operation. This removes one guest-side scan, not
 the thousands of browser layout passes or the overall large-input bottleneck.
+
+Both old/new guest-environment comparison runs pass exact text, one change
+notification, undo/redo, and typo/correction checks on the first page. Each
+uses native/Wasm/Wasm/native order at 585 px width. The new environment's
+Wasm bulk insertion/replacement samples were 14.2–17.8 seconds versus
+22.5–24.6 seconds with the old environment, but the unchanged native control
+also varied greatly (19.7 down to 10.8 seconds within the newer run). These
+samples cannot establish how much, if any, end-to-end improvement comes from
+this small change. Results are `mutation-parent-{old,new}-bulk/bulk-input.json`.
+The operation-count regression, rather than those unstable timings, proves
+that the repeated guest array search was removed.
+
+The candidate's unprofiled workspace stress run passes in 104.5 seconds with
+39.5-second native insertion. A subsequent unchanged-baseline run passes in
+137.0 seconds with 52.2-second insertion; this session is not providing stable
+latency comparisons. The candidate also passes the twelve focused checks,
+including stamped/downloaded languages and native mutation equivalence. Its
+first-paint, theme-switch, and denied-storage workflows pass, but the combined
+recovery/export test timed out waiting for the transient `ZIP imported` label.
+That failure is not counted as a pass. The test now captures status, loaded
+file identities, machine state, errors, and a screenshot on failure, and is
+being rerun separately before promotion. The live editor bytes and the Bunny
+archive still match the preceding `cd95394` export.

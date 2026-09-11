@@ -9,7 +9,9 @@ test("mutation parent reconciliation preserves order without repeated linear sea
   const start = source.indexOf("function readMutationBatch(");
   const end = source.indexOf("function GuestMutationObserver(", start);
   assert.ok(start >= 0 && end > start, "exercise the actual guest adapter");
-  const parents = Array.from({ length: 2000 }, (_, reference) => ({ reference }));
+  // Reference-number order need not match the order mutations first see nodes.
+  const parents = Array.from({ length: 2000 }, (_, index) => ({ reference: index * 37 % 2000 }));
+  const nodes = new Map(parents.map(parent => [parent.reference, parent]));
   const targets = [...parents, ...parents.toReversed()];
   const synchronized = [], released = [];
   const context = {
@@ -25,7 +27,7 @@ test("mutation parent reconciliation preserves order without repeated linear sea
       assert.equal(name, "item");
       return ["ref", args[0]];
     },
-    nodeForReference: reference => parents[reference],
+    nodeForReference: reference => nodes.get(reference),
     synchronizeGuestChildren: parent => synchronized.push(parent),
     releaseHostReferenceLease: reference => released.push(reference),
     releaseHostReference: token => released.push(token),
