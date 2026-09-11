@@ -1681,6 +1681,21 @@ invalidation, extra observer, or changed event-delivery timing was introduced.
 Other mirrored properties still need their own pre-observer parity checks;
 this change does not make the entire guest DOM immediately native.
 
+The integrated rebuild passes 43 regression checks covering both language
+delivery modes, new-node identity, native mutation records, caret blinking,
+text dragging, undo/redo, disposal, iframe output, reference containment, and
+bytecode/source parity. The full project editing workflow passes too: its
+110 KB paste took 0.89 seconds and native insertion took 29.7 seconds. The
+scrolled editor screenshot was inspected. After restarting the local server,
+the read-only owner check again passes divider dragging and invalid-to-valid
+font CSS recovery, with 144 tiles and three intercepted autosaves.
+
+Export `8dbeaa1` passes the four stored projects, including 50 tour slides,
+SQLite fragment navigation, theme changes, compressed backend execution in
+Deno, and all 151 manifest entries. `/root/resources-bunny.tar.gz` contains
+this export, verified after extraction; the previous `baa22c7` archive is
+preserved under `/root/archive/2026/09/11/`. No Bunny deployment was performed.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
