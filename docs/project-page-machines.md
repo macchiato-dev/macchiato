@@ -2374,6 +2374,23 @@ error shrinks the editor, remains below it, and releases its space on removal.
 The full editing stress case remains the behavioral check for native insertion,
 paste, history, drag, undo/redo, responsive splits, and machine identity.
 
+The normal production-layout stress run passes without diagnostic overrides:
+855 ms for paste and 16,198 ms for native insertion. Checkpoint `e13d384` also
+passes both recovery/publication workflows and twenty appearance checks. Its
+exported assets run all four owner projects; after restarting the local server,
+the checks explicitly assert the computed absolute editor placement as well as
+the working iframe output, theme switching, fifty tour slides, and SQLite
+navigation. This avoids mistaking new JavaScript with old server-rendered CSS
+for verification of the layout change.
+
+The Deno compressed-backend check and all 151 archive files pass. The local
+server and `/root/resources-bunny.tar.gz` use this checkpoint; the previous
+archive is retained at
+`/root/archive/2026/09/11/resources-bunny-0351f98-before-grid-editor.tar.gz`.
+No Bunny deployment or owner-project save was performed. Bulk insertion still
+takes substantially longer than ordinary typing or paste; this improvement
+does not close the remaining performance, recovery-quota, or DOM-fidelity work.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
