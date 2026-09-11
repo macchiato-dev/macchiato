@@ -83,7 +83,8 @@ test("storage errors return through the service and are thrown inside the guest"
   for (const oversized of ["x".repeat(3 * 1024 * 1024), "\\".repeat(1100000), "\0".repeat(400000)]) {
     values.set("large", oversized);
     returned = false;
-    assert.throws(() => context.localStorage.getItem("large"), error => error.name === "RangeError");
+    assert.throws(() => context.localStorage.getItem("large"), error =>
+      error.name === "RangeError" && error.constructor.name === "RangeError");
     assert.equal(returned, true, "an oversized reply returns an error before the guest throws");
     assert.equal(values.get("large"), oversized, "reading a large value must not truncate or delete it");
   }

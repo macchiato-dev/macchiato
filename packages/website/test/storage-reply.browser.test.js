@@ -22,7 +22,7 @@ for (const framed of [false, true]) test(`storage replies and subscription dispo
           localStorage.setItem("small", "still working");
           document.getElementById("result").textContent = value + ": " + localStorage.getItem("small");
         } catch (error) {
-          document.getElementById("result").textContent = error.name + ": " + error.message;
+          document.getElementById("result").textContent = error.name + ": " + (error instanceof RangeError) + ": " + error.message;
         }
       }
       document.getElementById("read").addEventListener("click", read);
@@ -61,7 +61,7 @@ for (const framed of [false, true]) test(`storage replies and subscription dispo
       () => ({ services: { storage } }), error => { throw error; });
     await output.load(program);
   }, program);
-  assert.equal(await target.locator("#result").textContent(), "RangeError: Storage response exceeds its text limit");
+  assert.equal(await target.locator("#result").textContent(), "RangeError: true: Storage response exceeds its text limit");
   assert.equal(await target.evaluate(() => localStorage.getItem(storage.key("large")).length), 1100000);
   await target.evaluate(() => localStorage.setItem(storage.key("large"), "recovered"));
   await target.getByRole("button", { name: "Read storage", exact: true }).click();
