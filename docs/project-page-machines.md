@@ -2841,6 +2841,38 @@ the verified export. The previous archive is retained beneath
 to Bunny. Remaining fidelity work includes HTML document-root semantics and
 character references, in addition to the larger performance/service checks.
 
+### HTML character references in the compiler guest
+
+The inert parser previously left `&nbsp;`, `&amp;`, numeric references, and
+encoded attribute values unchanged. Native-browser comparison fixtures exposed
+the literal spelling in the project tree instead of the intended characters.
+It now uses the decoder from `entities` 7.0.1, already present transitively via
+Vue and now declared directly by the website package. Text and attribute values
+use their respective decoding modes: for example, an unterminated named
+reference followed by `=` must not be consumed inside an attribute.
+
+Decoding happens after token boundaries are found, exactly once. Encoded quotes
+cannot terminate an attribute, and escaped tags stay text rather than becoming
+nodes. Title/textarea content decodes references; script and stylesheet source
+does not. Semantic inline CSS is validated after decoding, so an encoded `url`
+does not bypass the URL restriction. This does not yet implement general HTML
+error recovery or distinct document-root attribute semantics.
+
+The decoder's compressed character table needs `atob`. The first built-Wasm
+test caught its absence (and the dependency's fallback to an unavailable Node
+`Buffer`). The compiler environment now supplies a pure guest-local `atob`,
+installed before dependency initialization. Browser comparisons cover valid,
+unpadded, malformed, whitespace-containing, and binary inputs. No host API or
+DOM permission was added. The dependency license is included in exported
+artifacts as `/-/resources-site/THIRD-PARTY-NOTICES.txt`.
+
+Source/native parsing comparisons, built-Wasm/source compilation comparisons,
+and real output-context updates cover decoded text, attributes, CSS, raw
+script/style strings, non-ASCII values, rejected encoded URLs, and recovery
+after a rejected compile. Logs are under
+`/root/macchiato-work/html-references-*.log`; the `before` run records the
+original native-parity failure.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

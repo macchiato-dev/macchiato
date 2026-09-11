@@ -10599,6 +10599,29 @@
     }
   });
 
+  // packages/website/project-builder-environment.js
+  function atob2(input2) {
+    let source2 = String(input2).replace(/[\t\n\f\r ]/g, "");
+    if (source2.length % 4 === 0) source2 = source2.replace(/==?$/, "");
+    if (source2.length % 4 === 1 || /[^A-Za-z0-9+/]/.test(source2)) {
+      const error2 = new Error("Invalid base64 input");
+      error2.name = "InvalidCharacterError";
+      throw error2;
+    }
+    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let bits = 0, count = 0, result2 = "";
+    for (let index = 0; index < source2.length; index++) {
+      bits = bits << 6 | alphabet.indexOf(source2[index]);
+      count += 6;
+      if (count >= 8) {
+        count -= 8;
+        result2 += String.fromCharCode(bits >>> count & 255);
+      }
+    }
+    return result2;
+  }
+  if (typeof globalThis.atob !== "function") globalThis.atob = atob2;
+
   // node_modules/entities/dist/esm/decode-codepoint.js
   var _a;
   var decodeMap = /* @__PURE__ */ new Map([

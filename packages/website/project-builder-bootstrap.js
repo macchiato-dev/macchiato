@@ -1,3 +1,4 @@
+import "./project-builder-environment.js";
 import { compileProjectFiles, compileSingleFileProject, PROJECT_SOURCE_LIMITS } from "../project-editor/src/single-file-compiler.js";
 import { compileTemplate, parse as parseVueSfc } from "@vue/compiler-sfc";
 import { compile as compileSvelte } from "svelte/compiler";

@@ -1,3 +1,5 @@
+import { decodeHTML, decodeHTMLAttribute } from "entities/decode";
+
 class ParsedNode {
   constructor(type, name = "", text = "", attributes = []) {
     this.nodeType = type;
@@ -139,4 +141,3 @@ export function parseProjectHtml(source) {
   if (stack.length !== 1) throw new SyntaxError(`HTML element is not closed: ${stack.at(-1).localName}`);
   return document;
 }
-import { decodeHTML, decodeHTMLAttribute } from "entities/decode";

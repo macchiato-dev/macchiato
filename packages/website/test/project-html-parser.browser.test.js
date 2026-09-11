@@ -4,7 +4,27 @@ import { readFile } from "node:fs/promises";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 import { parseProjectHtml } from "../project-html-parser.js";
+import { atob as guestAtob } from "../project-builder-environment.js";
 import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
+
+test("compiler base64 utility matches the browser without Node or host access", async t => {
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const inputs = ["", "YQ==", "YQ", "YWI=", "YWI", "YR==", " Y\nW\tJ\rf\f ",
+    "a", "=", "====", "YQ=", "YQ===", "YWJj=", "YQ==!", "YQ\u00a0==", "YW-J", "YW_J", null, 123];
+  for (let length = 0; length < 260; length++) {
+    inputs.push(btoa(String.fromCharCode(...Array.from({ length }, (_, index) => index & 255))));
+  }
+  const expected = await page.evaluate(inputs => inputs.map(input => {
+    try { return { value: atob(input) }; }
+    catch (error) { return { error: error.name }; }
+  }), inputs);
+  assert.deepEqual(inputs.map(input => {
+    try { return { value: guestAtob(input) }; }
+    catch (error) { return { error: error.name }; }
+  }), expected);
+});
 
 // Compare inert parsing, not rendering. Never attach these fixtures to the
 // active document: URL-valued attributes must not start resource requests.
