@@ -1859,6 +1859,30 @@ After restarting the local server, the editing smoke check also passes modern
 JavaScript, divider dragging, and invalid-to-valid CSS recovery with 144 tiles
 and no stale warning or page error. Its three autosaves were intercepted.
 
+### Tour portrait layout
+
+The saved tour and its external source repository had identical stylesheets.
+The portrait rule omitted `wide-code`, leaving the desktop two-column layout
+active. A full-width reading column removes the 160 overflowing slides found
+earlier. Compact portrait gutters, directory-card spacing, and chapter headings
+also remove internal scrolling; empty range captions no longer consume space.
+No slide, narrative, canonical source line, or reading-state key changed.
+
+The tour repository records these changes as `8e8aa7d` and `0f2376a`. Its layout
+test now includes visible text bounds and chapter scrolling, at 1440×900,
+1168×760, 585×760, and the phone output's 390×688 effective pixels. All four
+complete native traversals pass. A separate 387-slide traversal in the Wasm
+phone output also passes, including notes, history, navigation boundary states,
+and a maximum of 694 DOM elements with no errors or external writes.
+
+The current project was still identical to its published snapshot. A guarded
+update changed only `style.css` and the exact embedded copy in
+`presentation.html`, creating and publishing version 25. The complete previous
+snapshot is archived at
+`/root/archive/2026/09/11/dom-use-tour-before-portrait-layout.json`. All other
+files and configuration are unchanged. The external repository's modified
+`notes.md` was not touched or committed; tests use isolated session state.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
