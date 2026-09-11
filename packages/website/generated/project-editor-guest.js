@@ -4230,11 +4230,11 @@ function scanFor(node, off, targetNode, targetOff, dir) {
     if (off == (dir < 0 ? 0 : maxOffset(node))) {
       if (node.nodeName == "DIV")
         return false;
-      let parent3 = node.parentNode;
-      if (!parent3 || parent3.nodeType != 1)
+      let parent2 = node.parentNode;
+      if (!parent2 || parent2.nodeType != 1)
         return false;
       off = domIndex(node) + (dir < 0 ? 0 : 1);
-      node = parent3;
+      node = parent2;
     } else if (node.nodeType == 1) {
       node = node.childNodes[off + (dir < 0 ? -1 : 0)];
       if (node.nodeType == 1 && node.contentEditable == "false")
@@ -5389,24 +5389,24 @@ var CompositeTile = class extends Tile {
     if (this.flags & 2)
       return;
     super.sync(track);
-    let parent3 = this.dom, prev = null, next;
-    let tracking = (track === null || track === void 0 ? void 0 : track.node) == parent3 ? track : null;
+    let parent2 = this.dom, prev = null, next;
+    let tracking = (track === null || track === void 0 ? void 0 : track.node) == parent2 ? track : null;
     let length = 0;
     for (let child of this.children) {
       child.sync(track);
       length += child.length + child.breakAfter;
-      next = prev ? prev.nextSibling : parent3.firstChild;
+      next = prev ? prev.nextSibling : parent2.firstChild;
       if (tracking && next != child.dom)
         tracking.written = true;
-      if (child.dom.parentNode == parent3) {
+      if (child.dom.parentNode == parent2) {
         while (next && next != child.dom)
           next = rm$1(next);
       } else {
-        parent3.insertBefore(child.dom, next);
+        parent2.insertBefore(child.dom, next);
       }
       prev = child.dom;
     }
-    next = prev ? prev.nextSibling : parent3.firstChild;
+    next = prev ? prev.nextSibling : parent2.firstChild;
     if (tracking && next)
       tracking.written = true;
     while (next)
@@ -5580,8 +5580,8 @@ var LineTile = class _LineTile extends CompositeTile {
           return new DOMPos(tile.dom, Math.min(tile.dom.nodeValue.length, offset));
         return tile.domPosFor(offset, tile.flags & 16 ? 1 : tile.flags & 32 ? -1 : side);
       }
-      let parent3 = found.tile.parent, saw = false;
-      for (let ch of parent3.children) {
+      let parent2 = found.tile.parent, saw = false;
+      for (let ch of parent2.children) {
         if (saw)
           return new DOMPos(ch.dom, 0);
         if (ch == found.tile) {
@@ -5845,18 +5845,18 @@ var TileBuilder = class {
   addText(text, marks2, openStart, tile) {
     var _a2;
     this.flushBuffer();
-    let parent3 = this.ensureMarks(marks2, openStart);
-    let prev = parent3.lastChild;
+    let parent2 = this.ensureMarks(marks2, openStart);
+    let prev = parent2.lastChild;
     if (prev && prev.isText() && !(prev.flags & 8) && prev.length + text.length < 512) {
       this.cache.reused.set(
         prev,
         2
         /* Reused.DOM */
       );
-      let tile2 = parent3.children[parent3.children.length - 1] = new TextTile(prev.dom, prev.text + text);
-      tile2.parent = parent3;
+      let tile2 = parent2.children[parent2.children.length - 1] = new TextTile(prev.dom, prev.text + text);
+      tile2.parent = parent2;
     } else {
-      parent3.append(tile || TextTile.of(text, (_a2 = this.cache.find(TextTile)) === null || _a2 === void 0 ? void 0 : _a2.dom));
+      parent2.append(tile || TextTile.of(text, (_a2 = this.cache.find(TextTile)) === null || _a2 === void 0 ? void 0 : _a2.dom));
     }
     this.pos += text.length;
     this.afterWidget = null;
@@ -5911,17 +5911,17 @@ var TileBuilder = class {
     let noSpace = this.afterWidget && widget.flags & 48 && (this.afterWidget.flags & 48) == (widget.flags & 48);
     if (!noSpace)
       this.flushBuffer();
-    let parent3 = this.ensureMarks(marks2, openStart);
+    let parent2 = this.ensureMarks(marks2, openStart);
     if (!noSpace && !(widget.flags & 16))
-      parent3.append(this.getBuffer(1));
-    parent3.append(widget);
+      parent2.append(this.getBuffer(1));
+    parent2.append(widget);
     this.pos += widget.length;
     this.afterWidget = widget;
   }
   addMark(tile, marks2, openStart) {
     this.flushBuffer();
-    let parent3 = this.ensureMarks(marks2, openStart);
-    parent3.append(tile);
+    let parent2 = this.ensureMarks(marks2, openStart);
+    parent2.append(tile);
     this.pos += tile.length;
     this.afterWidget = null;
   }
@@ -5964,20 +5964,20 @@ var TileBuilder = class {
   }
   ensureMarks(marks2, openStart) {
     var _a2;
-    let parent3 = this.curLine;
+    let parent2 = this.curLine;
     for (let i2 = marks2.length - 1; i2 >= 0; i2--) {
       let mark = marks2[i2], last;
-      if (openStart > 0 && (last = parent3.lastChild) && last instanceof MarkTile && last.mark.eq(mark)) {
-        parent3 = last;
+      if (openStart > 0 && (last = parent2.lastChild) && last instanceof MarkTile && last.mark.eq(mark)) {
+        parent2 = last;
         openStart--;
       } else {
         let tile = MarkTile.of(mark, (_a2 = this.cache.find(MarkTile, (m) => m.mark.eq(mark))) === null || _a2 === void 0 ? void 0 : _a2.dom);
-        parent3.append(tile);
-        parent3 = tile;
+        parent2.append(tile);
+        parent2 = tile;
         openStart = 0;
       }
     }
-    return parent3;
+    return parent2;
   }
   endLine() {
     if (this.curLine) {
@@ -6020,18 +6020,18 @@ var TileBuilder = class {
   getBlockPos() {
     var _a2;
     this.updateBlockWrappers();
-    let parent3 = this.root;
+    let parent2 = this.root;
     for (let wrap of this.wrappers) {
-      let last = parent3.lastChild;
+      let last = parent2.lastChild;
       if (wrap.from < this.pos && last instanceof BlockWrapperTile && last.wrapper.eq(wrap.wrapper)) {
-        parent3 = last;
+        parent2 = last;
       } else {
         let tile = BlockWrapperTile.of(wrap.wrapper, (_a2 = this.cache.find(BlockWrapperTile, (t2) => t2.wrapper.eq(wrap.wrapper))) === null || _a2 === void 0 ? void 0 : _a2.dom);
-        parent3.append(tile);
-        parent3 = tile;
+        parent2.append(tile);
+        parent2 = tile;
       }
     }
-    return parent3;
+    return parent2;
   }
   blockPosCovered() {
     let last = this.lastBlock;
@@ -6384,19 +6384,19 @@ var TileUpdate = class {
   }
   getCompositionContext(text) {
     let marks2 = [], line = null;
-    for (let parent3 = text.parentNode; ; parent3 = parent3.parentNode) {
-      let tile = Tile.get(parent3);
-      if (parent3 == this.view.contentDOM)
+    for (let parent2 = text.parentNode; ; parent2 = parent2.parentNode) {
+      let tile = Tile.get(parent2);
+      if (parent2 == this.view.contentDOM)
         break;
       if (tile instanceof MarkTile)
         marks2.push(tile);
       else if (tile === null || tile === void 0 ? void 0 : tile.isLine())
         line = tile;
       else if (tile instanceof BlockWrapperTile) ;
-      else if (parent3.nodeName == "DIV" && !line && parent3 != this.view.contentDOM)
-        line = new LineTile(parent3, lineBaseAttrs);
+      else if (parent2.nodeName == "DIV" && !line && parent2 != this.view.contentDOM)
+        line = new LineTile(parent2, lineBaseAttrs);
       else if (!line)
-        marks2.push(MarkTile.of(new MarkDecoration({ tagName: parent3.nodeName.toLowerCase(), attributes: getAttrs(parent3) }), parent3));
+        marks2.push(MarkTile.of(new MarkDecoration({ tagName: parent2.nodeName.toLowerCase(), attributes: getAttrs(parent2) }), parent2));
     }
     return { line, marks: marks2 };
   }
@@ -6700,16 +6700,16 @@ var DocView = class {
       } else {
         let bias = maxOffset(node) == 0 ? 0 : offset == 0 ? -1 : 1;
         for (; ; ) {
-          let parent3 = node.parentNode;
-          if (parent3 == tile.dom)
+          let parent2 = node.parentNode;
+          if (parent2 == tile.dom)
             break;
-          if (bias == 0 && parent3.firstChild != parent3.lastChild) {
-            if (node == parent3.firstChild)
+          if (bias == 0 && parent2.firstChild != parent2.lastChild) {
+            if (node == parent2.firstChild)
               bias = -1;
             else
               bias = 1;
           }
-          node = parent3;
+          node = parent2;
         }
         if (bias < 0)
           after = node;
@@ -7529,14 +7529,14 @@ var DOMReader = class {
   readRange(start, end) {
     if (!start)
       return this;
-    let parent3 = start.parentNode;
+    let parent2 = start.parentNode;
     for (let cur2 = start; ; ) {
-      this.findPointBefore(parent3, cur2);
+      this.findPointBefore(parent2, cur2);
       let oldLen = this.text.length;
       this.readNode(cur2);
       let tile = Tile.get(cur2), next = cur2.nextSibling;
       if (next == end) {
-        if ((tile === null || tile === void 0 ? void 0 : tile.breakAfter) && !next && parent3 != this.view.contentDOM)
+        if ((tile === null || tile === void 0 ? void 0 : tile.breakAfter) && !next && parent2 != this.view.contentDOM)
           this.lineBreak();
         break;
       }
@@ -7545,7 +7545,7 @@ var DOMReader = class {
         this.lineBreak();
       cur2 = next;
     }
-    this.findPointBefore(parent3, end);
+    this.findPointBefore(parent2, end);
     return this;
   }
   readTextNode(node) {
@@ -7605,11 +7605,11 @@ var DOMReader = class {
         point.pos = this.text.length + (isAtEnd(node, point.node, point.offset) ? length : 0);
   }
 };
-function isAtEnd(parent3, node, offset) {
+function isAtEnd(parent2, node, offset) {
   for (; ; ) {
     if (!node || offset < maxOffset(node))
       return false;
-    if (node == parent3)
+    if (node == parent2)
       return true;
     offset = domIndex(node) + 1;
     node = node.parentNode;
@@ -8246,10 +8246,10 @@ var handlers = /* @__PURE__ */ Object.create(null);
 var observers = /* @__PURE__ */ Object.create(null);
 var brokenClipboardAPI = browser.ie && browser.ie_version < 15 || browser.ios && browser.webkit_version < 604;
 function capturePaste(view) {
-  let parent3 = view.dom.parentNode;
-  if (!parent3)
+  let parent2 = view.dom.parentNode;
+  if (!parent2)
     return;
-  let target = parent3.appendChild(document.createElement("textarea"));
+  let target = parent2.appendChild(document.createElement("textarea"));
   target.style.cssText = "position: fixed; left: -10000px; top: 10px";
   target.focus();
   setTimeout(() => {
@@ -8510,10 +8510,10 @@ handlers.paste = (view, event) => {
   }
 };
 function captureCopy(view, text) {
-  let parent3 = view.dom.parentNode;
-  if (!parent3)
+  let parent2 = view.dom.parentNode;
+  if (!parent2)
     return;
-  let target = parent3.appendChild(document.createElement("textarea"));
+  let target = parent2.appendChild(document.createElement("textarea"));
   target.style.cssText = "position: fixed; left: -10000px; top: 10px";
   target.value = text;
   target.focus();
@@ -9402,20 +9402,20 @@ function visiblePixelRange(dom, paddingTop) {
   let doc2 = dom.ownerDocument, win = doc2.defaultView || window;
   let left = Math.max(0, rect.left), right = Math.min(win.innerWidth, rect.right);
   let top2 = Math.max(0, rect.top), bottom = Math.min(win.innerHeight, rect.bottom);
-  for (let parent3 = dom.parentNode; parent3 && parent3 != doc2.body; ) {
-    if (parent3.nodeType == 1) {
-      let elt = parent3;
+  for (let parent2 = dom.parentNode; parent2 && parent2 != doc2.body; ) {
+    if (parent2.nodeType == 1) {
+      let elt = parent2;
       let style = window.getComputedStyle(elt);
       if ((elt.scrollHeight > elt.clientHeight || elt.scrollWidth > elt.clientWidth) && style.overflow != "visible") {
         let parentRect = elt.getBoundingClientRect();
         left = Math.max(left, parentRect.left);
         right = Math.min(right, parentRect.right);
         top2 = Math.max(top2, parentRect.top);
-        bottom = Math.min(parent3 == dom.parentNode ? win.innerHeight : bottom, parentRect.bottom);
+        bottom = Math.min(parent2 == dom.parentNode ? win.innerHeight : bottom, parentRect.bottom);
       }
-      parent3 = style.position == "absolute" || style.position == "fixed" ? elt.offsetParent : elt.parentNode;
-    } else if (parent3.nodeType == 11) {
-      parent3 = parent3.host;
+      parent2 = style.position == "absolute" || style.position == "fixed" ? elt.offsetParent : elt.parentNode;
+    } else if (parent2.nodeType == 11) {
+      parent2 = parent2.host;
     } else {
       break;
     }
@@ -10761,8 +10761,8 @@ function findChild(tile, dom, dir) {
     let curTile = Tile.get(dom);
     if (curTile && curTile.parent == tile)
       return curTile;
-    let parent3 = dom.parentNode;
-    dom = parent3 != tile.dom ? parent3 : dir > 0 ? dom.nextSibling : dom.previousSibling;
+    let parent2 = dom.parentNode;
+    dom = parent2 != tile.dom ? parent2 : dir > 0 ? dom.nextSibling : dom.previousSibling;
   }
   return null;
 }
@@ -13875,8 +13875,8 @@ var PanelGroup = class {
     if (!this.dom) {
       this.dom = document.createElement("div");
       this.dom.className = this.top ? "cm-panels cm-panels-top" : "cm-panels cm-panels-bottom";
-      let parent3 = this.container || this.view.dom;
-      parent3.insertBefore(this.dom, this.top ? parent3.firstChild : null);
+      let parent2 = this.container || this.view.dom;
+      parent2.insertBefore(this.dom, this.top ? parent2.firstChild : null);
     }
     let curDOM = this.dom.firstChild;
     for (let panel of this.panels) {
@@ -15112,16 +15112,16 @@ function checkSide(side, pos, from, to) {
 function resolveNode(node, pos, side, overlays) {
   var _a2;
   while (node.from == node.to || (side < 1 ? node.from >= pos : node.from > pos) || (side > -1 ? node.to <= pos : node.to < pos)) {
-    let parent3 = !overlays && node instanceof TreeNode && node.index < 0 ? null : node.parent;
-    if (!parent3)
+    let parent2 = !overlays && node instanceof TreeNode && node.index < 0 ? null : node.parent;
+    if (!parent2)
       return node;
-    node = parent3;
+    node = parent2;
   }
   let mode = overlays ? 0 : IterMode.IgnoreOverlays;
   if (overlays)
-    for (let scan = node, parent3 = scan.parent; parent3; scan = parent3, parent3 = scan.parent) {
-      if (scan instanceof TreeNode && scan.index < 0 && ((_a2 = parent3.enter(pos, side, mode)) === null || _a2 === void 0 ? void 0 : _a2.from) != scan.from)
-        node = parent3;
+    for (let scan = node, parent2 = scan.parent; parent2; scan = parent2, parent2 = scan.parent) {
+      if (scan instanceof TreeNode && scan.index < 0 && ((_a2 = parent2.enter(pos, side, mode)) === null || _a2 === void 0 ? void 0 : _a2.from) != scan.from)
+        node = parent2;
     }
   for (; ; ) {
     let inner = node.enter(pos, side, mode);
@@ -15190,9 +15190,9 @@ var TreeNode = class _TreeNode extends BaseNode {
     return this.from + this._tree.length;
   }
   nextChild(i2, dir, pos, side, mode = 0) {
-    for (let parent3 = this; ; ) {
-      for (let { children, positions } = parent3._tree, e = dir > 0 ? children.length : -1; i2 != e; i2 += dir) {
-        let next = children[i2], start = positions[i2] + parent3.from, mounted;
+    for (let parent2 = this; ; ) {
+      for (let { children, positions } = parent2._tree, e = dir > 0 ? children.length : -1; i2 != e; i2 += dir) {
+        let next = children[i2], start = positions[i2] + parent2.from, mounted;
         if (!(mode & IterMode.EnterBracketed && next instanceof Tree && (mounted = MountedTree.get(next)) && !mounted.overlay && mounted.bracketed && pos >= start && pos <= start + next.length) && !checkSide(side, pos, start, start + next.length))
           continue;
         if (next instanceof TreeBuffer) {
@@ -15200,23 +15200,23 @@ var TreeNode = class _TreeNode extends BaseNode {
             continue;
           let index = next.findChild(0, next.buffer.length, dir, pos - start, side);
           if (index > -1)
-            return new BufferNode(new BufferContext(parent3, next, i2, start), null, index);
+            return new BufferNode(new BufferContext(parent2, next, i2, start), null, index);
         } else if (mode & IterMode.IncludeAnonymous || (!next.type.isAnonymous || hasChild(next))) {
           let mounted2;
           if (!(mode & IterMode.IgnoreMounts) && (mounted2 = MountedTree.get(next)) && !mounted2.overlay)
-            return new _TreeNode(mounted2.tree, start, i2, parent3);
-          let inner = new _TreeNode(next, start, i2, parent3);
+            return new _TreeNode(mounted2.tree, start, i2, parent2);
+          let inner = new _TreeNode(next, start, i2, parent2);
           return mode & IterMode.IncludeAnonymous || !inner.type.isAnonymous ? inner : inner.nextChild(dir < 0 ? next.children.length - 1 : 0, dir, pos, side, mode);
         }
       }
-      if (mode & IterMode.IncludeAnonymous || !parent3.type.isAnonymous)
+      if (mode & IterMode.IncludeAnonymous || !parent2.type.isAnonymous)
         return null;
-      if (parent3.index >= 0)
-        i2 = parent3.index + dir;
+      if (parent2.index >= 0)
+        i2 = parent2.index + dir;
       else
-        i2 = dir < 0 ? -1 : parent3._parent._tree.children.length;
-      parent3 = parent3._parent;
-      if (!parent3)
+        i2 = dir < 0 ? -1 : parent2._parent._tree.children.length;
+      parent2 = parent2._parent;
+      if (!parent2)
         return null;
     }
   }
@@ -15342,8 +15342,8 @@ function matchNodeContext(node, context, i2 = context.length - 1) {
   return true;
 }
 var BufferContext = class {
-  constructor(parent3, buffer, index, start) {
-    this.parent = parent3;
+  constructor(parent2, buffer, index, start) {
+    this.parent = parent2;
     this.buffer = buffer;
     this.index = index;
     this.start = start;
@@ -15499,9 +15499,9 @@ function stackIterator(tree, pos, side) {
   let inner = tree.resolveInner(pos, side), layers = null;
   for (let scan = inner instanceof TreeNode ? inner : inner.context.parent; scan; scan = scan.parent) {
     if (scan.index < 0) {
-      let parent3 = scan.parent;
-      (layers || (layers = [inner])).push(parent3.resolve(pos, side));
-      scan = parent3;
+      let parent2 = scan.parent;
+      (layers || (layers = [inner])).push(parent2.resolve(pos, side));
+      scan = parent2;
     } else {
       let mount = MountedTree.get(scan.tree);
       if (mount && mount.overlay && mount.overlay[0].from <= pos && mount.overlay[mount.overlay.length - 1].to >= pos) {
@@ -15653,9 +15653,9 @@ var TreeCursor = class {
       return this.yieldNode(this.mode & IterMode.IncludeAnonymous ? this._tree._parent : this._tree.parent);
     if (this.stack.length)
       return this.yieldBuf(this.stack.pop());
-    let parent3 = this.mode & IterMode.IncludeAnonymous ? this.buffer.parent : this.buffer.parent.nextSignificantParent();
+    let parent2 = this.mode & IterMode.IncludeAnonymous ? this.buffer.parent : this.buffer.parent.nextSignificantParent();
     this.buffer = null;
-    return this.yieldNode(parent3);
+    return this.yieldNode(parent2);
   }
   /**
   @internal
@@ -15695,7 +15695,7 @@ var TreeCursor = class {
     return this.sibling(-1);
   }
   atLastNode(dir) {
-    let index, parent3, { buffer } = this;
+    let index, parent2, { buffer } = this;
     if (buffer) {
       if (dir > 0) {
         if (this.index < buffer.buffer.buffer.length)
@@ -15705,14 +15705,14 @@ var TreeCursor = class {
           if (buffer.buffer.buffer[i2 + 3] < this.index)
             return false;
       }
-      ({ index, parent: parent3 } = buffer);
+      ({ index, parent: parent2 } = buffer);
     } else {
-      ({ index, _parent: parent3 } = this._tree);
+      ({ index, _parent: parent2 } = this._tree);
     }
-    for (; parent3; { index, _parent: parent3 } = parent3) {
+    for (; parent2; { index, _parent: parent2 } = parent2) {
       if (index > -1)
-        for (let i2 = index + dir, e = dir < 0 ? -1 : parent3._tree.children.length; i2 != e; i2 += dir) {
-          let child = parent3._tree.children[i2];
+        for (let i2 = index + dir, e = dir < 0 ? -1 : parent2._tree.children.length; i2 != e; i2 += dir) {
+          let child = parent2._tree.children[i2];
           if (this.mode & IterMode.IncludeAnonymous || child instanceof TreeBuffer || !child.type.isAnonymous || hasChild(child))
             return false;
         }
@@ -16695,16 +16695,16 @@ var Tag = class _Tag {
         name2 = `${mod.name}(${name2})`;
     return name2;
   }
-  static define(nameOrParent, parent3) {
+  static define(nameOrParent, parent2) {
     let name2 = typeof nameOrParent == "string" ? nameOrParent : "?";
     if (nameOrParent instanceof _Tag)
-      parent3 = nameOrParent;
-    if (parent3 === null || parent3 === void 0 ? void 0 : parent3.base)
+      parent2 = nameOrParent;
+    if (parent2 === null || parent2 === void 0 ? void 0 : parent2.base)
       throw new Error("Can not derive from a modified tag");
     let tag = new _Tag(name2, [], null, []);
     tag.set.push(tag);
-    if (parent3)
-      for (let t2 of parent3.set)
+    if (parent2)
+      for (let t2 of parent2.set)
         tag.set.push(t2);
     return tag;
   }
@@ -16746,10 +16746,10 @@ var Modifier = class _Modifier {
     for (let m of mods)
       m.instances.push(tag);
     let configs = powerSet(mods);
-    for (let parent3 of base2.set)
-      if (!parent3.modified.length)
+    for (let parent2 of base2.set)
+      if (!parent2.modified.length)
         for (let config2 of configs)
-          set.push(_Modifier.get(parent3, config2));
+          set.push(_Modifier.get(parent2, config2));
     return tag;
   }
 };
@@ -16798,8 +16798,8 @@ function styleTags(spec) {
         let last = pieces.length - 1, inner = pieces[last];
         if (!inner)
           throw new RangeError("Invalid path: " + part);
-        let rule2 = new Rule(tags2, mode, last > 0 ? pieces.slice(0, last) : null);
-        byName[inner] = rule2.sort(byName[inner]);
+        let rule = new Rule(tags2, mode, last > 0 ? pieces.slice(0, last) : null);
+        byName[inner] = rule.sort(byName[inner]);
       }
   }
   return ruleNodeProp.add(byName);
@@ -16943,17 +16943,17 @@ var HighlightBuilder = class {
     if (type.isTop)
       highlighters = this.highlighters.filter((h) => !h.scope || h.scope(type));
     let cls = inheritedClass;
-    let rule2 = getStyleTags(cursor) || Rule.empty;
-    let tagCls = highlightTags(highlighters, rule2.tags);
+    let rule = getStyleTags(cursor) || Rule.empty;
+    let tagCls = highlightTags(highlighters, rule.tags);
     if (tagCls) {
       if (cls)
         cls += " ";
       cls += tagCls;
-      if (rule2.mode == 1)
+      if (rule.mode == 1)
         inheritedClass += (inheritedClass ? " " : "") + tagCls;
     }
     this.startSpan(Math.max(from, start), cls);
-    if (rule2.opaque)
+    if (rule.opaque)
       return;
     let mounted = cursor.tree && cursor.tree.prop(NodeProp.mounted);
     if (mounted && mounted.overlay) {
@@ -16998,10 +16998,10 @@ var HighlightBuilder = class {
   }
 };
 function getStyleTags(node) {
-  let rule2 = node.type.prop(ruleNodeProp);
-  while (rule2 && rule2.context && !node.matchContext(rule2.context))
-    rule2 = rule2.next;
-  return rule2 || null;
+  let rule = node.type.prop(ruleNodeProp);
+  while (rule && rule.context && !node.matchContext(rule.context))
+    rule = rule.next;
+  return rule || null;
 }
 var t = Tag.define;
 var comment = t();
@@ -18296,9 +18296,9 @@ var TreeIndentContext = class _TreeIndentContext extends IndentContext {
     return indentFor(this.context.next, this.base, this.pos);
   }
 };
-function isParent(parent3, of) {
+function isParent(parent2, of) {
   for (let cur2 = of; cur2; cur2 = cur2.parent)
-    if (parent3 == cur2)
+    if (parent2 == cur2)
       return true;
   return false;
 }
@@ -19032,8 +19032,8 @@ function matchBrackets(state, pos, dir, config2 = {}) {
   return matchPlainBrackets(state, pos, dir, tree, node.type, maxScanDistance, brackets);
 }
 function matchMarkedBrackets(_state, _pos, dir, token, handle, matching, brackets) {
-  let parent3 = token.parent, firstToken = { from: handle.from, to: handle.to };
-  let depth = 0, cursor = parent3 === null || parent3 === void 0 ? void 0 : parent3.cursor();
+  let parent2 = token.parent, firstToken = { from: handle.from, to: handle.to };
+  let depth = 0, cursor = parent2 === null || parent2 === void 0 ? void 0 : parent2.cursor();
   if (cursor && (dir < 0 ? cursor.childBefore(token.from) : cursor.childAfter(token.to)))
     do {
       if (dir < 0 ? cursor.to <= token.from : cursor.from >= token.to) {
@@ -22615,13 +22615,13 @@ function completionTooltip(stateField, applyCompletion2) {
   return (view) => new CompletionTooltip(view, stateField, applyCompletion2);
 }
 function scrollIntoView2(container, element) {
-  let parent3 = container.getBoundingClientRect();
+  let parent2 = container.getBoundingClientRect();
   let self = element.getBoundingClientRect();
-  let scaleY = parent3.height / container.offsetHeight;
-  if (self.top < parent3.top)
-    container.scrollTop -= (parent3.top - self.top) / scaleY;
-  else if (self.bottom > parent3.bottom)
-    container.scrollTop += (self.bottom - parent3.bottom) / scaleY;
+  let scaleY = parent2.height / container.offsetHeight;
+  if (self.top < parent2.top)
+    container.scrollTop -= (parent2.top - self.top) / scaleY;
+  else if (self.bottom > parent2.bottom)
+    container.scrollTop += (self.bottom - parent2.bottom) / scaleY;
 }
 function score(option) {
   return (option.boost || 0) * 100 + (option.apply ? 10 : 0) + (option.info ? 5 : 0) + (option.type ? 1 : 0);
@@ -23809,10 +23809,10 @@ function probablyInString(state, pos, quoteToken, prefixes) {
       }
       return true;
     }
-    let parent3 = node.to == pos && node.parent;
-    if (!parent3)
+    let parent2 = node.to == pos && node.parent;
+    if (!parent2)
       break;
-    node = parent3;
+    node = parent2;
   }
   return false;
 }
@@ -24534,7 +24534,7 @@ var Stack = class _Stack {
   /**
   @internal
   */
-  constructor(p, stack, state, reducePos, pos, score2, buffer, bufferBase, curContext, lookAhead = 0, parent3) {
+  constructor(p, stack, state, reducePos, pos, score2, buffer, bufferBase, curContext, lookAhead = 0, parent2) {
     this.p = p;
     this.stack = stack;
     this.state = state;
@@ -24545,7 +24545,7 @@ var Stack = class _Stack {
     this.bufferBase = bufferBase;
     this.curContext = curContext;
     this.lookAhead = lookAhead;
-    this.parent = parent3;
+    this.parent = parent2;
   }
   /**
   @internal
@@ -24747,16 +24747,16 @@ var Stack = class _Stack {
   @internal
   */
   split() {
-    let parent3 = this;
-    let off = parent3.buffer.length;
-    if (off && parent3.buffer[off - 4] == 0)
+    let parent2 = this;
+    let off = parent2.buffer.length;
+    if (off && parent2.buffer[off - 4] == 0)
       off -= 4;
-    while (off > 0 && parent3.buffer[off - 2] > parent3.reducePos)
+    while (off > 0 && parent2.buffer[off - 2] > parent2.reducePos)
       off -= 4;
-    let buffer = parent3.buffer.slice(off), base2 = parent3.bufferBase + off;
-    while (parent3 && base2 == parent3.bufferBase)
-      parent3 = parent3.parent;
-    return new _Stack(this.p, this.stack.slice(), this.state, this.reducePos, this.pos, this.score, buffer, base2, this.curContext, this.lookAhead, parent3);
+    let buffer = parent2.buffer.slice(off), base2 = parent2.bufferBase + off;
+    while (parent2 && base2 == parent2.bufferBase)
+      parent2 = parent2.parent;
+    return new _Stack(this.p, this.stack.slice(), this.state, this.reducePos, this.pos, this.score, buffer, base2, this.curContext, this.lookAhead, parent2);
   }
   // Try to recover from an error by 'deleting' (ignoring) one token.
   /**
@@ -26476,7 +26476,7 @@ function notify(message) {
   if (typeof globalThis.__codeEditorNotify === "function") globalThis.__codeEditorNotify(message);
   else globalThis.__browserUseNotify(JSON.stringify(message));
 }
-var parent2 = document.getElementById("editor");
+var parent = document.getElementById("editor");
 var editorSetup = new Compartment();
 var language2 = new Compartment();
 var editability = new Compartment();
@@ -26649,7 +26649,7 @@ function editorExtensions() {
 }
 function mountEditor(content2 = 'const greeting = "Hello, constrained editor!";\nconsole.log(greeting);') {
   const state = EditorState.create({ doc: content2, extensions: editorExtensions() });
-  globalThis.__codeEditorView = new EditorView({ state, parent: parent2 });
+  globalThis.__codeEditorView = new EditorView({ state, parent });
   forceParsing(globalThis.__codeEditorView);
   notify({
     type: "ready",
@@ -26834,7 +26834,7 @@ globalThis.__codeEditorSetContent = (json) => {
   currentReadOnly = request.readOnly === true;
   if (!globalThis.__codeEditorView || languageChanged) {
     globalThis.__codeEditorView?.destroy();
-    parent2.replaceChildren();
+    parent.replaceChildren();
     const view2 = mountEditor(request.content);
     return JSON.stringify(documentUsage(view2.state.doc));
   }
@@ -27112,14 +27112,14 @@ function applyProjectPatch(snapshotValue, patch) {
   const config2 = structuredClone(snapshot.config);
   for (const operation of patch.config) {
     if (!Array.isArray(operation.path) || operation.path.length === 0 || operation.path.some((key2) => typeof key2 !== "string" || !key2)) throw new Error("Invalid configuration patch path");
-    const { parent: parent3, key } = configParent(config2, operation.path);
-    if (!parent3 || typeof parent3 !== "object" || Array.isArray(parent3)) throw new Error(`Invalid configuration patch parent: ${operation.path.join(".")}`);
+    const { parent: parent2, key } = configParent(config2, operation.path);
+    if (!parent2 || typeof parent2 !== "object" || Array.isArray(parent2)) throw new Error(`Invalid configuration patch parent: ${operation.path.join(".")}`);
     if (operation.op === "delete") {
-      if (!own(parent3, key) || !same(parent3[key], operation.before)) throw new Error(`Configuration patch delete mismatch: ${operation.path.join(".")}`);
-      delete parent3[key];
+      if (!own(parent2, key) || !same(parent2[key], operation.before)) throw new Error(`Configuration patch delete mismatch: ${operation.path.join(".")}`);
+      delete parent2[key];
     } else if (operation.op === "set") {
-      if (operation.absent ? own(parent3, key) : !own(parent3, key) || !same(parent3[key], operation.before)) throw new Error(`Configuration patch set mismatch: ${operation.path.join(".")}`);
-      parent3[key] = structuredClone(operation.value);
+      if (operation.absent ? own(parent2, key) : !own(parent2, key) || !same(parent2[key], operation.before)) throw new Error(`Configuration patch set mismatch: ${operation.path.join(".")}`);
+      parent2[key] = structuredClone(operation.value);
     } else throw new Error(`Unsupported configuration operation: ${operation.op}`);
   }
   return normalizeProjectSnapshot({ files: [...files].map(([path, content2]) => ({ path, content: content2 })), config: config2 });
@@ -27275,103 +27275,15 @@ function compileAllowedUrlPattern(input) {
     }
   };
 }
-function urlMatchesAllowedPatterns(url, patterns) {
-  const value = String(url || "");
-  if (value.length <= 2048 && /^#[^\u0000-\u001f\u007f]*$/.test(value)) return true;
-  return (patterns || []).some((pattern) => compileAllowedUrlPattern(pattern)(url));
-}
 function validateAllowedUrlPatterns(patterns) {
   for (const pattern of patterns || []) compileAllowedUrlPattern(pattern);
   return patterns;
-}
-
-// packages/hub/src/container-elements.js
-var rule = (parents, attributes = []) => Object.freeze({ parents: Object.freeze(parents), attributes: Object.freeze(attributes) });
-var CONTAINER_ELEMENT_RULES = Object.freeze({
-  article: Object.freeze({
-    html: rule(["document"], ["lang"]),
-    head: rule(["html"]),
-    meta: rule(["head"], ["charset", "name", "content"]),
-    title: rule(["head"]),
-    link: rule(["head"], ["rel", "href"]),
-    body: rule(["html"], ["class"]),
-    article: rule(["body", "main"], ["class"]),
-    header: rule(["article"], ["class"]),
-    h1: rule(["article", "header"], ["class", "id"]),
-    p: rule(["article", "header", "li"], ["class"]),
-    a: rule(["p", "li"], ["href", "title", "target"]),
-    strong: rule(["p", "li", "a"]),
-    em: rule(["p", "li", "a"]),
-    ul: rule(["article"], ["class"]),
-    li: rule(["ul"], ["class"]),
-    code: rule(["p", "li"], ["class"])
-  }),
-  page: Object.freeze({
-    html: rule(["document"], ["lang"]),
-    head: rule(["html"]),
-    meta: rule(["head"], ["charset", "name", "content"]),
-    title: rule(["head"]),
-    link: rule(["head"], ["rel", "href"]),
-    body: rule(["html"], ["class"]),
-    main: rule(["body"], ["class", "id"]),
-    section: rule(["main", "section"], ["class", "id"]),
-    div: rule(["body", "main", "section", "div"], ["class", "id"]),
-    header: rule(["body", "main", "section"], ["class"]),
-    footer: rule(["body", "main", "section"], ["class"]),
-    h1: rule(["main", "header", "section"], ["class", "id"]),
-    h2: rule(["main", "section"], ["class", "id"]),
-    p: rule(["main", "section", "footer"], ["class"]),
-    a: rule(["p", "li", "header", "footer"], ["href", "title", "target"]),
-    img: rule(["main", "section", "a"], ["src", "alt", "width", "height"]),
-    ul: rule(["main", "section"], ["class"]),
-    li: rule(["ul"], ["class"])
-  }),
-  "single-file-web-app": Object.freeze({
-    html: rule(["document"], ["lang"]),
-    head: rule(["html"]),
-    meta: rule(["head"], ["charset", "name", "content"]),
-    title: rule(["head"]),
-    style: rule(["head", "body"]),
-    body: rule(["html"], ["class"]),
-    main: rule(["body"], ["class", "id"]),
-    section: rule(["body", "main", "section"], ["class", "id"]),
-    div: rule(["body", "main", "section", "div"], ["class", "id", "role", "tabindex", "aria-label", "aria-live", "data-*"]),
-    span: rule(["body", "main", "section", "div", "button", "p"], ["class", "id"]),
-    h1: rule(["body", "main", "section"], ["class", "id"]),
-    p: rule(["body", "main", "section", "div"], ["class", "id"]),
-    button: rule(["body", "main", "section", "div"], ["class", "id", "type"]),
-    svg: rule(["body", "main", "section", "div"], ["class", "viewBox", "role", "aria-labelledby"]),
-    circle: rule(["svg"], ["cx", "cy", "r", "fill"]),
-    ellipse: rule(["svg"], ["cx", "cy", "rx", "ry", "fill"]),
-    line: rule(["svg"], ["x1", "y1", "x2", "y2", "stroke", "stroke-width"]),
-    path: rule(["svg"], ["d", "fill", "stroke", "stroke-width", "stroke-linecap"]),
-    script: rule(["body"], ["src"])
-  }),
-  canvas: Object.freeze({ html: rule(["document"], ["lang"]), head: rule(["html"]), meta: rule(["head"], ["charset"]), title: rule(["head"]), body: rule(["html"], ["class"]), canvas: rule(["body"], ["width", "height", "aria-label"]), script: rule(["body"], ["src"]) }),
-  svg: Object.freeze({ svg: rule(["document", "body"], ["viewBox", "role", "aria-labelledby"]), title: rule(["svg"], ["id"]), defs: rule(["svg"]), linearGradient: rule(["defs"], ["id", "x1", "y1", "x2", "y2", "gradientUnits"]), stop: rule(["linearGradient"], ["offset", "stop-color"]), g: rule(["svg", "g"], ["fill", "stroke", "transform"]), path: rule(["svg", "g"], ["d", "fill", "stroke", "stroke-width"]), rect: rule(["svg", "g"], ["x", "y", "width", "height", "rx", "ry", "fill"]), circle: rule(["svg", "g"], ["cx", "cy", "r", "fill"]), line: rule(["svg", "g"], ["x1", "y1", "x2", "y2", "stroke", "stroke-width"]), text: rule(["svg", "g"], ["x", "y", "fill"]) })
-});
-function containerElementNames(container) {
-  if (container === "web-page") {
-    const names = [];
-    const seen = /* @__PURE__ */ new Set();
-    for (const rules of Object.values(CONTAINER_ELEMENT_RULES)) {
-      for (const name2 of Object.keys(rules)) {
-        if (!seen.has(name2)) {
-          seen.add(name2);
-          names.push(name2);
-        }
-      }
-    }
-    return names;
-  }
-  return Object.keys(CONTAINER_ELEMENT_RULES[container] || {});
 }
 
 // packages/website/project-editor-application-services.js
 var listeners = null;
 var nextRequest = 1;
 var pending = /* @__PURE__ */ new Map();
-var outputListeners = /* @__PURE__ */ new Map();
 function callGuest(name2, payload = {}) {
   try {
     const result2 = globalThis[name2](JSON.stringify(payload));
@@ -27393,12 +27305,7 @@ function requestHost(name2, payload = {}) {
 var previousEditorReceive = globalThis.__resourcesEditorReceive;
 globalThis.__resourcesEditorReceive = (json) => {
   const message = JSON.parse(json);
-  if (message.type === "output-error") {
-    const listener = outputListeners.get(message.id);
-    if (listener) listener(new Error(message.message));
-    else if (previousEditorReceive) return previousEditorReceive(json);
-    return "null";
-  }
+  if (message.type === "output-error") return previousEditorReceive ? previousEditorReceive(json) : "null";
   const operation = pending.get(message.id);
   if (!operation) return previousEditorReceive ? previousEditorReceive(json) : "null";
   pending.delete(message.id);
@@ -27436,9 +27343,6 @@ globalThis.fetch = (input, init = {}) => requestHost("fetch", {
   headers: init.headers || {},
   body: init.body == null ? null : String(init.body)
 }).then((value) => new EditorResponse(value));
-function buildProject(files, config2) {
-  return requestHost("build.run", { files, config: config2 });
-}
 function downloadProjectArchive(snapshot, name2) {
   return callHost("archive.download", { snapshot, name: name2 });
 }
@@ -27447,9 +27351,6 @@ function importProjectArchive() {
 }
 function replaceFrontendPath(path) {
   return callHost("route.replace", { path });
-}
-function frontendTheme() {
-  return callHost("appearance.theme");
 }
 async function mountResourcesProjectEditor(options) {
   listeners = options;
@@ -27514,153 +27415,6 @@ async function mountResourcesProjectEditor(options) {
     }
   });
 }
-async function mountResourcesProjectPreview(options) {
-  callGuest("__resourcesProjectRequestOutput", { generation: Number(options.rootKey) });
-  const id2 = await requestHost("output.mount", {
-    rootKey: options.rootKey,
-    scripts: options.scripts,
-    violations: options.violations?.map((error) => error.message) || [],
-    tags: options.tags,
-    files: options.files,
-    allowedFetchOrigins: options.allowedFetchOrigins,
-    allowedLinkPatterns: options.allowedLinkPatterns,
-    environment: options.environment
-  });
-  outputListeners.set(id2, options.onViolation);
-  return Object.freeze({
-    inspect() {
-      return callHost("output.inspect", { id: id2 });
-    },
-    setContent(tree) {
-      return callHost("output.setContent", { id: id2, tree });
-    },
-    load(project) {
-      return requestHost("output.load", { id: id2, project });
-    },
-    run(scripts) {
-      return requestHost("output.run", { id: id2, scripts });
-    },
-    destroy() {
-      callHost("output.destroy", { id: id2 });
-      outputListeners.delete(id2);
-    }
-  });
-}
-
-// packages/website/project-html-parser.js
-var ParsedNode = class {
-  constructor(type, name2 = "", text = "", attributes = []) {
-    this.nodeType = type;
-    this.localName = name2;
-    this.nodeValue = type === 3 ? text : null;
-    this.childNodes = [];
-    this.parentElement = null;
-    this.attributeEntries = attributes;
-    this.attributes = attributes.map(([attributeName, value]) => ({ name: attributeName, value }));
-    this.namespaceURI = null;
-  }
-  append(node) {
-    node.parentElement = this.nodeType === 1 ? this : this.parentElement;
-    this.childNodes.push(node);
-  }
-  hasAttribute(name2) {
-    return this.attributeEntries.some(([key]) => key === name2);
-  }
-  getAttribute(name2) {
-    return this.attributeEntries.find(([key]) => key === name2)?.[1] ?? null;
-  }
-  get textContent() {
-    return this.nodeType === 3 ? this.nodeValue : this.childNodes.map((node) => node.textContent).join("");
-  }
-  querySelectorAll(selector) {
-    const match = /^([a-z][a-z0-9-]*)(.*)$/i.exec(selector);
-    if (!match) throw new SyntaxError(`Unsupported inert selector: ${selector}`);
-    const attributes = [];
-    const expression = /\[([a-z][a-z0-9-]*)(?:="([^"]*)")?\]/gi;
-    let entry;
-    while (entry = expression.exec(match[2])) attributes.push([entry[1].toLowerCase(), entry[2]]);
-    if (attributes.map(([name2, value]) => value === void 0 ? `[${name2}]` : `[${name2}="${value}"]`).join("") !== match[2]) {
-      throw new SyntaxError(`Unsupported inert selector: ${selector}`);
-    }
-    const found = [];
-    const visit = (node) => {
-      if (node.nodeType === 1 && node.localName === match[1].toLowerCase() && attributes.every(([name2, value]) => node.hasAttribute(name2) && (value === void 0 || node.getAttribute(name2) === value))) found.push(node);
-      for (const child of node.childNodes) visit(child);
-    };
-    visit(this);
-    return found;
-  }
-};
-var voidElements = /* @__PURE__ */ new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
-var rawElements = /* @__PURE__ */ new Set(["script", "style", "textarea", "title"]);
-function parsedAttributes(source) {
-  const entries = [];
-  let rest = source.trim();
-  while (rest) {
-    const match = /^([A-Za-z_:][A-Za-z0-9_.:-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?\s*/.exec(rest);
-    if (!match) throw new SyntaxError(`HTML attribute input was not consumed: ${rest.slice(0, 32)}`);
-    entries.push([match[1].toLowerCase(), match[2] ?? match[3] ?? match[4] ?? ""]);
-    rest = rest.slice(match[0].length);
-  }
-  return entries;
-}
-function parseProjectHtml(source) {
-  const document2 = new ParsedNode(9);
-  const html = new ParsedNode(1, "html");
-  const body = new ParsedNode(1, "body");
-  html.namespaceURI = body.namespaceURI = "http://www.w3.org/1999/xhtml";
-  document2.append(html);
-  html.append(body);
-  document2.body = body;
-  const stack = [body];
-  let at = 0;
-  while (at < source.length) {
-    if (source.startsWith("<!--", at)) {
-      const end = source.indexOf("-->", at + 4);
-      if (end < 0) throw new SyntaxError("HTML comment is not closed");
-      at = end + 3;
-      continue;
-    }
-    if (/^<!doctype\b/i.test(source.slice(at))) {
-      const end = source.indexOf(">", at + 2);
-      if (end < 0) throw new SyntaxError("HTML doctype is not closed");
-      at = end + 1;
-      continue;
-    }
-    if (source[at] !== "<") {
-      const end = source.indexOf("<", at);
-      stack.at(-1).append(new ParsedNode(3, "", source.slice(at, end < 0 ? source.length : end)));
-      at = end < 0 ? source.length : end;
-      continue;
-    }
-    const close = /^<\/\s*([A-Za-z][A-Za-z0-9-]*)\s*>/.exec(source.slice(at));
-    if (close) {
-      const name3 = close[1].toLowerCase();
-      if (stack.length === 1 || stack.at(-1).localName !== name3) throw new SyntaxError(`Unexpected closing tag: ${name3}`);
-      stack.pop();
-      at += close[0].length;
-      continue;
-    }
-    const open = /^<\s*([A-Za-z][A-Za-z0-9-]*)([^>]*)>/.exec(source.slice(at));
-    if (!open) throw new SyntaxError(`HTML tag input was not consumed at byte ${at}`);
-    const name2 = open[1].toLowerCase();
-    const selfClosing = /\/\s*$/.test(open[2]);
-    const node = new ParsedNode(1, name2, "", parsedAttributes(open[2].replace(/\/\s*$/, "")));
-    node.namespaceURI = stack.some((parent3) => parent3.localName === "svg") || name2 === "svg" ? "http://www.w3.org/2000/svg" : "http://www.w3.org/1999/xhtml";
-    stack.at(-1).append(node);
-    at += open[0].length;
-    if (rawElements.has(name2) && !selfClosing) {
-      const expression = new RegExp(`<\\/\\s*${name2}\\s*>`, "ig");
-      expression.lastIndex = at;
-      const end = expression.exec(source);
-      if (!end) throw new SyntaxError(`HTML ${name2} element is not closed`);
-      node.append(new ParsedNode(3, "", source.slice(at, end.index)));
-      at = expression.lastIndex;
-    } else if (!selfClosing && !voidElements.has(name2)) stack.push(node);
-  }
-  if (stack.length !== 1) throw new SyntaxError(`HTML element is not closed: ${stack.at(-1).localName}`);
-  return document2;
-}
 
 // packages/website/content-name-fields.js
 function mountContentNameFields() {
@@ -27716,9 +27470,6 @@ var PROJECT_IMAGE_TYPES = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", 
 function isProjectImage(file) {
   const extension = String(file?.path || "").split(".").at(-1).toLowerCase();
   return PROJECT_IMAGE_TYPES.has(extension) && /^data:image\//.test(file?.content || "");
-}
-function buildProject2(files, config2) {
-  return buildProject(files, config2);
 }
 function queryParameter(name2) {
   const match = new RegExp("(?:^|&)" + name2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^&]*)").exec(String(location.search || "").replace(/^\?/, ""));
@@ -28213,22 +27964,7 @@ async function mountProjectRoot(root) {
   let localHistory = null;
   let editorController = null;
   let editorGeneration = 0;
-  let previewController = null;
-  let previewTimer = 0;
   let editorPreviewTimer = 0;
-  let previewGeneration = 0;
-  let outputFrame = null;
-  let outputFramePort = null;
-  let outputFrameReady = null;
-  let outputFrameRequested = true;
-  const syncOutputTheme = () => {
-    const theme2 = frontendTheme();
-    if (outputFrame) {
-      outputFrame.style.colorScheme = theme2;
-      outputFrame.style.backgroundColor = theme2 === "light" ? "#e7ecff" : "#151717";
-    }
-    outputFramePort?.postMessage({ type: "theme", colorScheme: theme2 });
-  };
   let activeError = "";
   let activeErrorAction = null;
   let activeStatusSurface = "output";
@@ -28314,375 +28050,11 @@ async function mountProjectRoot(root) {
     });
     delete root.dataset.editorLoading;
   }
-  async function renderPreview() {
+  function renderPreview() {
     clearTimeout(editorPreviewTimer);
     editorPreviewTimer = 0;
-    if (root.dataset.outputOwner === "editor") {
-      editorController?.setSnapshot(state);
-      editorController?.renderSnapshot();
-      return;
-    }
-    const generation = ++previewGeneration;
-    root.dataset.outputMachineState = "starting";
-    activeError = "";
-    renderStatusState();
-    try {
-      editorController?.projectStatus.begin(generation);
-    } catch (error) {
-      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
-    }
-    let previewState = state;
-    if (state.config?.build) {
-      try {
-        previewState = normalizeProjectSnapshot(await buildProject2(state.files, state.config));
-      } catch (error) {
-        if (generation === previewGeneration) {
-          root.dataset.outputMachineState = "failed";
-          setStatus(`Build blocked: ${error.message}`, "error", null, "output");
-        }
-        return;
-      }
-      if (generation !== previewGeneration) return;
-    }
-    const entry = previewState.config?.entry || "index.html";
-    const source = previewState.files.find((file) => file.path === entry)?.content || "";
-    const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
-    root.querySelector("[data-preview-title]").textContent = title;
-    const outputOptions = previewState.config?.output || {};
-    const useOutputFrame = false;
-    let surfaceHost, surfaceRoot, surfaceBody;
-    if (useOutputFrame) {
-      if (!outputFrame) {
-        outputFrame = document.createElement("iframe");
-        outputFrame.className = "project-editor__preview-surface";
-        outputFrame.title = `${title} output`;
-        outputFrame.src = "/-/resources-site/project-output-frame.html";
-        outputFrame.style.cssText = "display:block;width:100%;height:100%;border:0";
-        outputFrame.style.colorScheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-        outputFrame.style.backgroundColor = document.documentElement.dataset.theme === "light" ? "#e7ecff" : "#151717";
-        outputFrame.hidden = true;
-        outputFrameReady = new Promise((resolve, reject2) => {
-          outputFrame.addEventListener("load", () => {
-            const channel = new MessageChannel();
-            channel.port1.addEventListener("message", (event) => {
-              if (event.data?.type === "ready") {
-                outputFramePort = channel.port1;
-                resolve();
-              }
-            });
-            channel.port1.start();
-            outputFrame.contentWindow.postMessage({ protocol: "resources-project-output-frame-v1", type: "connect" }, location.origin, [channel.port2]);
-          }, { once: true });
-          outputFrame.addEventListener("error", () => reject2(new Error("Project output frame failed to load")), { once: true });
-        });
-        preview.append(outputFrame);
-      }
-      surfaceHost = outputFrame;
-      await outputFrameReady;
-      if (generation !== previewGeneration) return;
-      preview.dataset.outputSurface = "iframe";
-    } else {
-      surfaceHost = document.createElement("div");
-      surfaceHost.className = "project-editor__preview-surface";
-      surfaceRoot = surfaceHost;
-      surfaceBody = document.createElement("div");
-      surfaceRoot.append(surfaceBody);
-      preview.replaceChildren(surfaceHost);
-      preview.dataset.outputSurface = "direct";
-    }
-    surfaceBody.dataset.projectOutputMount = String(generation);
-    const parsed = parseProjectHtml(source);
-    const allowed = /* @__PURE__ */ new Set();
-    containerElementNames("web-page").forEach((name2) => allowed.add(name2));
-    for (const name2 of Object.keys(previewState.config?.domSchema?.nodes || {})) allowed.add(name2);
-    const scripts = [];
-    const violations = [];
-    const structuralElement = (node) => ["script", "style", "link", "meta", "head", "html", "body"].includes(node.localName) || node.localName === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg";
-    const reject = (message) => {
-      if (!violations.some((violation) => violation.message === message)) violations.push(new Error(message));
-    };
-    const projectFile = (path) => previewState.files.find((candidate) => candidate.path === path);
-    const resolveModulePath = (from, specifier) => {
-      const parts = from.split("/");
-      parts.pop();
-      for (const part of specifier.split("/")) {
-        if (!part || part === ".") continue;
-        if (part === "..") parts.pop();
-        else parts.push(part);
-      }
-      return parts.join("/");
-    };
-    const bundleProjectModule = (path, source2, seen = /* @__PURE__ */ new Set()) => {
-      if (seen.has(path)) return "";
-      seen.add(path);
-      const imports = [];
-      const body = source2.replace(
-        /^[ \t]*import\s+(?:[^"']+?\s+from\s+)?["']([^"']+)["'];?[ \t]*$/gm,
-        (_statement, specifier) => {
-          if (!specifier.startsWith(".")) throw new Error(`Module import is outside the project: ${specifier}`);
-          const dependencyPath = resolveModulePath(path, specifier);
-          const dependency = projectFile(dependencyPath);
-          if (!dependency) throw new Error(`Project module not found: ${dependencyPath}`);
-          imports.push(bundleProjectModule(dependencyPath, dependency.content, seen));
-          return "";
-        }
-      ).replace(/^\s*export\s+(?=(?:const|let|var|function|class)\b)/gm, "");
-      if (/^\s*export\s/m.test(body)) throw new Error(`Unsupported module export in ${path}`);
-      return `${imports.join("\n")}
-${body}`;
-    };
-    for (const script of parsed.querySelectorAll("script")) {
-      let ancestor = script.parentElement;
-      let blocked = false;
-      while (ancestor && ancestor !== parsed.body) {
-        if (!structuralElement(ancestor) && !allowed.has(ancestor.localName)) {
-          blocked = true;
-          break;
-        }
-        ancestor = ancestor.parentElement;
-      }
-      if (blocked) continue;
-      const src = script.getAttribute("src");
-      const module = script.getAttribute("type") === "module";
-      if (src) {
-        const path = src.replace(/^\.\//, "");
-        const file = projectFile(path);
-        if (file) scripts.push({ source: path, code: module ? `(async function () {
-${bundleProjectModule(path, file.content)}
-})();` : file.content });
-      } else if (script.textContent.trim()) scripts.push({ source: entry, code: module ? `(async function () {
-${bundleProjectModule(entry, script.textContent)}
-})();` : script.textContent });
-    }
-    const fragment = document.createDocumentFragment();
-    const projectedAttributes = /* @__PURE__ */ new WeakMap();
-    function copy(node, parent3) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        parent3.append(document.createTextNode(node.textContent));
-        return;
-      }
-      if (node.nodeType !== Node.ELEMENT_NODE) return;
-      const name2 = node.localName;
-      const structural = structuralElement(node);
-      if (!allowed.has(name2) || structural) {
-        if (!structural) {
-          reject(`<${name2}> was omitted because the ${previewState.config?.container || "selected"} container schema does not allow it.`);
-          return;
-        }
-        if (["html", "body"].includes(name2)) {
-          for (const child of node.childNodes) copy(child, parent3);
-        }
-        return;
-      }
-      const element = node.namespaceURI === "http://www.w3.org/2000/svg" ? document.createElementNS("http://www.w3.org/2000/svg", name2) : document.createElement(name2);
-      for (const attribute of [
-        "id",
-        "class",
-        "title",
-        "role",
-        "type",
-        "tabindex",
-        "hidden",
-        "maxlength",
-        "placeholder",
-        "aria-label",
-        "aria-live",
-        "aria-modal",
-        "aria-haspopup",
-        "aria-expanded"
-      ]) {
-        if (node.hasAttribute(attribute) && (attribute === "hidden" || /^[- A-Za-z0-9_.,:]+$/.test(node.getAttribute(attribute))))
-          element.setAttribute(attribute, node.getAttribute(attribute));
-      }
-      if (name2 === "canvas") {
-        for (const attribute of ["width", "height"]) if (/^[0-9]{1,5}$/.test(node.getAttribute(attribute) || "")) element.setAttribute(attribute, node.getAttribute(attribute));
-      }
-      if (name2 === "a" && node.getAttribute("href")) {
-        const href = node.getAttribute("href");
-        const patterns = previewState.config?.containerOptions?.allowedLinkPatterns || previewState.config?.container?.allowedLinkPatterns || [];
-        if (urlMatchesAllowedPatterns(href, patterns)) {
-          const attributes = [["href", href]];
-          const authoredTarget = node.getAttribute("target");
-          if (authoredTarget) attributes.push(["target", authoredTarget]);
-          else if ((previewState.config?.containerOptions?.links || previewState.config?.container?.links)?.addTargetBlank !== false) attributes.push(["target", "_blank"]);
-          projectedAttributes.set(element, attributes);
-        } else {
-          reject(`The href for ${href} was omitted because it is outside the allowed URL patterns.`);
-        }
-      }
-      if (node.namespaceURI === "http://www.w3.org/2000/svg") {
-        const svgAttributes = /* @__PURE__ */ new Set(["viewBox", "width", "height", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id", "offset", "stop-color", "gradientUnits"]);
-        for (const attribute of node.attributes) {
-          if (svgAttributes.has(attribute.name) && /^[- A-Za-z0-9.,#()%]+$/.test(attribute.value)) element.setAttribute(attribute.name, attribute.value);
-        }
-      }
-      for (const child of node.childNodes) copy(child, element);
-      parent3.append(element);
-    }
-    for (const child of parsed.body.childNodes) copy(child, fragment);
-    const staging = document.createElement("div");
-    staging.append(fragment);
-    const serializeOutputNode = (node) => {
-      if (node.nodeType === Node.TEXT_NODE) return [0, node.textContent];
-      const attributes = [];
-      for (let index = 0; index < node.attributes.length; index++) {
-        const attribute = node.attributes[index];
-        attributes.push([attribute.name, attribute.value]);
-      }
-      for (const attribute of projectedAttributes.get(node) || []) attributes.push(attribute);
-      const children = [];
-      for (let index = 0; index < node.childNodes.length; index++) {
-        children.push(serializeOutputNode(node.childNodes[index]));
-      }
-      return [
-        1,
-        node.localName,
-        node.namespaceURI === "http://www.w3.org/2000/svg" ? 1 : 0,
-        attributes,
-        children
-      ];
-    };
-    const outputTree = [];
-    for (let index = 0; index < staging.childNodes.length; index++) {
-      outputTree.push(serializeOutputNode(staging.childNodes[index]));
-    }
-    let stylesheetPaths = previewState.config?.stylesheets;
-    if (!stylesheetPaths) {
-      stylesheetPaths = [];
-      const links = parsed.querySelectorAll('link[rel="stylesheet"][href]');
-      for (let index = 0; index < links.length; index++) {
-        stylesheetPaths.push(links[index].getAttribute("href").replace(/^\.\//, ""));
-      }
-    }
-    const styles = parsed.querySelectorAll("style");
-    const cssParts = [];
-    for (let index = 0; index < styles.length; index++) cssParts.push(styles[index].textContent || "");
-    for (const path of stylesheetPaths) {
-      const file = previewState.files.find((candidate) => candidate.path === path);
-      if (file) cssParts.push(file.content || "");
-    }
-    const css = cssParts.join("\n");
-    let renderedCss = "";
-    if (css) renderedCss = css;
-    let stagedRoot = "";
-    if (useOutputFrame) {
-      await new Promise((resolve) => {
-        const receive = (event) => {
-          if (event.data?.type !== "staged" || event.data.generation !== generation) return;
-          stagedRoot = event.data.root;
-          outputFramePort.removeEventListener("message", receive);
-          resolve();
-        };
-        outputFramePort.addEventListener("message", receive);
-        outputFramePort.postMessage({
-          type: "stage",
-          generation,
-          css: renderedCss,
-          colorScheme: document.documentElement.dataset.theme === "light" ? "light" : "dark"
-        });
-      });
-      if (generation !== previewGeneration) return;
-      surfaceBody = surfaceHost.contentDocument?.getElementById(stagedRoot);
-      if (!surfaceBody) throw new Error("Project output frame root is unavailable");
-    }
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(async () => {
-      if (generation !== previewGeneration) return;
-      try {
-        const allowedTags = [];
-        allowed.forEach((tag) => {
-          if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
-        });
-        const controller = await mountResourcesProjectPreview({
-          rootKey: String(generation),
-          root: surfaceBody,
-          statusRoot: preview,
-          scripts: [],
-          violations,
-          tags: allowedTags,
-          files: previewState.files,
-          allowedFetchOrigins: previewState.config?.containerOptions?.allowedFetchOrigins || previewState.config?.capabilities?.fetch?.resources || [],
-          allowedLinkPatterns: previewState.config?.containerOptions?.allowedLinkPatterns || [],
-          allowNavigate: (value) => urlMatchesAllowedPatterns(
-            value,
-            previewState.config?.containerOptions?.allowedLinkPatterns || []
-          ),
-          environment: { language: document.documentElement.lang || "en" },
-          onViolation(error) {
-            if (generation !== previewGeneration) return;
-            const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
-            if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error", null, "output");
-          }
-        });
-        if (generation !== previewGeneration) controller.destroy();
-        else {
-          if (useOutputFrame) {
-            controller.setContent(outputTree);
-            await controller.run(scripts);
-          } else {
-            await controller.load({
-              tree: outputTree,
-              stylesheets: renderedCss ? [renderedCss] : [],
-              scripts
-            });
-          }
-          if (useOutputFrame) {
-            await new Promise((resolve) => {
-              const receive = (event) => {
-                if (event.data?.type !== "committed" || event.data.generation !== generation) return;
-                outputFramePort.removeEventListener("message", receive);
-                resolve();
-              };
-              outputFramePort.addEventListener("message", receive);
-              outputFramePort.postMessage({ type: "commit", generation });
-            });
-            if (generation !== previewGeneration) {
-              controller.destroy();
-              return;
-            }
-            outputFrame.hidden = false;
-            for (const child of [...preview.children]) if (child !== outputFrame) child.remove();
-          }
-          previewController?.destroy();
-          previewController = controller;
-          root.dataset.outputMachineState = "ready";
-          delete preview.dataset.previewViolations;
-          delete preview.dataset.canvasCommands;
-          const inspection = controller.inspect?.();
-          const machine = inspection?.machine;
-          preview.dataset.projectMachineId = machine?.machineId || "wasm-web-machine";
-          preview.dataset.projectPrograms = String(inspection?.programs || 0);
-        }
-      } catch (error) {
-        if (generation === previewGeneration) root.dataset.outputMachineState = "failed";
-        setStatus(`Blocked: ${error.message}`, true, null, "output");
-        queueMicrotask(() => {
-          if (generation === previewGeneration) routeProjectStatus(generation, { type: "blocked", message: error.message });
-        });
-      }
-    }, 120);
-  }
-  function routeProjectStatus(generation, event) {
-    try {
-      return editorController?.projectStatus.report(generation, event) || null;
-    } catch (error) {
-      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
-      return null;
-    }
-  }
-  function disposeProjectMachine() {
-    previewGeneration += 1;
-    clearTimeout(previewTimer);
-    previewController?.destroy();
-    previewController = null;
-    outputFramePort?.close();
-    outputFrame?.remove();
-    outputFrame = outputFramePort = outputFrameReady = null;
-    outputFrameRequested = true;
-    delete preview.dataset.previewRuntime;
-    delete preview.dataset.previewViolations;
-    delete preview.dataset.projectMachineId;
-    delete preview.dataset.canvasCommands;
+    editorController?.setSnapshot(state);
+    editorController?.renderSnapshot();
   }
   async function mountEditorMachine(reason = "project-open") {
     const generation = ++editorGeneration;
@@ -28715,8 +28087,6 @@ ${bundleProjectModule(entry, script.textContent)}
         return;
       }
       editorController = controller;
-      root.dataset.editorMachineStage = "theme";
-      syncOutputTheme();
       root.dataset.editorMachineStage = "snapshot";
       editorController.setSnapshot(state);
       root.dataset.editorMachineId = controller.inspect()?.machine?.machineId || "quickjs-editor";
@@ -28730,7 +28100,7 @@ ${bundleProjectModule(entry, script.textContent)}
       if (root.dataset.outputMachineError) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
-      if (!previewController && (root.dataset.outputOwner !== "editor" || !projectSnapshotsEqual(initialOutputSnapshot, state))) renderPreview();
+      if (!projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
@@ -28739,7 +28109,6 @@ ${bundleProjectModule(entry, script.textContent)}
     }
   }
   function rotateContainerMachines(reason = "container-change") {
-    disposeProjectMachine();
     mountEditorMachine(reason);
   }
   function renderTabs() {
@@ -29117,9 +28486,8 @@ ${bundleProjectModule(entry, script.textContent)}
           setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
         }, 5e3);
       } else {
-        outputFrameRequested = true;
         const debounceMs = Math.min(5e3, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
-        editorPreviewTimer = setTimeout(root.dataset.outputOwner === "editor" ? () => editorController?.renderSnapshot() : renderPreview, debounceMs);
+        editorPreviewTimer = setTimeout(() => editorController?.renderSnapshot(), debounceMs);
       }
     } catch (error) {
       setStatus(`Editor update failed: ${error.message || String(error)}`, "error", null, "editor");
@@ -29392,10 +28760,6 @@ ${bundleProjectModule(entry, script.textContent)}
   document.addEventListener("pointerdown", (event) => {
     if (!outputOverflow.contains(event.target)) closeOutputOverflow();
   });
-  addEventListener("message", (event) => {
-    if (event.source !== parent || event.data?.protocol !== "resources-project-presentation-v1" || event.data.type !== "focus") return;
-    previewController?.focus?.();
-  });
   const splitter = root.querySelector(".project-editor__splitter");
   const projectLayout = root.closest(".project-create__layout");
   const projectClose = projectLayout.querySelector(".project-fields__toolbar .project-close");
@@ -29631,7 +28995,7 @@ ${bundleProjectModule(entry, script.textContent)}
     historyPanel.remove();
     editorGeneration += 1;
     editorController?.destroy();
-    disposeProjectMachine();
+    clearTimeout(editorPreviewTimer);
   }, { once: true });
 }
 for (const root of document.querySelectorAll("[data-project-editor]")) {
