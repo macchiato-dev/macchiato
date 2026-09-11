@@ -1721,8 +1721,9 @@ GuestElement.prototype.matches = function (selector) {
   Object.defineProperty(GuestObject.prototype, name, {
     get: function () { return hostGet(this.reference, name); },
     set: function (value) {
-      // Nullable DOMString setters treat null as empty text, not "null".
-      value = name !== "data" && value == null ? "" : String(value);
+      // data uses LegacyNullToEmptyString; the nullable Node properties also
+      // turn undefined into empty text, while data stringifies undefined.
+      value = (name === "data" ? value === null : value == null) ? "" : String(value);
       pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
     }
   });

@@ -2497,7 +2497,7 @@ GuestElement.prototype.matches = function (selector) {
       return hostGet(this.reference, name);
     },
     set: function set(value) {
-      value = name !== "data" && value == null ? "" : String(value);
+      value = (name === "data" ? value === null : value == null) ? "" : String(value);
       pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
     }
   });
