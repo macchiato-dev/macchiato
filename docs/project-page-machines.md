@@ -1568,6 +1568,54 @@ scope guard would incorrectly make those queries return no match. Keep the
 four raw-Wasm context probes unresolved until they exercise the integrated
 protocol and pass, then rerun the full editor/game and deployment checks.
 
+### Integrated selector boundary and iframe cascade
+
+The stylesheet and DOM-query consumers now use the semantic selector reader
+and renderer. Stylesheet version 5 replaces raw selector text with the counted
+selector format; DOM query methods require bounded selector bytes. Old raw
+string queries are rejected. All guest environment builders prepend the same
+ES5 parser/writer, and the site runtime artifacts were rebuilt together.
+
+The four former raw-Wasm context probes now pass without TODO markers:
+changing private host attributes does not affect the `:has()` style or the
+`querySelector`, `matches`, and `closest` results. Additional raw-Wasm tests
+cover pre-insertion, attached, and removed-tree queries, plus deliberate raw
+string bypass attempts. Wholly granted detached trees use native context,
+without temporary attribute mutations. The broader run passes 239 tests,
+including native/MicroQuickJS caret and text dragging, lazy language bytecode,
+direct and iframe output, markup, references, ranges, and mutations.
+
+The saved presentation exposed a missing `::backdrop` case that the initial
+selector corpus lacked. Its actual reset-dialog selector now has coverage and
+is allowed for owned dialogs. The rebuilt export then passed all four owner
+projects, including 50 successive tour slides, embedded keyboard navigation,
+SQLite fragments, desktop/mobile views, and system theme changes.
+
+Screenshot review also exposed a cascade regression in the iframe scaffolding:
+the host `.project-output-root` minimum-height rule outranked the newly
+type-specific guest `body` rule. Making the default `:where(...)` gives it zero
+specificity; application dimensions win. The module fixture now includes the
+real frame CSS and uses standards mode. Before the fix, an app asking for
+`100vh` had a 22px surface in a 150px viewport; the corrected module tests pass.
+The saved Mahjong now measures 798px for both its surface and iframe viewport.
+The host hidden-state rule is unchanged.
+
+Read-only live editing also passes modern JavaScript input, pointer-based split
+dragging, and malformed-to-valid font CSS recovery with all 144 tiles, aligned
+toolbar/workspace dividers, and no page errors. Three autosaves were intercepted;
+no saved project content was changed. Large native text insertion remains a
+separate performance issue, not resolved by this selector work.
+
+Final development export `2c545b8` includes the iframe cascade fix. All four
+owner-project checks pass again, along with the compressed backend in Deno and
+all 151 manifest entries. The first-paint/navigation appearance suite passes
+15 tests across desktop/phone, explicit and system themes, and missing or
+unavailable preferences. `/root/resources-bunny.tar.gz` now contains this
+verified export; extraction was verified before replacing the archive. Its
+predecessor is preserved at
+`/root/archive/2026/09/11/resources-bunny-1571583-before-semantic-selectors.tar.gz`.
+The local server is updated. No Bunny deployment was performed.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
