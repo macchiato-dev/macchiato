@@ -1996,11 +1996,34 @@ test("project resources survive session recovery, API saves, native publication,
   assert.equal(await page.evaluate(() => sessionStorage.getItem("resources_project_draft_v5")), retained);
   assert.equal((await exportedFiles())["index.html"], unsaved, "latest edits remain exportable despite quota failure");
   assert.notEqual(await page.locator("[data-project-editor]").getAttribute("data-draft-state"), "saved");
+  async function checkWarningLayout() {
+    await page.getByRole("button", { name: "Retry", exact: true }).waitFor({ state: "visible" });
+    const warningLayout = await page.locator("[data-project-status]").evaluate(node => {
+      const box = node.getBoundingClientRect(), retry = node.querySelector("button").getBoundingClientRect();
+      return { overflow: node.scrollWidth > node.clientWidth, retryFits: retry.left >= box.left &&
+        retry.right <= box.right && retry.top >= box.top && retry.bottom <= box.bottom,
+        onscreen: box.top >= 0 && box.bottom <= innerHeight && box.right <= innerWidth };
+    });
+    assert.deepEqual(warningLayout, { overflow: false, retryFits: true, onscreen: true });
+  }
+  await checkWarningLayout();
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-quota.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => document.querySelector(".project-editor__workspace").dataset.view === "preview");
+  await checkWarningLayout();
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-quota-phone-output.png") });
+  await page.getByRole("button", { name: "Editor", exact: true }).click();
+  await checkWarningLayout();
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-quota-phone-editor.png") });
+  await page.locator("[data-project-versions-proxy]").click();
+  await page.locator("[data-project-history] [data-version-sequence]").last().click();
+  const historical = await page.locator("[data-project-snapshot]").inputValue();
   await page.evaluate(() => sessionStorage.removeItem("quota-fixture"));
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftState === "saved");
   await page.getByText(/Draft recovery could not be saved/).waitFor({ state: "hidden" });
+  assert.equal(await page.locator("[data-project-snapshot]").inputValue(), historical, "retry does not change the selected history view");
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.reload({ waitUntil: "networkidle" });
   await output.getByRole("heading", { name: "After quota", exact: true }).waitFor();
   await content.click();

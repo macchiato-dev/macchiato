@@ -759,7 +759,8 @@ async function mountProjectRoot(root) {
     status.dataset.state = activeError ? "error" : activeNotice || recoveryWriteError ? "warning" : persistenceState;
     const persistenceWarning = !activeError && !activeNotice && (persistenceState === "warning" || Boolean(recoveryWriteError));
     const workspaceView = root.querySelector(".project-editor__workspace")?.dataset.view;
-    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" || (persistenceWarning && recoveryWriteError)
+    const targetSurface = workspaceView !== "preview" &&
+      (activeStatusSurface === "editor" || workspaceView === "editor" || (persistenceWarning && recoveryWriteError))
       ? editorMount.closest(".project-editor__source")
       : preview.closest(".project-editor__preview");
     if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
@@ -775,7 +776,7 @@ async function mountProjectRoot(root) {
       retry.type = "button";
       retry.className = "project-editor__status-action";
       retry.textContent = "Retry";
-      retry.addEventListener("click", () => { clearTimeout(saveTimer); save(); });
+      retry.addEventListener("click", retryRecovery);
       statusSave.append(document.createTextNode(" "), retry);
     }
     statusError.replaceChildren();
@@ -841,6 +842,19 @@ async function mountProjectRoot(root) {
       renderStatusState();
     }
     return !error;
+  }
+
+  function retryRecovery() {
+    clearTimeout(saveTimer);
+    // Browsing history must not replace the latest recovery copy with the
+    // historical file currently on screen.
+    if (!storeRecovery(draft ? DRAFT_KEY : pendingSnapshotKey,
+      JSON.stringify(draft ? localHistory : currentSnapshot))) return;
+    if (pending && !viewingHistorical) save();
+    else if (draft) {
+      root.dataset.draftState = "saved";
+      setStatus("Draft saved in this session");
+    }
   }
 
   function updateSnapshot(next, { destructive = false } = {}) {

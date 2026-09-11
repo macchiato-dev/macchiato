@@ -1135,7 +1135,8 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__status-action { position: relative; top: 1px; margin: -2px 0 -2px 3px; padding: 1px 4px 2px; border: 1px solid #ffd0d2; border-radius: 4px; color: inherit; background: transparent; font: inherit; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; }
 .project-editor__status-action:hover { background: rgba(255, 255, 255, 0.1); }
 .project-editor__status-action:focus-visible { background: rgba(255, 255, 255, 0.1); outline: none; }
-.project-editor__save { flex: 0 0 auto; }
+.project-editor__status[data-state="warning"] .project-editor__status-action { border-color: #ffe2a3; }
+.project-editor__save { min-width: 0; flex: 1 1 auto; }
 .project-editor__history { position: fixed; top: 48px; left: 8px; z-index: 60; width: min(260px, calc(100vw - 24px)); max-height: calc(100vh - 80px); padding: 5px; overflow: auto; border: 1px solid var(--track-border); border-radius: 8px; color: var(--text); background: var(--pop-bg); box-shadow: var(--shadow); }
 .project-editor__version { width: 100%; text-align: left; }
 .project-editor__version[aria-current="true"] { color: var(--text); background: var(--hover); opacity: 1; cursor: default; }
@@ -1304,7 +1305,6 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
   .project-editor:has(.project-editor__workspace[data-view="split"]) .project-editor__toolbar { grid-template-columns: 1fr; }
   .project-editor__preview > [data-project-preview] { padding: 0; }
   .project-editor__status { gap: 7px; }
-  .project-editor__save { max-width: 34%; overflow: hidden; }
   .layout {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-rows: auto auto minmax(0, 1fr) auto;
