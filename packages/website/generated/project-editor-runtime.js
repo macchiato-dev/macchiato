@@ -996,6 +996,9 @@ var WasmWebBridge = class {
       Navigator,
       Node,
       Range,
+      ResizeObserver,
+      ResizeObserverEntry,
+      ResizeObserverSize,
       Selection,
       SVGElement,
       Text
@@ -1037,6 +1040,7 @@ var WasmWebBridge = class {
     const eventListeners = /* @__PURE__ */ new WeakMap();
     const listenedObjects = /* @__PURE__ */ new Set();
     const mutationObservers = /* @__PURE__ */ new Set();
+    const resizeObservers = /* @__PURE__ */ new Map();
     const serviceSubscriptions = /* @__PURE__ */ new Set();
     const timers = /* @__PURE__ */ new Map();
     const frames = /* @__PURE__ */ new Map();
@@ -1228,6 +1232,11 @@ var WasmWebBridge = class {
     };
     if (!messagesOnly) realm.addEventListener("submit", guardSubmit);
     function get(object, name) {
+      if (object === hostDocument && name === "supportsResizeObserver") return typeof ResizeObserver === "function";
+      if (typeof ResizeObserverEntry === "function" && object instanceof ResizeObserverEntry && ["target", "contentRect", "contentBoxSize", "borderBoxSize", "devicePixelContentBoxSize"].includes(name)) {
+        return reference(object[name]);
+      }
+      if (typeof ResizeObserverSize === "function" && object instanceof ResizeObserverSize && (name === "inlineSize" || name === "blockSize")) return Math.round(object[name] * 64);
       if (object === hostDocument && name === "supportsIdleCallback") {
         return typeof realm.requestIdleCallback === "function" && typeof realm.cancelIdleCallback === "function";
       }
@@ -1547,6 +1556,33 @@ var WasmWebBridge = class {
       frames.delete(id);
     }
     function call(object, name, args) {
+      if (object === hostDocument && name === "resizeObserver" && args.length === 1 && typeof ResizeObserver === "function" && Number.isInteger(args[0]) && args[0] >= 0 && args[0] <= 4095) {
+        return reference(new ResizeObserver((entries) => deliver(args[0], entries)));
+      }
+      if (typeof ResizeObserver === "function" && object instanceof ResizeObserver) {
+        if (name === "observe" && args.length === 2 && args[0] instanceof Element && ["content-box", "border-box", "device-pixel-content-box"].includes(args[1])) {
+          requireNode(args[0]);
+          if (!resizeObservers.has(object) && resizeObservers.size >= 1024) fail("too many resize observers");
+          object.observe(args[0], { box: args[1] });
+          ownedNodes.add(args[0]);
+          if (!resizeObservers.has(object)) resizeObservers.set(object, /* @__PURE__ */ new Set());
+          resizeObservers.get(object).add(args[0]);
+          return null;
+        }
+        if (name === "unobserve" && args.length === 1 && args[0] instanceof Element) {
+          requireNode(args[0]);
+          object.unobserve(args[0]);
+          const targets = resizeObservers.get(object);
+          targets?.delete(args[0]);
+          if (!targets?.size) resizeObservers.delete(object);
+          return null;
+        }
+        if (name === "disconnect" && args.length === 0) {
+          object.disconnect();
+          resizeObservers.delete(object);
+          return null;
+        }
+      }
       if (typeof IdleDeadline === "function" && object instanceof IdleDeadline && name === "timeRemaining" && args.length === 0) {
         return Math.floor(object.timeRemaining() * 1e3);
       }
@@ -2720,6 +2756,8 @@ var WasmWebBridge = class {
       listenedObjects.clear();
       for (const observer of mutationObservers) observer.disconnect();
       mutationObservers.clear();
+      for (const observer of resizeObservers.keys()) observer.disconnect();
+      resizeObservers.clear();
       for (const stop of serviceSubscriptions) stop();
       serviceSubscriptions.clear();
       for (const timer of timers.values()) realm.clearTimeout(timer);
