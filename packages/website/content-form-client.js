@@ -1,8 +1,6 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty, projectSnapshotsEqual } from "/-/resources-site/project-history.js";
-import { urlMatchesAllowedPatterns, validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
-import { containerElementNames } from "/-/resources-site/container-elements.js";
-import { buildProject as buildProjectInMachine, downloadProjectArchive, frontendTheme, importProjectArchive, mountResourcesProjectEditor, mountResourcesProjectPreview, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
-import { parseProjectHtml } from "./project-html-parser.js";
+import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
+import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
 import { editorLanguageForPath } from "../project-editor/src/languages.js";
 import { mountContentNameFields } from "./content-name-fields.js";
 
@@ -11,8 +9,6 @@ function isProjectImage(file) {
   const extension = String(file?.path || "").split(".").at(-1).toLowerCase();
   return PROJECT_IMAGE_TYPES.has(extension) && /^data:image\//.test(file?.content || "");
 }
-
-function buildProject(files, config) { return buildProjectInMachine(files, config); }
 
 function queryParameter(name) {
   const match = new RegExp("(?:^|&)" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^&]*)")
@@ -483,22 +479,7 @@ async function mountProjectRoot(root) {
   let localHistory = null;
   let editorController = null;
   let editorGeneration = 0;
-  let previewController = null;
-  let previewTimer = 0;
   let editorPreviewTimer = 0;
-  let previewGeneration = 0;
-  let outputFrame = null;
-  let outputFramePort = null;
-  let outputFrameReady = null;
-  let outputFrameRequested = true;
-  const syncOutputTheme = () => {
-    const theme = frontendTheme();
-    if (outputFrame) {
-      outputFrame.style.colorScheme = theme;
-      outputFrame.style.backgroundColor = theme === "light" ? "#e7ecff" : "#151717";
-    }
-    outputFramePort?.postMessage({ type: "theme", colorScheme: theme });
-  };
   let activeError = "";
   let activeErrorAction = null;
   let activeStatusSurface = "output";
@@ -593,346 +574,14 @@ async function mountProjectRoot(root) {
     delete root.dataset.editorLoading;
   }
 
-  async function renderPreview() {
+  function renderPreview() {
     clearTimeout(editorPreviewTimer);
     editorPreviewTimer = 0;
-    if (root.dataset.outputOwner === "editor") {
-      // Explicit actions (history, import, configuration) render the selected
-      // snapshot. Typing uses the single trailing-edge timer below instead.
-      editorController?.setSnapshot(state);
-      editorController?.renderSnapshot();
-      return;
-    }
-    const generation = ++previewGeneration;
-    root.dataset.outputMachineState = "starting";
-    activeError = "";
-    renderStatusState();
-    try {
-      editorController?.projectStatus.begin(generation);
-    } catch (error) {
-      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
-    }
-    let previewState = state;
-    if (state.config?.build) {
-      try { previewState = normalizeProjectSnapshot(await buildProject(state.files, state.config)); }
-      catch (error) {
-        if (generation === previewGeneration) {
-          root.dataset.outputMachineState = "failed";
-          setStatus(`Build blocked: ${error.message}`, "error", null, "output");
-        }
-        return;
-      }
-      if (generation !== previewGeneration) return;
-    }
-    const entry = previewState.config?.entry || "index.html";
-    const source = previewState.files.find((file) => file.path === entry)?.content || "";
-    const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(source)?.[1].replace(/\s+/g, " ").trim() || entry;
-    root.querySelector("[data-preview-title]").textContent = title;
-    const outputOptions = previewState.config?.output || {};
-    // The Machine Controller will own the optional iframe transport. Until
-    // that transport is selected, keep the frontend guest on a plain element
-    // and give only that element to the disposable output machine.
-    const useOutputFrame = false;
-    let surfaceHost, surfaceRoot, surfaceBody;
-    if (useOutputFrame) {
-      if (!outputFrame) {
-        outputFrame = document.createElement("iframe");
-        outputFrame.className = "project-editor__preview-surface";
-        outputFrame.title = `${title} output`;
-        outputFrame.src = "/-/resources-site/project-output-frame.html";
-        outputFrame.style.cssText = "display:block;width:100%;height:100%;border:0";
-        outputFrame.style.colorScheme = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-        outputFrame.style.backgroundColor = document.documentElement.dataset.theme === "light" ? "#e7ecff" : "#151717";
-        outputFrame.hidden = true;
-        outputFrameReady = new Promise((resolve, reject) => {
-          outputFrame.addEventListener("load", () => {
-            const channel = new MessageChannel();
-            channel.port1.addEventListener("message", (event) => {
-              if (event.data?.type === "ready") { outputFramePort = channel.port1; resolve(); }
-            });
-            channel.port1.start();
-            outputFrame.contentWindow.postMessage({ protocol: "resources-project-output-frame-v1", type: "connect" }, location.origin, [channel.port2]);
-          }, { once: true });
-          outputFrame.addEventListener("error", () => reject(new Error("Project output frame failed to load")), { once: true });
-        });
-        preview.append(outputFrame);
-      }
-      surfaceHost = outputFrame;
-      await outputFrameReady;
-      if (generation !== previewGeneration) return;
-      preview.dataset.outputSurface = "iframe";
-    } else {
-      surfaceHost = document.createElement("div");
-      surfaceHost.className = "project-editor__preview-surface";
-      surfaceRoot = surfaceHost;
-      surfaceBody = document.createElement("div");
-      surfaceRoot.append(surfaceBody);
-      preview.replaceChildren(surfaceHost);
-      preview.dataset.outputSurface = "direct";
-    }
-    surfaceBody.dataset.projectOutputMount = String(generation);
-    const parsed = parseProjectHtml(source);
-    // Projects share one web-page container. A project may narrow or extend
-    // its authored surface through its generated DOM schema, but choosing a
-    // separate built-in container is no longer part of the editing model.
-    const allowed = new Set();
-    containerElementNames("web-page").forEach((name) => allowed.add(name));
-    for (const name of Object.keys(previewState.config?.domSchema?.nodes || {})) allowed.add(name);
-    const scripts = [];
-    const violations = [];
-    const structuralElement = (node) => ["script", "style", "link", "meta", "head", "html", "body"].includes(node.localName)
-      || (node.localName === "title" && node.namespaceURI !== "http://www.w3.org/2000/svg");
-    const reject = (message) => {
-      if (!violations.some((violation) => violation.message === message)) violations.push(new Error(message));
-    };
-    const projectFile = (path) => previewState.files.find((candidate) => candidate.path === path);
-    const resolveModulePath = (from, specifier) => {
-      const parts = from.split("/");
-      parts.pop();
-      for (const part of specifier.split("/")) {
-        if (!part || part === ".") continue;
-        if (part === "..") parts.pop();
-        else parts.push(part);
-      }
-      return parts.join("/");
-    };
-    const bundleProjectModule = (path, source, seen = new Set()) => {
-      if (seen.has(path)) return "";
-      seen.add(path);
-      const imports = [];
-      const body = source.replace(/^[ \t]*import\s+(?:[^"']+?\s+from\s+)?["']([^"']+)["'];?[ \t]*$/gm,
-        (_statement, specifier) => {
-          if (!specifier.startsWith(".")) throw new Error(`Module import is outside the project: ${specifier}`);
-          const dependencyPath = resolveModulePath(path, specifier);
-          const dependency = projectFile(dependencyPath);
-          if (!dependency) throw new Error(`Project module not found: ${dependencyPath}`);
-          imports.push(bundleProjectModule(dependencyPath, dependency.content, seen));
-          return "";
-        }).replace(/^\s*export\s+(?=(?:const|let|var|function|class)\b)/gm, "");
-      if (/^\s*export\s/m.test(body)) throw new Error(`Unsupported module export in ${path}`);
-      return `${imports.join("\n")}\n${body}`;
-    };
-    for (const script of parsed.querySelectorAll("script")) {
-      let ancestor = script.parentElement;
-      let blocked = false;
-      while (ancestor && ancestor !== parsed.body) {
-        if (!structuralElement(ancestor) && !allowed.has(ancestor.localName)) { blocked = true; break; }
-        ancestor = ancestor.parentElement;
-      }
-      if (blocked) continue;
-      const src = script.getAttribute("src");
-      const module = script.getAttribute("type") === "module";
-      if (src) {
-        const path = src.replace(/^\.\//, "");
-        const file = projectFile(path);
-        if (file) scripts.push({ source: path, code: module
-          ? `(async function () {\n${bundleProjectModule(path, file.content)}\n})();`
-          : file.content });
-      } else if (script.textContent.trim()) scripts.push({ source: entry, code: module
-        ? `(async function () {\n${bundleProjectModule(entry, script.textContent)}\n})();`
-        : script.textContent });
-    }
-    const fragment = document.createDocumentFragment();
-    const projectedAttributes = new WeakMap();
-    function copy(node, parent) {
-      if (node.nodeType === Node.TEXT_NODE) { parent.append(document.createTextNode(node.textContent)); return; }
-      if (node.nodeType !== Node.ELEMENT_NODE) return;
-      const name = node.localName;
-      const structural = structuralElement(node);
-      if (!allowed.has(name) || structural) {
-        if (!structural) {
-          reject(`<${name}> was omitted because the ${previewState.config?.container || "selected"} container schema does not allow it.`);
-          return;
-        }
-        if (["html", "body"].includes(name)) {
-          for (const child of node.childNodes) copy(child, parent);
-        }
-        return;
-      }
-      const element = node.namespaceURI === "http://www.w3.org/2000/svg"
-        ? document.createElementNS("http://www.w3.org/2000/svg", name)
-        : document.createElement(name);
-      for (const attribute of ["id", "class", "title", "role", "type", "tabindex", "hidden", "maxlength", "placeholder",
-        "aria-label", "aria-live", "aria-modal", "aria-haspopup", "aria-expanded"]) {
-        if (node.hasAttribute(attribute) && (attribute === "hidden" || /^[- A-Za-z0-9_.,:]+$/.test(node.getAttribute(attribute))))
-          element.setAttribute(attribute, node.getAttribute(attribute));
-      }
-      if (name === "canvas") {
-        for (const attribute of ["width", "height"]) if (/^[0-9]{1,5}$/.test(node.getAttribute(attribute) || "")) element.setAttribute(attribute, node.getAttribute(attribute));
-      }
-      if (name === "a" && node.getAttribute("href")) {
-        const href = node.getAttribute("href");
-        const patterns = previewState.config?.containerOptions?.allowedLinkPatterns || previewState.config?.container?.allowedLinkPatterns || [];
-        if (urlMatchesAllowedPatterns(href, patterns)) {
-          const attributes = [["href", href]];
-          const authoredTarget = node.getAttribute("target");
-          if (authoredTarget) attributes.push(["target", authoredTarget]);
-          else if ((previewState.config?.containerOptions?.links || previewState.config?.container?.links)?.addTargetBlank !== false) attributes.push(["target", "_blank"]);
-          projectedAttributes.set(element, attributes);
-        } else {
-          reject(`The href for ${href} was omitted because it is outside the allowed URL patterns.`);
-        }
-      }
-      if (node.namespaceURI === "http://www.w3.org/2000/svg") {
-        const svgAttributes = new Set(["viewBox", "width", "height", "x", "y", "x1", "y1", "x2", "y2", "cx", "cy", "r", "rx", "ry", "d", "points", "fill", "stroke", "stroke-width", "role", "aria-label", "aria-labelledby", "id", "offset", "stop-color", "gradientUnits"]);
-        for (const attribute of node.attributes) {
-          if (svgAttributes.has(attribute.name) && /^[- A-Za-z0-9.,#()%]+$/.test(attribute.value)) element.setAttribute(attribute.name, attribute.value);
-        }
-      }
-      for (const child of node.childNodes) copy(child, element);
-      parent.append(element);
-    }
-    for (const child of parsed.body.childNodes) copy(child, fragment);
-    const staging = document.createElement("div");
-    staging.append(fragment);
-    const serializeOutputNode = (node) => {
-      if (node.nodeType === Node.TEXT_NODE) return [0, node.textContent];
-      const attributes = [];
-      for (let index = 0; index < node.attributes.length; index++) {
-        const attribute = node.attributes[index];
-        attributes.push([attribute.name, attribute.value]);
-      }
-      for (const attribute of projectedAttributes.get(node) || []) attributes.push(attribute);
-      const children = [];
-      for (let index = 0; index < node.childNodes.length; index++) {
-        children.push(serializeOutputNode(node.childNodes[index]));
-      }
-      return [1, node.localName, node.namespaceURI === "http://www.w3.org/2000/svg" ? 1 : 0,
-        attributes, children];
-    };
-    const outputTree = [];
-    for (let index = 0; index < staging.childNodes.length; index++) {
-      outputTree.push(serializeOutputNode(staging.childNodes[index]));
-    }
-    let stylesheetPaths = previewState.config?.stylesheets;
-    if (!stylesheetPaths) {
-      stylesheetPaths = [];
-      const links = parsed.querySelectorAll('link[rel="stylesheet"][href]');
-      for (let index = 0; index < links.length; index++) {
-        stylesheetPaths.push(links[index].getAttribute("href").replace(/^\.\//, ""));
-      }
-    }
-    const styles = parsed.querySelectorAll("style");
-    const cssParts = [];
-    for (let index = 0; index < styles.length; index++) cssParts.push(styles[index].textContent || "");
-    for (const path of stylesheetPaths) {
-      const file = previewState.files.find((candidate) => candidate.path === path);
-      if (file) cssParts.push(file.content || "");
-    }
-    const css = cssParts.join("\n");
-    let renderedCss = "";
-    if (css) renderedCss = css;
-    let stagedRoot = "";
-    if (useOutputFrame) {
-      await new Promise((resolve) => {
-        const receive = (event) => {
-          if (event.data?.type !== "staged" || event.data.generation !== generation) return;
-          stagedRoot = event.data.root;
-          outputFramePort.removeEventListener("message", receive);
-          resolve();
-        };
-        outputFramePort.addEventListener("message", receive);
-        outputFramePort.postMessage({
-          type: "stage",
-          generation,
-          css: renderedCss,
-          colorScheme: document.documentElement.dataset.theme === "light" ? "light" : "dark",
-        });
-      });
-      if (generation !== previewGeneration) return;
-      surfaceBody = surfaceHost.contentDocument?.getElementById(stagedRoot);
-      if (!surfaceBody) throw new Error("Project output frame root is unavailable");
-    }
-    clearTimeout(previewTimer);
-    previewTimer = setTimeout(async () => {
-      if (generation !== previewGeneration) return;
-      try {
-        const allowedTags = [];
-        allowed.forEach((tag) => {
-          if (!["html", "head", "body", "meta", "link", "script", "style"].includes(tag)) allowedTags.push(tag);
-        });
-        const controller = await mountResourcesProjectPreview({
-          rootKey: String(generation),
-          root: surfaceBody, statusRoot: preview, scripts: [], violations,
-          tags: allowedTags,
-          files: previewState.files,
-          allowedFetchOrigins: previewState.config?.containerOptions?.allowedFetchOrigins
-            || previewState.config?.capabilities?.fetch?.resources || [],
-          allowedLinkPatterns: previewState.config?.containerOptions?.allowedLinkPatterns || [],
-          allowNavigate: (value) => urlMatchesAllowedPatterns(value,
-            previewState.config?.containerOptions?.allowedLinkPatterns || []),
-          environment: { language: document.documentElement.lang || "en" },
-          onViolation(error) {
-            if (generation !== previewGeneration) return;
-            const routed = routeProjectStatus(generation, { type: "blocked", message: error.message });
-            if (!routed || routed.accepted) setStatus(`Blocked: ${routed?.blocking?.message || error.message}`, "error", null, "output");
-          },
-        });
-        if (generation !== previewGeneration) controller.destroy();
-        else {
-          if (useOutputFrame) {
-            controller.setContent(outputTree);
-            await controller.run(scripts);
-          } else {
-            await controller.load({ tree: outputTree,
-              stylesheets: renderedCss ? [renderedCss] : [], scripts });
-          }
-          if (useOutputFrame) {
-            await new Promise((resolve) => {
-              const receive = (event) => {
-                if (event.data?.type !== "committed" || event.data.generation !== generation) return;
-                outputFramePort.removeEventListener("message", receive);
-                resolve();
-              };
-              outputFramePort.addEventListener("message", receive);
-              outputFramePort.postMessage({ type: "commit", generation });
-            });
-            if (generation !== previewGeneration) { controller.destroy(); return; }
-            outputFrame.hidden = false;
-            for (const child of [...preview.children]) if (child !== outputFrame) child.remove();
-          }
-          previewController?.destroy();
-          previewController = controller;
-          root.dataset.outputMachineState = "ready";
-          delete preview.dataset.previewViolations;
-          delete preview.dataset.canvasCommands;
-          const inspection = controller.inspect?.();
-          const machine = inspection?.machine;
-          preview.dataset.projectMachineId = machine?.machineId || "wasm-web-machine";
-          preview.dataset.projectPrograms = String(inspection?.programs || 0);
-        }
-      } catch (error) {
-        if (generation === previewGeneration) root.dataset.outputMachineState = "failed";
-        setStatus(`Blocked: ${error.message}`, true, null, "output");
-        queueMicrotask(() => {
-          if (generation === previewGeneration) routeProjectStatus(generation, { type: "blocked", message: error.message });
-        });
-      }
-    }, 120);
-  }
-
-  function routeProjectStatus(generation, event) {
-    try {
-      return editorController?.projectStatus.report(generation, event) || null;
-    } catch (error) {
-      setStatus(`Editor status bridge failed: ${error.message}`, "error", null, "editor");
-      return null;
-    }
-  }
-
-  function disposeProjectMachine() {
-    previewGeneration += 1;
-    clearTimeout(previewTimer);
-    previewController?.destroy();
-    previewController = null;
-    outputFramePort?.close();
-    outputFrame?.remove();
-    outputFrame = outputFramePort = outputFrameReady = null;
-    outputFrameRequested = true;
-    delete preview.dataset.previewRuntime;
-    delete preview.dataset.previewViolations;
-    delete preview.dataset.projectMachineId;
-    delete preview.dataset.canvasCommands;
+    // History, import, and configuration changes render immediately. Typing
+    // uses the trailing-edge timer below; the bootstrap owns compilation,
+    // iframe lifetime, errors, and the clean swap to the next output.
+    editorController?.setSnapshot(state);
+    editorController?.renderSnapshot();
   }
 
   async function mountEditorMachine(reason = "project-open") {
@@ -966,8 +615,6 @@ async function mountProjectRoot(root) {
         return;
       }
       editorController = controller;
-      root.dataset.editorMachineStage = "theme";
-      syncOutputTheme();
       root.dataset.editorMachineStage = "snapshot";
       editorController.setSnapshot(state);
       root.dataset.editorMachineId = controller.inspect()?.machine?.machineId || "quickjs-editor";
@@ -983,8 +630,7 @@ async function mountProjectRoot(root) {
       }
       // Bootstrap mounted the server snapshot. Recovered drafts or a chosen
       // template can replace it during UI startup and must reach output too.
-      if (!previewController && (root.dataset.outputOwner !== "editor" ||
-          !projectSnapshotsEqual(initialOutputSnapshot, state))) renderPreview();
+      if (!projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
@@ -994,7 +640,6 @@ async function mountProjectRoot(root) {
   }
 
   function rotateContainerMachines(reason = "container-change") {
-    disposeProjectMachine();
     mountEditorMachine(reason);
   }
 
@@ -1389,13 +1034,10 @@ async function mountProjectRoot(root) {
           setStatus("Blocked: Output is waiting for valid syntax.", "error", null, "output");
         }, 5_000);
       } else {
-        outputFrameRequested = true;
         // Keep the current output alive while the user is typing. Rebuilding
         // its DOM and QuickJS machine is intentionally a trailing-edge task.
         const debounceMs = Math.min(5_000, Math.max(250, Number(state.config?.output?.debounceMs) || 900));
-        editorPreviewTimer = setTimeout(root.dataset.outputOwner === "editor"
-          ? () => editorController?.renderSnapshot()
-          : renderPreview, debounceMs);
+        editorPreviewTimer = setTimeout(() => editorController?.renderSnapshot(), debounceMs);
       }
     } catch (error) {
       setStatus(`Editor update failed: ${error.message || String(error)}`, "error", null, "editor");
@@ -1655,10 +1297,6 @@ async function mountProjectRoot(root) {
   document.addEventListener("pointerdown", (event) => {
     if (!outputOverflow.contains(event.target)) closeOutputOverflow();
   });
-  addEventListener("message", (event) => {
-    if (event.source !== parent || event.data?.protocol !== "resources-project-presentation-v1" || event.data.type !== "focus") return;
-    previewController?.focus?.();
-  });
   const splitter = root.querySelector(".project-editor__splitter");
   const projectLayout = root.closest(".project-create__layout");
   const projectClose = projectLayout.querySelector(".project-fields__toolbar .project-close");
@@ -1889,7 +1527,7 @@ async function mountProjectRoot(root) {
     historyPanel.remove();
     editorGeneration += 1;
     editorController?.destroy();
-    disposeProjectMachine();
+    clearTimeout(editorPreviewTimer);
   }, { once: true });
 }
 

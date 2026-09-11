@@ -1,7 +1,6 @@
 let listeners = null;
 let nextRequest = 1;
 const pending = new Map();
-const outputListeners = new Map();
 
 function callGuest(name, payload = {}) {
   try {
@@ -27,12 +26,6 @@ function requestHost(name, payload = {}) {
 const previousEditorReceive = globalThis.__resourcesEditorReceive;
 globalThis.__resourcesEditorReceive = (json) => {
   const message = JSON.parse(json);
-  if (message.type === "output-error") {
-    const listener = outputListeners.get(message.id);
-    if (listener) listener(new Error(message.message));
-    else if (previousEditorReceive) return previousEditorReceive(json);
-    return "null";
-  }
   const operation = pending.get(message.id);
   if (!operation) return previousEditorReceive ? previousEditorReceive(json) : "null";
   pending.delete(message.id);
@@ -103,23 +96,5 @@ export async function mountResourcesProjectEditor(options) {
       return callGuest("__resourcesProjectRequestOutput", { generation });
     } }),
     setTheme(theme) { return callGuest("__codeEditorSetTheme", { theme }); },
-  });
-}
-
-export async function mountResourcesProjectPreview(options) {
-  callGuest("__resourcesProjectRequestOutput", { generation: Number(options.rootKey) });
-  const id = await requestHost("output.mount", {
-    rootKey: options.rootKey, scripts: options.scripts,
-    violations: options.violations?.map((error) => error.message) || [], tags: options.tags,
-    files: options.files, allowedFetchOrigins: options.allowedFetchOrigins,
-    allowedLinkPatterns: options.allowedLinkPatterns, environment: options.environment,
-  });
-  outputListeners.set(id, options.onViolation);
-  return Object.freeze({
-    inspect() { return callHost("output.inspect", { id }); },
-    setContent(tree) { return callHost("output.setContent", { id, tree }); },
-    load(project) { return requestHost("output.load", { id, project }); },
-    run(scripts) { return requestHost("output.run", { id, scripts }); },
-    destroy() { callHost("output.destroy", { id }); outputListeners.delete(id); },
   });
 }

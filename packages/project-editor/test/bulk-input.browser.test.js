@@ -35,7 +35,8 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const machine = await readFile(join(root, "dev/wasm-web-machine/dist/module/machine.js"));
   const core = await readFile(join(generated, "project-editor-microquickjs.js"));
   const language = await readFile(join(generated, "project-editor-language-html.js"));
-  const moduleSource = await readFile(join(root, "packages/website/content-form-client.js"), "utf8");
+  const moduleSource = await readFile(process.env.MACCHIATO_TEST_SOURCE_FILE ||
+    join(root, "packages/website/content-form-client.js"), "utf8");
   const text = `<!--\n${moduleSource.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
   const browser = await chromium.launch();
   t.after(() => browser.close());

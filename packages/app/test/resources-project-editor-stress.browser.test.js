@@ -428,7 +428,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   // Exercise both CodeMirror's paste handler and native bulk text insertion.
   // The latter exposed repeated full-page grid sizing, despite normal typing
   // and direct editor mounts passing. Keep the large source inert in output.
-  const moduleSource = await readFile(join(root, "packages/website/content-form-client.js"), "utf8");
+  const moduleSource = await readFile(process.env.MACCHIATO_TEST_SOURCE_FILE ||
+    join(root, "packages/website/content-form-client.js"), "utf8");
   const inertSource = source => `<!--\n${source.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
   const large = inertSource(moduleSource);
   // Native insertText emits thousands of input events, unlike paste. Cover
