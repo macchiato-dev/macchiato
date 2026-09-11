@@ -1086,7 +1086,7 @@ html:not([data-theme="light"]) .project-editor__mount .cm-editor { background: #
 /* Keep CodeMirror's standard wrapping Find/Replace layout. These controls sit
    inside the project form but must not inherit its full-width field styling. */
 .project-editor__mount .cm-search .cm-textfield { width: 12em; max-width: calc(100% - 32px); padding: 3px 6px; border: 1px solid var(--resources-editor-border); border-radius: 3px; color: var(--resources-editor-fg); background: var(--resources-editor-bg); font: inherit; }
-.project-editor__mount .cm-search input[type="checkbox"] { width: auto; padding: 0; vertical-align: middle; }
+.project-editor__mount .cm-search input[type="checkbox"] { width: auto; padding: 0; }
 .project-editor__mount .cm-search .cm-button { border: 1px solid var(--resources-editor-border); border-radius: 3px; color: var(--resources-editor-fg); background: var(--resources-editor-panel); font: inherit; cursor: pointer; }
 .project-editor__splitter { position: relative; cursor: col-resize; background: #454b4a; box-shadow: inset 1px 0 #202524; outline: none; }
 html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-shadow: inset 1px 0 #e8edef; }
