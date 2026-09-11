@@ -34,6 +34,23 @@ test("workspace transport compacts and restores project resources", () => {
   assert.deepEqual(JSON.parse(resources.hydrateText(compact)), workspace);
 });
 
+test("SVG entry markup is compiled rather than discarded as an image asset", () => {
+  const resources = new ResourcesProjectResourceDevice();
+  const source = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>';
+  const compact = resources.compactSnapshot({ files: [
+    { path: "image.svg", content: source },
+    { path: "other.svg", content: source },
+  ] });
+  for (const entry of ["image.svg", "./image.svg"]) {
+    const files = resources.compilationFiles(compact.files, entry);
+    assert.equal(files[0].content, source);
+    assert.equal(files[1].content, "");
+    const compiled = compileProjectFiles(files, { entry });
+    assert.equal(compiled.tree[0][1], "svg");
+    assert.equal(compiled.tree[0][4][0][1], "circle");
+  }
+});
+
 test("compilation restores large source files but keeps image bytes out of the build guest", () => {
   const resources = new ResourcesProjectResourceDevice();
   const source = 'var book = "' + "paragraph ".repeat(8_000) + '";\n';

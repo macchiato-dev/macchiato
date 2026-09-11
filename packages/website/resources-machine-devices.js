@@ -37,10 +37,13 @@ export class ResourcesProjectResourceDevice {
       return { ...file, content: value };
     });
   }
-  compilationFiles(files) {
+  compilationFiles(files, entry = "index.html") {
     return this.hydrateFiles(files).map(file => {
       const image = /\.(?:gif|jpe?g|png|svg|webp)$/i.test(file.path);
       const binary = /^data:[^,]*;base64,/i.test(file.content);
+      // An SVG entry is source markup, not an opaque image dependency.
+      // It must pass through the compiler and the host's SVG checks.
+      if (!binary && (file.path === entry || `./${file.path}` === entry)) return file;
       return image || binary ? { ...file, content: "" } : file;
     });
   }
@@ -144,7 +147,7 @@ export class ResourcesBuildDevice {
     // QuickJS request avoids copying large assets through an unrelated VM.
     // Large JS/CSS/HTML is opaque in the editor too, but it is still source.
     // Replacing every opaque reference with "" silently erased those scripts.
-    const files = this.projectResources.compilationFiles(payload.files);
+    const files = this.projectResources.compilationFiles(payload.files, payload.config?.entry);
     try { return machine.compileFiles(files, payload.config); }
     finally { machine.destroy(); }
   }
