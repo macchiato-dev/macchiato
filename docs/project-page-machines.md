@@ -3698,3 +3698,31 @@ The previous verified archive is preserved at
 Nothing was deployed to Bunny. The earlier timeout/interruption remain recorded;
 this checkpoint does not prove the broader performance and native-document
 fidelity requirements complete.
+
+### Optional native input-pending hint
+
+The installed CodeMirror language worker consults
+`navigator.scheduling.isInputPending()` when available. The guest previously
+omitted that capability. A native-control test queues an actual Chromium
+keypress while a synchronous task is running: native page/iframe controls pass,
+but both guest runtimes report the API absent. The bridge now exposes only the
+native scheduling object's boolean query with a validated `includeContinuous`
+argument. The guest performs dictionary conversion and leaves the API absent
+when the browser lacks it. No CodeMirror parser budget or scheduler is replaced.
+
+All 23 input-pending, idle-deadline, and mutation checks pass after rebuilding.
+The queued-key tests work in both runtimes, directly and inside an iframe, and
+also cover missing browser support and option conversion. This is the browser's
+coarse same-origin scheduling hint, not an input queue or a root-scoped activity
+guarantee; see the [proposal](https://wicg.github.io/is-input-pending/).
+Baseline and corrected logs are `input-pending-{baseline,corrected}.log`.
+
+Serial first-page typing of the same 106,402-character JavaScript source remains
+mixed: MicroQuickJS keys ranged 47–96 ms before and 42–161 ms afterward, with
+native timings also varying. These runs include test-only parser checkpoints;
+they do not establish a speedup. A new optional fixed-cadence comparison queues
+ten real keys at 30 ms intervals without serial acknowledgement waits. It checks
+exact final source and records protocol acknowledgement delays, not claimed
+paint latency. `MACCHIATO_TEST_INPUT_BURST=1` enables it;
+`MACCHIATO_TEST_DISABLE_INPUT_PENDING=1` removes only the guest's hint for a
+same-runtime comparison. Neither diagnostic changes production behavior.
