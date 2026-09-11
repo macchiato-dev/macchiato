@@ -13,6 +13,8 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   const direct = await build({ entryPoints: [new URL("project-machines.js", website).pathname],
     bundle: true, write: false, format: "esm", platform: "browser" });
   const frameController = await readFile(new URL("generated/project-output-frame-controller.js", website), "utf8");
+  const frameShell = await readFile(new URL("project-output-frame.html", website), "utf8");
+  const frameCss = frameShell.match(/<style>([\s\S]*?)<\/style>/)[1];
   const browser = await chromium.launch();
   t.after(() => browser.close());
   // Explicit media emulation bypasses iframe color-scheme inheritance.
@@ -44,7 +46,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     if (path === "/machine.js") return route.fulfill({ contentType: "text/javascript", body: machine.outputFiles[0].text });
     if (path === "/direct.js") return route.fulfill({ contentType: "text/javascript", body: direct.outputFiles[0].text });
     if (path === "/frame.html") return route.fulfill({ contentType: "text/html",
-      body: `<div id="project-output-a"></div><script type="module">${frameController}</script>` });
+      body: `<!doctype html><html><head><style>${frameCss}</style></head><body><div id="project-output-a" class="project-output-root"></div><script type="module">${frameController}</script></body></html>` });
     return route.fulfill({ contentType: "text/html", body: '<div id="guest"></div>' });
   });
   await page.goto("http://modules.test/");
@@ -193,6 +195,13 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     assert.equal(await surface.innerText(), "AB70", "denied replacements preserve the active application");
   }
   const outputDocument = iframe ? page.frames().find(frame => frame !== page.mainFrame()) : page;
+  if (iframe) {
+    await load([{ path: 'index.html', content: '<style>body { min-height: 100vh; background: #102e29; }</style><main>Full height</main>' }]);
+    const size = await outputDocument.locator('.project-output-root:has(> main)').evaluate(node => ({
+      height: node.getBoundingClientRect().height, viewport: window.innerHeight, minimum: getComputedStyle(node).minHeight,
+    }));
+    assert.ok(size.height >= size.viewport, 'iframe defaults must not override app body dimensions: ' + JSON.stringify(size));
+  }
   await outputDocument.evaluate(() => {
     document.body.id = "outside-ancestor";
     const sibling = document.createElement("div");
