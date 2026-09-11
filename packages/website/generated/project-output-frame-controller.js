@@ -405,6 +405,7 @@ var ProjectOutput = class {
     this.programs += scripts.length;
   };
   inspect = () => ({ runtime: "quickjs", programs: this.programs });
+  focus = () => this.active?.session.call("__resourcesOutputFocus", null);
   destroy = () => {
     if (this.destroyed) return;
     this.destroyed = true;
@@ -423,6 +424,7 @@ var output;
 var storage;
 var ownerPort;
 var destroyed = false;
+addEventListener("focus", () => output?.focus());
 function reportError(error) {
   ownerPort?.postMessage({ protocol, type: "error", error: error?.message || String(error) });
 }

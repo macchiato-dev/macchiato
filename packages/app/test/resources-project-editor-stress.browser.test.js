@@ -121,6 +121,11 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     earlyOutput = await page.locator('iframe.project-editor__output-frame').elementHandle();
     await editor.locator('[data-project-present]').click();
     await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.presenting === 'true', null, { timeout: 5000 });
+    await page.waitForFunction(() => {
+      const frame = document.querySelector('iframe.project-editor__output-frame');
+      return document.activeElement === frame &&
+        !!frame.contentDocument.activeElement?.closest('.project-output-root');
+    }, null, { timeout: 5000 });
     const bounds = await earlyOutput.boundingBox();
     assert.ok(bounds.width > 1435 && bounds.height > 895, "output expands without waiting for CodeMirror");
     await page.screenshot({ path: join(artifacts, 'output-before-editor.png') });
