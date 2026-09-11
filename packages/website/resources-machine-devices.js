@@ -627,6 +627,10 @@ export class ResourcesOutputDevice {
       if (typeof node[1] !== "string" || !node[1])
         throw new Error(`Project output element name is missing at ${path}`);
       if (!Array.isArray(node[4])) throw new Error(`Project output children are invalid at ${path}`);
+      if (node[5] !== undefined && (!Array.isArray(node[5]) || node[5].length > 128 * 1024 ||
+          node[5].some(byte => !Number.isInteger(byte) || byte < 0 || byte > 255))) {
+        throw new Error(`Project inline style bytes are invalid at ${path}`);
+      }
       node[4].forEach((child, index) => validate(child, `${path}.${index}`));
     };
     tree.forEach((node, index) => validate(node, String(index)));

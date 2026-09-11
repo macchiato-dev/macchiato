@@ -70,6 +70,19 @@ function cssImages(rules) {
   return rules;
 }
 
+function inlineStyle(source) {
+  // Reuse the semantic declaration format, but do not let a closing brace
+  // turn an attribute into additional rules. Its selector is never applied.
+  const rules = cssImages(parseConstrainedCss(`.wwc-inline { ${source} }`));
+  if (rules.length !== 1 || rules[0].selector !== ".wwc-inline") {
+    throw new SyntaxError("Inline style must contain only declarations");
+  }
+  validateConstrainedCssRules(rules);
+  const bytes = encodeConstrainedCssRules(rules);
+  if (bytes.length > 128 * 1024) throw new RangeError("Inline style operations are too large");
+  return [...bytes];
+}
+
 export class SingleFileProjectCompiler {
   constructor({ limits = SOURCE_LIMITS } = {}) {
     this.limits = Object.freeze({ ...limits });
@@ -137,7 +150,10 @@ export class SingleFileProjectCompiler {
       }
       // Preserve the namespace in the wire tree. The host still validates
       // every element and attribute when the output guest creates the nodes.
-      return [[1, name, svg ? 1 : 0, attributes, value.childNodes.flatMap(nodes)]];
+      const node = [1, name, svg ? 1 : 0, attributes, value.childNodes.flatMap(nodes)];
+      const style = value.getAttribute("style");
+      if (style !== null) node.push(inlineStyle(style));
+      return [node];
     };
     const tree = parsed.body.childNodes.flatMap(nodes);
     // The server build can hand the guest semantic operations directly. A

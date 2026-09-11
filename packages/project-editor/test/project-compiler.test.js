@@ -57,3 +57,19 @@ test("embedded CSS SVG becomes semantic image data, not a forwarded URL", () => 
   }
   assert.throws(() => compile(`<style>.card{background-image:url("data:image/svg+xml,${encodeURIComponent('<svg><script>bad()</script></svg>')}")}</style>`), /SVG element/);
 });
+
+test("inline declarations become semantic bytes without losing inline precedence", () => {
+  const [node] = compile('<p id="sample" style="color: red !important; color: blue; margin: 4px 8px;">Text</p>').tree;
+  assert.deepEqual(node[3], [["id", "sample"]]);
+  assert.ok(Array.isArray(node[5]) && node[5].length > 4);
+  assert.equal(node[5][0], 5, "same semantic CSS wire version as stylesheets");
+  assert.ok(compile('<p style=""></p>').tree[0][5], "empty inline style is an explicit replacement");
+  for (const style of [
+    'color: red; } p { color: blue;',
+    '@import "https://example.test/style.css";',
+    'background: url("https://example.test/pixel")',
+    'background: url("//example.test/pixel")',
+    'background: url("/pixel")',
+    'behavior: none',
+  ]) assert.throws(() => compile(`<p style='${style}'>Text</p>`), undefined, style);
+});

@@ -1136,6 +1136,60 @@ document.getElementById("again").addEventListener("click", () => {
   }
 });
 
+test("project inline styles match native precedence and reject external URLs", { timeout: 90000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const errors = [], external = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => {
+    if (new URL(request.url()).hostname === "inline-style.example") external.push(request.url());
+  });
+  const source = `<style>
+.sample { color: green !important; padding: 20px; }
+@keyframes pulse { from { opacity: 1; } to { opacity: 0.8; } }
+</style>
+<div id="sample" class="sample" style="color: red !important; color: blue; padding: 4px !important; padding: 9px; margin: 8px 12px; border: 2px solid; width: 200px; height: 40px; animation: pulse 10s linear infinite;">Inline styles</div>
+<button id="change">Change padding</button>
+<script>
+document.getElementById("change").addEventListener("click", () => {
+  document.getElementById("sample").style.setProperty("padding", "6px");
+});
+</script>`;
+  const native = await browser.newPage();
+  await native.setContent(source);
+  const appearance = node => {
+    const style = getComputedStyle(node);
+    return Object.fromEntries(["color", "paddingTop", "paddingRight", "marginTop", "marginRight",
+      "borderTopWidth", "width", "height"].map(name => [name, style[name]]));
+  };
+  const expected = await native.locator("#sample").evaluate(appearance);
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
+  await page.locator(".cm-content").fill(source);
+  const output = page.frameLocator("[data-project-output-mount] iframe");
+  await output.locator("#sample").waitFor();
+  assert.deepEqual(await output.locator("#sample").evaluate(appearance), expected);
+  assert.equal(await output.locator("#sample").evaluate(node => node.getAnimations().length), 1,
+    "the inline animation resolves the scoped stylesheet keyframe");
+  await output.locator("#change").click();
+  await native.locator("#change").click();
+  assert.deepEqual(await output.locator("#sample").evaluate(appearance),
+    await native.locator("#sample").evaluate(appearance));
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/project-inline-styles.png") });
+  await page.locator(".cm-content").fill(source.replace("color: red !important;",
+    "background: url('https://inline-style.example/pixel'); color: red !important;"));
+  await page.waitForFunction(() => document.querySelector("[data-project-status]").textContent.includes("external URLs"),
+    null, { timeout: 15000 });
+  assert.equal(await output.locator("#sample").textContent(), "Inline styles",
+    "invalid source does not replace the working output");
+  assert.deepEqual(external, []);
+  assert.deepEqual(errors, []);
+});
+
 test("project focus options preserve native scroll behavior", { timeout: 60000 }, async t => {
   const port = await getPort(), dataDir = await tempDir();
   const app = startApp(port, dataDir);

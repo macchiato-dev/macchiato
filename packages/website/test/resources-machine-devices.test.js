@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ResourcesProjectResourceDevice, ResourcesStorageDevice, ResourcesFetchDevice, ResourcesArchiveDevice } from "../resources-machine-devices.js";
+import { ResourcesProjectResourceDevice, ResourcesStorageDevice, ResourcesFetchDevice, ResourcesArchiveDevice, ResourcesOutputDevice } from "../resources-machine-devices.js";
 import { encodeProjectArchive } from "../../hub/src/project-archive.js";
 import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "../project-session.js";
@@ -15,6 +15,15 @@ function storageWindow() {
   };
   return { sessionStorage: area(), localStorage: area(), addEventListener() {} };
 }
+
+test("output trees accept bounded inline operation bytes, not coercible values", () => {
+  const output = new ResourcesOutputDevice(null, () => {}, null);
+  const tree = compileProjectFiles([{ path: "index.html", content: '<p style="color:red">Text</p>' }]).tree;
+  assert.doesNotThrow(() => output.validateTree(tree));
+  for (const bytes of ["color:red", [-1], [256], [1.5], [null], [true], new Array(128 * 1024 + 1).fill(0)]) {
+    assert.throws(() => output.validateTree([[...tree[0].slice(0, 5), bytes]]), /inline style bytes/);
+  }
+});
 
 test("resource reads are bounded chunks with catchable errors and unchanged bytes", () => {
   const device = new ResourcesProjectResourceDevice();
