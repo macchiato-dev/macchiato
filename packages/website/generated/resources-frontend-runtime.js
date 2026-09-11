@@ -2616,6 +2616,11 @@ Object.defineProperty(GuestElement.prototype, "children", {
     });
   }
 });
+Object.defineProperty(GuestElement.prototype, "childElementCount", {
+  get: function get() {
+    return hostGet(this.reference, "childElementCount");
+  }
+});
 Object.defineProperty(GuestElement.prototype, "contentEditable", {
   get: function get() {
     return this.getAttribute("contenteditable") || "inherit";

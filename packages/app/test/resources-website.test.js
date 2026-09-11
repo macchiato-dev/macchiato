@@ -1497,6 +1497,8 @@ test("Resources project save controls publish titled latest versions", async (t)
   const browser = await chromium.launch();
   t.after(async () => browser.close());
   const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
   await page.context().addCookies([{ name: "resources_session", value: session, domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
   await page.locator(".cm-content").waitFor();
@@ -1742,6 +1744,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByRole("button", { name: "Project menu" }).click();
   assert.equal(await page.getByRole("menuitem", { name: "Delete project" }).isVisible(), true);
   await page.screenshot({ path: join(dataDir, "resources-save-controls.png") });
+  assert.deepEqual(errors, []);
 });
 
 test("CodeMirror Find/Replace remains usable in both themes and narrow workspaces", async (t) => {

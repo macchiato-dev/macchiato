@@ -1837,6 +1837,9 @@ Object.defineProperty(GuestElement.prototype, "children", {
     return childrenOf(this).filter(function (node) { return node instanceof GuestElement; });
   }
 });
+Object.defineProperty(GuestElement.prototype, "childElementCount", {
+  get: function () { return hostGet(this.reference, "childElementCount"); }
+});
 Object.defineProperty(GuestElement.prototype, "contentEditable", {
   get: function () { return this.getAttribute("contenteditable") || "inherit"; },
   set: function (value) { this.setAttribute("contenteditable", String(value)); }

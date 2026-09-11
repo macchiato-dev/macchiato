@@ -214,7 +214,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
               var _dialog$querySelector;
               var dialog = search.closest("[data-command-dialog]");
               var query = (dialog == null || (_dialog$querySelector = dialog.querySelector("[data-command-input]")) == null ? void 0 : _dialog$querySelector.value.trim()) || "";
-              search.href = query ? "/browse?q=" + encodeURIComponent(query) : "/browse";
+              search.setAttribute("href", query ? "/browse?q=" + encodeURIComponent(query) : "/browse");
             }
           });
           document.addEventListener("keydown", function (event) {
@@ -417,7 +417,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
                 var link = document.createElement("a");
                 link.className = "account-card";
                 __resourcesDatasetSet(link, "data-project-link", "");
-                link.href = "/" + encodeURIComponent(project.namespace) + "/" + encodeURIComponent(project.slug);
+                link.setAttribute("href", "/" + encodeURIComponent(project.namespace) + "/" + encodeURIComponent(project.slug));
                 var title = document.createElement("h3");
                 title.textContent = String(project.name || project.slug);
                 var namespace = document.createElement("span");
