@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
+import { editorLanguages } from "../src/languages.js";
 
 // Use identical compiled editor and language sources, source text, viewport,
 // and browser input paths. Only the DOM/runtime boundary differs. This is a
@@ -22,22 +23,35 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const environment = process.env.MACCHIATO_TEST_ENVIRONMENT_FILE || join(generated, "project-editor-runtime.bin");
   const runtime = join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/microquickjs-guest-runtime");
   const application = join(directory, "application.js");
-  const setup = '__codeEditorSetContent(JSON.stringify({language:"html",content:"<p>Initial</p>"}));';
+  const selectedLanguage = process.env.MACCHIATO_TEST_EDITOR_LANGUAGE || "html";
+  const parser = editorLanguages.find(entry => entry.name === selectedLanguage)?.package;
+  assert.ok(parser || selectedLanguage === "plain", "known editor language required");
+  const parserName = parser || "html";
+  const setup = `__codeEditorSetContent(JSON.stringify({language:${JSON.stringify(selectedLanguage)},content:"Initial"}));`;
+  const parseBudget = Number(process.env.MACCHIATO_TEST_PARSE_BUDGET || 0);
+  assert.ok(Number.isInteger(parseBudget) && parseBudget >= 0 && parseBudget <= 20);
+  assert.ok(!parseBudget || process.env.MACCHIATO_TYPING_CHECKPOINTS, "budget experiment requires checkpoints");
+  const checkpoints = process.env.MACCHIATO_TYPING_CHECKPOINTS
+    ? `globalThis.__bulkParseBudget = ${parseBudget};\n` + await readFile(
+      new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
   await writeFile(application, 'globalThis.__CODE_EDITOR_DEFER_START__=true;\n' +
-    'load("editor.bin");load("html.bin");\n' + setup);
+    'load("editor.bin");load("language.bin");\n' + setup + "\n" + checkpoints);
   execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", join(directory, "application.bin"), application]);
   execFileSync(process.execPath, [join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/stamp-wasm.js"),
     join(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
     join(directory, "editor.wasm"), `runtime.bin=${environment}`,
     `application.bin=${join(directory, "application.bin")}`, `editor.bin=${join(generated, "project-editor-core.bin")}`,
-    `html.bin=${join(generated, "project-editor-language-html.bin")}`]);
+    `language.bin=${join(generated, `project-editor-language-${parserName}.bin`)}`]);
   const wasm = await readFile(join(directory, "editor.wasm"));
   const machine = await readFile(join(root, "dev/wasm-web-machine/dist/module/machine.js"));
   const core = await readFile(join(generated, "project-editor-microquickjs.js"));
-  const language = await readFile(join(generated, "project-editor-language-html.js"));
+  const language = await readFile(join(generated, `project-editor-language-${parserName}.js`));
   const moduleSource = await readFile(process.env.MACCHIATO_TEST_SOURCE_FILE ||
     join(root, "packages/website/content-form-client.js"), "utf8");
-  const text = `<!--\n${moduleSource.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
+  // The default matches the workspace stress test's inert output. Raw source
+  // distinguishes ordinary editing from repeatedly parsing one huge comment.
+  const rawSource = process.env.MACCHIATO_TEST_RAW_SOURCE === "1";
+  const text = rawSource ? moduleSource : `<!--\n${moduleSource.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
   const editorWidth = Number(process.env.MACCHIATO_TEST_EDITOR_WIDTH || 720);
   assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
   const methods = (process.env.MACCHIATO_TEST_INPUT_METHODS || "paste,insertText,replaceText").split(",");
@@ -63,7 +77,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         </style><div id="guest"><div id="editor"></div></div>` });
     });
     await page.goto("http://bulk-input.test/");
-    await page.evaluate(async ({ mode, setup }) => {
+    await page.evaluate(async ({ mode, setup, checkpoints }) => {
       window.messages = [];
       window.events = { beforeinput: 0, input: 0 };
       for (const type of Object.keys(events)) document.addEventListener(type, () => events[type]++);
@@ -71,7 +85,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         globalThis.__CODE_EDITOR_DEFER_START__ = true;
         globalThis.__browserUseNotify = message => messages.push(JSON.parse(message));
         await import("/core.js"); await import("/language.js");
-        (0, eval)(setup);
+        (0, eval)(setup + "\n" + checkpoints);
       } else {
         const { default: Machine } = await import("/machine.js");
         const module = await WebAssembly.compileStreaming(fetch("/editor.wasm"));
@@ -81,7 +95,9 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         });
         await machine.onmsg(0);
       }
-    }, { mode, setup });
+      window.typingCheckpoint = name => mode === "native" ? window[name]()
+        : machine.onmsg(new TextEncoder().encode("\u0002" + name + "\0{}"));
+    }, { mode, setup, checkpoints });
     const content = page.locator(".cm-content");
     const geometry = await page.locator(".cm-scroller").evaluate(node => {
       const style = getComputedStyle(node), box = node.getBoundingClientRect();
@@ -90,7 +106,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         contentEditable: content.contentEditable,
         userModify: getComputedStyle(content).getPropertyValue("-webkit-user-modify") };
     });
-    results.push({ run, mode, method: "geometry", ...geometry });
+    results.push({ run, mode, method: "geometry", language: selectedLanguage, rawSource, ...geometry });
     t.diagnostic(JSON.stringify(results.at(-1)));
     // Warm both the browser input path and editor before measuring bulk work.
     await content.fill("warmup");
@@ -149,6 +165,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     for (let index = 0; index < 4; index++) await page.keyboard.press("ArrowRight");
     let inserted = "";
     const keyMilliseconds = [];
+    if (checkpoints) await page.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
     const typingDirectory = process.env.MACCHIATO_TYPING_CPU_PROFILE_DIR;
     const typingProfiler = typingDirectory ? await context.newCDPSession(page) : null;
     if (typingProfiler) {
@@ -168,6 +185,18 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       await mkdir(typingDirectory, { recursive: true });
       await writeFile(join(typingDirectory, `${run}-${mode}-typing.cpuprofile`), JSON.stringify(profile));
       await typingProfiler.detach();
+    }
+    if (checkpoints) {
+      const timings = await page.evaluate(() => {
+        typingCheckpoint("reportTypingCheckpoints");
+        return messages.filter(message => message.type === "typing-checkpoints").at(-1).timings;
+      });
+      results.push({ run, mode, method: "typing-checkpoints", timings });
+      t.diagnostic(JSON.stringify(results.at(-1)));
+      await page.waitForFunction(() => {
+        typingCheckpoint("reportTypingCheckpoints");
+        return messages.filter(message => message.type === "typing-checkpoints").at(-1).viewportParsed;
+      }, null, { timeout: 10000 });
     }
     results.push({ run, mode, method: "first-page-typing", characters: text.length, keyMilliseconds });
     t.diagnostic(JSON.stringify(results.at(-1)));

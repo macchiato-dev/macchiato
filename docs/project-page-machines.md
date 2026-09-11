@@ -3342,3 +3342,83 @@ The previous archive is retained at
 Nothing was deployed to Bunny. Native bulk-input latency, viewport/`rem`
 fidelity, and other service failure paths remain open; this is not completion
 of the broader goal.
+
+### Separating native bulk input from ordinary typing (2026-09-11)
+
+The new `native-input.browser.test.js` control runs without CodeMirror, Wasm,
+or any handler that cancels input. It compares equally sized single-line and
+multiline input in rich contenteditable, CSS plaintext editing, and HTML
+`plaintext-only`, then reverses the case order. With the fixed 106,432-character
+source, the one-line calls take 36–70 ms and emit one input event. The
+1,961-line calls take 4.8–10.0 seconds and emit 3,874 input events. Native
+`innerText` returns 47 additional paragraph breaks for the multiline source
+in each mode. The control records this difference rather than normalizing
+it away; undo/redo reproduces the native result. The actual CodeMirror tests
+continue to require exact source text, including all newlines.
+
+[CodeMirror's upstream theme](https://github.com/codemirror/view/blob/main/src/theme.ts)
+already requests `-webkit-user-modify: read-write-plaintext-only`. The updated
+native/Wasm comparison checks the computed value, not just emitted CSS: both
+paths preserve it, along with the same 585 × 844 editor and 13 px font. The
+full comparison passes, including bulk insertion/replacement and undo/redo.
+Native insertion takes 8.7–11.2 seconds in that run; MicroQuickJS takes
+11.0–20.3 seconds. Neither an absent CSS property nor Wasm alone explains all
+of the native multiline delay. This is not a claim that the remaining
+runtime overhead is acceptable or that browser input should be intercepted.
+
+First-page typing exposes a separate, more relevant cost. The fixed stress
+source is deliberately wrapped in one enormous HTML comment to keep output
+inert. The benchmark can now select raw source and its real language, and
+run only paste plus ordinary key-by-key edits while retaining the original
+full-input default. Across these diagnostic runs:
+
+- The HTML-comment case takes about 55–359 ms per key in MicroQuickJS, with
+  substantial timing variation between runs.
+- The actual 106,402-character JavaScript module takes 41–138 ms per key in
+  the unprofiled comparison, versus about 5–13 ms natively.
+- The same large text without a syntax parser takes 10–22 ms per key in
+  MicroQuickJS, versus about 3–6 ms natively. This is a diagnostic control,
+  not a proposal to disable highlighting in production.
+
+DevTools CPU profiles capture just the typing phase. A separate optimized
+build retaining function names identifies the dominant frame as `JS_Call`,
+the interpreter. Its non-custom Wasm sections are byte-identical to the
+shipped editor runtime; the code-section SHA-256 is
+`a4e9964a15d16377405086c8b19c839b6e108cf52e6f8c7d12ca42b988b01945`.
+Thus the function-index mapping does not rely on an approximately similar
+debug build. `JS_GC2` accounts for only about 13–19 ms in these roughly
+one-second guest profiles; this is not evidence for changing GC policy.
+
+The optional ES5 `typing-checkpoints.js` fixture measures editor update,
+observer flush, parser work, document flattening, and JSON serialization.
+These timings are inclusive and must not be summed. In the real JavaScript
+case, parser work takes 286–304 ms within 434–444 ms of view updates; document
+flattening takes 20–29 ms and JSON serialization about 12–13 ms. This points
+toward parsing and scheduling rather than another bulk-transfer rewrite.
+
+A test-only reduction of the installed parser's 20 ms foreground budget to
+5 ms lowers some parsing work but does not reliably improve keystroke latency;
+it also produces more deferred updates. It is not shipped. The test requires
+the visible viewport to become parsed after typing, so deferred highlighting
+cannot masquerade as permanently disabled highlighting. Normal content,
+undo/redo, and typo-correction assertions still run in each diagnostic mode.
+
+Useful flags on `bulk-input.browser.test.js` are
+`MACCHIATO_TEST_INPUT_METHODS=paste`, `MACCHIATO_TEST_EDITOR_LANGUAGE=javascript`,
+`MACCHIATO_TEST_RAW_SOURCE=1`, `MACCHIATO_TYPING_CPU_PROFILE_DIR=<directory>`, and
+`MACCHIATO_TYPING_CHECKPOINTS=1`. `MACCHIATO_TEST_PARSE_BUDGET=5` requires the
+checkpoints fixture and is explicitly experimental. No profiling, monkey
+patches, or observer instrumentation were added to the production host.
+Evidence is under `native-input-control*`, `subscription-bulk-input*`,
+`first-page-*`, `typing-checkpoints-*`, and `typing-budget-five*` in
+`/root/macchiato-work`; symbol-preserving build output is kept separately in
+`microquickjs-symbols-target`.
+
+The next scheduling check is concrete: the canonical guest currently fakes
+`requestIdleCallback` with `setTimeout(0)` and a synthetic 50 ms deadline.
+CodeMirror uses this facade for background parsing. Forwarding the browser's
+real idle callback/deadline, with scoped cancellation and reference lifetimes,
+should be tested for fidelity before claiming a speed improvement. The guest's
+empty ResizeObserver facade is another outstanding native-behavior gap.
+The verified local deployment and Bunny archive remain unchanged by these
+test-only changes; the broader performance and rendering goals remain open.
