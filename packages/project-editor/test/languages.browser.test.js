@@ -478,9 +478,11 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     const detached = window.callGuest("inspectTextProbe", {});
     const guestWrites = [];
     for (const property of ["nodeValue", "textContent"]) {
-      for (const value of ["guest text", "", null]) {
+      for (const value of ["guest text", "雪🐈", "", null, undefined, 0, false]) {
+        const control = document.createTextNode("control");
+        control[property] = value;
         const result = window.callGuest("writeTextProbe", { property, value });
-        guestWrites.push({ property, value, result, native: text.nodeValue });
+        guestWrites.push({ property, result, native: text.nodeValue, expected: control.nodeValue });
       }
     }
     return { initial, unobserved, immediate, delivered, detached, guestWrites };
@@ -496,8 +498,7 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   }
   assert.deepEqual(textStates.immediate.oldValues, [], "text reads do not force observer delivery");
   assert.deepEqual(textStates.delivered.oldValues, ["native without observer"]);
-  for (const { property, value, result, native } of textStates.guestWrites) {
-    const expected = value === null ? "" : value;
+  for (const { property, result, native, expected } of textStates.guestWrites) {
     assert.equal(result.nodeValue, expected, `${property}: read flushes the pending guest write`);
     assert.equal(result.textContent, expected);
     assert.equal(native, expected);

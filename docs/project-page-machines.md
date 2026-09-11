@@ -1749,7 +1749,11 @@ text setters also send empty text for null rather than the literal `"null"`.
 The focused browser checks cover unobserved mutations, reads before observer
 delivery, retained detached text, old mutation values, and pending guest writes
 through both properties. They pass for stamped and downloaded language modules.
-Performance and integration checks are pending at this source checkpoint;
+An uninstrumented new/old pair inserted the same 109,485 characters in
+20.1/20.4 seconds, with first-page insert/backspace medians of 149/154 ms.
+Exact source and error checks passed; owner writes were intercepted. This pair
+shows no obvious added cost, not a statistically established speedup. The large
+native-input delay remains. Integration checks are pending at this checkpoint;
 collection and attribute caches still need independent fidelity checks.
 
 ### Standalone compiler parity
