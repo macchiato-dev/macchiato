@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { appendFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -58,7 +59,14 @@ async function stopApp(child) {
 
 test("Resources creates and heavily edits a project without code-editor-use", { timeout: 180_000 }, async (t) => {
   const started = performance.now();
-  const checkpoint = name => t.diagnostic(`${name}: ${Math.round(performance.now() - started)} ms`);
+  const report = message => {
+    t.diagnostic(message);
+    // Optional external evidence survives termination before Node prints results.
+    if (process.env.MACCHIATO_TEST_PROGRESS_FILE) {
+      appendFileSync(process.env.MACCHIATO_TEST_PROGRESS_FILE, message + "\n");
+    }
+  };
+  const checkpoint = name => report(`${name}: ${Math.round(performance.now() - started)} ms`);
   const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-stress-"))]);
   const app = startApp(port, dataDir);
   t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
@@ -541,6 +549,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       await profiler.send("Tracing.start", { categories: "devtools.timeline", transferMode: "ReturnAsStream" });
     }
     const started = performance.now();
+    checkpoint(native ? "starting native insertion" : "starting paste");
     if (native) await page.keyboard.insertText(text);
     else await content.evaluate((node, value) => {
       const data = new DataTransfer();
@@ -549,7 +558,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       node.dispatchEvent(event);
       if (!event.defaultPrevented) throw new Error("Paste was not handled");
     }, text);
-    t.diagnostic(`${native ? "native insertion" : "paste"}: ${text.length} characters in ${Math.round(performance.now() - started)} ms`);
+    report(`${native ? "native insertion" : "paste"}: ${text.length} characters in ${Math.round(performance.now() - started)} ms`);
     if (profiler) {
       const { profile } = await profiler.send("Profiler.stop");
       await mkdir(profileDirectory, { recursive: true });
