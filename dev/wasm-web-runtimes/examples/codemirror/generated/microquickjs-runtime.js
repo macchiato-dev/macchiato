@@ -2609,7 +2609,7 @@ globalThis.__wwcSetElementTextContent = function (element, value) {
 };
 Object.defineProperty(GuestObject.prototype, "childNodes", {
   get: function get() {
-    return childrenOf(this);
+    return readGuestChildren(this);
   }
 });
 ["parentNode", "parentElement", "firstChild", "lastChild", "nextSibling", "previousSibling"].forEach(function (name) {
@@ -2622,7 +2622,7 @@ Object.defineProperty(GuestObject.prototype, "childNodes", {
 });
 Object.defineProperty(GuestElement.prototype, "children", {
   get: function get() {
-    return childrenOf(this).filter(function (node) {
+    return readGuestChildren(this).filter(function (node) {
       return node instanceof GuestElement;
     });
   }
@@ -3136,7 +3136,7 @@ function mutationNode(recordReference, kind, index) {
   var result = hostCall(recordReference, kind, [index]);
   return nodeForReference(result[1]);
 }
-function synchronizeGuestChildren(target) {
+function readGuestChildren(target) {
   var bytes = hostCall(target.reference, "childNodeReferences", []);
   var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var next = [];
@@ -3145,6 +3145,10 @@ function synchronizeGuestChildren(target) {
     var reference = bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24;
     next.push(nodeForReference(reference));
   }
+  return next;
+}
+function synchronizeGuestChildren(target) {
+  var next = readGuestChildren(target);
   var previous = childrenOf(target).slice();
   for (var old = 0; old < previous.length; old++) {
     if (next.indexOf(previous[old]) < 0 && parentOf(previous[old]) === target) {

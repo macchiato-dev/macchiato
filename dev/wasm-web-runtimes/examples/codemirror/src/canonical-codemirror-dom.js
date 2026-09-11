@@ -452,7 +452,7 @@ globalThis.__wwcSetElementTextContent = function (element, value) {
   return true;
 };
 Object.defineProperty(GuestObject.prototype, "childNodes", {
-  get: function () { return childrenOf(this); }
+  get: function () { return readGuestChildren(this); }
 });
 // Native editing can change relationships before MutationObserver delivery.
 // Keep the mirror for bookkeeping, but read public relationships from the DOM.
@@ -467,7 +467,7 @@ Object.defineProperty(GuestObject.prototype, "childNodes", {
 });
 Object.defineProperty(GuestElement.prototype, "children", {
   get: function () {
-    return childrenOf(this).filter(function (node) { return node instanceof GuestElement; });
+    return readGuestChildren(this).filter(function (node) { return node instanceof GuestElement; });
   }
 });
 Object.defineProperty(GuestElement.prototype, "childElementCount", {
@@ -948,7 +948,10 @@ function mutationNode(recordReference, kind, index) {
   var result = hostCall(recordReference, kind, [index]);
   return nodeForReference(result[1]);
 }
-function synchronizeGuestChildren(target) {
+// Public reads fetch the browser's current ordered children. The private
+// mirror is only connection/lifetime bookkeeping, not a native editing cache.
+// This returns a snapshot; retaining it is not yet a live NodeList facade.
+function readGuestChildren(target) {
   var bytes = hostCall(target.reference, "childNodeReferences", []);
   var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var next = [];
@@ -958,6 +961,10 @@ function synchronizeGuestChildren(target) {
       bytes[at + 2] << 16 | bytes[at + 3] << 24;
     next.push(nodeForReference(reference));
   }
+  return next;
+}
+function synchronizeGuestChildren(target) {
+  var next = readGuestChildren(target);
   var previous = childrenOf(target).slice();
   for (var old = 0; old < previous.length; old++) {
     if (next.indexOf(previous[old]) < 0 && parentOf(previous[old]) === target) {
