@@ -26,6 +26,9 @@ function requestHost(name, payload = {}) {
 const previousEditorReceive = globalThis.__resourcesEditorReceive;
 globalThis.__resourcesEditorReceive = (json) => {
   const message = JSON.parse(json);
+  // Output IDs and request IDs are separate namespaces. An output error is
+  // owned by the bootstrap even when its ID matches a pending UI request.
+  if (message.type === "output-error") return previousEditorReceive ? previousEditorReceive(json) : "null";
   const operation = pending.get(message.id);
   if (!operation) return previousEditorReceive ? previousEditorReceive(json) : "null";
   pending.delete(message.id);
