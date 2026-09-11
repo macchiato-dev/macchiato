@@ -1721,6 +1721,22 @@ characters in 20.6/19.9 seconds, with first-page insert/backspace medians of
 147/134 ms. This is an accuracy fix, not a demonstrated speedup. Exact source
 and error checks passed, and all live-owner writes were intercepted.
 
+The integrated build passes 209 regression checks, including inherited-markup
+containment, reference grants, both language delivery modes, document identity,
+native mutation records, caret/dragging behavior, disposal, iframe output, and
+source/bytecode parity. The full project editing workflow passes with a 0.84
+second 110 KB paste and 23.7 second native insertion. The light-mode editor
+screenshot was inspected. The 15 first-paint/theme checks pass on the rebuilt
+site, and live-owner editing recovers from invalid CSS with 144 Mahjong tiles,
+aligned dividers, no page errors, and three intercepted autosaves.
+
+Export `6e52623` passes all four stored projects (including 50 tour slides and
+SQLite fragment navigation), compressed backend execution in Deno, and all 151
+manifest entries. The local server and `/root/resources-bunny.tar.gz` use this
+build, and archive extraction was verified before replacement. The previous
+`8dbeaa1` archive remains under `/root/archive/2026/09/11/`. Nothing was deployed
+to Bunny. Collection and text-cache fidelity remain separate open work.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
