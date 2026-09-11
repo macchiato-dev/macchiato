@@ -2160,6 +2160,55 @@ after extraction from `/root/resources-bunny.tar.gz`. The prior archive is
 No Bunny deployment was performed. This checkpoint fixes an observed stale
 attribute bug, not the remaining collection or large-input performance work.
 
+### Current child reads and duplicate leases
+
+Fresh `childNodes` and `children` reads now use the host's existing checked
+child-reference operation. They no longer expose the connection/lifetime
+bookkeeping array. A shared native/MicroQuickJS/QuickJS fixture checks inherited
+children, native insertion and removal, empty replacement, pending guest
+appends, and native `normalize()` merging adjacent text. Reads and mutations
+remain in one task, without observer delivery. Node identity, order, counts,
+and first/last relationships agree in these checks.
+
+The returned arrays are snapshots, not complete live `NodeList` or
+`HTMLCollection` implementations. A retained collection and attribute
+enumeration still need further work. This distinction remains explicit in the
+guest implementation; the private mirror is not made authoritative again to
+avoid boundary calls.
+
+The MicroQuickJS bridge now releases duplicate reference leases directly,
+matching QuickJS. The previous shim allocated an immediately unreachable
+`HostReference` for each duplicate and waited for its finalizer. A test runs
+the identical repeated lookups under both strategies: temporary-token
+construction falls from 800 to zero while retained wrappers remain valid
+through GC. Owning wrappers still use normal finalizers. This is a guest-side
+use of the existing zero-length release control, not a host API expansion.
+
+Large-document correctness still passes. Fresh child reads initially measured
+about 814 ms for paste versus about 722 ms with the previous environment.
+Direct release measured 704 and 896 ms in two subsequent passes; insertion
+remains around 8 seconds and ordinary keys mostly 53–68 ms, with occasional
+roughly 100 ms actions. These noisy timings do not prove an end-to-end CPU
+speedup. The eliminated temporary allocations are verified independently.
+
+The final checkpoint passes 55 focused browser/runtime checks, five
+workspace/account workflows, the full editing stress scenario, and 67 backend
+checks. Exported-asset checks cover all four owner projects, theme switches,
+50 tour slides, and SQLite fragment navigation without saving project data.
+Caret/drag and project screenshots were reviewed. Export `6ba99c6` runs the
+compressed backend in Deno and verifies all 151 files after archive extraction.
+The local server and `/root/resources-bunny.tar.gz` use this checkpoint; the
+previous archive is retained at
+`/root/archive/2026/09/11/resources-bunny-15880ea-before-live-children.tar.gz`.
+Nothing was deployed to Bunny.
+
+Another size/complexity audit remains: `content-form-client.js` retains an
+alternate DOM-rendering path after the editor-owned output early return.
+`project-editor-bootstrap.es5.js` sets that ownership before the application
+starts. Check other consumers before removing or separating the old path;
+optimizing a renderer the current workspace never calls would not improve the
+actual loading or editing path.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
