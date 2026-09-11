@@ -1969,6 +1969,57 @@ export; the previous `57911ab` archive is retained under
 `/root/archive/2026/09/11/`. Nothing has been deployed to Bunny, and the remaining
 broader-suite failures and performance/fidelity work are not waived.
 
+### Workspace recovery and ordinary account interactions
+
+The account-form browser checks exposed an ownership gap: title-to-name
+generation lived only in the project editor guest. Organization forms now
+initialize the same small helper in the outer guest, without loading an editor.
+The complete organization/invitation/notification/role/username workflow passes
+in Chromium. Manually chosen names survive subsequent title edits.
+
+Mobile view switching now moves Details and Close out of the info pane before
+hiding it. CodeMirror's standard Find/Replace panel no longer inherits the
+retired single-row search layout; real replacements and control bounds pass in
+both themes at desktop and phone widths. These are native CodeMirror controls,
+not a replacement search implementation.
+
+“Save with title” required `HTMLFormElement.requestSubmit`. The guest now
+forwards that method through the host's existing form-navigation guard. Native
+validation and submitter values are preserved. Document and element tests also
+exercise denied submission, including stopped propagation; `submit()` remains
+unavailable because it bypasses validation and submit events.
+
+The recovery test initially appeared to lose edits after reload. Direct checks
+proved that both the pending session snapshot and the eventual editor contents
+were correct. A browser-only startup observer then reproduced the real problem:
+the bootstrap first rendered the superseded server contents. It now defers the
+first CodeMirror render to the project UI's selected/recovered snapshot. The
+regression verifies that only the recovered contents appear during startup,
+alongside titled publication, session recovery, and the constant Save project
+label. This check covers the editor, not every output-recovery paint sequence.
+
+Public project cards also exposed a missing guest `childElementCount` getter.
+It now reads the already-supported native property synchronously, including
+native changes before observer delivery. Card and palette-search destinations
+use `setAttribute`, not unsupported guest `href` expandos. Actual click-through
+tests pass without loading the editor machine.
+
+Export `da43c0b` passes 209 editing/containment checks, 67 backend checks, five
+focused account/workspace browser tests, and 15 appearance checks. Its compressed
+backend executes under Deno and all 151 deployment files verify after archive
+extraction. Read-only owner checks cover Mahjong, Cat Memory, the tour (50 slides
+and expanded/embed keyboard navigation), and SQLite fragment navigation using
+the exported assets. Screenshots of the desktop and phone projects were reviewed.
+
+The local server is running these rebuilt artifacts. The handoff archive is
+`/root/resources-bunny.tar.gz`; its previous `66294b0` revision is retained in
+`/root/archive/2026/09/11/resources-bunny-66294b0-before-workspace-recovery.tar.gz`.
+Nothing was deployed to Bunny. Large native insertion remains slow: 106,458
+characters took 20,462 ms in this run, while paste took 841 ms for 106,432
+characters. This is not a matched performance comparison with the earlier
+fixture. The remaining broad-suite failures, full close-stack recording, and
+public DOM collection fidelity still require work; the overall goal stays open.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
