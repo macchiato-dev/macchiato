@@ -24,9 +24,9 @@ test("compiled document attributes reach distinct roots before scripts and survi
     { path: "index.html", content: source(changed) },
   ]));
   programs[0].scripts.push({ source: "observe.js", code: `
-    document.querySelector("p").setAttribute("data-root-language", document.documentElement.getAttribute("lang"));
-    document.querySelector("p").setAttribute("data-distinct", String(document.body !== document.documentElement));
-    document.querySelector("p").setAttribute("data-outside", String(document.querySelector("#outside") === null));
+    __wwcPostMessage(JSON.stringify({ language: document.documentElement.getAttribute("lang"),
+      distinct: document.body !== document.documentElement,
+      outside: document.querySelector("#outside") === null }));
   ` });
   const browser = await chromium.launch();
   t.after(() => browser.close());
@@ -48,7 +48,9 @@ test("compiled document attributes reach distinct roots before scripts and survi
     const { Machine, ProjectOutput } = await import("/module.js");
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
     const mount = document.querySelector("#mount");
-    const output = new ProjectOutput(Machine, module, mount, () => ({}), error => { throw error; });
+    const reports = [];
+    const output = new ProjectOutput(Machine, module, mount,
+      () => ({ onMessage: message => reports.push(JSON.parse(message)) }), error => { throw error; });
     const appearances = [];
     function appearance(root) {
       return [root, root.querySelector("body"), root.querySelector("p")].map(node => {
@@ -70,12 +72,9 @@ test("compiled document attributes reach distinct roots before scripts and survi
       await output.load(programs[0]);
       const root = mount.querySelector("html"), body = root.querySelector("body"), head = root.querySelector("head");
       const paragraph = root.querySelector("p");
-      const script = { language: paragraph.dataset.rootLanguage, distinct: paragraph.dataset.distinct,
-        outside: paragraph.dataset.outside };
+      const script = reports[0];
       await compare(sources[0]);
       const stylesheet = head.querySelector("style");
-      // Remove only the test script's attributes before checking hydration.
-      for (const name of ["data-root-language", "data-distinct", "data-outside"]) paragraph.removeAttribute(name);
       const updated = output.setContent(programs[1].tree, programs[1].document);
       await compare(sources[1]);
       return { script, appearances, hydrated: updated.hydrated,
@@ -86,7 +85,7 @@ test("compiled document attributes reach distinct roots before scripts and survi
         headNote: head.getAttribute("data-note"), hostTitle: document.title };
     } finally { output.destroy(); }
   }, { programs, sources: [source(), source(true)] });
-  assert.deepEqual(result.script, { language: "es", distinct: "true", outside: "true" });
+  assert.deepEqual(result.script, { language: "es", distinct: true, outside: true });
   for (const comparison of result.appearances) assert.deepEqual(comparison.actual, comparison.expected);
   assert.equal(result.hydrated, true);
   assert.equal(result.same, true);

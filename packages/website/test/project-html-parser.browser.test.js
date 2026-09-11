@@ -96,6 +96,9 @@ test("the built Wasm compiler agrees with the source compiler on attribute parsi
   });
   await page.goto("http://compiler.test/");
   const sources = [
+    '<html lang="es" class="page" style="font-size:18px"><head data-note="A &amp; B"><style>body { color: green; }</style></head><body dir="rtl" style="color:blue"><p>Document</p></body></html>',
+    '<body style="background:&#117;rl(&quot;https://outside.test/pixel&quot;)"><p>Blocked root style</p></body>',
+    '<div><body class="misplaced"></body></div>',
     '<p data-label="a > b" class="first" CLASS="ignored">Text</p>',
     '<p style=\'color:red; --label:"a > b";\'>Text</p>',
     '<svg viewBox="0 0 24 24"><path d="M1 2 L3 4" /></svg>',

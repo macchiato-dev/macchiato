@@ -12272,12 +12272,16 @@
     "aria-live",
     "class",
     "contenteditable",
+    "dir",
     "hidden",
     "id",
+    "lang",
     "maxlength",
     "placeholder",
     "role",
     "tabindex",
+    "title",
+    "translate",
     "type",
     "value"
   ]);
@@ -12373,6 +12377,36 @@
     if (bytes.length > 128 * 1024) throw new RangeError("Inline style operations are too large");
     return [...bytes];
   }
+  function documentParts(parsed) {
+    const direct = (children2, name) => {
+      const matches = children2.filter((node2) => node2.nodeType === 1 && node2.localName === name);
+      if (matches.length > 1) throw new SyntaxError(`Duplicate document ${name} element`);
+      return matches[0];
+    };
+    const html = direct(parsed.body.childNodes, "html");
+    if (html && parsed.body.childNodes.some((node2) => node2 !== html && (node2.nodeType !== 3 || node2.textContent.trim()))) {
+      throw new SyntaxError("Content outside the document html element");
+    }
+    const children = html ? html.childNodes : parsed.body.childNodes;
+    const head = direct(children, "head"), body = direct(children, "body");
+    if (head?.childNodes.some((node2) => node2.nodeType === 3 ? node2.textContent.trim() : !OMITTED.has(node2.localName))) {
+      throw new SyntaxError("Unsupported content in document head");
+    }
+    const wrappers = /* @__PURE__ */ new Set([html, head, body]);
+    function check(node2) {
+      if (node2.nodeType === 1 && WRAPPERS.has(node2.localName) && !wrappers.has(node2)) {
+        throw new SyntaxError(`Misplaced document ${node2.localName} element`);
+      }
+      for (const child of node2.childNodes) check(child);
+    }
+    for (const node2 of parsed.body.childNodes) check(node2);
+    return {
+      html,
+      head,
+      body,
+      content: children.flatMap((node2) => node2 === head ? [] : node2 === body ? node2.childNodes : [node2])
+    };
+  }
   var SingleFileProjectCompiler = class {
     constructor({ limits = SOURCE_LIMITS } = {}) {
       this.limits = Object.freeze({ ...limits });
@@ -12384,6 +12418,7 @@
         throw new RangeError("Project source exceeds its line or code-point budget");
       }
       const parsed = parseProjectHtml(source2);
+      const parts = documentParts(parsed);
       const scripts = [];
       const cssParts2 = parsed.querySelectorAll("style").map((node2) => node2.textContent);
       for (const link of parsed.querySelectorAll('link[rel="stylesheet"][href]')) {
@@ -12439,8 +12474,17 @@
         if (style !== null) node2.push(inlineStyle(style));
         return [node2];
       };
-      const tree = parsed.body.childNodes.flatMap(nodes);
-      return { tree, stylesheets: stylesheet ? [{ operations: stylesheet }] : [], scripts, usage };
+      const tree = parts.content.flatMap(nodes);
+      const document2 = {};
+      for (const name of WRAPPERS) {
+        const part = parts[name];
+        const attributes = (part?.attributeEntries || []).filter(([key2, value]) => (ATTRIBUTES.has(key2) || /^(aria|data)-[a-z][a-z0-9-]*$/.test(key2)) && value.length <= 2e3);
+        const node2 = [1, name, 0, attributes, []];
+        const style = part?.getAttribute("style");
+        if (style != null) node2.push(inlineStyle(style));
+        document2[name] = node2;
+      }
+      return { tree, document: document2, stylesheets: stylesheet ? [{ operations: stylesheet }] : [], scripts, usage };
     }
   };
   function localResourcePath(value) {

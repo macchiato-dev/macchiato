@@ -852,9 +852,11 @@ var ATTRIBUTES = /* @__PURE__ */ new Set([
   "content",
   "contenteditable",
   "data-language",
+  "dir",
   "disabled",
   "draggable",
   "hidden",
+  "lang",
   "maxlength",
   "cx",
   "cy",
@@ -3003,9 +3005,12 @@ var ProjectOutput = class {
     if (this.destroyed) throw new Error("Project output was destroyed");
     this.remove(this.preparing);
     const wrapper = this.root.ownerDocument.createElement("div");
-    const surface = this.root.ownerDocument.createElement("div");
-    surface.className = "project-output-root";
-    surface.tabIndex = -1;
+    wrapper.className = "project-output-root";
+    const surface = this.root.ownerDocument.createElement("html");
+    const head = this.root.ownerDocument.createElement("head");
+    const body = this.root.ownerDocument.createElement("body");
+    surface.append(head, body);
+    body.tabIndex = -1;
     wrapper.append(surface);
     wrapper.inert = true;
     wrapper.style.cssText = "position:absolute;left:0;top:0;width:100%;opacity:0;visibility:hidden;pointer-events:none";
@@ -3025,6 +3030,7 @@ var ProjectOutput = class {
       if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
       const result = session.call("__resourcesOutputLoad", {
         tree: project.tree || [],
+        document: project.document,
         stylesheets: project.stylesheets || []
       });
       await session.machine.onmsg(0);
@@ -3057,10 +3063,10 @@ var ProjectOutput = class {
       entry.wrapper.remove();
     }
   }
-  setContent = (tree) => {
+  setContent = (tree, document2) => {
     const session = this.active?.session;
     if (!session) throw new Error("Project output is unavailable");
-    const result = session.call("__resourcesOutputSetContent", tree);
+    const result = session.call("__resourcesOutputSetContent", { tree, document: document2 });
     session.machine.onmsg(0);
     return result;
   };

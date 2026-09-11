@@ -141,8 +141,8 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   await surface.click();
   await page.keyboard.press("ArrowRight");
   assert.equal(await surface.innerText(), "Key: ArrowRight", "plain output content receives keyboard input after clicking");
-  assert.equal(await surface.evaluate(node => node.ownerDocument.activeElement === node.closest(".project-output-root")), true);
-  assert.equal(await surface.evaluate(node => node.closest(".project-output-root").tabIndex), -1,
+  assert.equal(await surface.evaluate(node => node.ownerDocument.activeElement === node.closest("body")), true);
+  assert.equal(await surface.evaluate(node => node.closest("body").tabIndex), -1,
     "the output surface does not add a tab stop");
   await load([
     { path: "index.html", content: `<style>
@@ -209,7 +209,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   const outputDocument = iframe ? page.frames().find(frame => frame !== page.mainFrame()) : page;
   if (iframe) {
     await load([{ path: 'index.html', content: '<style>body { min-height: 100vh; background: #102e29; }</style><main>Full height</main>' }]);
-    const size = await outputDocument.locator('.project-output-root:has(> main)').evaluate(node => ({
+    const size = await outputDocument.locator('.project-output-root > html > body:has(> main)').evaluate(node => ({
       height: node.getBoundingClientRect().height, viewport: window.innerHeight, minimum: getComputedStyle(node).minHeight,
     }));
     assert.ok(size.height >= size.viewport, 'iframe defaults must not override app body dimensions: ' + JSON.stringify(size));
@@ -222,15 +222,16 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     document.body.appendChild(sibling);
   });
   boundaryFiles[1].content = `
-    var root = document.body;
+    var root = document.documentElement;
     document.querySelector("main").textContent = JSON.stringify([
       document.querySelector("#outside-secret") === null,
       root.parentElement === null,
-      root.closest("#outside-ancestor") === null
+      root.closest("#outside-ancestor") === null,
+      document.body.parentElement === root
     ]);
   `;
   await load(boundaryFiles);
-  assert.equal(await surface.innerText(), "[true,true,true]", "queries and traversal stay within the output root");
+  assert.equal(await surface.innerText(), "[true,true,true,true]", "queries and traversal stay within the output root");
   assert.equal(await outputDocument.locator("#outside-secret").innerText(), "Private host content");
   // Replacing `body` with a host scope class must not turn a root sibling
   // selector into authority over neighboring host content.

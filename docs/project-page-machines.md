@@ -2986,6 +2986,24 @@ attribute integration remain unresolved; these checks do not close the goal.
 
 ### Standalone compiler parity
 
+Project compilation now carries separate HTML/head/body descriptions alongside
+the body tree. Root inline styles use the same semantic declaration bytes as
+ordinary elements; language/direction attributes use ordinary native attribute
+calls. The output controller stages a private HTML subtree with real head/body
+children, and the output guest installs source attributes before application
+scripts. Metadata-aware content updates remove previous source attributes and
+styles while retaining matching nodes and the stylesheet. Tree-only updates
+leave root metadata alone. Controller staging styles remain on an ungranted
+wrapper, outside the source's class/style attributes.
+
+This does not yet reproduce the document viewport's background propagation or
+`rem` basis: these are still HTML subtrees inside the frame. Exact root class
+attribute selectors also retain the previously documented private-marker
+limitation. The small inert parser rejects duplicate/misplaced wrappers and
+non-metadata head content rather than attempting native HTML error recovery.
+The browser comparison checks separate inheritance, language/direction,
+attributes visible at script startup, root-style removal, and retained nodes.
+
 The temporary playground keeps its page integration behind a controller and a
 small set of related devices. A session device owns namespaced ephemeral state,
 an editor device owns the editor machine, a compiler device selects a
