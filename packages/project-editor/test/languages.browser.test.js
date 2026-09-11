@@ -401,6 +401,11 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     const initial = window.callGuest("startSiblingProbe", {});
     const parent = document.querySelector("#sibling-probe");
     const [first, middle, last] = parent.children;
+    const added = document.createElement("span");
+    added.dataset.name = "native";
+    parent.append(added);
+    const insertedImmediately = window.callGuest("inspectSiblingProbe", {});
+    added.remove();
     parent.prepend(last);
     const movedImmediately = window.callGuest("inspectSiblingProbe", {});
     await Promise.resolve();
@@ -412,11 +417,14 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     await Promise.resolve();
     const removed = window.callGuest("inspectSiblingProbe", {});
     const restored = window.callGuest("moveSiblingProbe", {});
-    return { initial, movedImmediately, moved, detached, removedImmediately, removed, restored };
+    return { initial, insertedImmediately, movedImmediately, moved, detached, removedImmediately, removed, restored };
   });
   assert.deepEqual(siblings.initial.next, ["middle", "last", null]);
   assert.deepEqual(siblings.initial.previous, [null, "first", "middle"]);
   assert.ok(siblings.initial.identity);
+  assert.deepEqual(siblings.insertedImmediately.next, ["middle", "last", "native"],
+    "an unknown native node is returned before any observer creates its wrapper");
+  assert.ok(siblings.insertedImmediately.nextIdentity, "repeated reads preserve the newly granted node's identity");
   assert.deepEqual(siblings.moved.next, ["middle", null, "first"]);
   assert.deepEqual(siblings.moved.previous, ["last", "first", null]);
   assert.deepEqual(siblings.movedImmediately, siblings.moved,

@@ -1660,6 +1660,27 @@ export, verified again after extraction. The prior `2c545b8` archive is in
 `/root/archive/2026/09/11/`. Nothing was deployed to Bunny. Large native input
 and the previously documented pre-observer mirror parity gap remain open.
 
+### September 11 synchronous sibling reads after the scan optimization
+
+The sibling parity test now reads immediately after a native reorder and after
+removal from a retained detached subtree, before yielding to MutationObserver.
+Both language-loading variants failed with the mirrored getters. Direct native
+`nextSibling` and `previousSibling` forwarding passes them, preserving wrapper
+identity and excluding the host siblings beside the granted root. The host uses
+the same grant check as parent reads; no new wire operation or event scheduler
+is needed. The test also covers a native insertion not yet observed by the
+guest, so it cannot pass solely by returning wrappers already in its mirror.
+
+The previous direct-read experiment predated the bounded large-mutation scan
+in CodeMirror. With that scan in place, an uninstrumented new/old pair using
+the same host and 109,485-character input took 20.1/19.6 seconds. Subsequent
+first-page insert/backspace medians were 133/133 ms. Both checked exact source
+and no page errors, with stored-project writes intercepted. This small sample
+supports retrying the fidelity fix, not a speedup claim. No per-read mirror
+invalidation, extra observer, or changed event-delivery timing was introduced.
+Other mirrored properties still need their own pre-observer parity checks;
+this change does not make the entire guest DOM immediately native.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

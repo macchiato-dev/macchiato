@@ -242,6 +242,7 @@ function inspectSiblingProbe() {
     next: siblingNodes.map(function (node) { return name(node.nextSibling); }),
     previous: siblingNodes.map(function (node) { return name(node.previousSibling); }),
     identity: siblingNodes[0].nextSibling === siblingNodes[1],
+    nextIdentity: siblingNodes[2].nextSibling === siblingNodes[2].nextSibling,
     rootNext: document.body.nextSibling === null,
     rootPrevious: document.body.previousSibling === null
   }));
