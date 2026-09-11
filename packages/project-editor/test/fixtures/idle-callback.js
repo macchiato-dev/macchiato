@@ -26,7 +26,13 @@ function idleCommand(json) {
   } else if (command === "invalid") {
     var invalid = false;
     try { requestIdleCallback(null); } catch (error) { invalid = error instanceof TypeError; }
-    idleReport({ invalid: invalid });
+    var invalidOptions = false;
+    try { requestIdleCallback(function () {}, 1); } catch (error) { invalidOptions = error instanceof TypeError; }
+    var reads = 0;
+    var options = {};
+    Object.defineProperty(options, "timeout", { get: function () { reads++; return 20; } });
+    cancelIdleCallback(requestIdleCallback(function () {}, options));
+    idleReport({ invalid: invalid, invalidOptions: invalidOptions, optionReads: reads });
   } else if (command === "foreign-cancel") {
     // Raw operation: bypass the guest's local callback map, as a malicious
     // guest could. Handle 1 may belong to another machine, never this one now.

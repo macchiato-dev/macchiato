@@ -3445,3 +3445,18 @@ fixes that test without changing runtime semantics. Evidence is in
 `idle-callback-tests*` and `idle-callback-boundaries.log` under
 `/root/macchiato-work`. Editing, performance, and deployment checks follow;
 these focused tests do not by themselves establish a performance improvement.
+
+The 29 language, live-child, reference-scope, module, and storage checks pass.
+Sequential unprofiled ABBA comparisons use the same 106,402-character real
+JavaScript source and 585 × 844 editor. The new idle path takes 45–307 ms per
+key in its first run and 87–159 ms in the repeat; the old synthetic path takes
+57–202 ms between those runs. Native controls also vary substantially, reaching
+308 ms in one run. There is no reliable speedup claim from these measurements.
+All three runs preserve exact source, edits, and undo/redo. Reports are in
+`native-idle-typing*` and `synthetic-idle-typing*` in the working directory.
+The scheduling change is a fidelity improvement, not a parser-budget reduction.
+
+A direct browser check also confirms that primitive options throw `TypeError`
+and a timeout getter is read once. The guest now follows those rules before
+allocating a callback; the regression fixture covers both. Rebuilt deployment
+artifacts and full-project checks must use this final guest revision together.

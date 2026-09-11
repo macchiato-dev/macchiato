@@ -93,7 +93,8 @@ for (const engine of ["microquickjs", "quickjs"]) {
     await target.waitForFunction(() => notices.some(value => value.delivered));
     const normal = await target.evaluate(() => ({ notices, nativeDeadlines }));
     assert.deepEqual(normal.notices.slice(0, 3), [
-      { index: 0, supported: true, cancel: true }, { index: 0, invalid: true }, { index: 0, canceled: 5000 },
+      { index: 0, supported: true, cancel: true },
+      { index: 0, invalid: true, invalidOptions: true, optionReads: 1 }, { index: 0, canceled: 5000 },
     ]);
     assert.equal(normal.notices[3].timeout, false);
     assert.ok(normal.notices[3].remaining >= 0 && normal.notices[3].remaining <= normal.nativeDeadlines[0].remaining);
