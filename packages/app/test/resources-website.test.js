@@ -723,8 +723,10 @@ test("a project build script runs with separate runtime and application inputs",
   await page.locator("[data-project-archive-file]").setInputFiles({
     name: "built.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
   });
-  await page.getByRole("heading", { name: "Built in an isolated JavaScript context" }).waitFor();
-  assert.equal(await page.locator("[data-project-output-mount] h1").textContent(),
+  const output = page.frameLocator("[data-project-output-mount] iframe")
+    .locator(".project-output-root:not([hidden])");
+  await output.getByRole("heading", { name: "Built in an isolated JavaScript context" }).waitFor();
+  assert.equal(await output.locator("h1").textContent(),
     "Built in an isolated JavaScript context");
   assert.deepEqual(errors, []);
 });
@@ -748,11 +750,13 @@ test("Vue and Svelte starting points build and remain interactive in the output 
   for (const framework of ["vue", "svelte"]) {
     await page.getByLabel("Template").selectOption(framework);
     await page.locator(".cm-content span").first().waitFor({ timeout: 10_000 });
-    const button = page.locator("[data-project-output-mount] button", { hasText: "Count 0" });
+    const output = page.frameLocator("[data-project-output-mount] iframe")
+      .locator(".project-output-root:not([hidden])");
+    const button = output.getByRole("button", { name: "Count 0", exact: true });
     await button.waitFor({ timeout: 10_000 }).catch(async () => assert.fail(
       `${framework} did not render: ${await page.locator("body").innerText()}\n${errors.join("\n")}`));
     await button.click();
-    await page.locator("[data-project-output-mount] button", { hasText: "Count 1" })
+    await output.getByRole("button", { name: "Count 1", exact: true })
       .waitFor({ timeout: 10_000 }).catch(async () => assert.fail(
         `${framework} did not react: ${await page.locator("body").innerText()}\n${errors.join("\n")}`));
   }
