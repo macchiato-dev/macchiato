@@ -564,6 +564,7 @@ GuestStorage.prototype.listen = function (name, callback) {
     ]]);
     if (result !== null) {
       var reader = new Reader(result, result.length);
+      reader.at = 0; // Nested values have no outer message-length header.
       var errorName = readValue(reader), message = readValue(reader);
       var ErrorType = errorName === "TypeError" ? TypeError : errorName === "RangeError" ? RangeError : Error;
       var failure = new ErrorType(message);

@@ -8,6 +8,7 @@ import { compileProjectFiles } from "../../project-editor/src/single-file-compil
 for (const framed of [false, true]) test(`storage replies and subscription disposal work in QuickJS (${framed ? "iframe" : "direct"})`, async t => {
   const code = (await build({ stdin: { contents: `
     export { default as Machine } from './dev/wasm-web-machine/src/wasm-web-machine.ts';
+    export { QuickJSRuntime } from './dev/wasm-web-runtimes/quickjs/context-runtime.js';
     export { ProjectOutput } from './packages/website/project-output-session.js';
     export { ProjectOutputStorage } from './packages/website/project-output-storage.js';
     export { ResourcesStorageDevice } from './packages/website/resources-machine-devices.js';
@@ -139,6 +140,35 @@ for (const framed of [false, true]) test(`storage replies and subscription dispo
   }, subscriptionProgram);
   assert.deepEqual(subscriptions, { before: 3, afterOne: 2, retained: 0,
     reports: [[1, "changed"], [2, "changed"]] });
+  const boundary = await target.evaluate(async () => {
+    const { Machine, QuickJSRuntime } = await import("/module.js");
+    const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
+    const results = [];
+    for (const id of [-1, 0.5, 4096, 0, 4095]) {
+      // Exercise the raw ABI: the ordinary guest allocator already enforces
+      // this range, so it cannot prove that a malicious guest is rejected.
+      const runtime = new QuickJSRuntime(module);
+      let calls = 0, stops = 0, error = "";
+      const machine = new Machine(runtime.createSession(), document.querySelector("#mount"), {
+        services: { storage: { listen() { calls++; return () => stops++; } } },
+      });
+      try {
+        machine.onmsg(0);
+        const source = new TextEncoder().encode(`immediate([3, document.reference,
+          stringIndex("storageListen"), [encode("local"), encode("key"), encode(${id})]]);`);
+        const message = new Uint8Array(source.length + 1);
+        message[0] = 1; message.set(source, 1);
+        machine.onmsg(message);
+      } catch (failure) { error = failure.message; }
+      finally { machine.destroy(); runtime.destroy(); }
+      results.push({ id, calls, stops, blocked: error.includes("storage callback is not allowed") });
+    }
+    return results;
+  });
+  assert.deepEqual(boundary, [-1, 0.5, 4096, 0, 4095].map(id => ({
+    id, calls: id === 0 || id === 4095 ? 1 : 0,
+    stops: id === 0 || id === 4095 ? 1 : 0, blocked: id !== 0 && id !== 4095,
+  })), "invalid callback IDs never reach the storage driver; boundary IDs are cleaned up");
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);
 });
