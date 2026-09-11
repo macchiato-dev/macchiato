@@ -3147,6 +3147,7 @@ function readMutationBatch(batchReference, batchToken) {
   var length = hostGet(batchReference, "length"),
     records = [],
     changedParents = [];
+  var changedParentReferences = Object.create(null);
   for (var index = 0; index < length; index++) {
     var result = hostCall(batchReference, "item", [index]);
     var reference = result[1],
@@ -3173,7 +3174,10 @@ function readMutationBatch(batchReference, batchToken) {
       var next = hostGet(reference, "nextSibling");
       record.previousSibling = previous === null ? null : nodeForReference(previous[1]);
       record.nextSibling = next === null ? null : nodeForReference(next[1]);
-      if (changedParents.indexOf(record.target) < 0) changedParents.push(record.target);
+      if (!changedParentReferences[targetResult[1]]) {
+        changedParentReferences[targetResult[1]] = true;
+        changedParents.push(record.target);
+      }
     } else if (type === "characterData") {
       record.oldValue = hostGet(reference, "oldValue");
     } else if (type === "attributes") {
