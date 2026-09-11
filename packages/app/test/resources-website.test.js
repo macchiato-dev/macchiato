@@ -1678,17 +1678,33 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
   await page.locator(".cm-content").fill("<h1>Reload recovery marker</h1>");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
+  assert.match(await page.locator("[data-project-snapshot]").inputValue(), /Reload recovery marker/);
+  assert.match(await page.evaluate(() => sessionStorage.getItem(`resources_project_pending_v1:${document.querySelector("[data-project-editor]").dataset.projectId}`)), /Reload recovery marker/);
   let unloadDialogs = 0;
   page.on("dialog", async (dialog) => { unloadDialogs += 1; await dialog.dismiss(); });
+  await page.addInitScript(() => {
+    window.editorStartupContents = [];
+    const observer = new MutationObserver(() => {
+      const text = document.querySelector(".cm-content")?.textContent;
+      if (text && !window.editorStartupContents.includes(text)) window.editorStartupContents.push(text);
+      if (document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready") observer.disconnect();
+    });
+    observer.observe(document, { subtree: true, childList: true, characterData: true });
+  });
   await page.reload({ waitUntil: "networkidle" });
   assert.equal(unloadDialogs, 0, "recoverable project edits should not trigger a browser unload warning");
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
+  assert.match(await page.locator("[data-project-snapshot]").inputValue(), /Reload recovery marker/);
   await page.locator(".cm-content").waitFor();
   assert.match(await page.locator(".cm-content").innerText(), /Reload recovery marker/);
+  assert.deepEqual(await page.evaluate(() => window.editorStartupContents), ["<h1>Reload recovery marker</h1>"],
+    "reload must not first render the superseded server snapshot");
   await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "Saved");
   assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
   await page.getByRole("button", { name: "Editor menu" }).click();
   await page.getByRole("menuitem", { name: "Save tab configuration" }).click();
-  assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
+  assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
+  assert.equal(await page.locator("[data-project-submit]").isEnabled(), true);
   await page.getByRole("button", { name: "Project menu" }).click();
   assert.equal(await page.getByRole("menuitem", { name: "Delete project" }).isVisible(), true);
   await page.screenshot({ path: join(dataDir, "resources-save-controls.png") });
