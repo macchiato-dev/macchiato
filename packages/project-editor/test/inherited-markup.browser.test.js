@@ -24,7 +24,7 @@ test("inherited active markup cannot become raw guest CSS or executable content"
   const machine = await readFile(resolve(root, "dev/wasm-web-machine/dist/module/machine.js"));
   const browser = await chromium.launch();
   t.after(() => browser.close());
-  const cases = ["text", "childText", "childRemove", "moveChild", "innerHTML",
+  const cases = ["text", "childText", "childData", "childContent", "childRemove", "moveChild", "innerHTML",
     "appendText", "replaceText", "clone", "move", "read", "remove"]
     .map(operation => ({ operation, tag: "style" }));
   for (const operation of ["type", "clone", "move"]) cases.push({ operation, tag: "script" });

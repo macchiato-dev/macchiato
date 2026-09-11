@@ -3634,3 +3634,16 @@ Logs: `mutation-observer-baseline.log`, `mutation-observer-corrected.log`, and
 `mutation-observer-boundary.log` under `/root/macchiato-work`. Full application
 and packaged-deployment verification are pending. The document-frame decision
 remains open and is not changed by these observer fixes.
+
+The final `d7bd432` export passes all 43 focused browser checks, including
+character-data coercion, disposal with queued mutation records, resizing,
+lazy language loading, and storage reply errors. Its 152-file manifest and
+compressed backend execution in Deno also pass. An additional 165 inherited
+markup checks verify that the new `Text.data` path, like `nodeValue` and
+`textContent`, cannot modify stylesheet text through an inherited reference:
+the existing content-target guard checks ancestors before property writes.
+The tests exercise document and container grants and intercept unexpected
+resource requests. No additional host restriction was needed.
+Evidence: `native-mutations-final-focused.log`,
+`native-mutations-final-backend.log`, and `native-mutations-markup.log` in
+`/root/macchiato-work`. Full-page and stress verification remain in progress.

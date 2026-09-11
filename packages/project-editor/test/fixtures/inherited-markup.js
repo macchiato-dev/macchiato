@@ -23,10 +23,13 @@ function probeMarkup(json) {
     hostCall(target.reference, "setAttribute", ["type", "text/javascript"]);
   } else if (request.operation === "text") {
     immediate([2, target.reference, stringIndex("textContent"), text]);
-  } else if (request.operation === "childText" || request.operation === "childRemove" || request.operation === "moveChild") {
+  } else if (request.operation === "childText" || request.operation === "childData" ||
+      request.operation === "childContent" || request.operation === "childRemove" || request.operation === "moveChild") {
     var children = hostCall(target.reference, "childNodes", []);
     var first = hostCall(children[1], "item", [0]);
     if (request.operation === "childText") immediate([2, first[1], stringIndex("nodeValue"), text]);
+    else if (request.operation === "childData") immediate([2, first[1], stringIndex("data"), text]);
+    else if (request.operation === "childContent") immediate([2, first[1], stringIndex("textContent"), text]);
     else if (request.operation === "childRemove") hostCall(first[1], "remove", []);
     else hostCall(hostGet(document.reference, "body")[1], "appendChild", [new GuestObject(first[1])]);
   } else if (request.operation === "nestedImage" || request.operation === "nestedScript") {
