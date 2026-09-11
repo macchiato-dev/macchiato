@@ -75,14 +75,32 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     // including slower CI hosts. Expiring mid-save is not an editor failure.
     iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
 
+  const profilePath = process.env.MACCHIATO_TEST_CPU_PROFILE;
+  let profiler;
   const browser = await chromium.launch();
-  t.after(async () => browser.close());
+  t.after(async () => {
+    try {
+      if (profiler) {
+        const { profile } = await profiler.send("Profiler.stop");
+        await writeFile(profilePath, JSON.stringify(profile));
+        await profiler.detach();
+      }
+    } finally { await browser.close(); }
+  });
   const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS || join(dataDir, "artifacts");
   await mkdir(artifacts, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 },
     ...(process.env.MACCHIATO_TEST_ARTIFACTS ? { recordVideo: { dir: artifacts,
       size: { width: 1440, height: 900 } } } : {}),
   });
+  // Optional DevTools sampling stays outside the machine and guest runtimes.
+  // Keep it off for timing comparisons; this profile is for attribution.
+  if (profilePath) {
+    profiler = await page.context().newCDPSession(page);
+    await profiler.send("Profiler.enable");
+    await profiler.send("Profiler.setSamplingInterval", { interval: 10_000 });
+    await profiler.send("Profiler.start");
+  }
   // Swap a complete exported host/guest pair for regression comparisons.
   // Mixing an older host with newer guest calls is not a valid baseline.
   if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
