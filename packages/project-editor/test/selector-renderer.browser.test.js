@@ -18,8 +18,8 @@ function selectorBytes(source) {
   return bytes;
 }
 
-// Prototype-level tests. The live WIT/guest integration still has separate,
-// explicitly unresolved probes in css-scope.browser.test.js.
+// Native matching/cascade tests complement the live byte-protocol and guest
+// containment checks in css-scope.browser.test.js.
 const tag = name => ['tag', name];
 const attr = (name, value) => ['attribute', name, '=', value];
 const part = (...terms) => ['', terms];
@@ -34,6 +34,25 @@ test('semantic selector rendering confines native matching context', async t => 
     bundle: true, write: false, format: 'esm', platform: 'browser' });
   const browser = await chromium.launch();
   t.after(() => browser.close());
+  await t.test('simple compounds remain direct with a zero-weight ownership suffix', async () => {
+    const page = await browser.newPage();
+    try {
+      await page.route('http://selector-renderer.test/**', route => route.fulfill(
+        new URL(route.request().url()).pathname === '/renderer.js'
+          ? { body: bundle.outputFiles[0].text, contentType: 'text/javascript' }
+          : { body: '<!doctype html><p>Owned</p>', contentType: 'text/html' }));
+      await page.goto('http://selector-renderer.test/');
+      const rendered = await page.evaluate(async () => {
+        const { renderSelector, parseConstrainedSelector } = await import('/renderer.js');
+        const selector = parseConstrainedSelector('p.note[data-x="a,b"]:hover::before');
+        return [renderSelector(selector, null), renderSelector(selector, 'wwm-12345')];
+      });
+      assert.deepEqual(rendered, [
+        'p.note[data-x="a,b"]:hover::before',
+        'p.note[data-x="a,b"]:hover:where(.wwm-12345, .wwm-12345 *)::before',
+      ]);
+    } finally { await page.close(); }
+  });
   const cases = [
     { name: 'document grants retain native selector context', method: 'querySelector', scope: null, selector: privateAncestor, samples: [true, false] },
     { name: 'query cannot test a host ancestor', method: 'querySelector', selector: privateAncestor, match: false },
@@ -52,7 +71,7 @@ test('semantic selector rendering confines native matching context', async t => 
     { name: 'descendant nth-child uses its real position', selector: [[part(tag('p'), ['nth', 'nth-child', 0, 2])]], match: true },
     { name: 'descendant first-child does not match the second', selector: [[part(tag('p'), ['pseudo', 'first-child'])]], match: false },
     { name: 'attribute punctuation is quoted, not selector syntax', selector: [[part(attr('data-probe', '"] ~ #after, [data-probe="'))]], match: true },
-    { name: 'pseudo-element remains outside functional wrapper', selector: [[part(tag('p'), ['element', 'before'])]], pseudo: '::before', match: true },
+    { name: 'pseudo-element follows the ownership guard', selector: [[part(tag('p'), ['element', 'before'])]], pseudo: '::before', match: true },
   ];
   for (const probe of cases) await t.test(probe.name, async () => {
     const page = await browser.newPage();
