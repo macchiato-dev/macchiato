@@ -75,40 +75,16 @@
     return "null";
   };
 
-  function languageFor(path) {
-    return globalThis.__codeEditorLanguageForPath(path);
-  }
-  function editableFile(files) {
-    var preferred = ["index.html", "main.js", "style.css", "README.md"];
-    var byPath = {};
-    var index;
-    for (index = 0; index < files.length; index++) byPath[files[index].path] = files[index];
-    for (index = 0; index < preferred.length; index++) {
-      if (byPath[preferred[index]]) return byPath[preferred[index]];
-    }
-    for (index = 0; index < files.length; index++) {
-      if (typeof files[index].content === "string") return files[index];
-    }
-    return { path: "index.html", content: "" };
-  }
   function start(workspace) {
     var files = workspace.snapshot && workspace.snapshot.files || [];
-    var selected = editableFile(files);
     activeSnapshot = workspace.snapshot || { files: files, config: {} };
-    activeFile = selected;
-    activePath = selected.path;
     globalThis.__codeEditorConfigureLimits(JSON.stringify({
       maxLines: 5000,
       maxCharacters: 1000000
     }));
-    globalThis.__codeEditorSetContent(JSON.stringify({
-      content: selected.content,
-      language: languageFor(selected.path),
-      readOnly: root.getAttribute("data-read-only") === "true"
-    }));
-    var current = root.querySelector("[data-project-file-current]");
-    if (current) current.textContent = selected.path;
-    root.setAttribute("data-editor-machine-state", "ready");
+    // The project UI selects the entry and recovers session edits before the
+    // first CodeMirror render. Rendering this server snapshot first would
+    // briefly expose stale contents and create a needless editor transaction.
     if (files.length && !outputId) startOutput(activeSnapshot);
     else loadProjectUi();
   }
