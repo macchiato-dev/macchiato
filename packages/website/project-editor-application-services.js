@@ -14,7 +14,10 @@ function callGuest(name, payload = {}) {
 }
 
 function callHost(name, payload = {}) {
-  return JSON.parse(globalThis.__wwcServiceCall(name, JSON.stringify(payload)));
+  const text = JSON.stringify(payload);
+  // Fail inside the guest before the host's bounded-text check can unwind it.
+  if (text.length > 2 * 1024 * 1024) throw new Error("Editor service request exceeds its text limit");
+  return JSON.parse(globalThis.__wwcServiceCall(name, text));
 }
 
 function requestHost(name, payload = {}) {

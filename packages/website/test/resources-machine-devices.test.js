@@ -110,7 +110,7 @@ test("resource session writes are atomic and leave ordinary storage alone", () =
   const window = storageWindow(), resources = new ResourcesProjectResourceDevice();
   const storage = new ResourcesStorageDevice(window, resources), key = pendingProjectSnapshotKey("fixture");
   const plain = JSON.stringify({ files: [{ path: "index.html", content: "<p>plain</p>" }], config: {} });
-  storage.set("session", key, plain);
+  assert.deepEqual(storage.writeRecovery(key, plain), { error: null });
   assert.equal(window.sessionStorage.getItem(key), plain);
   assert.equal(storage.get("session", key), plain);
   for (const [kind, name] of [["local", key], ["session", "theme"]]) {
