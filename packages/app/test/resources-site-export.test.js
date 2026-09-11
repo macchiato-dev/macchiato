@@ -59,7 +59,12 @@ test("exports resources site as static files", async (t) => {
   );
   assert.doesNotMatch(outputFrame, /<script[^>]+src=/);
   assert.match(outputFrame, /id="project-output-a"/);
-  assert.match(outputFrame, /<script type="module">import WasmWebMachine from "\.\/machine\.js"/);
+  // The inline controller may start with preserved comments or whitespace.
+  // Its only imported browser module remains the shared Machine Host.
+  const frameController = outputFrame.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(frameController);
+  assert.deepEqual([...frameController.matchAll(/\bimport\s+.*?from\s+"([^"]+)"/g)]
+    .map((match) => match[1]), ["./machine.js"]);
   assert.match(outputFrame, /resources-project-output-machine-v1/);
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);

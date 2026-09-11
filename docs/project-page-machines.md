@@ -1902,11 +1902,38 @@ HTML, exported copy, and live `blog-examples.localhost` response share SHA-256
 under `/root/archive/2026/09/11/`. Nothing was deployed to Bunny.
 
 An additional check found that requesting that large standalone HTML at the
-wrong `resources-edge` origin returns 503 (`Edge application unavailable`),
-while its configured `blog-examples` origin returns the correct 200 response.
-The saved project route also returns 200. The deferred response failure needs
-investigation; it should not be mistaken for a failure of the newly verified
-project layout or hidden by treating every 503 as an intentional rejection.
+`resources-edge` origin returned 503 (`Edge application unavailable`), while
+its configured `blog-examples` origin returned 200. The initial inference that
+this was a wrong-origin request was incorrect: the Edge manifest permits the
+artifact. The deferred response failure is explained below.
+
+### Deferred document response headers and filename routes
+
+The document response crosses the server machine's header policy even when
+its body stays outside the guest. Published example responses include CORS,
+and storage responses can include ETag and Last-Modified. Those three headers
+were missing from the document policy. They are now explicitly allowed;
+arbitrary extra headers still fail closed. Tests exercise GET and HEAD through
+the actual MicroQuickJS routing guest, including the validator headers.
+
+A separate 503 came from treating filenames such as `/favicon.ico` as account
+names. The application planner now checks the namespace/project name grammar
+before querying their stores, leaving filenames to the normal static-manifest
+lookup. It preserves valid mixed-case lookup, percent decoding, and embeds.
+Both source tests and the rebuilt QuickJS application cover these paths.
+
+After rebuilding and restarting local Resources Edge, GET/HEAD of the tour and
+Markdown example return 200 with their CORS header. Missing filename paths
+return 404, with no HEAD body. The saved tour project still returns 200. The
+new compressed Bunny backend also executes successfully under Deno. Neither
+the DOM/network capabilities nor public artifact authority were broadened.
+
+The broader regression run completed with 86 passes and 19 failures. Some
+checks still target retired modules, old iframe selectors, or the former
+default dark theme; others require investigation. This is not a clean overall
+suite or a declaration that staging is ready. In particular, save/close,
+account interactions, and the remaining example/UI tests need current-browser
+verification instead of blanket expectation changes.
 
 ### Standalone compiler parity
 
