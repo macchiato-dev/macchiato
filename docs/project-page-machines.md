@@ -1791,7 +1791,16 @@ host API or permission is needed.
 
 Both MicroQuickJS language modes reproduce the missing reflection and pass
 with the accessor. QuickJS form checks also reproduce it; their rebuilt-artifact
-checks and full integration verification are pending at this source checkpoint.
+checks now pass, including native clicks on disabled/re-enabled buttons. All 209
+integrated regression checks pass, with new assertions that Save is natively
+disabled after loading a saved project and enabled after an edit.
+
+The rebuilt split tour passes all 387 slides, the navigation boundary states,
+notes editing, and history. A separate cold-start expanded-view attempt exposes
+an open startup gap: output can become ready before project services install
+the toolbar listeners, and an early Expand click is lost. The ready-workspace
+layout traversal waits for project controls; it does not certify this earlier
+interval. Fixing that ownership/readiness handoff remains required.
 
 ### Standalone compiler parity
 
