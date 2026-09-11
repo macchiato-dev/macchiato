@@ -1825,7 +1825,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee10(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, presentButton, presentClose, previewSection, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, projectContentBlock, closeOutputOverflow, closePresentation, openPresentation, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, positionHistory, openVersionHistory, _t0, _t1;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, previewController, previewTimer, editorPreviewTimer, previewGeneration, outputFrame, outputFramePort, outputFrameReady, outputFrameRequested, syncOutputTheme, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, _renderPreview, routeProjectStatus, disposeProjectMachine, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i4, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i5, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator22, _step22, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator24, _step24, _iterator25, _step25, field, closeHistory, positionHistory, openVersionHistory, _t0, _t1;
       return _regenerator().w(function (_context14) {
         while (1) switch (_context14.p = _context14.n) {
           case 0:
@@ -1843,21 +1843,21 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               historyPanel.style.top = buttonRect.bottom + gap - containingRect.top + "px";
               historyPanel.style.maxHeight = Math.max(120, innerHeight - buttonRect.bottom - gap - edge) + "px";
             };
-            closeHistory = function _closeHistory(_temp10) {
-              var _ref28 = _temp10 === void 0 ? {} : _temp10,
-                _ref28$restoreFocus = _ref28.restoreFocus,
-                restoreFocus = _ref28$restoreFocus === void 0 ? false : _ref28$restoreFocus;
+            closeHistory = function _closeHistory(_temp1) {
+              var _ref27 = _temp1 === void 0 ? {} : _temp1,
+                _ref27$restoreFocus = _ref27.restoreFocus,
+                restoreFocus = _ref27$restoreFocus === void 0 ? false : _ref27$restoreFocus;
               historyPanel.hidden = true;
               versionButton.setAttribute("aria-expanded", "false");
               if (restoreFocus) versionButton.focus();
             };
-            applyTemplateSnapshot = function _applyTemplateSnapsho(next, _temp1) {
+            applyTemplateSnapshot = function _applyTemplateSnapsho(next, _temp0) {
               var _next$config$containe, _next$config;
-              var _ref26 = _temp1 === void 0 ? {} : _temp1,
-                _ref26$notice = _ref26.notice,
-                notice = _ref26$notice === void 0 ? true : _ref26$notice,
-                _ref26$previousSnapsh = _ref26.previousSnapshot,
-                previousSnapshot = _ref26$previousSnapsh === void 0 ? state : _ref26$previousSnapsh;
+              var _ref25 = _temp0 === void 0 ? {} : _temp0,
+                _ref25$notice = _ref25.notice,
+                notice = _ref25$notice === void 0 ? true : _ref25$notice,
+                _ref25$previousSnapsh = _ref25.previousSnapshot,
+                previousSnapshot = _ref25$previousSnapsh === void 0 ? state : _ref25$previousSnapsh;
               if (linkPatterns) linkPatterns.value = (((_next$config$containe = next.config.containerOptions) == null ? void 0 : _next$config$containe.allowedLinkPatterns) || []).join("\n");
               if (template) template.value = next.config.template || "blank";
               growTextarea(linkPatterns);
@@ -1951,32 +1951,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 projectViewControls.append(projectDetails);
                 projectViewControls.append(projectClose);
               }
-            };
-            openPresentation = function _openPresentation(_temp0) {
-              var _ref25 = _temp0 === void 0 ? {} : _temp0,
-                _ref25$keyboard = _ref25.keyboard,
-                keyboard = _ref25$keyboard === void 0 ? false : _ref25$keyboard;
-              __resourcesDatasetSet(root, "data-presenting", "true");
-              document.body.classList.add("project-presenting");
-              previewSection.classList.add("project-editor__preview--presenting");
-              projectContentBlock == null || projectContentBlock.style.setProperty("animation", "none");
-              projectContentBlock == null || projectContentBlock.style.setProperty("backdrop-filter", "none");
-              projectContentBlock == null || projectContentBlock.style.setProperty("transform", "none");
-              presentButton.setAttribute("aria-pressed", "true");
-              presentClose.blur();
-              requestAnimationFrame(function () {
-                var _previewController2;
-                return (_previewController2 = previewController) == null || _previewController2.focus == null ? void 0 : _previewController2.focus();
-              });
-            };
-            closePresentation = function _closePresentation() {
-              __resourcesDatasetDelete(root, "data-presenting");
-              document.body.classList.remove("project-presenting");
-              previewSection.classList.remove("project-editor__preview--presenting");
-              projectContentBlock == null || projectContentBlock.style.removeProperty("animation");
-              projectContentBlock == null || projectContentBlock.style.removeProperty("backdrop-filter");
-              projectContentBlock == null || projectContentBlock.style.removeProperty("transform");
-              presentButton.setAttribute("aria-pressed", "false");
             };
             closeOutputOverflow = function _closeOutputOverflow(_temp9) {
               var _ref23 = _temp9 === void 0 ? {} : _temp9,
@@ -2824,10 +2798,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           var href = node.getAttribute("href");
                           var patterns = ((_previewState$config5 = previewState.config) == null || (_previewState$config5 = _previewState$config5.containerOptions) == null ? void 0 : _previewState$config5.allowedLinkPatterns) || ((_previewState$config6 = previewState.config) == null || (_previewState$config6 = _previewState$config6.container) == null ? void 0 : _previewState$config6.allowedLinkPatterns) || [];
                           if (urlMatchesAllowedPatterns(href, patterns)) {
-                            var _ref29, _previewState$config7, _previewState$config8;
+                            var _ref28, _previewState$config7, _previewState$config8;
                             var attributes = [["href", href]];
                             var authoredTarget = node.getAttribute("target");
-                            if (authoredTarget) attributes.push(["target", authoredTarget]);else if (((_ref29 = ((_previewState$config7 = previewState.config) == null || (_previewState$config7 = _previewState$config7.containerOptions) == null ? void 0 : _previewState$config7.links) || ((_previewState$config8 = previewState.config) == null || (_previewState$config8 = _previewState$config8.container) == null ? void 0 : _previewState$config8.links)) == null ? void 0 : _ref29.addTargetBlank) !== false) attributes.push(["target", "_blank"]);
+                            if (authoredTarget) attributes.push(["target", authoredTarget]);else if (((_ref28 = ((_previewState$config7 = previewState.config) == null || (_previewState$config7 = _previewState$config7.containerOptions) == null ? void 0 : _previewState$config7.links) || ((_previewState$config8 = previewState.config) == null || (_previewState$config8 = _previewState$config8.container) == null ? void 0 : _previewState$config8.links)) == null ? void 0 : _ref28.addTargetBlank) !== false) attributes.push(["target", "_blank"]);
                             projectedAttributes.set(element, attributes);
                           } else {
                             reject("The href for " + href + " was omitted because it is outside the allowed URL patterns.");
@@ -3170,7 +3144,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                     case 23:
                       clearTimeout(previewTimer);
                       previewTimer = setTimeout(_asyncToGenerator(_regenerator().m(function _callee6() {
-                        var _previewState$config0, _previewState$config1, _previewState$config10, allowedTags, controller, _previewController4, _i9, _arr6, child, inspection, machine, _t4;
+                        var _previewState$config0, _previewState$config1, _previewState$config10, allowedTags, controller, _previewController3, _i9, _arr6, child, inspection, machine, _t4;
                         return _regenerator().w(function (_context6) {
                           while (1) switch (_context6.p = _context6.n) {
                             case 0:
@@ -3273,7 +3247,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                                 if (child !== outputFrame) child.remove();
                               }
                             case 9:
-                              (_previewController4 = previewController) == null || _previewController4.destroy();
+                              (_previewController3 = previewController) == null || _previewController3.destroy();
                               previewController = controller;
                               __resourcesDatasetSet(root, "data-output-machine-state", "ready");
                               __resourcesDatasetDelete(preview, "data-preview-violations");
@@ -3793,14 +3767,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               }, _callee3, null, [[0, 2, 3, 4]]);
             })));
             workspace = root.querySelector(".project-editor__workspace");
-            presentButton = root.querySelector("[data-project-present]");
-            presentClose = root.querySelector("[data-project-present-close]");
-            previewSection = root.querySelector(".project-editor__preview");
             outputOverflow = root.querySelector("[data-output-overflow]");
             outputOverflowTrigger = root.querySelector("[data-output-overflow-trigger]");
             outputOverflowMenu = root.querySelector("[data-output-overflow-menu]");
             fullscreenButton = root.querySelector("[data-project-fullscreen]");
-            projectContentBlock = root.closest(".content-block");
             outputOverflowTrigger.addEventListener("click", function () {
               var opening = outputOverflowMenu.hidden;
               outputOverflowMenu.hidden = !opening;
@@ -3845,31 +3815,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             document.addEventListener("pointerdown", function (event) {
               if (!outputOverflow.contains(event.target)) closeOutputOverflow();
             });
-            presentButton.addEventListener("click", function (event) {
-              return openPresentation({
-                keyboard: event.detail === 0
-              });
-            });
-            presentClose.addEventListener("click", function (event) {
-              closePresentation();
-              if (event.detail === 0) presentButton.focus();else presentButton.blur();
-            });
-            document.addEventListener("keydown", function (event) {
-              if (event.key === "Escape" && __resourcesDatasetGet(root, "data-presenting") === "true") {
-                event.preventDefault();
-                closePresentation();
-                presentButton.focus();
-              } else if (event.key === "Escape" && parent !== window) {
-                parent.postMessage({
-                  protocol: "resources-project-presentation-v1",
-                  type: "escape"
-                }, "*");
-              }
-            });
             addEventListener("message", function (event) {
-              var _event$data, _previewController3;
+              var _event$data, _previewController2;
               if (event.source !== parent || ((_event$data = event.data) == null ? void 0 : _event$data.protocol) !== "resources-project-presentation-v1" || event.data.type !== "focus") return;
-              (_previewController3 = previewController) == null || _previewController3.focus == null || _previewController3.focus();
+              (_previewController2 = previewController) == null || _previewController2.focus == null || _previewController2.focus();
             });
             splitter = root.querySelector(".project-editor__splitter");
             projectLayout = root.closest(".project-create__layout");
@@ -4142,10 +4091,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
           type: "focus"
         }, "*");
       },
-      closeBlogPresentation = function closeBlogPresentation(_temp11) {
-        var _ref32 = _temp11 === void 0 ? {} : _temp11,
-          _ref32$focus = _ref32.focus,
-          focus = _ref32$focus === void 0 ? true : _ref32$focus;
+      closeBlogPresentation = function closeBlogPresentation(_temp10) {
+        var _ref31 = _temp10 === void 0 ? {} : _temp10,
+          _ref31$focus = _ref31.focus,
+          focus = _ref31$focus === void 0 ? true : _ref31$focus;
         if (!figure.classList.contains("blog-example-block--fullscreen")) return;
         figure.classList.remove("blog-example-block--fullscreen");
         blogContentBlock == null || blogContentBlock.style.removeProperty("animation");

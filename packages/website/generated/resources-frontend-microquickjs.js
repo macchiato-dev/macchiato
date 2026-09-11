@@ -12,10 +12,57 @@ function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 (function () {
   var _resourcesFrontend = _asyncToGenerator(_regenerator().m(function _callee2() {
-    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, requestFrontendService, FrontendHeaders, FrontendResponse, root2;
+    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, root2;
     return _regenerator().w(function (_context3) {
       while (1) switch (_context3.n) {
         case 0:
+          mountProjectPresentation = function _mountProjectPresenta(root3) {
+            var button = root3.querySelector("[data-project-present]");
+            var close = root3.querySelector("[data-project-present-close]");
+            var preview = root3.querySelector(".project-editor__preview");
+            var content = root3.closest(".content-block");
+            function hide() {
+              __resourcesDatasetDelete(root3, "data-presenting");
+              document.body.classList.remove("project-presenting");
+              preview.classList.remove("project-editor__preview--presenting");
+              for (var _i = 0, _arr = ["animation", "backdrop-filter", "transform"]; _i < _arr.length; _i++) {
+                var name = _arr[_i];
+                content == null || content.style.removeProperty(name);
+              }
+              button.setAttribute("aria-pressed", "false");
+            }
+            button.addEventListener("click", function () {
+              __resourcesDatasetSet(root3, "data-presenting", "true");
+              document.body.classList.add("project-presenting");
+              preview.classList.add("project-editor__preview--presenting");
+              for (var _i2 = 0, _arr2 = ["animation", "backdrop-filter", "transform"]; _i2 < _arr2.length; _i2++) {
+                var name = _arr2[_i2];
+                content == null || content.style.setProperty(name, "none");
+              }
+              button.setAttribute("aria-pressed", "true");
+              close.blur();
+              requestAnimationFrame(function () {
+                var _root3$querySelector;
+                return (_root3$querySelector = root3.querySelector(".project-editor__output-frame")) == null ? void 0 : _root3$querySelector.focus();
+              });
+            });
+            close.addEventListener("click", function (event) {
+              hide();
+              if (event.detail === 0) button.focus();else button.blur();
+            });
+            document.addEventListener("keydown", function (event) {
+              if (event.key === "Escape" && __resourcesDatasetGet(root3, "data-presenting") === "true") {
+                event.preventDefault();
+                hide();
+                button.focus();
+              } else if (event.key === "Escape" && parent !== window) {
+                parent.postMessage({
+                  protocol: "resources-project-presentation-v1",
+                  type: "escape"
+                }, "*");
+              }
+            });
+          };
           requestFrontendService = function _requestFrontendServi(name, payload) {
             if (payload === void 0) {
               payload = {};
@@ -300,6 +347,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             return frontendFetch;
           }();
           if (document.querySelector("[data-project-editor]")) {
+            mountProjectPresentation(document.querySelector("[data-project-editor]"));
             requestFrontendService("editor.mount").catch(function (error) {
               var _document$querySelect;
               (_document$querySelect = document.querySelector("[data-project-editor]")) == null || _document$querySelect.setAttribute("data-editor-machine-state", "failed");
