@@ -219,6 +219,10 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.locator("[data-project-status]").isHidden(), true);
     assert.equal(await page.locator("[data-project-save]").textContent(), "");
     if (template === "clock") {
+      assert.equal(await surface.evaluate(node => getComputedStyle(node).backgroundColor), "rgb(23, 26, 26)",
+        "the clock must load its own stylesheet through its HTML entry");
+      assert.equal(await surface.locator("main").evaluate(node => getComputedStyle(node).textAlign), "center");
+      await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-clock.png") });
       await page.locator("[data-project-file-trigger]").click();
       await page.locator('[data-project-file="script.js"]').click();
       const scriptEditor = page.locator(".cm-content");
@@ -712,6 +716,13 @@ test("every Resources starting point exports and imports without losing files or
   await page.locator(".project-editor .cm-content").waitFor({ state: "attached" });
   const templateOptions = await page.getByLabel("Template").locator("option").evaluateAll((options) =>
     options.map((option) => option.value).filter(Boolean));
+  async function exportSnapshot() {
+    await page.getByRole("button", { name: "Editor menu" }).click();
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("menuitem", { name: "Export ZIP" }).click();
+    const bytes = await readFile(await (await downloadPromise).path());
+    return { bytes, snapshot: await decodeProjectArchive(bytes) };
+  }
 
   for (const template of templateOptions) {
     await page.getByLabel("Template").selectOption(template);
@@ -720,21 +731,20 @@ test("every Resources starting point exports and imports without losing files or
       return snapshot && JSON.parse(snapshot).config.template === value;
     }, template);
     const expected = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
-    await page.getByRole("button", { name: "Editor menu" }).click();
-    const downloadPromise = page.waitForEvent("download");
-    await page.getByRole("menuitem", { name: "Export ZIP" }).click();
-    const download = await downloadPromise;
-    const bytes = await readFile(await download.path());
-    const decoded = await decodeProjectArchive(bytes);
-    assert.deepEqual(decoded, expected, `${template} must survive archive encoding`);
+    const { bytes, snapshot: exported } = await exportSnapshot();
+    assert.deepEqual(exported, expected, `${template} must survive archive encoding`);
 
     await page.getByLabel("Template").selectOption("blank");
     await page.locator("[data-project-archive-file]").setInputFiles({
       name: `${template}.zip`, mimeType: "application/zip", buffer: bytes,
     });
     await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "ZIP imported");
-    assert.deepEqual(JSON.parse(await page.locator("[data-project-snapshot]").inputValue()), expected,
-      `${template} must survive browser import`);
+    const imported = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
+    assert.deepEqual(imported.config, expected.config, `${template} preserves configuration`);
+    assert.deepEqual(imported.files.map(file => file.path), expected.files.map(file => file.path));
+    // The editor deliberately receives opaque handles for imported assets.
+    // Export again to verify the original bytes, not the handle representation.
+    assert.deepEqual((await exportSnapshot()).snapshot, expected, `${template} must survive browser import`);
   }
   assert.deepEqual(errors, []);
 });
@@ -989,6 +999,42 @@ test("Resources project CodeMirror follows repeated explicit and system theme ch
   assert.deepEqual(errors, []);
 });
 
+test("project output fetches supplied files and rejects outside requests through its controller", async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const errors = [], external = [], scripts = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => {
+    if (new URL(request.url()).hostname === "assets.example") external.push(request.url());
+    if (request.resourceType() === "script") scripts.push(new URL(request.url()).pathname);
+  });
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  const snapshot = { files: [
+    { path: "index.html", content: `<p id="local">Waiting</p><p id="outside">Waiting</p><script>
+      fetch("./message.txt").then(response => response.text()).then(text => {
+        document.getElementById("local").textContent = text;
+      });
+      fetch("https://assets.example/probe.txt").then(() => {
+        document.getElementById("outside").textContent = "Unexpected access";
+      }).catch(error => { document.getElementById("outside").textContent = error.message; });
+    </script>` },
+    { path: "message.txt", content: "Fetched through the project machine" },
+  ], config: { entry: "index.html", template: "html" } };
+  await page.locator("[data-project-archive-file]").setInputFiles({ name: "fetch.zip",
+    mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
+  const output = page.frameLocator("[data-project-output-mount] iframe");
+  await output.getByText("Fetched through the project machine", { exact: true }).waitFor();
+  await output.locator("#outside").getByText(/Fetch blocked for https:\/\/assets.example/).waitFor();
+  assert.deepEqual(external, [], "the denied request must never reach the browser network");
+  assert.equal(scripts.some(path => path.endsWith("project-editor-runtime.js")), false);
+  assert.deepEqual(errors, []);
+});
+
 test("Resources.co edge account creates organizations and projects in a real browser", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
@@ -1015,7 +1061,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
     login: account.login,
     name: account.name,
     iat: Date.now(),
-    exp: Date.now() + 60_000,
+    exp: Date.now() + 300_000,
   }, "local-preview-session-signing-key");
 
   const browser = await chromium.launch();
@@ -1034,34 +1080,6 @@ test("Resources.co edge account creates organizations and projects in a real bro
   page.on("console", (message) => { if (message.type() === "error") projectErrors.push(message.text()); });
   page.on("response", (response) => { if (response.status() >= 500) projectErrors.push(`${response.status()} ${response.url()}`); });
   await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
-  const fetchProbe = await page.evaluate(async () => {
-    const { createProjectOutputMachine } = await import("/-/resources-site/project-editor-runtime.js");
-    async function run(fetchResource) {
-      const root = document.createElement("div");
-      document.body.append(root);
-      const controller = await createProjectOutputMachine({
-        root,
-        scripts: [{ code: `const result = document.createElement("p"); document.body.append(result);
-          fetch("https://assets.example/probe.txt").then((response) => response.text())
-            .then((text) => { result.textContent = text; })
-            .catch((error) => { result.textContent = error.message; });` }],
-        options: { fetchResource },
-      });
-      const deadline = Date.now() + 2_000;
-      while (!root.textContent && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 10));
-      const text = root.textContent;
-      controller.destroy(); root.remove();
-      return text;
-    }
-    return {
-      allowed: await run(async (url) => ({ status: url.endsWith("/probe.txt") ? 200 : 404, body: "fetched through msg/onmsg" })),
-      blocked: await run(undefined),
-    };
-  });
-  assert.deepEqual(fetchProbe, {
-    allowed: "fetched through msg/onmsg",
-    blocked: "Project network access is disabled",
-  });
   await assert.doesNotReject(page.getByRole("heading", { name: "Your projects", exact: true }).waitFor());
   assert.equal(new URL(page.url()).pathname, "/");
   assert.equal(await page.getByRole("link", { name: "View all projects" }).getAttribute("href"), "/projects");
