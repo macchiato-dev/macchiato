@@ -1892,6 +1892,22 @@ stylesheet. This resolves the previously identified 390×688 portrait failure;
 it is not a claim that every possible viewport or all broader editor issues
 have been verified.
 
+The refreshed Bunny export is `57911ab`. Compared with `fddc662`, only the
+standalone tour HTML, manifest, and edge revision marker changed; all runtime
+artifacts are byte-identical. Its 151 files pass verification after archive
+extraction, and compressed backend execution passes. The generated standalone
+HTML, exported copy, and live `blog-examples.localhost` response share SHA-256
+`6a5700e4abd79cc1ea3bf81ff03b2594c5c441199d8655126024131434628cef`.
+`/root/resources-bunny.tar.gz` has been replaced, with its predecessor archived
+under `/root/archive/2026/09/11/`. Nothing was deployed to Bunny.
+
+An additional check found that requesting that large standalone HTML at the
+wrong `resources-edge` origin returns 503 (`Edge application unavailable`),
+while its configured `blog-examples` origin returns the correct 200 response.
+The saved project route also returns 200. The deferred response failure needs
+investigation; it should not be mistaken for a failure of the newly verified
+project layout or hidden by treating every 503 as an intentional rejection.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
