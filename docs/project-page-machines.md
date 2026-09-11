@@ -1648,6 +1648,18 @@ optimizing ordinary editing and optimizing a multi-thousand-line native input
 operation are not interchangeable. Live-owner diagnostics intercepted saves
 and left stored project contents unchanged.
 
+The full editor regression passes with the simplified host: exact edits,
+undo/redo, lazy language loading, scrolling, theme changes, output recovery,
+and pointer/keyboard pane resizing. Its 110 KB paste took 1.05 seconds and
+native insertion took 34.4 seconds. Light/dark screenshots were inspected.
+Export `baa22c7` passes all 151 manifest entries, compressed backend execution
+in Deno, and the four stored owner-project checks, including 50 tour slides,
+SQLite fragment navigation, and the 798-pixel Mahjong iframe surface. The
+local server is updated, and `/root/resources-bunny.tar.gz` contains this
+export, verified again after extraction. The prior `2c545b8` archive is in
+`/root/archive/2026/09/11/`. Nothing was deployed to Bunny. Large native input
+and the previously documented pre-observer mirror parity gap remain open.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
