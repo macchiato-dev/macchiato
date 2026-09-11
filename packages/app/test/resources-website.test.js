@@ -1020,7 +1020,7 @@ test("saved project output keeps its backing while the editor is still loading",
       return [...context.getImageData(0, 0, 1, 1).data];
     }, [...png]);
     return { pixel, outer: await frame.evaluate(node => getComputedStyle(node).colorScheme),
-      inner: await output.locator("html").evaluate(node => getComputedStyle(node).colorScheme) };
+      inner: await output.locator(":root").evaluate(node => getComputedStyle(node).colorScheme) };
   }
   const colors = { dark: [21, 23, 23, 255], light: [231, 236, 255, 255] };
   // DevTools media emulation overrides every frame independently. Test native
@@ -1073,7 +1073,7 @@ test("saved project output keeps its backing while the editor is still loading",
         await page.frameLocator(".project-editor__output-frame").locator("#scheme").filter({ hasText: resolved }).waitFor({ timeout: 5000 }).catch(async error => {
           t.diagnostic(JSON.stringify({ selected, resolved, errors, backing: await backing(page),
             outerTheme: await page.locator("html").getAttribute("data-theme"),
-            nativeDark: await page.frameLocator(".project-editor__output-frame").locator("html").evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches),
+            nativeDark: await page.frameLocator(".project-editor__output-frame").locator(":root").evaluate(() => matchMedia("(prefers-color-scheme: dark)").matches),
             guest: await page.frameLocator(".project-editor__output-frame").locator("#scheme").textContent() }));
           throw error;
         });
