@@ -2861,6 +2861,8 @@ var QuickJSRuntime = class {
 };
 
 // packages/website/storage-service.js
+var replyLimit = 2 * 1024 * 1024;
+var valueEnvelopeLength = JSON.stringify({ value: "" }).length;
 function storageResponse(storage, request) {
   try {
     if (!storage) throw new Error("Storage is not available");
@@ -2869,8 +2871,13 @@ function storageResponse(storage, request) {
     switch (operation) {
       case "has":
         return { value: storage.has(kind, key) };
-      case "get":
-        return { value: storage.get(kind, key) };
+      case "get": {
+        const value2 = storage.get(kind, key), result = { value: value2 };
+        if (typeof value2 === "string" && (value2.length > replyLimit - valueEnvelopeLength || value2.length > (replyLimit - valueEnvelopeLength) / 6 && JSON.stringify(result).length > replyLimit)) {
+          throw new RangeError("Storage response exceeds its text limit");
+        }
+        return result;
+      }
       case "set":
         storage.set(kind, key, value);
         return { value: null };

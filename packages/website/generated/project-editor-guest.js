@@ -27239,7 +27239,8 @@ function storageRequest(operation, kind, key, value) {
   if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
   const result2 = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
   if (result2.error) {
-    const error = new Error(result2.error.message);
+    const ErrorType = result2.error.name === "RangeError" ? RangeError : result2.error.name === "TypeError" ? TypeError : Error;
+    const error = new ErrorType(result2.error.message);
     error.name = result2.error.name;
     throw error;
   }

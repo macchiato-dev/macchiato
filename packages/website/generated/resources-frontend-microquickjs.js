@@ -234,7 +234,8 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
             var result = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
             if (result.error) {
-              var error = new Error(result.error.message);
+              var ErrorType = result.error.name === "RangeError" ? RangeError : result.error.name === "TypeError" ? TypeError : Error;
+              var error = new ErrorType(result.error.message);
               error.name = result.error.name;
               throw error;
             }
