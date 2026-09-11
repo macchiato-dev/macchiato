@@ -1822,6 +1822,43 @@ the archive's 151 entries were verified after extraction. The previous
 `d1d8d45` archive is under `/root/archive/2026/09/11/`. No Bunny deployment
 was performed, and the broader readiness goal remains open.
 
+### Expanded output before editor startup
+
+The cold-start Expand failure has a deterministic regression: hold the editor
+Wasm download while allowing the output to become ready, then click Expand.
+The previous build loses that click. Page-level expanded-view controls now
+belong to the outer frontend guest, installed before it asks the controller to
+mount the editor child. Project editing, history, and output management stay in
+the editor guest. No UI handler or additional permission was added to the
+Machine host.
+
+The regression expands and closes the existing iframe before CodeMirror loads,
+then leaves it expanded across editor startup. It verifies frame identity and
+full-viewport dimensions, with a screenshot at the held-download checkpoint.
+The updated build passes all 209 integrated regression checks, including the
+remaining editing, selection, disposal, language, form, and artifact checks.
+This fixes Expand's early ownership gap, not every toolbar control's readiness,
+and does not address the portrait tour overflow documented above.
+
+The tour's expanded keyboard check exposed a second issue: focusing the iframe
+can leave its native body active, outside the guest's granted application div.
+Scoped keyboard delivery correctly refuses that target. The iframe controller
+now forwards native frame activation to its active output session; the guest
+focuses its application surface only when no permitted element is focused.
+This preserves focused inputs and their selections, does not activate a staged
+replacement, and leaves the Machine's input-scope checks unchanged.
+
+The final build passes the 209-check suite again, the four read-only exported
+project checks (including expanded tour keyboard navigation), and compressed
+backend execution. Appearance/first-paint checks passed all 15 cases before
+the additional focus handoff. The local server and
+`/root/resources-bunny.tar.gz` now use export `fddc662`; its 151 files were
+verified after extracting the archive. The previous `1344f49` archive is in
+`/root/archive/2026/09/11/`. No Bunny deployment or owner project save was made.
+After restarting the local server, the editing smoke check also passes modern
+JavaScript, divider dragging, and invalid-to-valid CSS recovery with 144 tiles
+and no stale warning or page error. Its three autosaves were intercepted.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
