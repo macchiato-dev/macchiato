@@ -2227,6 +2227,27 @@ Large-input comparisons use the previous 106 KB source explicitly, so removing
 source lines cannot make the benchmark input smaller. The byte savings alone
 do not establish a typing-latency improvement.
 
+The final fixed-input workspace run passes with a 789 ms paste and a 19,653 ms
+native insertion. Large native insertion remains an open performance issue.
+The verified archive and local server were refreshed with this smaller UI.
+
+### SVG accessibility survives compilation
+
+The compiler previously discarded SVG `title` elements together with HTML page
+metadata, leaving the logo template's `aria-labelledby` without a target. It
+now preserves SVG titles and their namespace. HTML page titles stay outside
+the output surface; SVG styles still become semantic CSS operations rather
+than active style elements. No host permissions were added.
+
+A failing-before/passing-after compiler test checks the title and the retained
+rejection of foreign HTML. Browser tests check the accessible image name in
+both direct and iframe QuickJS output, and through the actual Resources logo
+template using the rebuilt compiler. The template screenshot was reviewed.
+Thirteen focused checks and the five-template workflow pass. Read-only checks
+again cover all four owner projects, theme changes, 50 tour slides, and SQLite
+fragments using export `b280d85`. Its compressed backend runs in Deno; all 151
+files verify. Nothing was deployed to Bunny.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
