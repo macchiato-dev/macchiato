@@ -1072,9 +1072,19 @@ test("Resources editor remains usable when browser storage access is denied", { 
   const app = startApp(port, dataDir);
   t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
   await app.waitForReady;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const account = await createAccountStore(createNodeSqliteClient(db)).authenticateIdentity({
+    provider: "github", providerUserId: "storage-denied", login: "storage-dev", name: "Storage Dev",
+    email: "storage@example.test", emailVerified: true,
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage();
+  await page.context().addCookies([{ name: "resources_session", value: session, domain: "resources-edge.localhost",
+    path: "/", httpOnly: true, sameSite: "Lax" }]);
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.addInitScript(() => {
@@ -1104,6 +1114,38 @@ test("Resources editor remains usable when browser storage access is denied", { 
   await page.getByRole("menuitemradio", { name: "style.css", exact: true }).click();
   await page.getByRole("tab", { name: "index.html", exact: true }).click();
   assert.match(await page.locator(".cm-content").innerText(), /Editing without storage/);
+  await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
+  await page.locator(".cm-content").waitFor();
+  await page.locator(".cm-content").fill("<h1>Unsaved without storage</h1>");
+  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+    name: "Unsaved without storage", exact: true,
+  }).waitFor();
+  await page.locator("[data-project-status]").getByText(/Draft recovery could not be saved/).waitFor();
+  assert.notEqual(await page.locator("[data-project-editor]").getAttribute("data-draft-state"), "saved");
+  await page.getByRole("button", { name: "Editor menu", exact: true }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("menuitem", { name: "Export ZIP", exact: true }).click();
+  const snapshot = decodeProjectArchive(await readFile(await (await download).path()));
+  assert.equal(snapshot.files.find(file => file.path === "index.html").content, "<h1>Unsaved without storage</h1>");
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/storage-denied-draft.png") });
+  // Reload takes the outer guest's recovery-presence path as well. It must
+  // still open, without claiming the unavailable recovery record was read.
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(".cm-content").waitFor();
+  await page.locator("[data-project-status]").getByText(/Draft recovery failed/).waitFor();
+  await page.getByLabel("Title", { exact: true }).fill("Storage test");
+  await page.getByRole("button", { name: "Create project", exact: true }).click();
+  await page.getByRole("button", { name: "Save project", exact: true }).waitFor();
+  await page.locator(".cm-content").waitFor();
+  const saved = page.waitForResponse(response => response.request().method() === "POST" &&
+    /\/api\/projects\/[^/]+\/snapshot$/.test(new URL(response.url()).pathname));
+  await page.locator(".cm-content").fill("<h1>Saved without storage</h1>");
+  assert.equal((await saved).status(), 200);
+  await page.locator("[data-project-status]").getByText(/Draft saved on server, but local recovery could not be cleared/).waitFor();
+  assert.equal(await page.locator("[data-project-editor]").getAttribute("data-draft-state"), "saved");
+  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+    name: "Saved without storage", exact: true,
+  }).waitFor();
   assert.deepEqual(errors, []);
 });
 

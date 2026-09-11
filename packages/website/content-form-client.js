@@ -438,8 +438,8 @@ async function mountProjectRoot(root) {
   let recoveryFailure = "";
   let recoveryWriteError = "";
   function removeRecovery(key) {
-    try { sessionStorage.removeItem(key); }
-    catch (error) { recoveryFailure = error.message || String(error); }
+    try { sessionStorage.removeItem(key); return true; }
+    catch (error) { recoveryFailure = error.message || String(error); return false; }
   }
   function readRecovery(key) {
     try { return readProjectRecovery(key); }
@@ -723,7 +723,7 @@ async function mountProjectRoot(root) {
       if (root.dataset.outputMachineState === "waiting" ||
           !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
       if (recoveryFailure) setStatus(`Draft recovery failed: ${recoveryFailure}. Stored recovery data was kept.`,
-        "error", null, "editor");
+        "warning", null, "editor");
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
@@ -1048,9 +1048,10 @@ async function mountProjectRoot(root) {
         templateOnlyPending = false;
         delete root.dataset.draftDirty;
         root.dataset.draftState = "saved";
-        if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
+        const cleared = !pendingSnapshotKey || removeRecovery(pendingSnapshotKey);
         recoveryWriteError = "";
-        setStatus("Saved");
+        setStatus(cleared ? "Saved" : `Draft saved on server, but local recovery could not be cleared: ${recoveryFailure}.`,
+          cleared ? "normal" : "warning");
       } else {
         setStatus("Saving…");
       }
