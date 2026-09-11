@@ -39,6 +39,10 @@ function probeReference(json) {
     result = hostCall(document.reference, "removeChild", [capturedTarget]);
   } else if (request.operation === "parent") {
     result = hostGet(capturedTarget.reference, "parentNode");
+  } else if (request.operation === "firstChild" || request.operation === "lastChild") {
+    result = hostGet(capturedTarget.reference, request.operation);
+  } else if (request.operation === "documentIdentity") {
+    result = document.documentElement.parentNode === document;
   } else if (request.operation === "closest") {
     result = hostCall(capturedTarget.reference, "closest", [encodeSelector("#own")]);
   } else if (request.operation === "type") result = hostGet(capturedTarget.reference, "nodeType");

@@ -2445,6 +2445,7 @@ function nodeForReference(reference) {
   return node;
 }
 globalThis.__wwcNodeForReference = nodeForReference;
+rememberNode(document);
 rememberNode(document.head);
 rememberNode(document.body);
 Object.defineProperty(GuestObject.prototype, "nodeType", {
@@ -2607,46 +2608,18 @@ globalThis.__wwcSetElementTextContent = function (element, value) {
   element.replaceChildren(value);
   return true;
 };
-Object.defineProperties(GuestObject.prototype, {
-  childNodes: {
-    get: function get() {
-      return childrenOf(this);
-    }
-  },
-  parentNode: {
-    get: function get() {
-      return parentOf(this);
-    }
-  },
-  parentElement: {
-    get: function get() {
-      var parent = parentOf(this);
-      return parent instanceof GuestElement ? parent : null;
-    }
-  },
-  firstChild: {
-    get: function get() {
-      return childrenOf(this)[0] || null;
-    }
-  },
-  lastChild: {
-    get: function get() {
-      var children = childrenOf(this);
-      return children.length ? children[children.length - 1] : null;
-    }
-  },
-  nextSibling: {
-    get: function get() {
-      var result = hostGet(this.reference, "nextSibling");
-      return result === null ? null : nodeForReference(result[1]);
-    }
-  },
-  previousSibling: {
-    get: function get() {
-      var result = hostGet(this.reference, "previousSibling");
-      return result === null ? null : nodeForReference(result[1]);
-    }
+Object.defineProperty(GuestObject.prototype, "childNodes", {
+  get: function get() {
+    return childrenOf(this);
   }
+});
+["parentNode", "parentElement", "firstChild", "lastChild", "nextSibling", "previousSibling"].forEach(function (name) {
+  Object.defineProperty(GuestObject.prototype, name, {
+    get: function get() {
+      var result = hostGet(this.reference, name);
+      return result === null ? null : nodeForReference(result[1]);
+    }
+  });
 });
 Object.defineProperty(GuestElement.prototype, "children", {
   get: function get() {

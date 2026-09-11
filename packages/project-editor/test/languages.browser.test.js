@@ -417,26 +417,50 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     await Promise.resolve();
     const removed = window.callGuest("inspectSiblingProbe", {});
     const restored = window.callGuest("moveSiblingProbe", {});
-    return { initial, insertedImmediately, movedImmediately, moved, detached, removedImmediately, removed, restored };
+    const other = document.createElement("div");
+    other.dataset.name = "other";
+    root.append(other);
+    other.append(first);
+    const reparentedImmediately = window.callGuest("inspectSiblingProbe", {});
+    return { initial, insertedImmediately, movedImmediately, moved, detached, removedImmediately, removed, restored, reparentedImmediately };
   });
   assert.deepEqual(siblings.initial.next, ["middle", "last", null]);
   assert.deepEqual(siblings.initial.previous, [null, "first", "middle"]);
+  assert.deepEqual(siblings.initial.parents, [true, true, true]);
+  assert.deepEqual(siblings.initial.parentElements, siblings.initial.parents);
+  assert.deepEqual(siblings.initial.parentNames, ["container", "container", "container"]);
+  assert.equal(siblings.initial.first, "first");
+  assert.equal(siblings.initial.last, "last");
   assert.ok(siblings.initial.identity);
   assert.deepEqual(siblings.insertedImmediately.next, ["middle", "last", "native"],
     "an unknown native node is returned before any observer creates its wrapper");
   assert.ok(siblings.insertedImmediately.nextIdentity, "repeated reads preserve the newly granted node's identity");
+  assert.equal(siblings.insertedImmediately.last, "native");
   assert.deepEqual(siblings.moved.next, ["middle", null, "first"]);
   assert.deepEqual(siblings.moved.previous, ["last", "first", null]);
+  assert.equal(siblings.moved.first, "last");
+  assert.equal(siblings.moved.last, "middle");
   assert.deepEqual(siblings.movedImmediately, siblings.moved,
     "native reordering is visible synchronously, before observer delivery");
   assert.deepEqual(siblings.detached, siblings.moved, "owned detached siblings remain usable");
   assert.deepEqual(siblings.removed.next, [null, null, "first"]);
   assert.deepEqual(siblings.removed.previous, ["last", null, null]);
+  assert.deepEqual(siblings.removed.parents, [true, false, true]);
+  assert.deepEqual(siblings.removed.parentElements, siblings.removed.parents);
+  assert.equal(siblings.removed.last, "first");
   assert.deepEqual(siblings.removedImmediately, siblings.removed,
     "native removal in a retained detached subtree is visible synchronously");
   assert.deepEqual(siblings.restored, siblings.initial, "guest moves invalidate stale index hints synchronously");
+  assert.deepEqual(siblings.reparentedImmediately.parents, [false, true, true]);
+  assert.deepEqual(siblings.reparentedImmediately.parentNames, ["other", "container", "container"],
+    "a native move returns the new parent, including a previously unknown owned node");
+  assert.deepEqual(siblings.reparentedImmediately.parentElements, siblings.reparentedImmediately.parents);
+  assert.equal(siblings.reparentedImmediately.first, "middle");
   for (const state of Object.values(siblings)) {
     assert.ok(state.rootNext && state.rootPrevious, "root siblings remain outside the grant");
+    assert.ok(state.rootParent && state.rootParentElement, "root ancestors remain outside the grant");
+    assert.ok(state.fragmentParent && state.fragmentParentElement,
+      "a DocumentFragment is a parentNode, not a parentElement");
   }
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);

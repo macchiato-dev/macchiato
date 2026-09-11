@@ -1668,6 +1668,8 @@ function nodeForReference(reference) {
   return node;
 }
 globalThis.__wwcNodeForReference = nodeForReference;
+// Native parent reads in document mode must reuse this document's identity.
+rememberNode(document);
 rememberNode(document.head);
 rememberNode(document.body);
 
@@ -1827,28 +1829,19 @@ globalThis.__wwcSetElementTextContent = function (element, value) {
   element.replaceChildren(value);
   return true;
 };
-Object.defineProperties(GuestObject.prototype, {
-  childNodes: { get: function () { return childrenOf(this); } },
-  parentNode: { get: function () { return parentOf(this); } },
-  parentElement: { get: function () {
-    var parent = parentOf(this);
-    return parent instanceof GuestElement ? parent : null;
-  } },
-  firstChild: { get: function () { return childrenOf(this)[0] || null; } },
-  lastChild: { get: function () {
-    var children = childrenOf(this);
-    return children.length ? children[children.length - 1] : null;
-  } },
-  // Native editing can reorder siblings before MutationObserver delivery.
-  // Read the current relationship; the host checks the returned node's grant.
-  nextSibling: { get: function () {
-    var result = hostGet(this.reference, "nextSibling");
-    return result === null ? null : nodeForReference(result[1]);
-  } },
-  previousSibling: { get: function () {
-    var result = hostGet(this.reference, "previousSibling");
-    return result === null ? null : nodeForReference(result[1]);
-  } }
+Object.defineProperty(GuestObject.prototype, "childNodes", {
+  get: function () { return childrenOf(this); }
+});
+// Native editing can change relationships before MutationObserver delivery.
+// Keep the mirror for bookkeeping, but read public relationships from the DOM.
+// The host checks every returned node against the machine's grants.
+["parentNode", "parentElement", "firstChild", "lastChild", "nextSibling", "previousSibling"].forEach(function (name) {
+  Object.defineProperty(GuestObject.prototype, name, {
+    get: function () {
+      var result = hostGet(this.reference, name);
+      return result === null ? null : nodeForReference(result[1]);
+    }
+  });
 });
 Object.defineProperty(GuestElement.prototype, "children", {
   get: function () {

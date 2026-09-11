@@ -26,7 +26,7 @@ test("raw node references retain identity without granting unrelated host conten
   t.after(() => browser.close());
   const probes = ["value", "setValue", "attribute", "style", "append",
     "documentChildren", "selectionText", "selectionGeometry", "removeDocumentRoot",
-    "parent", "closest", "type"].map(operation => ({ operation }));
+    "parent", "firstChild", "lastChild", "closest", "type", "documentIdentity"].map(operation => ({ operation }));
   probes.push({ operation: "value", grant: "retained" },
     { operation: "value", grant: "during-dispatch" }, { operation: "detachedChild", grant: "retained" });
   for (const probe of probes) {
@@ -46,7 +46,7 @@ test("raw node references retain identity without granting unrelated host conten
           const module = await WebAssembly.compileStreaming(fetch("/scope.wasm"));
           const stamp = new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]);
           const reports = [], outside = document.getElementById("outside");
-          const machine = new Machine(module, document.getElementById("own"), {
+          const machine = new Machine(module, operation === "documentIdentity" ? document : document.getElementById("own"), {
             stamp, onMessage: message => reports.push(message),
           });
           let error = null;
@@ -78,6 +78,10 @@ test("raw node references retain identity without granting unrelated host conten
         if (grant) {
           assert.equal(result.error, null);
           assert.deepEqual(JSON.parse(result.reports[2]), { result: "secret-value" });
+        } else if (operation === "documentIdentity") {
+          assert.equal(result.error, null);
+          assert.deepEqual(JSON.parse(result.reports[2]), { result: true },
+            "the root's native parent reuses the guest document, not a second wrapper");
         } else if (["parent", "closest", "type"].includes(operation)) {
           assert.equal(result.error, null);
           assert.deepEqual(JSON.parse(result.reports[2]), { result: operation === "type" ? 1 : null });

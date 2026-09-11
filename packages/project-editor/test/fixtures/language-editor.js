@@ -216,10 +216,14 @@ function inspectMutationProbe() {
   flush();
 }
 
-var siblingNodes, siblingParent, siblingObserver;
+var siblingNodes, siblingParent, siblingObserver, siblingFragment, siblingFragmentChild;
 function startSiblingProbe() {
   siblingParent = document.createElement("div");
   siblingParent.setAttribute("id", "sibling-probe");
+  siblingParent.setAttribute("data-name", "container");
+  siblingFragment = document.createDocumentFragment();
+  siblingFragmentChild = document.createElement("span");
+  siblingFragment.appendChild(siblingFragmentChild);
   siblingNodes = ["first", "middle", "last"].map(function (name) {
     var node = document.createElement("span");
     node.setAttribute("data-name", name);
@@ -239,12 +243,21 @@ function moveSiblingProbe() {
 function inspectSiblingProbe() {
   function name(node) { return node ? node.getAttribute("data-name") : null; }
   __wwcPostMessage("__wwcResponse:" + JSON.stringify({
+    first: name(siblingParent.firstChild),
+    last: name(siblingParent.lastChild),
     next: siblingNodes.map(function (node) { return name(node.nextSibling); }),
     previous: siblingNodes.map(function (node) { return name(node.previousSibling); }),
+    parents: siblingNodes.map(function (node) { return node.parentNode === siblingParent; }),
+    parentElements: siblingNodes.map(function (node) { return node.parentElement === siblingParent; }),
+    parentNames: siblingNodes.map(function (node) { return name(node.parentNode); }),
+    fragmentParent: siblingFragmentChild.parentNode === siblingFragment,
+    fragmentParentElement: siblingFragmentChild.parentElement === null,
     identity: siblingNodes[0].nextSibling === siblingNodes[1],
     nextIdentity: siblingNodes[2].nextSibling === siblingNodes[2].nextSibling,
     rootNext: document.body.nextSibling === null,
-    rootPrevious: document.body.previousSibling === null
+    rootPrevious: document.body.previousSibling === null,
+    rootParent: document.body.parentNode === null,
+    rootParentElement: document.body.parentElement === null
   }));
   flush();
 }

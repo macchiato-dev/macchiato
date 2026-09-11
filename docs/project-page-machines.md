@@ -1696,6 +1696,31 @@ Deno, and all 151 manifest entries. `/root/resources-bunny.tar.gz` contains
 this export, verified after extraction; the previous `baa22c7` archive is
 preserved under `/root/archive/2026/09/11/`. No Bunny deployment was performed.
 
+### September 11 native parent and endpoint relationships
+
+Extending the pre-observer probes exposed stale `firstChild`/`lastChild` values
+after native insertion/reordering. The wrapper-based `parentElement` check
+also treated a DocumentFragment wrapper as an element. Public parent and
+endpoint getters now forward native reads alongside siblings, through one
+shared guest getter definition. The host adds only `firstChild` and `lastChild`
+to its existing related-node read list; returned references retain the same
+grant check. Internal child bookkeeping remains separate from these public
+reads, and collection/text caches are not claimed to be immediately native.
+
+The probes cover native moves into a previously unknown owned parent,
+removal from detached subtrees, a fragment's distinct parentNode/parentElement
+behavior, and root ancestor exclusion. A document-mode probe additionally
+failed because the identity table did not contain the existing guest document.
+Registering that permanent wrapper makes `documentElement.parentNode` return
+the same document instead of constructing another wrapper. All 21 focused
+language/reference checks pass, including direct attempts to read children
+of ungranted nodes. No observer scheduling or delivery semantics changed.
+
+Before integration, an uninstrumented new/old pair inserted the same 109,485
+characters in 20.6/19.9 seconds, with first-page insert/backspace medians of
+147/134 ms. This is an accuracy fix, not a demonstrated speedup. Exact source
+and error checks passed, and all live-owner writes were intercepted.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
