@@ -13,6 +13,7 @@ import { chromium } from "playwright";
 import { resourcesWebsiteHandler } from "../../../examples/resources-website/handler.js";
 import { buildResourcesSiteRoutes, resourcesDomSchema, validateResourcesStylesheet } from "../../../packages/website/seed.js";
 import { seal } from "../../../packages/website/auth/session.js";
+import { themeBootstrapScript } from "../../../packages/website/theme-bootstrap.js";
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createNodeSqliteClient } from "../../../packages/website/adapters/node-sqlite-client.js";
 
@@ -204,42 +205,41 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.getByLabel("Template").inputValue(), template);
     assert.equal(await page.locator(".project-create__fields").isVisible(), true);
     assert.equal(await page.locator(".project-view__identity").count(), 0);
-    const preview = page.frameLocator(".project-editor__presentation-frame").locator(previewSelector);
+    const output = page.frameLocator("[data-project-output-mount] iframe");
+    const surface = output.locator(".project-output-root:not([hidden]):not(:has(.project-output-root))");
+    const preview = surface.locator(previewSelector);
     await preview.waitFor();
     assert.equal(await preview.count(), 1);
     assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
     assert.equal(await page.locator("[data-project-status]").isHidden(), true);
     assert.equal(await page.locator("[data-project-save]").textContent(), "");
     if (template === "clock") {
-      await page.locator("[data-preview-runtime='quickjs']").waitFor();
       await page.locator("[data-project-file-trigger]").click();
       await page.locator('[data-project-file="script.js"]').click();
       const scriptEditor = page.locator(".cm-content");
       await scriptEditor.press("Control+A");
-      await scriptEditor.fill(snapshot.files.find((file) => file.path === "script.js").content.replace("1000", "5000"));
-      await page.waitForTimeout(500);
-      await page.locator("[data-preview-runtime='quickjs']").waitFor();
-      const output = page.frameLocator("[data-project-preview] iframe.project-editor__preview-surface");
-      const initialTime = await output.locator("#time").textContent();
+      await scriptEditor.fill(snapshot.files.find((file) => file.path === "script.js").content.replace("1000", "5000") +
+        '\ndocument.getElementById("time").setAttribute("data-tick-delay", "5000");');
+      const clock = surface.locator('#time[data-tick-delay="5000"]');
+      await clock.waitFor();
+      const initialTime = await clock.textContent();
       await page.waitForTimeout(1_500);
-      assert.equal(await output.locator("#time").textContent(), initialTime);
+      assert.equal(await clock.textContent(), initialTime);
       await page.waitForTimeout(4_200);
-      assert.notEqual(await output.locator("#time").textContent(), initialTime);
+      assert.notEqual(await clock.textContent(), initialTime);
     }
     if (template === "article") {
       const sourceEditor = page.locator(".cm-content");
       await sourceEditor.press("Control+A");
       await sourceEditor.fill(snapshot.files.find((file) => file.path === "index.html").content.replace("A small article</h1>", "A changed article</h1>"));
-      const output = page.frameLocator("[data-project-preview] iframe.project-editor__preview-surface");
-      await output.locator("h1", { hasText: "A changed article" }).waitFor();
+      await surface.locator("h1", { hasText: "A changed article" }).waitFor();
       await page.locator("[data-project-file-trigger]").click();
       await page.locator('[data-project-file="style.css"]').click();
       await sourceEditor.press("Control+A");
       await sourceEditor.fill("body { background: rgb(12, 34, 56); color: rgb(240, 230, 220); } h1 { font-size: 41px; }");
-      await output.locator("body").waitFor();
       await page.waitForTimeout(1_100);
-      assert.equal(await output.locator("body").evaluate((node) => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
-      assert.equal(await output.locator("h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
+      assert.equal(await surface.evaluate((node) => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
+      assert.equal(await surface.locator("h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
       await page.getByLabel("Template").selectOption("mark");
       await page.locator("[data-project-file-trigger]").click();
       await assert.doesNotReject(page.locator('[data-project-file="image.svg"]').waitFor());
@@ -254,17 +254,19 @@ test("Resources.co blog container examples render and surface schema errors in t
   await page.goto(`http://resources-edge.localhost:${port}/try?template=article`, { waitUntil: "domcontentloaded" });
   const editor = page.locator(".cm-content");
   await editor.waitFor();
+  const output = page.frameLocator("[data-project-output-mount] iframe");
+  const surface = output.locator(".project-output-root:not([hidden]):not(:has(.project-output-root))");
+  await surface.locator("h1").waitFor();
+  const originalHeading = await surface.locator("h1").textContent();
   await editor.click();
   await page.keyboard.press("Control+A");
   await page.keyboard.type('<article><h1 id="allowed">Waiting</h1><iframe><p>Blocked subtree</p></iframe></article><script>document.getElementById("allowed").textContent = "Allowed guest code still runs";</script>');
   await page.locator("[data-project-status][data-state='error']").waitFor();
-  await page.locator("[data-project-preview] h1").getByText("Allowed guest code still runs", { exact: true }).waitFor();
-  await page.waitForTimeout(2_000);
-  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
-  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-preview-violations"), "1");
-  assert.equal(await page.locator("[data-project-preview] h1").textContent(), "Allowed guest code still runs");
-  assert.equal(await page.locator("[data-project-preview] iframe").count(), 0);
-  assert.equal(await page.locator("[data-project-preview]").getByText("Blocked subtree").count(), 0);
+  // The compiler rejects the unsafe document as a whole and leaves the last
+  // valid output alive; it does not execute a partially stripped document.
+  assert.equal(await surface.locator("h1").textContent(), originalHeading);
+  assert.equal(await output.locator("iframe").count(), 0);
+  assert.equal(await surface.getByText("Blocked subtree").count(), 0);
   assert.match(await editor.innerText(), /<iframe>.*Blocked subtree.*<\/iframe>/s);
   assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "error");
   assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__preview");
@@ -273,8 +275,11 @@ test("Resources.co blog container examples render and surface schema errors in t
   await page.getByRole("button", { name: "Split view", exact: true }).click();
   assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__preview");
   assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
-  assert.match(await page.locator("[data-project-error]").textContent(), /^Blocked:.*iframe.*omitted/i);
+  assert.match(await page.locator("[data-project-error]").textContent(), /iframe/i);
   assert.equal(await page.locator("[data-project-save]").textContent(), "");
+  await editor.fill('<article><h1 id="allowed">Waiting</h1></article><script>document.getElementById("allowed").textContent = "Allowed guest code still runs";</script>');
+  await surface.locator("h1", { hasText: "Allowed guest code still runs" }).waitFor();
+  assert.equal(await page.locator("[data-project-status]").isHidden(), true);
 });
 
 test("apps directory lists available app subdomains", async (t) => {
@@ -408,9 +413,18 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
   await app.waitForReady;
   const browser = await chromium.launch();
   t.after(async () => browser.close());
-  const page = await browser.newPage();
+  const page = await browser.newPage({ colorScheme: "dark" });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  async function checkBrowserScripts() {
+    const scripts = await page.locator("script:not([type='application/json'])").evaluateAll(nodes =>
+      nodes.map(node => ({ src: node.getAttribute("src"), type: node.type, text: node.textContent.trim() })));
+    assert.deepEqual(scripts.filter(script => !script.src), [{ src: null, type: "", text: themeBootstrapScript.trim() }]);
+    assert.equal(scripts.filter(script => script.src).length, 1);
+    assert.equal(scripts.find(script => script.src).type, "module");
+    assert.match(scripts.find(script => script.src).src, /^\/-\/resources-site\/controller\.js(?:\?|$)/);
+  }
 
   const response = await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
   await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
@@ -435,7 +449,7 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
     return [style.getPropertyValue("--accent").trim(), style.getPropertyValue("--active-bg").trim()];
   });
   assert.equal(response.status(), 200);
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 1);
+  await checkBrowserScripts();
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
   assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
@@ -473,14 +487,15 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
   assert.equal(await page.getByRole("link", { name: "Log in" }).count(), 1);
   await page.getByRole("button", { name: "Light" }).click();
   assert.equal(await page.locator("html").getAttribute("data-theme"), "light");
-  await page.locator(".main").click();
+  await page.locator(".main").click({ position: { x: 2, y: 2 } });
   assert.equal(await page.locator("details.edge-user-menu[open]").count(), 0);
   await page.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
+  assert.deepEqual(errors, []);
   await assert.doesNotReject(page.getByRole("dialog", { name: "Search or jump to…" }).waitFor());
   await page.getByRole("searchbox", { name: "Search or jump to…" }).fill("settings");
   await assert.doesNotReject(page.getByRole("link", { name: "Settings" }).last().waitFor());
   await page.keyboard.press("Escape");
-
+  await page.getByRole("dialog", { name: "Search or jump to…" }).waitFor({ state: "hidden" });
   await page.getByLabel("Account menu").click();
   await page.getByLabel("Language").selectOption("es");
   await assert.doesNotReject(page.getByRole("heading", { name: "Infraestructura tuya, compuesta por partes." }).waitFor());
@@ -498,7 +513,7 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
   await assert.doesNotReject(page.getByRole("heading", { name: "Log in to Resources.co" }).waitFor());
   await assert.doesNotReject(page.locator(".nav").waitFor());
   await assert.doesNotReject(page.locator(".footer").waitFor());
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
+  await checkBrowserScripts();
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   const authCardWidth = await page.locator(".auth-card").evaluate((node) => node.getBoundingClientRect().width);
   assert.ok(authCardWidth >= 400 && authCardWidth <= 440);
