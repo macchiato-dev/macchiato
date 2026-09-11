@@ -1522,16 +1522,19 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByRole("tab", { name: "index.html", exact: true }).click();
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["index.html", "style.css"]);
   const indexTab = page.getByRole("tab", { name: "index.html" });
-  await indexTab.dispatchEvent("pointerenter");
+  await page.mouse.move(0, 0);
+  await indexTab.hover();
   await page.waitForTimeout(30);
   assert.equal(await page.locator(".instant-tooltip").count(), 0, "a fully visible root file should not have a tooltip");
-  await indexTab.evaluate((element) => { element.style.width = "24px"; });
-  await indexTab.dispatchEvent("pointerenter");
+  await page.mouse.move(0, 0);
+  await indexTab.evaluate((element) => { element.style.width = "48px"; });
+  // Stay on the label, not the independently clickable close control.
+  await indexTab.hover({ position: { x: 8, y: 10 } });
   await page.waitForTimeout(100);
   assert.equal(await page.locator(".instant-tooltip").count(), 0, "pointer tooltips should respect the native-style delay");
   await page.waitForTimeout(550);
   assert.equal(await page.locator(".instant-tooltip").textContent(), "index.html");
-  await indexTab.dispatchEvent("pointerleave");
+  await page.mouse.move(0, 0);
   await indexTab.evaluate((element) => { element.style.removeProperty("width"); });
   const crowdedTabGeometry = await page.locator("[data-project-editor]").evaluate((root) => {
     const tabs = root.querySelector("[data-project-tabs]");
@@ -1628,7 +1631,14 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByRole("button", { name: "More save options" }).click();
   await page.getByRole("menuitem", { name: "Save with title…" }).click();
   await page.getByLabel("Version title").fill("Ready for review");
+  const publication = page.waitForResponse(response => response.request().method() === "POST" &&
+    new URL(response.url()).pathname.startsWith("/projects/"));
   await page.getByRole("button", { name: "Save version" }).click();
+  const published = await publication;
+  assert.equal(new URLSearchParams(published.request().postData()).get("versionTitle"), "Ready for review",
+    "the title reaches the native form before requestSubmit reads it");
+  assert.equal(published.status(), 303);
+  await page.waitForLoadState("networkidle");
   await page.locator("[data-project-versions-proxy]").waitFor();
   await page.waitForFunction(() => /^\d+ seconds? ago$/.test(document.querySelector("[data-current-version]")?.textContent || ""));
   assert.equal(await page.locator("[data-project-versions-proxy]").evaluate((button) => button.innerText.trim()), "");
@@ -1682,6 +1692,56 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByRole("button", { name: "Project menu" }).click();
   assert.equal(await page.getByRole("menuitem", { name: "Delete project" }).isVisible(), true);
   await page.screenshot({ path: join(dataDir, "resources-save-controls.png") });
+});
+
+test("CodeMirror Find/Replace remains usable in both themes and narrow workspaces", async (t) => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  for (const colorScheme of ["light", "dark"]) for (const width of [1280, 390]) {
+    const page = await browser.newPage({ viewport: { width, height: 844 }, colorScheme });
+    const errors = [];
+    page.on("pageerror", error => errors.push(error.message));
+    await page.goto(`http://resources-edge.localhost:${port}/try`);
+    await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
+    if (width < 760) await page.getByRole("button", { name: "Editor", exact: true }).click();
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("Control+f");
+    const search = page.locator(".cm-panel.cm-search");
+    await search.waitFor();
+    const layout = await search.evaluate(panel => {
+      const rect = panel.getBoundingClientRect();
+      const controls = [...panel.querySelectorAll("input,button")];
+      const close = panel.querySelector('[name="close"]').getBoundingClientRect();
+      return { clipped: controls.some(control => {
+        const box = control.getBoundingClientRect();
+        return box.left < rect.left || box.right > rect.right || box.top < rect.top || box.bottom > rect.bottom;
+      }), obscured: controls.some(control => {
+        const box = control.getBoundingClientRect();
+        return control.name !== "close" && box.left < close.right && box.right > close.left &&
+          box.top < close.bottom && box.bottom > close.top;
+      }), inputWidth: panel.querySelector('[name="search"]').getBoundingClientRect().width };
+    });
+    assert.equal(layout.clipped, false, `${colorScheme}, ${width}px: controls remain inside the panel`);
+    assert.equal(layout.obscured, false, `${colorScheme}, ${width}px: close does not cover another control`);
+    assert.ok(layout.inputWidth >= 100, `${colorScheme}, ${width}px: usable Find field`);
+    const before = JSON.parse(await page.locator("[data-project-snapshot]").inputValue())
+      .files.find(file => file.path === "index.html").content;
+    await search.locator('[name="search"]').pressSequentially("Hypertext");
+    await page.locator(".cm-searchMatch").first().waitFor();
+    await search.locator('input[name="replace"]').pressSequentially("Hyperlink");
+    await search.locator('[name="replaceAll"]').click();
+    await page.waitForFunction(expected => JSON.parse(document.querySelector("[data-project-snapshot]").value)
+      .files.find(file => file.path === "index.html").content === expected, before.replaceAll("Hypertext", "Hyperlink"));
+    await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS || dataDir, `search-${colorScheme}-${width}.png`) });
+    await page.keyboard.press("Escape");
+    assert.equal(await search.count(), 0);
+    assert.deepEqual(errors, []);
+    await page.close();
+  }
 });
 
 test("Resources Edge manages usernames, invitations, notifications, and roles in Chromium", async (t) => {

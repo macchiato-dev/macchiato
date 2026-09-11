@@ -122,9 +122,12 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     await page.getByRole("button", { name: "Stopped safely" }).waitFor();
   }
   for (const code of ["form.setAttribute('method', 'post')", "button.setAttribute('formmethod', 'get')",
-    "form.setAttribute('action', 'https://outside.test/')", "form.submit()", "form.requestSubmit()"] ) {
+    "form.setAttribute('action', 'https://outside.test/')", "form.submit()"] ) {
     await assert.rejects(page.evaluate(code => run(code), code));
   }
+  // Programmatic submission has exactly the same event and network guard as
+  // native activation, even after listeners stop propagation above.
+  await page.evaluate(() => run("form.requestSubmit(); form.requestSubmit(button);"));
   // A granted control can be associated with a form outside its subtree by
   // inherited markup. Native activation must not acquire a navigation grant.
   await page.evaluate(() => {
@@ -150,12 +153,18 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     window.machine = new Machine(await WebAssembly.compileStreaming(fetch("/runtime.wasm")),
       document, { allowNavigate: "self" });
     await machine.onmsg(0);
-    document.body.innerHTML = '<form method="post" action="/accepted"><input name="title" value="Saved"><button>Create project</button></form>';
+    document.body.innerHTML = '<form id="save" method="post" action="/accepted"><input id="title" name="title" required><button id="save-button" name="intent" value="publish">Create project</button></form>';
   });
+  const beforeValidation = requests.length;
+  await page.evaluate(() => run("document.getElementById('save').requestSubmit();"));
+  assert.equal(requests.length, beforeValidation, "native required-field validation still prevents submission");
   const submission = page.waitForRequest(request => request.url() === "http://forms.test/accepted");
-  await page.getByRole("button", { name: "Create project" }).click();
+  await page.evaluate(() => run(`
+    document.getElementById('title').value = 'Saved';
+    document.getElementById('save').requestSubmit(document.getElementById('save-button'));
+  `));
   const request = await submission;
   assert.equal(request.method(), "POST");
-  assert.equal(request.postData(), "title=Saved");
+  assert.equal(request.postData(), "title=Saved&intent=publish");
   await page.waitForURL("http://forms.test/accepted");
 });
