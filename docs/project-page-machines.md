@@ -1535,6 +1535,16 @@ corpus and native/guest parity tests before switching the live path; do not
 replace accurate browser behavior with cloned trees or a large host-side source
 parser just to make the new tests pass.
 
+The `1571583` development export includes the shared split rule and reuses the
+unchanged runtime artifacts. All 151 manifest entries, compressed backend
+execution, and exported-asset checks for all four owner projects pass. The
+verified `/root/resources-bunny.tar.gz` is refreshed; its predecessor is in
+`/root/archive/2026/09/11/`. No Bunny deployment was performed. The experimental
+selector renderer is not on this export's execution path. Before integrating
+it, extend the native parity checks to cascade specificity and root-tag
+remapping as well as matching results; correct matching alone does not prove
+that competing declarations retain their original precedence.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
