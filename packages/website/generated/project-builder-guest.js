@@ -10766,41 +10766,6 @@
       [property + "-left", left]
     ];
   }
-  function cssBorder(value) {
-    if (value === "0" || value === "none") {
-      return ["top", "right", "bottom", "left"].map(function(side) {
-        return ["border-" + side + (value === "0" ? "-width" : "-style"), value];
-      });
-    }
-    var parts = cssParts(value);
-    if (parts.length !== 3 || !/^\d/.test(parts[0]) || !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-      throw new SyntaxError("border shorthand is not understood: " + value);
-    }
-    var result2 = [];
-    ["top", "right", "bottom", "left"].forEach(function(side) {
-      result2.push(["border-" + side + "-width", parts[0]]);
-      result2.push(["border-" + side + "-style", parts[1]]);
-      result2.push(["border-" + side + "-color", parts[2]]);
-    });
-    return result2;
-  }
-  function cssBorderSide(property, value) {
-    var side = property.slice("border-".length);
-    if (value === "0") return [[property + "-width", "0"]];
-    if (value === "none") return [[property + "-style", "none"]];
-    var parts = cssParts(value);
-    if (parts.length === 2 && /^\d/.test(parts[0])) {
-      return [[property + "-width", parts[0]], [property + "-color", parts[1]]];
-    }
-    if (parts.length !== 3 || !/^\d/.test(parts[0]) || !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-      throw new SyntaxError(property + " shorthand is not understood: " + value);
-    }
-    return [
-      ["border-" + side + "-width", parts[0]],
-      ["border-" + side + "-style", parts[1]],
-      ["border-" + side + "-color", parts[2]]
-    ];
-  }
   function cssRadius(value) {
     var halves = value.split("/");
     if (halves.length > 2) throw new SyntaxError("border radius is not understood");
@@ -10828,10 +10793,6 @@
   function canonicalCss(property, value) {
     if (property === "-moz-tab-size") return [];
     if (property === "padding" || property === "margin") return cssEdges(property, value);
-    if (property === "border") return cssBorder(value);
-    if (/^border-(?:top|right|bottom|left)$/.test(property)) {
-      return cssBorderSide(property, value);
-    }
     if (property === "border-radius") return cssRadius(value);
     if (property === "gap") return [["row-gap", value], ["column-gap", value]];
     if (property === "overflow") {
@@ -10936,6 +10897,7 @@
           return valueList(items);
         }
         if (token[0] === 7) items.push([7, token[1], read2(true)]);
+        else if (token[0] === 11) items.push([12, token[1]]);
         else if (token[0] === 0) {
           if (items.length && !items[items.length - 1].separator) items.push({ separator: " " });
         } else if (token[0] === 5) {
@@ -10992,7 +10954,7 @@
         if (!value) throw new SyntaxError("CSS declaration value is empty");
         try {
           canonicalCss(property, value).forEach(function(entry) {
-            var structured = entry[0] === "background" || entry[0] === "background-image";
+            var structured = entry[0] === "background" || entry[0] === "background-image" || /^border(?:-(?:top|right|bottom|left))?$/.test(entry[0]);
             declarations.push({
               property: entry[0],
               tokens: structured ? null : cssTokens(entry[1]),
@@ -11099,6 +11061,11 @@
     "background-position-y",
     "background-repeat",
     "background-size",
+    "border",
+    "border-top",
+    "border-right",
+    "border-bottom",
+    "border-left",
     "border-bottom-color",
     "border-bottom-left-radius",
     "border-bottom-right-radius",
@@ -11623,7 +11590,7 @@
       image.bytes.forEach((byte) => writer.byte(byte));
       return;
     }
-    if (node2[0] >= 1 && node2[0] <= 4 || node2[0] === 9) writer.text(node2[1]);
+    if (node2[0] >= 1 && node2[0] <= 4 || node2[0] === 9 || node2[0] === 12) writer.text(node2[1]);
     else if (node2[0] === 7) {
       writer.text(node2[1]);
       writeValue(writer, node2[2]);
@@ -11848,7 +11815,9 @@
       if (rule2.rules) cssImages(rule2.rules);
       if (rule2.frames) cssImages(rule2.frames);
       for (const declaration3 of rule2.declarations || []) {
-        if (declaration3.value) declaration3.value = image(declaration3.value);
+        if (declaration3.value && (declaration3.property === "background" || declaration3.property === "background-image")) {
+          declaration3.value = image(declaration3.value);
+        }
       }
     }
     return rules;

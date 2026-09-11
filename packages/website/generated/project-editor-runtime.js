@@ -173,6 +173,11 @@ var CSS_PROPERTIES = /* @__PURE__ */ new Set([
   "background-position-y",
   "background-repeat",
   "background-size",
+  "border",
+  "border-top",
+  "border-right",
+  "border-bottom",
+  "border-left",
   "border-bottom-color",
   "border-bottom-left-radius",
   "border-bottom-right-radius",
@@ -393,7 +398,7 @@ function createCssRenderer(dependencies) {
     if (targetStyle && itemCount !== 1) fail2("inline style must contain one rule");
     const probe = new CSSStyleSheet();
     const output = [];
-    let lastDeclaration = null;
+    let lastDeclarations = [], lastAssignments = [];
     function readDeclarations(declarationCount, ruleIndex) {
       if (declarationCount > 128) fail2("stylesheet rule has too many declarations");
       let index;
@@ -403,8 +408,10 @@ function createCssRenderer(dependencies) {
         fail2(`stylesheet declarations in rule ${ruleIndex + 1} could not be checked`);
       }
       const declaration = probe.cssRules[index].style;
-      lastDeclaration = declaration;
       const declarations = [];
+      const assignments = [];
+      lastDeclarations = declarations;
+      lastAssignments = assignments;
       for (let declarationIndex = 0; declarationIndex < declarationCount; declarationIndex++) {
         const declarationKind = reader.byte();
         if (declarationKind === 0) {
@@ -423,7 +430,7 @@ function createCssRenderer(dependencies) {
         const important = reader.byte();
         if (important > 1) fail2("stylesheet priority is not representable");
         if (declarationKind === 2) {
-          if (property !== "background" && property !== "background-image") {
+          if (property !== "background" && property !== "background-image" && !/^border(?:-(?:top|right|bottom|left))?$/.test(property)) {
             fail2(`structured ${property} is not supported`);
           }
           let nodes = 0;
@@ -431,6 +438,9 @@ function createCssRenderer(dependencies) {
             if (++nodes > 512 || depth2 > 16) fail2("stylesheet value tree is too complex");
             const kind = reader.byte();
             if (kind === 11) {
+              if (property !== "background" && property !== "background-image") {
+                fail2("embedded SVG is only available as a background image");
+              }
               const length = reader.uint();
               if (length > reader.bytes.length - reader.at) fail2("truncated SVG image");
               const image = reader.bytes.subarray(reader.at, reader.at + length);
@@ -469,6 +479,11 @@ function createCssRenderer(dependencies) {
               }
               return `/*${comment}*/`;
             }
+            if (kind === 12) {
+              const operator = reader.text();
+              if (!/^[+*-]$/.test(operator)) fail2("stylesheet operator is not representable");
+              return operator;
+            }
             if (kind === 10) {
               const separator = reader.byte();
               if (separator > 2) fail2("stylesheet list separator is not representable");
@@ -488,6 +503,7 @@ function createCssRenderer(dependencies) {
             fail2(`CSS value for ${property} in rule ${ruleIndex + 1} was not accepted`);
           }
           declarations.push(`  ${property}: ${value2}${important ? " !important" : ""};`);
+          assignments.push([property, value2, important ? "important" : ""]);
           continue;
         }
         const tokenCount = reader.uint();
@@ -539,8 +555,8 @@ function createCssRenderer(dependencies) {
         declaration.setProperty(property, value, important ? "important" : "");
         if (!declaration.getPropertyValue(property)) continue;
         declarations.push(`  ${property}: ${value}${important ? " !important" : ""};`);
+        assignments.push([property, value, important ? "important" : ""]);
       }
-      if (targetStyle && declarations.length > 1) declaration.cssText = declarations.join("\n");
       return declarations;
     }
     function readItems(itemCount2, output2) {
@@ -634,14 +650,9 @@ ${declarations.join("\n")}
     readItems(itemCount, output);
     if (reader.at !== reader.bytes.length) fail2("trailing stylesheet operation data");
     if (targetStyle) {
-      const declaration = lastDeclaration;
-      if (replace) targetStyle.cssText = "";
-      for (const property of declaration) {
-        targetStyle.setProperty(
-          property,
-          declaration.getPropertyValue(property),
-          declaration.getPropertyPriority(property)
-        );
+      if (replace) targetStyle.cssText = lastDeclarations.join("\n");
+      else for (const [property, value, priority] of lastAssignments) {
+        targetStyle.setProperty(property, value, priority);
       }
       return;
     }

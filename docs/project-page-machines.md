@@ -2678,8 +2678,8 @@ clearing them. Tests verify node identity, stylesheet identity, clearing/removal
 and unchanged neighboring host content.
 
 This does not mean arbitrary browser CSS or HTML is supported. The current
-parser still rejects some valid shorthand forms, such as a border shorthand
-without an explicit color. Attributes on stripped document wrappers (`html` and
+parser at this checkpoint still rejected a border shorthand without an explicit
+color (addressed below). Attributes on stripped document wrappers (`html` and
 `body`) also need a deliberate mapping to the granted root; this change applies
 to elements in the compiled content tree. These are remaining compiler-fidelity
 tasks, alongside the previously recorded performance and service-boundary work.
@@ -2698,6 +2698,27 @@ The local server and `/root/resources-bunny.tar.gz` use this export. The previou
 archive is at
 `/root/archive/2026/09/11/resources-bunny-01f8efe-before-inline-styles.tar.gz`.
 No owner project was saved and nothing was deployed to Bunny.
+
+### Native border shorthand fidelity
+
+Border and side-border shorthands now cross as single semantic declarations.
+The compiler no longer guesses width/style/color longhands, so omitted colors,
+reordered components, CSS-wide keywords, custom properties, and border-image
+resets retain browser behavior. Structured arithmetic uses tag 12, distinct from
+embedded SVG's tag 11. Only background properties accept embedded SVG.
+
+The host validates formatted values with `CSS.supports` rather than setting and
+reading a temporary declaration: Chromium can return an empty `border` shorthand
+for the valid `border: none`. Replacement inline blocks use native cascade
+handling; explicit property assignments retain `setProperty` semantics. No raw
+source CSS crosses this boundary, and selector checks remain in place.
+
+The native browser regression compares 16 cases in four contexts (compiled
+inline, compiled stylesheet, guest `cssText`, and guest `setProperty`). All 64
+comparisons cover side widths/styles/colors and border-image properties. Forged
+wire tests bypass the compiler and reject SVG borders, URL functions, and
+arbitrary operator strings, preserving the previous styles without network
+requests. The Resources storage, inline-style, and focus checks also pass.
 
 ### Standalone compiler parity
 

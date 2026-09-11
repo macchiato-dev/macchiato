@@ -3,6 +3,7 @@ import test from "node:test";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 import { compileProjectFiles } from "../src/single-file-compiler.js";
+import { encodeConstrainedCssRules } from "../src/constrained-css-wire.js";
 
 test("the host renders embedded CSS SVG and rejects unsafe image data before applying it", async (t) => {
   const browser = await chromium.launch();
@@ -46,6 +47,23 @@ test("the host renders embedded CSS SVG and rejects unsafe image data before app
     '<svg><path fill="url(https://example.test/leak)" d="M0 0"/></svg>',
   ]) {
     await assert.rejects(page.evaluate((bytes) => window.install(new Uint8Array(bytes)), image(svg)), /SVG image attribute/);
+    assert.equal(await page.locator("style").count(), styles);
+  }
+  // Bypass the compiler deliberately: the host must independently reject
+  // images in a border, arbitrary operator text, and a raw URL function.
+  await page.locator(".card").evaluate(node => { node.style.border = "2px solid red"; });
+  const original = await page.locator(".card").getAttribute("style");
+  for (const [value, error] of [
+    [[11, ["svg", [], []]], /only available as a background image/],
+    [[12, "url(https://example.test/leak)"], /operator is not representable/],
+    [[7, "url", [4, "https://example.test/leak"]], /function url is not allowed/],
+  ]) {
+    const bytes = [...encodeConstrainedCssRules([{ selector: ".card", declarations: [
+      { property: "border", value, important: false },
+    ] }])];
+    await assert.rejects(page.evaluate(bytes => window.install(new Uint8Array(bytes),
+      document.querySelector(".card").style, true), bytes), error);
+    assert.equal(await page.locator(".card").getAttribute("style"), original);
     assert.equal(await page.locator("style").count(), styles);
   }
   assert.deepEqual(network, []);

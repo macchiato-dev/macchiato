@@ -41,6 +41,14 @@ still checks the bytes independently and formats the CSS; compiler success
 does not grant additional authority. Multiple inline declarations use native
 cascade handling so a later normal value cannot erase an earlier `!important`.
 
+Border shorthands remain single semantic declarations, including omitted colors,
+reordered components, `var()` and `calc()`. The browser supplies their defaults
+and resets; the compiler does not guess longhands. A replacement declaration
+block follows the cascade, while guest `setProperty` calls remain explicit
+assignments. The host checks rendered values with `CSS.supports`, since valid
+shorthands can have empty CSSOM shorthand readbacks. Images remain restricted to
+background declarations, and arithmetic operators have their own wire tag.
+
 Source-limit accounting walks CodeMirror's immutable text tree and weakly
 caches each subtree's code-point count and longest line. Edits reuse unchanged
 subtrees; discarded history does not remain pinned by this cache. DOM,
