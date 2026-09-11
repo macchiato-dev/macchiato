@@ -27368,6 +27368,10 @@ function readProjectRecovery(key) {
   if (result2.error) throw new Error(result2.error);
   return result2.value;
 }
+function writeProjectRecovery(key, value) {
+  const result2 = callHost("session.writeRecovery", { key, value });
+  if (result2.error) throw new Error(result2.error);
+}
 async function mountResourcesProjectEditor(options) {
   listeners = options;
   let lastContent, lastValue;
@@ -27940,6 +27944,7 @@ async function mountProjectRoot(root) {
   const historyInEditorMachine = snapshotField.value.length <= 256e3;
   let recoveredPendingSnapshot = false;
   let recoveryFailure = "";
+  let recoveryWriteError = "";
   function readRecovery(key) {
     try {
       return readProjectRecovery(key);
@@ -28005,6 +28010,7 @@ async function mountProjectRoot(root) {
   let activeStatusSurface = "output";
   let activeNotice = false;
   let persistenceState = status.dataset.state || "normal";
+  let persistenceText = statusSave.textContent;
   function showCurrentVersion() {
     currentVersion.textContent = relativeVersionTime(currentUpdatedAt);
     currentVersion.dataset.versionTime = String(currentUpdatedAt);
@@ -28248,15 +28254,27 @@ async function mountProjectRoot(root) {
     root.querySelector("[data-project-file-current]").textContent = selected === "config" ? root.dataset.configLabel || "Configuration" : selected;
   }
   function renderStatusState() {
-    status.dataset.state = activeError ? "error" : activeNotice ? "warning" : persistenceState;
-    const persistenceWarning = !activeError && !activeNotice && persistenceState === "warning";
+    status.dataset.state = activeError ? "error" : activeNotice || recoveryWriteError ? "warning" : persistenceState;
+    const persistenceWarning = !activeError && !activeNotice && (persistenceState === "warning" || Boolean(recoveryWriteError));
     const workspaceView = root.querySelector(".project-editor__workspace")?.dataset.view;
-    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
+    const targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" || persistenceWarning && recoveryWriteError ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
     if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
     status.hidden = !(activeError || activeNotice || persistenceWarning);
     statusNotice.hidden = !activeNotice || Boolean(activeError);
     statusError.hidden = !activeError;
     statusSave.hidden = !persistenceWarning;
+    statusSave.textContent = recoveryWriteError ? `Draft recovery could not be saved: ${recoveryWriteError}. Your edits remain in this tab. Save the project or export a ZIP before closing it.` : persistenceText;
+    if (recoveryWriteError) {
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.className = "project-editor__status-action";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", () => {
+        clearTimeout(saveTimer);
+        save();
+      });
+      statusSave.append(document.createTextNode(" "), retry);
+    }
     statusError.replaceChildren();
     if (activeError) statusError.append(document.createTextNode(activeError));
     if (activeErrorAction) {
@@ -28295,7 +28313,7 @@ async function mountProjectRoot(root) {
       activeStatusSurface = surface;
     } else {
       persistenceState = nextState;
-      statusSave.textContent = text;
+      persistenceText = text;
     }
     renderStatusState();
   }
@@ -28304,6 +28322,19 @@ async function mountProjectRoot(root) {
     activeErrorAction = null;
     renderStatusState();
     mountEditorMachine("manual-reset");
+  }
+  function storeRecovery(key, value) {
+    let error = "";
+    try {
+      writeProjectRecovery(key, value);
+    } catch (failure) {
+      error = failure.message || String(failure);
+    }
+    if (error !== recoveryWriteError) {
+      recoveryWriteError = error;
+      renderStatusState();
+    }
+    return !error;
   }
   function updateSnapshot(next, { destructive = false } = {}) {
     const normalized = normalizeProjectSnapshot(next);
@@ -28319,7 +28350,7 @@ async function mountProjectRoot(root) {
     const serialized = JSON.stringify(state);
     snapshotField.value = serialized;
     pending2 = true;
-    if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, serialized);
+    if (pendingSnapshotKey && !draft && !memoryOnly) storeRecovery(pendingSnapshotKey, serialized);
     root.dataset.draftDirty = "true";
     root.dataset.draftState = "dirty";
     unsavedChangeCount += 1;
@@ -28331,14 +28362,14 @@ async function mountProjectRoot(root) {
     if (draft || memoryOnly) {
       localHistory.snapshot = state;
       if (editorController && historyInEditorMachine) localHistory = editorController.history.setCurrent(state);
-      if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+      if (draft) storeRecovery(DRAFT_KEY, JSON.stringify(localHistory));
     }
     clearTimeout(saveTimer);
     saveTimer = setTimeout(save, 1500);
     return true;
   }
   function checkpointDraft({ destructive = false } = {}) {
-    if (recoveryFailure) return;
+    if (recoveryFailure) return false;
     const now = Date.now();
     if (editorController && historyInEditorMachine) {
       localHistory = editorController.history.checkpoint(state, {
@@ -28346,24 +28377,27 @@ async function mountProjectRoot(root) {
         destructive,
         checkpointIntervalMs: CHECKPOINT_MS
       });
-    } else {
-      if (!destructive && now - localHistory.lastVersionAt < CHECKPOINT_MS) return;
+    } else if (destructive || now - localHistory.lastVersionAt >= CHECKPOINT_MS) {
       const patch = diffProjectSnapshots(localHistory.snapshots.at(-1), state);
-      if (projectPatchIsEmpty(patch)) return;
-      localHistory.patches.push(patch);
-      localHistory.snapshots.push(state);
-      localHistory.versionTimes.push(now);
-      localHistory.checkpoint = state;
-      localHistory.lastVersionAt = now;
-      localHistory.snapshot = state;
+      if (!projectPatchIsEmpty(patch)) {
+        localHistory.patches.push(patch);
+        localHistory.snapshots.push(state);
+        localHistory.versionTimes.push(now);
+        localHistory.checkpoint = state;
+        localHistory.lastVersionAt = now;
+        localHistory.snapshot = state;
+      }
     }
     versionCount.textContent = String(localHistory.patches.length);
-    if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+    return !draft || storeRecovery(DRAFT_KEY, JSON.stringify(localHistory));
   }
   async function save() {
     if (!pending2 || saving) return;
     if (draft || memoryOnly) {
-      if (!templateOnlyPending) checkpointDraft({ destructive: pendingDestructive || selected === "config" });
+      if ((!templateOnlyPending || recoveryWriteError) && !checkpointDraft({ destructive: pendingDestructive || selected === "config" })) {
+        root.dataset.draftState = "warning";
+        return;
+      }
       pending2 = false;
       pendingDestructive = false;
       templateOnlyPending = false;
@@ -28409,6 +28443,7 @@ async function mountProjectRoot(root) {
         delete root.dataset.draftDirty;
         root.dataset.draftState = "saved";
         if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
+        recoveryWriteError = "";
         setStatus("Saved");
       } else {
         setStatus("Saving\u2026");

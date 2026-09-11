@@ -569,6 +569,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     if (result2.error) throw new Error(result2.error);
     return result2.value;
   }
+  function writeProjectRecovery(key, value) {
+    var result2 = callHost("session.writeRecovery", {
+      key: key,
+      value: value
+    });
+    if (result2.error) throw new Error(result2.error);
+  }
   function mountResourcesProjectEditor(_x) {
     return _mountResourcesProjectEditor.apply(this, arguments);
   }
@@ -1491,7 +1498,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -1899,7 +1906,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             _save = function _save3() {
               _save = _asyncToGenerator(_regenerator().m(function _callee6() {
-                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure, result2, _t5, _t6;
+                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure2, result2, _t5, _t6;
                 return _regenerator().w(function (_context6) {
                   while (1) switch (_context6.p = _context6.n) {
                     case 0:
@@ -1910,12 +1917,18 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       return _context6.a(2);
                     case 1:
                       if (!(draft || memoryOnly)) {
+                        _context6.n = 3;
+                        break;
+                      }
+                      if (!((!templateOnlyPending || recoveryWriteError) && !checkpointDraft({
+                        destructive: pendingDestructive || selected === "config"
+                      }))) {
                         _context6.n = 2;
                         break;
                       }
-                      if (!templateOnlyPending) checkpointDraft({
-                        destructive: pendingDestructive || selected === "config"
-                      });
+                      __resourcesDatasetSet(root, "data-draft-state", "warning");
+                      return _context6.a(2);
+                    case 2:
                       pending2 = false;
                       pendingDestructive = false;
                       templateOnlyPending = false;
@@ -1923,13 +1936,13 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       __resourcesDatasetSet(root, "data-draft-state", "saved");
                       setStatus(memoryOnly ? "" : "Draft saved in this session");
                       return _context6.a(2);
-                    case 2:
+                    case 3:
                       savingGeneration = changeGeneration;
                       savingSnapshot = state;
                       savingDestructive = pendingDestructive && !templateOnlyPending;
                       saving = true;
                       setStatus("Saving\u2026");
-                      _context6.p = 3;
+                      _context6.p = 4;
                       requestSave = function requestSave() {
                         return fetch("/api/projects/" + encodeURIComponent(projectId) + "/snapshot", {
                           method: "POST",
@@ -1943,63 +1956,63 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                           })
                         });
                       };
-                      _context6.n = 4;
+                      _context6.n = 5;
                       return requestSave();
-                    case 4:
+                    case 5:
                       _response = _context6.v;
                       if (!(_response.status === 403)) {
-                        _context6.n = 9;
-                        break;
-                      }
-                      _context6.n = 5;
-                      return _response.clone().json().catch(function () {
-                        return null;
-                      });
-                    case 5:
-                      failure = _context6.v;
-                      if (!((failure == null ? void 0 : failure.error) === "request_token")) {
-                        _context6.n = 9;
+                        _context6.n = 10;
                         break;
                       }
                       _context6.n = 6;
+                      return _response.clone().json().catch(function () {
+                        return null;
+                      });
+                    case 6:
+                      failure = _context6.v;
+                      if (!((failure == null ? void 0 : failure.error) === "request_token")) {
+                        _context6.n = 10;
+                        break;
+                      }
+                      _context6.n = 7;
                       return fetch(location.href, {
                         cache: "no-store"
                       });
-                    case 6:
+                    case 7:
                       page = _context6.v;
                       _t5 = new DOMParser();
-                      _context6.n = 7;
+                      _context6.n = 8;
                       return page.text();
-                    case 7:
+                    case 8:
                       documentCopy = _t5.parseFromString.call(_t5, _context6.v, "text/html");
                       fresh = (_find = _toConsumableArray(documentCopy.querySelectorAll("[data-project-editor]")).find(function (editor) {
                         return __resourcesDatasetGet(editor, "data-project-id") === projectId;
                       })) == null ? void 0 : __resourcesDatasetGet(_find, "data-csrf");
                       if (!fresh) {
-                        _context6.n = 9;
+                        _context6.n = 10;
                         break;
                       }
                       __resourcesDatasetSet(root, "data-csrf", fresh);
-                      _context6.n = 8;
+                      _context6.n = 9;
                       return requestSave();
-                    case 8:
-                      _response = _context6.v;
                     case 9:
+                      _response = _context6.v;
+                    case 10:
                       if (_response.ok) {
-                        _context6.n = 11;
+                        _context6.n = 12;
                         break;
                       }
-                      _context6.n = 10;
+                      _context6.n = 11;
                       return _response.json().catch(function () {
                         return null;
                       });
-                    case 10:
-                      _failure = _context6.v;
-                      throw new Error((_failure == null ? void 0 : _failure.message) || "Save failed (" + _response.status + ")");
                     case 11:
-                      _context6.n = 12;
-                      return _response.json();
+                      _failure2 = _context6.v;
+                      throw new Error((_failure2 == null ? void 0 : _failure2.message) || "Save failed (" + _response.status + ")");
                     case 12:
+                      _context6.n = 13;
+                      return _response.json();
+                    case 13:
                       result2 = _context6.v;
                       versionCount.textContent = String(result2.versionCount);
                       if (changeGeneration === savingGeneration) {
@@ -2009,28 +2022,29 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         __resourcesDatasetDelete(root, "data-draft-dirty");
                         __resourcesDatasetSet(root, "data-draft-state", "saved");
                         if (pendingSnapshotKey) sessionStorage.removeItem(pendingSnapshotKey);
+                        recoveryWriteError = "";
                         setStatus("Saved");
                       } else {
                         setStatus("Saving\u2026");
                       }
-                      _context6.n = 14;
+                      _context6.n = 15;
                       break;
-                    case 13:
-                      _context6.p = 13;
-                      _t6 = _context6.v;
-                      setStatus(_t6.message, true);
                     case 14:
                       _context6.p = 14;
+                      _t6 = _context6.v;
+                      setStatus(_t6.message, true);
+                    case 15:
+                      _context6.p = 15;
                       saving = false;
                       if (pending2 && changeGeneration !== savingGeneration) {
                         clearTimeout(saveTimer);
                         saveTimer = setTimeout(save, 250);
                       }
-                      return _context6.f(14);
-                    case 15:
+                      return _context6.f(15);
+                    case 16:
                       return _context6.a(2);
                   }
-                }, _callee6, null, [[3, 13, 14, 15]]);
+                }, _callee6, null, [[4, 14, 15, 16]]);
               }));
               return _save.apply(this, arguments);
             };
@@ -2041,7 +2055,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               var _ref8 = _temp5 === void 0 ? {} : _temp5,
                 _ref8$destructive = _ref8.destructive,
                 destructive = _ref8$destructive === void 0 ? false : _ref8$destructive;
-              if (recoveryFailure) return;
+              if (recoveryFailure) return false;
               var now = Date.now();
               if (editorController && historyInEditorMachine) {
                 localHistory = editorController.history.checkpoint(state, {
@@ -2049,19 +2063,19 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   destructive: destructive,
                   checkpointIntervalMs: CHECKPOINT_MS
                 });
-              } else {
-                if (!destructive && now - localHistory.lastVersionAt < CHECKPOINT_MS) return;
+              } else if (destructive || now - localHistory.lastVersionAt >= CHECKPOINT_MS) {
                 var patch = diffProjectSnapshots(localHistory.snapshots.at(-1), state);
-                if (projectPatchIsEmpty(patch)) return;
-                localHistory.patches.push(patch);
-                localHistory.snapshots.push(state);
-                localHistory.versionTimes.push(now);
-                localHistory.checkpoint = state;
-                localHistory.lastVersionAt = now;
-                localHistory.snapshot = state;
+                if (!projectPatchIsEmpty(patch)) {
+                  localHistory.patches.push(patch);
+                  localHistory.snapshots.push(state);
+                  localHistory.versionTimes.push(now);
+                  localHistory.checkpoint = state;
+                  localHistory.lastVersionAt = now;
+                  localHistory.snapshot = state;
+                }
               }
               versionCount.textContent = String(localHistory.patches.length);
-              if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+              return !draft || storeRecovery(DRAFT_KEY, JSON.stringify(localHistory));
             };
             updateSnapshot = function _updateSnapshot(next, _temp4) {
               var _editorController4, _root$closest8;
@@ -2081,7 +2095,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               var serialized = JSON.stringify(state);
               snapshotField.value = serialized;
               pending2 = true;
-              if (pendingSnapshotKey && !draft && !memoryOnly) sessionStorage.setItem(pendingSnapshotKey, serialized);
+              if (pendingSnapshotKey && !draft && !memoryOnly) storeRecovery(pendingSnapshotKey, serialized);
               __resourcesDatasetSet(root, "data-draft-dirty", "true");
               __resourcesDatasetSet(root, "data-draft-state", "dirty");
               unsavedChangeCount += 1;
@@ -2093,11 +2107,24 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               if (draft || memoryOnly) {
                 localHistory.snapshot = state;
                 if (editorController && historyInEditorMachine) localHistory = editorController.history.setCurrent(state);
-                if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
+                if (draft) storeRecovery(DRAFT_KEY, JSON.stringify(localHistory));
               }
               clearTimeout(saveTimer);
               saveTimer = setTimeout(save, 1500);
               return true;
+            };
+            storeRecovery = function _storeRecovery(key, value) {
+              var error = "";
+              try {
+                writeProjectRecovery(key, value);
+              } catch (_failure4) {
+                error = _failure4.message || String(_failure4);
+              }
+              if (error !== recoveryWriteError) {
+                recoveryWriteError = error;
+                renderStatusState();
+              }
+              return !error;
             };
             resetStoppedEditor = function _resetStoppedEditor() {
               activeError = "";
@@ -2122,7 +2149,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 activeStatusSurface = surface;
               } else {
                 persistenceState = nextState;
-                statusSave.textContent = text;
+                persistenceText = text;
               }
               renderStatusState();
             };
@@ -2151,15 +2178,27 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             renderStatusState = function _renderStatusState() {
               var _root$querySelector2;
-              __resourcesDatasetSet(status, "data-state", activeError ? "error" : activeNotice ? "warning" : persistenceState);
-              var persistenceWarning = !activeError && !activeNotice && persistenceState === "warning";
+              __resourcesDatasetSet(status, "data-state", activeError ? "error" : activeNotice || recoveryWriteError ? "warning" : persistenceState);
+              var persistenceWarning = !activeError && !activeNotice && (persistenceState === "warning" || Boolean(recoveryWriteError));
               var workspaceView = (_root$querySelector2 = root.querySelector(".project-editor__workspace")) == null ? void 0 : __resourcesDatasetGet(_root$querySelector2, "data-view");
-              var targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
+              var targetSurface = activeStatusSurface === "editor" || workspaceView === "editor" || persistenceWarning && recoveryWriteError ? editorMount.closest(".project-editor__source") : preview.closest(".project-editor__preview");
               if (targetSurface && status.parentElement !== targetSurface) targetSurface.append(status);
               status.hidden = !(activeError || activeNotice || persistenceWarning);
               statusNotice.hidden = !activeNotice || Boolean(activeError);
               statusError.hidden = !activeError;
               statusSave.hidden = !persistenceWarning;
+              statusSave.textContent = recoveryWriteError ? "Draft recovery could not be saved: " + recoveryWriteError + ". Your edits remain in this tab. Save the project or export a ZIP before closing it." : persistenceText;
+              if (recoveryWriteError) {
+                var retry = document.createElement("button");
+                retry.type = "button";
+                retry.className = "project-editor__status-action";
+                retry.textContent = "Retry";
+                retry.addEventListener("click", function () {
+                  clearTimeout(saveTimer);
+                  save();
+                });
+                statusSave.append(document.createTextNode(" "), retry);
+              }
               statusError.replaceChildren();
               if (activeError) statusError.append(document.createTextNode(activeError));
               if (activeErrorAction) {
@@ -2563,6 +2602,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             historyInEditorMachine = snapshotField.value.length <= 256e3;
             recoveredPendingSnapshot = false;
             recoveryFailure = "";
+            recoveryWriteError = "";
             if (!readOnly && !draft && !memoryOnly && pendingSnapshotKey) {
               try {
                 pendingValue = readRecovery(pendingSnapshotKey);
@@ -2622,6 +2662,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             activeStatusSurface = "output";
             activeNotice = false;
             persistenceState = __resourcesDatasetGet(status, "data-state") || "normal";
+            persistenceText = statusSave.textContent;
             refreshSubmitLabel();
             if (draft || memoryOnly) {
               if (draft) {

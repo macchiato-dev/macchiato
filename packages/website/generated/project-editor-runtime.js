@@ -3368,6 +3368,9 @@ async function createProjectEditorMachine({
 function readProjectRecovery(key) {
   return sessionStorage.getItem(key);
 }
+function writeProjectRecovery(key, value) {
+  sessionStorage.setItem(key, value);
+}
 function navigationType() {
   return performance.getEntriesByType("navigation")[0]?.type || "navigate";
 }
@@ -3483,5 +3486,6 @@ export {
   mountResourcesProjectEditor,
   mountResourcesProjectPreview,
   navigationType,
-  readProjectRecovery
+  readProjectRecovery,
+  writeProjectRecovery
 };
