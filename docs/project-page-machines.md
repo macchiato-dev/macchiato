@@ -2421,6 +2421,23 @@ transport or the Machine Host's permissions. It is not a general guarantee for
 every storage API: startup with storage entirely disabled, unrelated preference
 writes, and oversized service responses still need their own coverage.
 
+The rebuilt `17f8548` export passes fourteen service/artifact tests, the real
+quota/recovery workflow, titled publication, Find/Replace at desktop and phone
+widths, and twenty appearance checks. The full editing stress test also passes:
+106,432 characters pasted in 810 ms and 106,458 characters inserted through the
+native input path in 16,345 ms. These timings are consistent with the preceding
+grid-layout improvement, not evidence that the remaining bulk-input cost is
+solved. The compressed backend runs in Deno, and all 151 files verify both in
+the build directory and after extracting the deployment archive.
+
+The restarted local server and `/root/resources-bunny.tar.gz` now use that
+export. Read-only owner checks pass for Mahjong, Cat Memory Match, fifty tour
+slides with embedded/expanded keyboard navigation, and SQLite fragment links,
+including desktop/phone rendering and theme switches. The previous archive is
+kept at
+`/root/archive/2026/09/11/resources-bunny-e13d384-before-recovery-quota.tar.gz`.
+No owner project was saved and nothing was deployed to Bunny.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
