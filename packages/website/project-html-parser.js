@@ -45,14 +45,40 @@ const rawElements = new Set(["script", "style", "textarea", "title"]);
 
 function parsedAttributes(source) {
   const entries = [];
+  const names = new Set();
   let rest = source.trim();
   while (rest) {
+    // A slash is a closing marker only between attributes. In an unquoted
+    // value, as in src=tile.png/>, it belongs to that value instead.
+    if (rest === "/") return { entries, selfClosing: true };
     const match = /^([A-Za-z_:][A-Za-z0-9_.:-]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?\s*/.exec(rest);
     if (!match) throw new SyntaxError(`HTML attribute input was not consumed: ${rest.slice(0, 32)}`);
-    entries.push([match[1].toLowerCase(), match[2] ?? match[3] ?? match[4] ?? ""]);
+    const name = match[1].toLowerCase();
+    // HTML keeps the first spelling of a duplicated attribute. Keeping both
+    // made getAttribute read the first but guest installation apply the last.
+    if (!names.has(name)) entries.push([name, match[2] ?? match[3] ?? match[4] ?? ""]);
+    names.add(name);
     rest = rest.slice(match[0].length);
   }
-  return entries;
+  return { entries, selfClosing: false };
+}
+
+function openingTag(source, at) {
+  const name = /^<\s*([A-Za-z][A-Za-z0-9-]*)/.exec(source.slice(at));
+  if (!name) throw new SyntaxError(`HTML tag input was not consumed at offset ${at}`);
+  const start = at + name[0].length;
+  let quote = "";
+  for (let end = start; end < source.length; end++) {
+    const character = source[end];
+    if (quote) {
+      if (character === quote) quote = "";
+    } else if (character === '"' || character === "'") quote = character;
+    else if (character === ">") {
+      return { name: name[1].toLowerCase(), end: end + 1,
+        ...parsedAttributes(source.slice(start, end)) };
+    }
+  }
+  throw new SyntaxError(`HTML start tag is not closed at offset ${at}`);
 }
 
 export function parseProjectHtml(source) {
@@ -89,14 +115,13 @@ export function parseProjectHtml(source) {
       if (stack.length === 1 || stack.at(-1).localName !== name) throw new SyntaxError(`Unexpected closing tag: ${name}`);
       stack.pop(); at += close[0].length; continue;
     }
-    const open = /^<\s*([A-Za-z][A-Za-z0-9-]*)([^>]*)>/.exec(source.slice(at));
-    if (!open) throw new SyntaxError(`HTML tag input was not consumed at byte ${at}`);
-    const name = open[1].toLowerCase();
-    const selfClosing = /\/\s*$/.test(open[2]);
-    const node = new ParsedNode(1, name, "", parsedAttributes(open[2].replace(/\/\s*$/, "")));
+    const open = openingTag(source, at);
+    const name = open.name;
+    const node = new ParsedNode(1, name, "", open.entries);
     node.namespaceURI = stack.some((parent) => parent.localName === "svg") || name === "svg"
       ? "http://www.w3.org/2000/svg" : "http://www.w3.org/1999/xhtml";
-    stack.at(-1).append(node); at += open[0].length;
+    const selfClosing = open.selfClosing && node.namespaceURI === "http://www.w3.org/2000/svg";
+    stack.at(-1).append(node); at = open.end;
     if (rawElements.has(name) && !selfClosing) {
       const expression = new RegExp(`<\\/\\s*${name}\\s*>`, "ig");
       expression.lastIndex = at;

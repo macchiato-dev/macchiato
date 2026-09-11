@@ -25,7 +25,7 @@ test("inline content updates retain matching nodes and the machine stylesheet", 
   });
   await page.goto("http://inline.test/");
   const compile = style => compileProjectFiles([{ path: "index.html", content:
-    `<style>.sample { color: green; }</style><p class="sample" id="sample"${style === null ? "" : ` style="${style}"`}>Text</p>` }]);
+    `<style>.sample { color: green; }</style><p class="sample" CLASS="ignored" id="sample" data-label="a > b"${style === null ? "" : ` style="${style}"`}>Text</p>` }]);
   const result = await page.evaluate(async programs => {
     const { Machine, ProjectOutput } = await import("/module.js");
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
@@ -42,6 +42,7 @@ test("inline content updates retain matching nodes and the machine stylesheet", 
       const greenAfterEmpty = getComputedStyle(empty).color;
       const removed = output.setContent(programs[3].tree);
       return { updated, sameNode, blue, cleared, greenAfterEmpty, removed,
+        label: document.querySelector("#sample").getAttribute("data-label"),
         stylesheetRetained: stylesheet.isConnected && document.querySelector("#mount style") === stylesheet,
         inlineRemoved: document.querySelector("#sample").getAttribute("style") === null,
         green: getComputedStyle(document.querySelector("#sample")).color,
@@ -49,6 +50,7 @@ test("inline content updates retain matching nodes and the machine stylesheet", 
     } finally { output.destroy(); }
   }, [compile("color:red"), compile("color:blue"), compile(""), compile(null)]);
   assert.equal(result.updated.hydrated, true);
+  assert.equal(result.label, "a > b");
   assert.equal(result.cleared.hydrated, true);
   assert.equal(result.sameNode, true);
   assert.equal(result.blue, "rgb(0, 0, 255)");
