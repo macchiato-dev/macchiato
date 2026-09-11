@@ -3661,3 +3661,9 @@ history recovery, retry, and reload. Their logs are
 establish the timeout's cause or a performance improvement. Desktop and phone
 quota-warning screenshots were inspected; both retain visible retry controls
 without covering the other pane.
+
+The first candidate stress run terminated with signal 15 and no test result
+(`native-mutations-stress.log`); the cgroup reported zero OOM kills. Its light,
+dark, and phone screenshots were inspected, but that is not a completed stress
+test. An optional progress file now retains checkpoints outside Node's buffered
+test report, with no production instrumentation and no deadline increase.
