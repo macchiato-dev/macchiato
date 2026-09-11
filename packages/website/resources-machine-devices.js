@@ -473,7 +473,7 @@ export class ResourcesOutputDevice {
       "output.inspect": (output) => output.inspect(),
       "output.setContent": (output, payload) => {
         this.validateTree(payload.tree);
-        return output.setContent(payload.tree);
+        return output.setContent(payload.tree, payload.document);
       },
     });
   }
@@ -558,7 +558,7 @@ export class ResourcesOutputDevice {
             frame.remove();
           },
           inspect: () => request("inspect", {}),
-          setContent: (tree) => request("setContent", { tree }),
+          setContent: (tree, document) => request("setContent", { tree, document }),
           run: (scripts) => request("run", { scripts }),
           load: (project) => request("load", { project }),
         }));

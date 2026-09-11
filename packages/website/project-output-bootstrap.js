@@ -69,6 +69,32 @@ function outputInlineStyles(node, value) {
   }
 }
 
+let installedDocument = {};
+function setOutputDocument(parts, inline) {
+  if (!parts) return;
+  if (document.documentElement === document.body || document.head === document.body) {
+    throw new Error("Project documents require distinct HTML, head, and body elements");
+  }
+  for (const name of ["html", "head", "body"]) {
+    const node = name === "html" ? document.documentElement : document[name];
+    const value = parts[name];
+    if (!value || value[0] !== 1 || value[1] !== name || value[2] !== 0 || value[4].length) {
+      throw new TypeError("Invalid project document part");
+    }
+    if (!inline) {
+      const previous = installedDocument[name];
+      for (const [key] of previous?.[3] || []) {
+        if (!value[3].some(attribute => attribute[0] === key)) node.removeAttribute(key);
+      }
+      for (const [key, data] of value[3]) {
+        if (node.getAttribute(key) !== data) node.setAttribute(key, data);
+      }
+      if (previous?.[5] && !value[5]) node.removeAttribute("style");
+    } else if (value[5]) node.style.installDeclarationOperations(new Uint8Array(value[5]));
+  }
+  if (inline) installedDocument = parts;
+}
+
 function setOutputContent(nodes, inline = true) {
   // In container mode the machine's logical head shares the root. Preserve
   // its rendered styles without copying or moving those protected nodes.
@@ -90,13 +116,19 @@ function setOutputContent(nodes, inline = true) {
 }
 
 globalThis.__resourcesOutputSetContent = json => {
-  const result = setOutputContent(JSON.parse(json));
+  const project = JSON.parse(json);
+  // A tree-only edit leaves document metadata unchanged.
+  const tree = Array.isArray(project) ? project : project.tree;
+  setOutputDocument(project.document, false);
+  const result = setOutputContent(tree);
+  setOutputDocument(project.document, true);
   return JSON.stringify({ mounted: result.mounted, hydrated: result.hydrated });
 };
 
 globalThis.__resourcesOutputLoad = (json) => {
   const project = JSON.parse(json);
   const tree = project.tree || [];
+  setOutputDocument(project.document, false);
   const result = setOutputContent(tree, false);
   // Establish scoped keyframe names before applying inline animation values.
   for (const stylesheet of project.stylesheets || []) {
@@ -108,6 +140,7 @@ globalThis.__resourcesOutputLoad = (json) => {
     }
   }
   tree.forEach((node, index) => outputInlineStyles(result.nodes[index], node));
+  setOutputDocument(project.document, true);
   return JSON.stringify({ mounted: result.mounted, hydrated: result.hydrated });
 };
 

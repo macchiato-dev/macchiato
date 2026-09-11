@@ -134,11 +134,14 @@ export class ProjectOutput {
     if (this.destroyed) throw new Error("Project output was destroyed");
     this.remove(this.preparing);
     const wrapper = this.root.ownerDocument.createElement("div");
-    const surface = this.root.ownerDocument.createElement("div");
-    surface.className = "project-output-root";
+    wrapper.className = "project-output-root";
+    const surface = this.root.ownerDocument.createElement("html");
+    const head = this.root.ownerDocument.createElement("head");
+    const body = this.root.ownerDocument.createElement("body");
+    surface.append(head, body);
     // Native clicks on non-focusable app content should focus its granted
     // surface, not the outer document. This adds no sequential tab stop.
-    surface.tabIndex = -1;
+    body.tabIndex = -1;
     wrapper.append(surface);
     wrapper.inert = true;
     wrapper.style.cssText = "position:absolute;left:0;top:0;width:100%;opacity:0;visibility:hidden;pointer-events:none";
@@ -154,7 +157,7 @@ export class ProjectOutput {
       await session.machine.onmsg(0);
       if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
       const result = session.call("__resourcesOutputLoad", {
-        tree: project.tree || [], stylesheets: project.stylesheets || [],
+        tree: project.tree || [], document: project.document, stylesheets: project.stylesheets || [],
       });
       await session.machine.onmsg(0);
       await session.run(project.scripts || []);
@@ -185,10 +188,10 @@ export class ProjectOutput {
     finally { entry.wrapper.remove(); }
   }
 
-  setContent = tree => {
+  setContent = (tree, document) => {
     const session = this.active?.session;
     if (!session) throw new Error("Project output is unavailable");
-    const result = session.call("__resourcesOutputSetContent", tree);
+    const result = session.call("__resourcesOutputSetContent", { tree, document });
     session.machine.onmsg(0);
     return result;
   };

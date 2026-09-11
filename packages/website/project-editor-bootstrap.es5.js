@@ -130,6 +130,7 @@
           if (generation !== outputGeneration) return null;
           return requestStage("output.load", { id: id, project: {
             tree: compiled.tree,
+            document: compiled.document,
             stylesheets: compiled.stylesheets,
             scripts: compiled.scripts,
             files: project.files,

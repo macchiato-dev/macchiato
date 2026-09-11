@@ -9,10 +9,10 @@
     /* Match the embedding page's chosen scheme from the first frame paint.
        Otherwise the browser can put a white canvas behind transparent CSS. */
     :root { color-scheme: light dark; }
-    html, body { min-height: 100%; margin: 0; background: transparent; }
+    :root, :root > body { min-height: 100%; margin: 0; background: transparent; }
     /* A guest document fills this frame even through auto-height staging
        wrappers. Its own body styles can override this low-specificity default. */
-    :where(.project-output-root) { min-height: 100vh; }
+    :where(.project-output-root > html > body) { min-height: 100vh; }
     .project-output-root[hidden] { display: none; }
   </style>
 </head>

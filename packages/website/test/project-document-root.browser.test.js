@@ -23,7 +23,8 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
     :root > body > p { opacity: .75; }
     html:has(+ #outside) p, body + #outside { color: red; }
   `;
-  const program = compileProjectFiles([{ path: "index.html", content: `<style>${css}</style><p>Sample</p>` }]);
+  const program = compileProjectFiles([{ path: "index.html", content:
+    `<html class="page"><head><style>${css}</style></head><body class="app"><p>Sample</p></body></html>` }]);
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage(), errors = [], unexpected = [];

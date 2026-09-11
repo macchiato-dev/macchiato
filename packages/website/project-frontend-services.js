@@ -121,7 +121,7 @@ export async function mountResourcesProjectPreview(options) {
   outputListeners.set(id, options.onViolation);
   return Object.freeze({
     inspect() { return call("output.inspect", { id }); },
-    setContent(tree) { return call("output.setContent", { id, tree }); },
+    setContent(tree, document) { return call("output.setContent", { id, tree, document }); },
     load(project) { return requestFrontendService("output.load", { id, project }); },
     run(scripts) { return requestFrontendService("output.run", { id, scripts }); },
     destroy() { call("output.destroy", { id }); outputListeners.delete(id); },

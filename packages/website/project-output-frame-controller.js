@@ -99,7 +99,7 @@ async function operation(name, payload) {
     return null;
   }
   if (!output || destroyed) throw new Error("Project output is unavailable");
-  if (name === "setContent") return output.setContent(payload.tree);
+  if (name === "setContent") return output.setContent(payload.tree, payload.document);
   if (name === "load") return output.load(payload.project);
   if (name === "run") { await output.run(payload.scripts); return null; }
   if (name === "inspect") return { ...output.inspect(), realm: "iframe" };

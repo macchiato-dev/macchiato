@@ -12,8 +12,8 @@ const ELEMENTS = new Set([
   "option", "p", "section", "small", "span", "strong", "textarea", "ul",
 ]);
 const ATTRIBUTES = new Set([
-  "aria-label", "aria-live", "class", "contenteditable", "hidden", "id", "maxlength", "placeholder",
-  "role", "tabindex", "type", "value",
+  "aria-label", "aria-live", "class", "contenteditable", "dir", "hidden", "id", "lang", "maxlength", "placeholder",
+  "role", "tabindex", "title", "translate", "type", "value",
 ]);
 const SVG_ELEMENTS = new Map([
   "svg", "g", "defs", "circle", "ellipse", "line", "linearGradient", "path", "rect", "stop", "text", "title",
@@ -85,6 +85,39 @@ function inlineStyle(source) {
   return [...bytes];
 }
 
+// The inert parser retains explicit wrappers. Keep their attributes separate
+// from body content instead of flattening three different elements into a div.
+// This is deliberately not HTML's error-recovery algorithm: misplaced or
+// duplicate document wrappers fail rather than acquiring surprising meanings.
+function documentParts(parsed) {
+  const direct = (children, name) => {
+    const matches = children.filter(node => node.nodeType === 1 && node.localName === name);
+    if (matches.length > 1) throw new SyntaxError(`Duplicate document ${name} element`);
+    return matches[0];
+  };
+  const html = direct(parsed.body.childNodes, "html");
+  if (html && parsed.body.childNodes.some(node => node !== html &&
+      (node.nodeType !== 3 || node.textContent.trim()))) {
+    throw new SyntaxError("Content outside the document html element");
+  }
+  const children = html ? html.childNodes : parsed.body.childNodes;
+  const head = direct(children, "head"), body = direct(children, "body");
+  if (head?.childNodes.some(node => node.nodeType === 3 ? node.textContent.trim()
+      : !OMITTED.has(node.localName))) {
+    throw new SyntaxError("Unsupported content in document head");
+  }
+  const wrappers = new Set([html, head, body]);
+  function check(node) {
+    if (node.nodeType === 1 && WRAPPERS.has(node.localName) && !wrappers.has(node)) {
+      throw new SyntaxError(`Misplaced document ${node.localName} element`);
+    }
+    for (const child of node.childNodes) check(child);
+  }
+  for (const node of parsed.body.childNodes) check(node);
+  return { html, head, body,
+    content: children.flatMap(node => node === head ? [] : node === body ? node.childNodes : [node]) };
+}
+
 export class SingleFileProjectCompiler {
   constructor({ limits = SOURCE_LIMITS } = {}) {
     this.limits = Object.freeze({ ...limits });
@@ -98,6 +131,7 @@ export class SingleFileProjectCompiler {
       throw new RangeError("Project source exceeds its line or code-point budget");
     }
     const parsed = parseProjectHtml(source);
+    const parts = documentParts(parsed);
     const scripts = [];
     const cssParts = parsed.querySelectorAll("style").map((node) => node.textContent);
     for (const link of parsed.querySelectorAll('link[rel="stylesheet"][href]')) {
@@ -157,10 +191,20 @@ export class SingleFileProjectCompiler {
       if (style !== null) node.push(inlineStyle(style));
       return [node];
     };
-    const tree = parsed.body.childNodes.flatMap(nodes);
+    const tree = parts.content.flatMap(nodes);
+    const document = {};
+    for (const name of WRAPPERS) {
+      const part = parts[name];
+      const attributes = (part?.attributeEntries || []).filter(([key, value]) =>
+        (ATTRIBUTES.has(key) || /^(aria|data)-[a-z][a-z0-9-]*$/.test(key)) && value.length <= 2_000);
+      const node = [1, name, 0, attributes, []];
+      const style = part?.getAttribute("style");
+      if (style != null) node.push(inlineStyle(style));
+      document[name] = node;
+    }
     // The server build can hand the guest semantic operations directly. A
     // client build may instead supply source and let the guest encode it.
-    return { tree, stylesheets: stylesheet ? [{ operations: stylesheet }] : [], scripts, usage };
+    return { tree, document, stylesheets: stylesheet ? [{ operations: stylesheet }] : [], scripts, usage };
   }
 }
 
