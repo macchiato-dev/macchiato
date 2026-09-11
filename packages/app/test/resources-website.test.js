@@ -2459,7 +2459,11 @@ test("project resources survive session recovery, API saves, native publication,
     await page.locator("[data-project-archive-file]").setInputFiles({ name: "resource.zip",
       mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
     try {
-      await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "ZIP imported");
+      // Import clears the input when it finishes. Autosave may replace the
+      // transient status before Playwright samples it, so verify completion
+      // and the actual exported bytes instead of racing a button label.
+      await page.waitForFunction(() => document.querySelector("[data-project-archive-file]")?.files.length === 0);
+      assert.deepEqual(await exportedFiles(), filesOf(snapshot), "the imported files remain complete and exportable");
     } catch (error) {
       t.diagnostic(JSON.stringify({ errors, importState: await page.evaluate(() => ({
         button: document.querySelector("[data-project-save]")?.textContent,
