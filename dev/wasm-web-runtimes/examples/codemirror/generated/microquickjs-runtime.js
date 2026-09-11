@@ -3563,6 +3563,14 @@ Object.defineProperty(GuestElement.prototype, "hidden", {
     immediate([2, this.reference, stringIndex("hidden"), encode(Boolean(value))]);
   }
 });
+Object.defineProperty(GuestElement.prototype, "disabled", {
+  get: function get() {
+    return hostCall(this.reference, "hasAttribute", ["disabled"]);
+  },
+  set: function set(value) {
+    if (value) this.setAttribute("disabled", "");else this.removeAttribute("disabled");
+  }
+});
 ["value", "checked"].forEach(function (name) {
   Object.defineProperty(GuestElement.prototype, name, {
     get: function get() {

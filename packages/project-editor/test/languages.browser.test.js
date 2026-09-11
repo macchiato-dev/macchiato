@@ -503,6 +503,26 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     assert.equal(result.textContent, expected);
     assert.equal(native, expected);
   }
+  const disabledStates = await page.evaluate(() => {
+    const initial = window.callGuest("inspectDisabledProbe", {});
+    const button = document.querySelector("#disabled-probe");
+    const states = [initial.disabled];
+    for (const value of [true, false, "false", "", 1, 0, null]) {
+      const result = window.callGuest("inspectDisabledProbe", { write: true, value });
+      states.push([result.disabled, button.disabled, Boolean(value)]);
+    }
+    button.setAttribute("disabled", "false");
+    states.push(window.callGuest("inspectDisabledProbe", {}).disabled);
+    button.removeAttribute("disabled");
+    states.push(window.callGuest("inspectDisabledProbe", {}).disabled);
+    return states;
+  });
+  assert.equal(disabledStates[0], false, "an enabled control starts with disabled=false");
+  for (const [guest, native, expected] of disabledStates.slice(1, -2)) {
+    assert.equal(guest, expected);
+    assert.equal(native, expected, "disabled property is reflected in the native control");
+  }
+  assert.deepEqual(disabledStates.slice(-2), [true, false], "native attribute changes are immediately visible");
   await page.evaluate(() => window.stopGuest());
   assert.deepEqual(errors, []);
 });

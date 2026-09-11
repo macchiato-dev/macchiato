@@ -2747,6 +2747,15 @@ Object.defineProperty(GuestElement.prototype, "hidden", {
     immediate([2, this.reference, stringIndex("hidden"), encode(Boolean(value))]);
   }
 });
+// disabled reflects attribute presence, even when its value is "false".
+// Use native presence checks so host changes are visible before observers run.
+Object.defineProperty(GuestElement.prototype, "disabled", {
+  get: function () { return hostCall(this.reference, "hasAttribute", ["disabled"]); },
+  set: function (value) {
+    if (value) this.setAttribute("disabled", "");
+    else this.removeAttribute("disabled");
+  }
+});
 ["value", "checked"].forEach(function (name) {
   Object.defineProperty(GuestElement.prototype, name, {
     get: function () { return immediate([1, this.reference, stringIndex(name)]); },

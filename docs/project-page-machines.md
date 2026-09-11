@@ -1773,6 +1773,26 @@ previous `6e52623` archive is preserved under `/root/archive/2026/09/11/`.
 Nothing was deployed to Bunny. This is an integrated accuracy checkpoint,
 not a claim that the entire performance and DOM-fidelity goal is complete.
 
+### September 11 complete presentation traversal and disabled controls
+
+A read-only owner traversal reached all 387 stored tour slides at 1440×900,
+in the split project workspace. No script errors or measured slide-content
+overflow occurred, and the live document peaked at 694 elements rather than
+accumulating a copy of each slide. The final assertion failed, however: Next
+was not natively disabled on the last slide.
+
+The shared guest environment lacked a `disabled` property. Assigning it made
+an ordinary JavaScript property without changing the browser control. This also
+affects the workspace Save button and tab-scroll arrows. The new accessor uses
+the existing guarded attribute operations: presence means true, truthy writes
+set the attribute, and false writes remove it. Native presence is read directly
+so externally changed attributes are visible before observer delivery. No new
+host API or permission is needed.
+
+Both MicroQuickJS language modes reproduce the missing reflection and pass
+with the accessor. QuickJS form checks also reproduce it; their rebuilt-artifact
+checks and full integration verification are pending at this source checkpoint.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

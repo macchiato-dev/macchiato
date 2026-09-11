@@ -216,6 +216,19 @@ function inspectMutationProbe() {
   flush();
 }
 
+var disabledProbe;
+function inspectDisabledProbe(json) {
+  var request = JSON.parse(json);
+  if (!disabledProbe) {
+    disabledProbe = document.createElement("button");
+    disabledProbe.setAttribute("id", "disabled-probe");
+    document.body.appendChild(disabledProbe);
+  }
+  if (request.write) disabledProbe.disabled = request.value;
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify({ disabled: disabledProbe.disabled }));
+  flush();
+}
+
 var textProbe, textProbeParent, textProbeObserver, textProbeRecords;
 function startTextProbe() {
   textProbeParent = document.createElement("div");

@@ -41,6 +41,37 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
       await machine.onmsg(bytes);
     };
   }, documentMode);
+  // Boolean reflection must reach native controls, not become an expando on
+  // the guest wrapper. Disabled controls must not activate when clicked.
+  await page.evaluate(() => run(`
+    var disabledProbe = document.createElement('button');
+    disabledProbe.setAttribute('id', 'disabled-probe');
+    disabledProbe.textContent = 'Disabled probe';
+    disabledProbe.addEventListener('click', function () { disabledProbe.textContent = 'Activated'; });
+    document.body.appendChild(disabledProbe);
+    disabledProbe.disabled = true;
+  `));
+  const disabledProbe = page.locator('#disabled-probe');
+  assert.equal(await disabledProbe.isDisabled(), true, 'guest disabled reaches the native button');
+  await disabledProbe.click({ force: true });
+  assert.equal(await disabledProbe.textContent(), 'Disabled probe');
+  await page.evaluate(() => run(`disabledProbe.disabled = false;`));
+  assert.equal(await disabledProbe.isDisabled(), false);
+  await disabledProbe.click();
+  assert.equal(await disabledProbe.textContent(), 'Activated');
+  // Reading the property after an attribute/native mutation must not depend
+  // on an observer refreshing the guest's attribute bookkeeping.
+  await page.evaluate(async () => {
+    document.querySelector('#disabled-probe').setAttribute('disabled', 'false');
+    await run(`disabledProbe.setAttribute('data-observed', String(disabledProbe.disabled));`);
+  });
+  assert.equal(await disabledProbe.getAttribute('data-observed'), 'true');
+  await page.evaluate(async () => {
+    document.querySelector('#disabled-probe').removeAttribute('disabled');
+    await run(`disabledProbe.setAttribute('data-observed', String(disabledProbe.disabled));`);
+  });
+  assert.equal(await disabledProbe.getAttribute('data-observed'), 'false');
+  await page.evaluate(() => run(`disabledProbe.remove();`));
   const html = '<dialog id="modal"><form method="dialog"><button value="cancel">Cancel</button></form></dialog>';
   const project = compileProjectFiles([{ path: "index.html", content: html }]);
   assert.deepEqual(project.tree[0][4][0][3], [["method", "dialog"]]);

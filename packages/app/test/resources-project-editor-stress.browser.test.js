@@ -274,6 +274,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await editor.getAttribute("data-persistence"), "stored", "reload must not silently fall back to the public view");
   assert.match(restoredSnapshot, /Editable row 100/);
   assert.match(restoredSnapshot, /revision 80/);
+  assert.equal(await page.getByRole("button", { name: "Save project", exact: true }).isDisabled(), true,
+    "the native Save button is disabled after loading a saved version");
   assert.deepEqual(oldEditorRequests, []);
   assert.deepEqual(errors, []);
 
@@ -283,6 +285,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     'document.getElementById("fail").addEventListener("click", function () {' +
     'setTimeout(function () { throw new Error("output timer regression"); }, 10);' +
     '});</script>');
+  assert.equal(await page.getByRole("button", { name: "Save project", exact: true }).isDisabled(), false,
+    "editing re-enables the native Save button");
   await output.getByRole("button", { name: "Fail later" }).click();
   const errorMessage = page.getByText(/Output stopped:.*output timer regression/);
   await errorMessage.waitFor();
