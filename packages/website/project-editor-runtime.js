@@ -2,6 +2,8 @@ import { createConstrainedFetch, createProjectBuildMachine, createProjectEditorM
 
 export { createConstrainedFetch, createProjectBuildMachine, createProjectOutputMachine };
 
+export function readProjectRecovery(key) { return sessionStorage.getItem(key); }
+
 export async function mountResourcesProjectEditor(options) {
   const controller = await createProjectEditorMachine({
     root: options.root,

@@ -7,6 +7,8 @@ function call(name, payload = {}) {
   return JSON.parse(globalThis.__wwcServiceCall(name, JSON.stringify(payload)));
 }
 
+export function hasSessionValue(key) { return call("session.has", { key }); }
+
 export function requestFrontendService(name, payload = {}) {
   const id = nextRequest++;
   return new Promise((resolve, reject) => {

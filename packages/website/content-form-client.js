@@ -1,6 +1,6 @@
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normalizeProjectSnapshot, projectPatchIsEmpty, projectSnapshotsEqual } from "/-/resources-site/project-history.js";
 import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
-import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
+import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, readProjectRecovery, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
 import { editorLanguageForPath } from "../project-editor/src/languages.js";
 import { mountContentNameFields } from "./content-name-fields.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "./project-session.js";
@@ -430,7 +430,7 @@ async function mountProjectRoot(root) {
   let recoveredPendingSnapshot = false;
   let recoveryFailure = "";
   function readRecovery(key) {
-    try { return sessionStorage.getItem(key); }
+    try { return readProjectRecovery(key); }
     catch (error) {
       // In particular, an old page-local resource handle cannot safely be
       // guessed. Retain the stored record rather than deleting it as bad JSON.

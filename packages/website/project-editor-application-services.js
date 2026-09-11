@@ -70,6 +70,14 @@ export function importProjectArchive() { return requestHost("archive.import"); }
 export function replaceFrontendPath(path) { return callHost("route.replace", { path }); }
 export function frontendTheme() { return callHost("appearance.theme"); }
 
+export function readProjectRecovery(key) {
+  const result = callHost("session.recovery", { key });
+  // Host exceptions unwind Wasm; report recoverable storage failures as data
+  // and throw here, where the application's try/catch can actually catch it.
+  if (result.error) throw new Error(result.error);
+  return result.value;
+}
+
 export async function mountResourcesProjectEditor(options) {
   listeners = options;
   let lastContent, lastValue;

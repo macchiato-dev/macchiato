@@ -74,6 +74,8 @@ export async function startResourcesMachineController() {
     "output.mount": (payload) => editorDevice.mountOutput(payload),
   });
   synchronousServices = Object.freeze({
+    "session.has": (payload) => storageDevice.hasSessionValue(payload.key),
+    "session.recovery": (payload) => storageDevice.readRecovery(payload.key),
     "appearance.theme": () => document.documentElement.dataset.theme === "light" ? "light" : "dark",
     "archive.download": (payload) => archiveDevice.download(payload),
     "resource.read": (payload) => projectResources.read(payload.content),

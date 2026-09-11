@@ -135,6 +135,11 @@ export class ResourcesStorageDevice {
     return this.projectResources && kind === "session" &&
       (key === DRAFT_KEY || key.startsWith(PENDING_KEY_PREFIX));
   }
+  hasSessionValue(key) { return this.window.sessionStorage.getItem(key) !== null; }
+  readRecovery(key) {
+    try { return { value: this.get("session", key), error: null }; }
+    catch (error) { return { value: null, error: error.message || String(error) }; }
+  }
   get(kind, key) {
     const value = this.area(kind).getItem(key);
     return value !== null && this.projectSession(kind, key)
@@ -164,11 +169,14 @@ export class ResourcesFetchDevice {
     const headers = new Headers(payload.headers || {});
     if ([...headers].length > 32) throw new Error("Frontend fetch has too many headers");
     let body = payload.body == null ? undefined : String(payload.body);
+    if (body && encoder.encode(body).byteLength > 2 * 1024 * 1024) throw new Error("Frontend fetch body is too large");
     const projectApi = /^\/(?:api|-)\/projects\//.test(url.pathname);
     if (body && projectApi && /application\/json/i.test(headers.get("content-type") || "")) {
       body = this.projectResources.hydrateText(body);
+      // The small guest request can refer to a full portable project. Match
+      // the server's project-form budget after resolving those resource bytes.
+      if (encoder.encode(body).byteLength > 70 * 1024 * 1024) throw new Error("Project fetch body is too large");
     }
-    if (body && encoder.encode(body).byteLength > 2 * 1024 * 1024) throw new Error("Frontend fetch body is too large");
     const response = await this.window.fetch(url, {
       method, headers, body, credentials: "same-origin", redirect: "error", cache: "no-store",
     });

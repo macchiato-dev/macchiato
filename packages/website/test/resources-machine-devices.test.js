@@ -49,9 +49,23 @@ test("pending snapshots retain resource bytes across a new page's resource table
   assert.equal(window.sessionStorage.getItem(key), null);
 });
 
+test("recovery presence does not decode assets and recovery errors cross as data", () => {
+  const window = storageWindow();
+  const storage = new ResourcesStorageDevice(window, new ResourcesProjectResourceDevice());
+  const key = pendingProjectSnapshotKey("expired");
+  assert.equal(storage.hasSessionValue(key), false);
+  assert.deepEqual(storage.readRecovery(key), { value: null, error: null });
+  const expired = JSON.stringify({ files: [{ path: "tile.svg", content: "\0resources-project-resource:1" }] });
+  window.sessionStorage.setItem(key, expired);
+  assert.equal(storage.hasSessionValue(key), true);
+  assert.deepEqual(storage.readRecovery(key), { value: null, error: "Project recovery resource is unavailable" });
+  assert.equal(window.sessionStorage.getItem(key), expired);
+});
+
 test("current project API reads compact resources and writes their bytes, never handles", async () => {
   const resources = new ResourcesProjectResourceDevice();
-  const snapshot = { files: [{ path: "tile.svg", content: "tile bytes" }], config: {} };
+  const snapshot = { files: [{ path: "tile.svg", content: "tile bytes" },
+    { path: "book.bin", content: "x".repeat(3 * 1024 * 1024) }], config: {} };
   const requests = [];
   const device = new ResourcesFetchDevice({ location: { href: "http://site.test/project", origin: "http://site.test" },
     async fetch(url, options) {
@@ -67,6 +81,8 @@ test("current project API reads compact resources and writes their bytes, never 
       headers: { "content-type": "application/json" }, body: response.body });
     assert.deepEqual(JSON.parse(requests.at(-1).body), { snapshot });
   }
+  await assert.rejects(device.request({ url: "/api/other", method: "POST",
+    body: snapshot.files[1].content }), /Frontend fetch body is too large/);
 });
 
 test("session history preserves resource handles and their splice patches", () => {
