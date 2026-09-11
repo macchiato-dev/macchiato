@@ -3073,7 +3073,7 @@ GuestDocument.prototype.createElement = function (tag) {
 };
 GuestDocument.prototype.createElementNS = function (namespace, tag) {
   namespace = String(namespace);
-  tag = String(tag).toLowerCase();
+  tag = String(tag);
   var result = immediate([3, this.reference, stringIndex("createElementNS"), [encode(namespace), encode(tag)]]);
   var node = rememberNode(new GuestElement(result[1]));
   node._nodeType = 1;
