@@ -1205,19 +1205,43 @@ globalThis.queueMicrotask = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   Promise.resolve().then(callback);
 };
-globalThis.requestIdleCallback = function (callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  var started = Date.now();
-  return setTimeout(function () {
-    callback({
-      didTimeout: false,
-      timeRemaining: function () {
-        return Math.max(0, 50 - (Date.now() - started));
-      }
-    });
-  }, 0);
-};
-globalThis.cancelIdleCallback = globalThis.clearTimeout;
+// Do not disguise timers as idle work. Libraries can choose their own fallback
+// when the browser has no idle scheduler. Retain the delivered wrapper so its
+// native reference lives as long as an application-held deadline does.
+if (hostGet(document.reference, "supportsIdleCallback")) {
+  var idleCallbacks = Object.create(null);
+  globalThis.requestIdleCallback = function (callback, options) {
+    if (typeof callback !== "function") throw new TypeError("callback required");
+    var timeout = options && options.timeout !== undefined ? Number(options.timeout) >>> 0 : -1;
+    var handle;
+    var index = allocateCallback(function (deadline) {
+      delete idleCallbacks[handle];
+      var value = { timeRemaining: function () {
+        return hostCall(deadline.reference, "timeRemaining", []) / 1000;
+      } };
+      Object.defineProperty(value, "didTimeout", { get: function () {
+        return hostGet(deadline.reference, "didTimeout");
+      } });
+      callback(value);
+    }, true);
+    try {
+      handle = hostCall(document.reference, "idleCallback", [timeout, index]);
+    } catch (error) {
+      releaseCallback(index);
+      throw error;
+    }
+    idleCallbacks[handle] = index;
+    return handle;
+  };
+  globalThis.cancelIdleCallback = function (handle) {
+    handle = Number(handle);
+    var index = idleCallbacks[handle];
+    if (index === undefined) return;
+    hostCall(document.reference, "cancelIdleCallback", [handle]);
+    delete idleCallbacks[handle];
+    releaseCallback(index);
+  };
+}
 
 function reportConsole(...values) {
   var parts = [];

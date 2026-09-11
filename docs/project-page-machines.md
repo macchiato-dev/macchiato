@@ -3422,3 +3422,26 @@ should be tested for fidelity before claiming a speed improvement. The guest's
 empty ResizeObserver facade is another outstanding native-behavior gap.
 The verified local deployment and Bunny archive remain unchanged by these
 test-only changes; the broader performance and rendering goals remain open.
+
+### Native idle scheduling (2026-09-11)
+
+The canonical guest now forwards idle requests to the browser realm belonging
+to its granted document. It no longer substitutes a zero-delay timer or
+invents a deadline. The host exposes only support detection, scoped scheduling
+and cancellation, and the native deadline's two read operations. Remaining
+time crosses the integer wire in microseconds and is converted to milliseconds
+by the guest. Retaining the guest deadline retains its native reference; later
+reads do not reuse a stale copied budget. Without native support, the guest
+does not expose `requestIdleCallback`, allowing libraries to choose a fallback.
+
+`idle-callback.browser.test.js` passes for both MicroQuickJS and QuickJS, each
+directly and in an iframe. It checks native deadlines and timeouts, retained
+references, 5,000 canceled requests without callback-slot exhaustion, disposal,
+machine-local cancellation, and absent native support. Raw QuickJS ABI calls
+also test timeout and callback bounds before any native task is scheduled.
+The initial MicroQuickJS test failed because its reporting fixture did not
+flush queued messages after a named call; adding the explicit fixture flush
+fixes that test without changing runtime semantics. Evidence is in
+`idle-callback-tests*` and `idle-callback-boundaries.log` under
+`/root/macchiato-work`. Editing, performance, and deployment checks follow;
+these focused tests do not by themselves establish a performance improvement.
