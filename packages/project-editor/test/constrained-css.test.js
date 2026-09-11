@@ -4,6 +4,15 @@ import { parseConstrainedCss } from "../src/constrained-css.js";
 import { validateConstrainedCssRules } from "../src/constrained-css-policy.js";
 import { encodeConstrainedCss } from "../src/constrained-css-wire.js";
 
+test("accepts RGB colors through the same semantic value checks as RGBA", () => {
+  for (const color of ["rgb(12, 34, 56)", "rgb(12 34 56 / 50%)", "rgba(12, 34, 56, 0.5)"]) {
+    assert.doesNotThrow(() => validateConstrainedCssRules(parseConstrainedCss(`body { color: ${color}; }`)));
+  }
+  assert.throws(() => validateConstrainedCssRules(parseConstrainedCss(
+    'body { color: rgb(url("https://example.test/track")); }',
+  )));
+});
+
 test("encodes bounded responsive and preference media rules", () => {
   const source = `
     .shape { border-radius: 48% 52% 43% 57% / 54% 43% 57% 46%; }

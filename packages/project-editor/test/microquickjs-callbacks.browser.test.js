@@ -7,6 +7,7 @@ import { chromium } from "playwright";
 
 for (const [fixture, expected] of [
   ["browser-timers", ["argument", "immediate", "interval", "timeout"]],
+  ["promise-rejection", ["compile: invalid CSS"]],
   ["transient-messages", { requests: 24, serviceStrings: 0 }],
   ["transient-dom-values", { updates: 24, retained: 0 }],
   ["wire-numbers", { equal: true, denied: 3 }],

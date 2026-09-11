@@ -38,7 +38,7 @@ const CSS_PROPERTIES = new Set([
 ]);
 const CSS_VALUE_FUNCTIONS = new Set([
   "attr", "blur", "brightness", "calc", "clamp", "color-mix", "contrast", "counter", "cubic-bezier", "drop-shadow", "linear-gradient",
-  "max", "min", "minmax", "radial-gradient", "repeat", "rgba", "rotate", "rotateX", "rotateY", "rotateZ",
+  "max", "min", "minmax", "radial-gradient", "repeat", "rgb", "rgba", "rotate", "rotateX", "rotateY", "rotateZ",
   "saturate", "scale", "scaleX", "scaleY", "steps", "translate", "translate3d",
   "translateX", "translateY", "var"
 ]);
