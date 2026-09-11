@@ -82,8 +82,23 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     // Warm both the browser input path and editor before measuring bulk work.
     await content.fill("warmup");
     await page.keyboard.press("End"); await page.keyboard.type(" edit");
-    for (const method of ["paste", "insertText"]) {
-      await content.fill("before");
+    async function paste(value) {
+      await content.evaluate((node, value) => {
+        const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", value);
+        const event = new ClipboardEvent("paste", { clipboardData, bubbles: true, cancelable: true });
+        node.dispatchEvent(event);
+        if (!event.defaultPrevented) throw new Error("Paste was not handled");
+      }, value);
+    }
+    for (const method of ["paste", "insertText", "replaceText"]) {
+      // The workspace replaces an already large document, not just "before".
+      // Keep both cases so deletion/layout cost cannot masquerade as a
+      // difference between its runtime and this isolated-editor fixture.
+      const before = method === "replaceText" ? text + "\n<!-- previous document -->" : "before";
+      await content.click();
+      await page.keyboard.press("Control+A");
+      await paste(before);
+      await page.keyboard.press("Control+End");
       await page.keyboard.press("Control+A");
       await page.evaluate(() => { messages.length = 0; events.beforeinput = events.input = 0; });
       const profileDirectory = process.env.MACCHIATO_CPU_PROFILE_DIR;
@@ -93,13 +108,8 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         await profiler.send("Profiler.start");
       }
       const started = performance.now();
-      if (method === "insertText") await page.keyboard.insertText(text);
-      else await content.evaluate((node, value) => {
-        const clipboardData = new DataTransfer(); clipboardData.setData("text/plain", value);
-        const event = new ClipboardEvent("paste", { clipboardData, bubbles: true, cancelable: true });
-        node.dispatchEvent(event);
-        if (!event.defaultPrevented) throw new Error("Paste was not handled");
-      }, text);
+      if (method === "paste") await paste(text);
+      else await page.keyboard.insertText(text);
       const elapsed = performance.now() - started;
       if (profiler) {
         const { profile } = await profiler.send("Profiler.stop");
@@ -116,7 +126,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         events: state.events, changes: state.changes });
       t.diagnostic(JSON.stringify(results.at(-1)));
       await page.keyboard.press("Control+z");
-      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), "before");
+      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), before);
       await page.keyboard.press("Control+y");
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), text);
     }
