@@ -3004,6 +3004,27 @@ non-metadata head content rather than attempting native HTML error recovery.
 The browser comparison checks separate inheritance, language/direction,
 attributes visible at script startup, root-style removal, and retained nodes.
 
+The complete `a1889af` build verifies this integration in the exported runtime.
+The 98 browser parser/output/containment checks and 11 compiler/module checks
+pass. Old test locators that selected any `html` or `body` were made explicit:
+the iframe canvas uses its native `:root`, while guest content uses the granted
+HTML subtree's body. Both first-paint/system-theme tests then pass, as do the
+read-only saved games, fifty tour slides with keyboard navigation, and SQLite
+fragment navigation. Screenshots were inspected for the games and light/dark
+editing. No owner project was saved.
+
+The full unprofiled editing run passes in 59.44 seconds (80-edit burst 11.11
+seconds, paste 883 ms, native insertion of 106,458 characters 19.34 seconds).
+This is within previously observed timing variation, not evidence of a causal
+speedup from root handling. Artifacts and logs are `document-parts-*` under
+`/root/macchiato-work`. The 152-file archive inventory passes before and after
+extraction, and its compressed backend executes in Deno. The 3030 server now
+serves the verified controller, host, frontend/editor/output guests, and frame
+bytes. `/root/resources-bunny.tar.gz` contains this export; the predecessor is
+`/root/archive/2026/09/11/resources-bunny-1e60725-before-document-parts.tar.gz`.
+No Bunny deployment was performed. The viewport/`rem`, exact root-class, and
+bulk-input performance limitations remain open.
+
 The temporary playground keeps its page integration behind a controller and a
 small set of related devices. A session device owns namespaced ephemeral state,
 an editor device owns the editor machine, a compiler device selects a
