@@ -486,18 +486,26 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   const nativeSource = large + "\n<!-- native insertion -->";
   const mount = editor.locator(".project-editor__source > .project-editor__mount");
   if (process.env.MACCHIATO_DIRECT_LAYOUT_SELECTORS) {
-    await page.evaluate(() => {
+    const changed = await page.evaluate(() => {
+      let changed = 0;
       function narrow(rules) {
         for (const rule of rules) {
-          if (rule.selectorText) rule.selectorText = rule.selectorText
-            .replaceAll("html:has(.focused-view)", "html:has(> body > .focused-view)")
-            .replaceAll("body:has(.focused-view)", "body:has(> .focused-view)")
-            .replaceAll(".project-editor:has(.project-editor__workspace", ".project-editor:has(> .project-editor__workspace");
+          if (rule.selectorText) {
+            const previous = rule.selectorText;
+            const next = previous
+              .replaceAll("html:has(.focused-view)", "html:has(> body > .focused-view)")
+              .replaceAll("body:has(.focused-view)", "body:has(> .focused-view)")
+              .replaceAll(".project-editor:has(.project-editor__workspace", ".project-editor:has(> .project-editor__workspace");
+            if (next !== previous) { rule.selectorText = next; changed++; }
+          }
           if (rule.cssRules) narrow(rule.cssRules);
         }
       }
       for (const sheet of document.styleSheets) narrow(sheet.cssRules);
+      return changed;
     });
+    assert.ok(changed > 0, "the experimental layout selector rewrite must not silently do nothing");
+    t.diagnostic(`narrowed ${changed} layout selectors`);
   }
   if (process.env.MACCHIATO_EDITOR_CONTAIN) {
     await mount.evaluate((node, contain) => { node.style.contain = contain; }, process.env.MACCHIATO_EDITOR_CONTAIN);

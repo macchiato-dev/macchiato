@@ -3089,3 +3089,47 @@ the same verified export; the previous archive is retained at
 No owner project was saved and nothing was deployed to Bunny. Viewport canvas
 propagation, the native `rem` basis, bulk-input performance, and the remaining
 service-boundary checks are still open.
+
+### Controlled large-replacement comparisons
+
+The current `f34d76d` artifacts were measured again without profiling, video,
+or concurrent builds/browsers. The paired editor test now covers replacement
+of an already-large document as well as insertion into a short document. Both
+paths verify the complete text, one change notification, undo, and redo. Each
+native bulk operation produces one `beforeinput` and 3,874 `input` events in
+both runtimes. First-page typing still makes and corrects a typo with real
+keyboard events and verifies every resulting document.
+
+For the same 106,432-character source, large replacement at 720 px width took
+7.2–7.3 seconds in native CodeMirror and 10.4–10.7 seconds in MicroQuickJS. At
+the workspace's 585 px width it took 7.2–8.4 and 10.4–11.0 seconds respectively.
+The benchmark now records geometry and accepts `MACCHIATO_TEST_EDITOR_WIDTH`;
+both runtimes use the same computed `13px / 18.2px monospace` scroller font.
+The isolated fixture remains 844 px high versus 798 px in the workspace, and
+does not reproduce its surrounding UI or application callbacks. Native/Wasm/
+Wasm/native order and warmup reduce some timing bias, but these few runs are
+not statistical proof of a regression or speedup.
+
+The full workspace's roughly 20-second replacement is therefore not explained
+by the interpreter alone, or by comparing deletion of a large document with
+insertion into a short one. The narrower-width comparison does not close the
+gap either. Ordinary first-page key actions still take roughly 55–100 ms in
+MicroQuickJS versus 5–10 ms natively; that remains a separate optimization
+target. No native `beforeinput` interception or replacement editing behavior
+was introduced to bypass the cost.
+
+The optional direct-child layout-selector experiment was also repeated. Its
+test now reports how many selectors changed and rejects a silent no-op. The
+checked run rewrote 15 selectors and passed the full workspace workflow,
+including retained pane size and correct editing/recovery. Native insertion
+took 17.2 seconds, versus 21.0 seconds in the preceding experimental run and
+19.7 seconds in the verified unmodified build. This is not a consistent enough
+benefit to ship the CSS rewrite; production selectors remain unchanged.
+
+Logs and measurements are `scope-marker-bulk-baseline`,
+`large-replacement-baseline`, `workspace-width-bulk`, and `narrow-layout-checked` under
+`/root/macchiato-work`. The exploratory plain-contenteditable probe there was
+abandoned because `innerText` introduces block separators and was not a valid
+exact-text oracle; none of its timings support these conclusions. These are
+test improvements, not a performance fix or a new production build. The live
+server and deployment archive retain the verified scope-marker build.
