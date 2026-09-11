@@ -2391,6 +2391,36 @@ No Bunny deployment or owner-project save was performed. Bulk insertion still
 takes substantially longer than ordinary typing or paste; this improvement
 does not close the remaining performance, recovery-quota, or DOM-fidelity work.
 
+### Recoverable draft-storage exhaustion
+
+The browser quota case is now exercised end to end, not only through a mocked
+Storage object. Previously, a real `QuotaExceededError` escaped the host storage
+call and unwound the editor guest; its status area remained empty. Recovery
+writes now return an error as application-service data. The guest reports a
+warning while continuing to update its snapshot, output, and exportable files.
+A failed atomic write leaves the previous recovery record untouched, and an
+unsaved project is not falsely marked saved by its checkpoint timer.
+
+Retry writes the latest draft, including its in-memory history, even when an
+older version is selected. It does not change that selected view or replace
+the latest recovery snapshot with historical content. For an existing project,
+local recovery failure does not prevent server autosave; successful autosave
+clears the warning because those edits are then persisted on the server.
+
+The warning and Retry button wrap within the status row. They follow the
+visible pane when the editor is hidden, including phone output-only mode.
+Browser assertions and screenshots cover both phone modes and desktop, ZIP
+export during exhaustion, preservation of the prior record, retry after space
+is freed, and reload of the latest edits afterward. The fixture fills its own
+session storage until the browser rejects writes; it does not alter owner data.
+
+The application guest also checks the existing service-request text limit
+before calling the host, so an oversized request becomes a catchable guest
+error rather than another host unwind. This does not enlarge the service
+transport or the Machine Host's permissions. It is not a general guarantee for
+every storage API: startup with storage entirely disabled, unrelated preference
+writes, and oversized service responses still need their own coverage.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
