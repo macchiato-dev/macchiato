@@ -71,6 +71,52 @@ test('semantic selector rendering confines native matching context', async t => 
       assert.equal(result.outside, 'rgb(0, 0, 0)');
     } finally { await page.close(); }
   });
+  await t.test('scoping preserves native cascade precedence in both source orders', async () => {
+    const page = await browser.newPage();
+    try {
+      await page.route('http://selector-renderer.test/**', route => route.fulfill(
+        new URL(route.request().url()).pathname === '/renderer.js'
+          ? { body: bundle.outputFiles[0].text, contentType: 'text/javascript' }
+          : { body: '<body class="game"><p class="text">Text</p>', contentType: 'text/html' }));
+      await page.goto('http://selector-renderer.test/');
+      const pairs = [
+        [['.game', [[part(['class', 'game'])]]], ['body', [[part(tag('body'))]]]],
+        [['.game', [[part(['class', 'game'])]]], ['body:where(.game)', [[part(tag('body'), ['where', [[part(['class', 'game'])]]])]]]],
+        [['body.game', [[part(tag('body'), ['class', 'game'])]]], ['.game', [[part(['class', 'game'])]]]],
+        [['.game', [[part(['class', 'game'])]]], ['body:first-child', [[part(tag('body'), ['pseudo', 'first-child'])]]]],
+        [['.text', [[part(['class', 'text'])]]], ['body p', [[part(tag('body')), joined(' ', tag('p'))]]]],
+        [['.game:has(> .text, + #outside)', [[part(['class', 'game'], ['has', [[joined('>', ['class', 'text'])], [joined('+', ['id', 'outside'])]]])]]], ['.game.text', [[part(['class', 'game'], ['class', 'text'])]]]],
+      ];
+      // Matching and specificity are independent. Compare actual computed
+      // styles against a native document, not against another renderer.
+      const samples = await page.evaluate(async pairs => {
+        const { renderSelector } = await import('/renderer.js');
+        const style = document.createElement('style'); document.head.append(style);
+        const samples = [];
+        for (const pair of pairs) for (const reverse of [false, true]) {
+          const rules = pair.map(([source, ast], index) => ({ source, ast, color: index ? '#ff0001' : '#0001ff' }));
+          if (reverse) rules.reverse();
+          const colors = () => ['#own', '#own p'].map(selector => getComputedStyle(document.querySelector(selector)).color);
+          // Use a headless native document body (head is outside the body),
+          // so body:first-child has the same logical position as a root.
+          document.head.remove();
+          document.body.id = 'own'; document.body.className = 'game text';
+          document.body.innerHTML = '<p class="text">Text</p>';
+          document.body.append(style);
+          style.textContent = rules.map(rule => rule.source + '{color:' + rule.color + '}').join('\n');
+          const native = colors();
+          document.body.id = ''; document.body.className = '';
+          document.body.innerHTML = '<div>Host sibling</div><main id="own" class="wwm-12345 game text"><p class="text">Text</p></main>';
+          document.body.append(style);
+          style.textContent = rules.map(rule => renderSelector(rule.ast, 'wwm-12345', true) + '{color:' + rule.color + '}').join('\n');
+          samples.push({ rules: rules.map(rule => rule.source), native, scoped: colors() });
+          const head = document.createElement('head'); document.documentElement.prepend(head);
+        }
+        return samples;
+      }, pairs);
+      for (const sample of samples) assert.deepEqual(sample.scoped, sample.native, sample.rules.join(' then '));
+    } finally { await page.close(); }
+  });
   await t.test('malformed semantic pieces are rejected', async () => {
     const page = await browser.newPage();
     try {
