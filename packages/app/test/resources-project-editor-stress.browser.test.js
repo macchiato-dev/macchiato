@@ -89,8 +89,10 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   });
   const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS || join(dataDir, "artifacts");
   await mkdir(artifacts, { recursive: true });
+  // Retain screenshots without video-encoding overhead in timing runs.
+  const recordVideo = process.env.MACCHIATO_TEST_ARTIFACTS && process.env.MACCHIATO_TEST_VIDEO !== "0";
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 },
-    ...(process.env.MACCHIATO_TEST_ARTIFACTS ? { recordVideo: { dir: artifacts,
+    ...(recordVideo ? { recordVideo: { dir: artifacts,
       size: { width: 1440, height: 900 } } } : {}),
   });
   // Optional DevTools sampling stays outside the machine and guest runtimes.
