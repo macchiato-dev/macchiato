@@ -2908,8 +2908,8 @@ GuestElement.prototype.replaceChildren = function (...values) {
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
 };
 
-// Attribute reads are common during rendering. Mirror values in the guest and
-// send only mutations across the boundary.
+// Keep known attributes for enumeration; individual reads must observe the
+// browser immediately, including changes before MutationObserver delivery.
 Object.defineProperty(GuestElement.prototype, "attributes", {
   get: function () {
     var values = this._attributeValues || (this._attributeValues = Object.create(null));
@@ -2919,21 +2919,17 @@ Object.defineProperty(GuestElement.prototype, "attributes", {
   }
 });
 GuestElement.prototype.getAttribute = function (name) {
+  name = String(name);
+  var value = hostCall(this.reference, "getAttribute", [name]);
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
-  if (Object.prototype.hasOwnProperty.call(values, name)) return values[name];
-  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
-  if (known[name]) return null;
-  var value = hostCall(this.reference, "getAttribute", [String(name)]);
-  known[name] = true;
-  if (value !== null) values[name] = value;
+  if (value === null) delete values[name];
+  else values[name] = value;
   return value;
 };
 GuestElement.prototype.setAttribute = function (name, value) {
   var text = String(value);
   if (name === "class") text = projectClassName(text);
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
-  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
-  known[name] = true;
   values[name] = text;
   if (String(name).toLowerCase() === "style") {
     this.style.cssText = text;
@@ -2945,8 +2941,6 @@ GuestElement.prototype.setAttribute = function (name, value) {
 };
 GuestElement.prototype.removeAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
-  var known = this._knownAttributes || (this._knownAttributes = Object.create(null));
-  known[name] = true;
   delete values[name];
   pendingOperations.push([3, this.reference, stringIndex("removeAttribute"), [
     encode(String(name))
