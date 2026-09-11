@@ -2488,6 +2488,56 @@ No owner content was saved and no Bunny deployment was performed. This does
 not remove the existing host image-size limit or prove arbitrary-size project
 viewing, bounded string-table retention, or recovery with storage disabled.
 
+### Early form input and output document height
+
+The broader browser audit found two application defects and a frame-layout
+defect. A title typed into the server-rendered organization form before the
+outer guest started never generated its name. The guest now adopts nonempty
+field values when it attaches listeners, without replacing a manually entered
+name. The regression test holds the actual frontend Wasm request, types into
+the static form, releases the request, and verifies both generated and manual
+names, including subsequent title edits. Neither the host nor the form waits
+for CodeMirror to become available.
+
+The digital-clock template supplied a stylesheet but did not link it from its
+HTML entry. It now links that file explicitly. Screenshot review then caught
+the output background ending after 270 pixels inside a 698-pixel iframe. A
+percentage minimum height could not resolve through the auto-height staging
+wrappers. The frame now gives its document roots a low-specificity `100vh`
+minimum, which guest styles can override. The clock fills desktop, phone, and
+expanded output without a surplus scrollbar; expansion and return preserve
+the iframe. This is frame integration CSS, not additional guest CSS parsing
+or a new Machine Host capability.
+
+Template replacement and Undo are also exercised through the current output
+machine: edited HTML and CSS are restored exactly, including their rendered
+heading and colors, while retaining the iframe. Archive tests compare
+re-exported file bytes after import, not the opaque resource handles used by
+the editor guest. A separate fetch test confirms supplied project files load
+through the controller and a denied external URL never reaches the network.
+It no longer imports the retired browser-side project editor runtime.
+
+The rebuilt `2bff6eb` export passes the compressed-backend Deno test and all
+151 manifest entries, including verification after archive extraction. The
+focused browser workflows and 36 appearance/service/artifact checks pass.
+The full editing stress test passes with 106,432 characters pasted in 780 ms
+and 106,458 characters inserted through native input in 16,482 ms. This is
+consistent with the preceding checkpoint, not an additional speedup.
+
+Read-only checks of the owner projects pass for 144 Mahjong tiles, 16 Cat
+Memory cards, fifty successive tour slides with embedded/expanded keyboard
+navigation, SQLite fragment links, and desktop/phone theme changes. The local
+server and `/root/resources-bunny.tar.gz` now contain this export. Its previous
+archive is preserved at
+`/root/archive/2026/09/11/resources-bunny-cc6587c-before-output-viewport.tar.gz`.
+No owner content was saved and no Bunny deployment was performed.
+
+The old, much larger account workflow still contains obsolete pre-iframe and
+toolbar assertions and needs a careful migration, not deletion of its coverage.
+Passing the current focused workflows does not make that old test or the full
+deployment-readiness goal complete. Bulk native insertion performance, live
+DOM collection fidelity, and startup with storage disabled remain open too.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
