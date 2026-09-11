@@ -2767,6 +2767,33 @@ against a native document, rather than silently choosing which wrapper wins.
 The inert parser is not a complete HTML parser; character references and
 browser error recovery also need explicit fidelity work.
 
+The `ba10594` export verifies all 151 files before and after archive extraction,
+and its compressed backend runs in Deno. Read-only saved-project checks pass
+for both games, fifty tour slides, SQLite navigation, and desktop/phone theme
+switches. The local server is restarted with these artifacts. The archive at
+`/root/resources-bunny.tar.gz` is updated; its predecessor is retained at
+`/root/archive/2026/09/11/resources-bunny-f1c12f3-before-html-attributes.tar.gz`.
+No owner project was saved and nothing was deployed to Bunny.
+
+Performance is not conclusively settled. A recorded stress run and an
+unrecorded run both exceeded the 180-second limit. Using the previous compiler
+artifact in the otherwise identical unrecorded workflow passed in 139 seconds
+(1,591 ms paste; 53,069 ms native insertion). The current compiler then passed
+in 92 seconds (897 ms paste; 19,223 ms native insertion). The early light-editor
+checkpoints were similar at 28/29 seconds, and typing/scrolling/theme checkpoints
+at 57/54 seconds. These variable runs do not establish either a parser regression
+or a performance improvement. Test-only checkpoints and an optional compiler
+artifact override now allow the comparison without changing the application.
+Logs are `/root/macchiato-work/html-attributes-stress*.log`; the timed-out
+recording and its extracted late frame remain under `html-attributes-stress/`.
+
+That late frame also exposes a separate first-paint gap: after saving/reloading,
+the dark workspace's output has white backing outside the fixture's light-blue
+article while the editor is still loading. Final-state theme checks did not
+detect this interval. Add a stalled-editor reload check of the actual iframe's
+backing before considering the initial-paint requirement satisfied; inspect
+the frame's own color scheme as well as the inherited media-query preference.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
