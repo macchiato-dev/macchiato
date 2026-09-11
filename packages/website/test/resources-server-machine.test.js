@@ -12,10 +12,34 @@ import { ServerMachineController } from "../../server-use/src/machine-controller
 import { createProjectSnapshotDiffer, createProjectSnapshotValidator,
   createProjectVersionPlanner } from "../project-version-machine.js";
 import { validateProjectUrlPatterns } from "../project-snapshot-validation.js";
+import { publicResponseHeaders } from "../edge/models.js";
 import { policyModule, policyBytecodes, projectVersionBytecodes, serverBytecodes,
   serverModule } from "./server-machine-assets.js";
 
 const secret = "resources-server-machine-test-secret-value";
+
+test("machine document routes preserve public artifact headers without allowing arbitrary headers", async () => {
+  const machine = createResourcesServerMachine(serverModule, {
+    bytecodes: serverBytecodes, sqlDevice: async () => { throw new Error("unexpected SQL"); },
+    authConfig: null,
+  });
+  for (const key of ["-/blog-examples/example/index.html", "-/resources-site/machine.js"]) {
+    const expected = publicResponseHeaders(key, new Headers({
+      etag: '"artifact-revision"', "last-modified": "Fri, 11 Sep 2026 00:00:00 GMT",
+    }));
+    for (const method of ["GET", "HEAD"]) {
+      const response = await machine.handle(new Request(`http://resources-edge.localhost/${key}`, { method }), {
+        documentHandler: () => new Response(method === "HEAD" ? null : "artifact body", { headers: expected }),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual([...response.headers], [...expected]);
+      assert.equal(await response.text(), method === "HEAD" ? "" : "artifact body");
+    }
+  }
+  await assert.rejects(machine.handle(new Request("http://resources-edge.localhost/example"), {
+    documentHandler: () => new Response("body", { headers: { "x-internal-secret": "test-only" } }),
+  }), /cannot return header x-internal-secret/);
+});
 
 test("selects every document route and each machine-owned mutation", () => {
   for (const [method, path] of [

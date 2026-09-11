@@ -81,6 +81,30 @@ test("local edge health runs through MicroQuickJS and named sql-use", async () =
   assert.equal(response.headers.get("cache-control"), "no-store");
 });
 
+test("database-backed preview serves static examples with their CORS headers", async t => {
+  const db = new DatabaseSync(":memory:");
+  t.after(() => db.close());
+  const handler = createResourcesEdgePreviewRouter({ schedule() {} })({}, db);
+  for (const path of ["/-/blog-examples/markdown-editor/app.css",
+    "/-/blog-examples/dom-use-tour/index.html"]) {
+    const response = await handler(new Request(`http://resources-edge.localhost${path}`));
+    assert.equal(response.status, 200, `${path}: ${await response.clone().text().then(body => body.slice(0, 100))}`);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*");
+    assert.equal(response.headers.get("cross-origin-resource-policy"), "cross-origin");
+    assert.ok((await response.arrayBuffer()).byteLength > 100);
+  }
+});
+
+test("database-backed preview returns 404 for paths that cannot name namespaces", async t => {
+  const db = new DatabaseSync(":memory:");
+  t.after(() => db.close());
+  const handler = createResourcesEdgePreviewRouter({ schedule() {} })({}, db);
+  for (const path of ["/favicon.ico", "/private.txt", "/bad_name", "/Uppercase", "/bad--name"]) {
+    const response = await handler(new Request(`http://resources-edge.localhost${path}`));
+    assert.equal(response.status, 404, `${path}: ${await response.text()}`);
+  }
+});
+
 test("the private server machine is absent from public publication authority", async () => {
   for (const path of ["microquickjs-server.wasm", "resources-server/manifest.json",
     "resources-server/00.bin"]) {

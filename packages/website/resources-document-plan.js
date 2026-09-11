@@ -1,13 +1,23 @@
+import { NAMESPACE_NAME } from "../hub/src/names.js";
+
 const accountPaths = new Set(["/", "/projects", "/projects/new",
   "/organizations/new", "/profile"]);
 const discoverableNamespaces = ["benatkin", "resources", "macchiato"];
 const tryTemplates = new Set(["article", "hello", "clock", "mark", "chart", "ball",
   "stars", "blank", "slides"]);
 
+// Static filenames and malformed route segments are not namespace lookups.
+// Keep the stores' case-insensitive name matching, without making them handle
+// validation errors for paths that simply have no dynamic route.
+function routeName(value) {
+  return value.length <= 63 && NAMESPACE_NAME.test(value.toLowerCase());
+}
+
 function projectRoute(pathname) {
   try {
     const match = /^\/([^/]+)\/([^/]+)(?:\/(embed))?$/.exec(decodeURIComponent(pathname));
-    return match ? { namespace: match[1], slug: match[2], embed: match[3] === "embed" } : null;
+    return match && routeName(match[1]) && routeName(match[2])
+      ? { namespace: match[1], slug: match[2], embed: match[3] === "embed" } : null;
   } catch {
     return null;
   }
@@ -16,7 +26,7 @@ function projectRoute(pathname) {
 function namespaceRoute(pathname) {
   try {
     const match = /^\/([^/]+)$/.exec(decodeURIComponent(pathname));
-    return match ? match[1] : null;
+    return match && routeName(match[1]) ? match[1] : null;
   } catch {
     return null;
   }
