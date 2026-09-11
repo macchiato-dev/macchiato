@@ -2948,6 +2948,21 @@ previous verified `82e85a0` pair (live artifact hashes checked). Neither a Bunny
 deployment nor owner-project edits were performed. Root-attribute integration,
 complete editor revalidation, and performance attribution remain open.
 
+The finer-checkpoint repeat of the complete `82e85a0` baseline subsequently
+passed in 139 seconds. Its 80-edit burst took about 20 seconds, paste 1.46
+seconds, and native insertion 56.67 seconds. The candidate pair with the final
+single-mutation host passed in 141 seconds with optional 10ms DevTools CPU
+sampling (26 seconds for the burst, 1.67 seconds paste, 50.86 seconds native
+insertion). Sampling is for attribution, not a timing comparison. During the
+burst, samples concentrate in the editor Wasm; during most of the bulk native
+insertion, they report browser `(program)` work rather than JavaScript. That
+does not by itself identify layout as the cause. Builder Wasm is another
+substantial cost outside the burst. These results establish recovery of the
+full behavioral checks, not a performance improvement or a stable latency
+baseline. The profile and logs are `document-query-*` under the work directory.
+`MACCHIATO_TEST_CPU_PROFILE` enables sampling only in the Playwright harness;
+the production host and guests contain no profiler or memory probe.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
