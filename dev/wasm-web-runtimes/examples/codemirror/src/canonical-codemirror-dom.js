@@ -1090,10 +1090,90 @@ GuestMutationObserver.prototype.takeRecords = function () {
   var result = hostCall(this.reference, "takeRecords", []);
   return readMutationBatch(result[1]);
 };
-function EmptyObserver() {}
-EmptyObserver.prototype.observe = EmptyObserver.prototype.unobserve =
-  EmptyObserver.prototype.disconnect = function () {};
-EmptyObserver.prototype.takeRecords = function () { return []; };
+function resizeArray(reference, wrap, token) {
+  var lease = token ? null : new GuestObject(reference), values = [];
+  var length = hostGet(reference, "length");
+  for (var index = 0; index < length; index++) {
+    values.push(wrap(hostCall(reference, "item", [index])[1]));
+  }
+  releaseHostReference(token || lease._hostReference);
+  return values;
+}
+function GuestResizeEntry(reference) { GuestObject.call(this, reference); }
+GuestResizeEntry.prototype = Object.create(GuestObject.prototype);
+Object.defineProperty(GuestResizeEntry.prototype, "target", { get: function () {
+  return nodeForReference(hostGet(this.reference, "target")[1]);
+} });
+Object.defineProperty(GuestResizeEntry.prototype, "contentRect", { get: function () {
+  if (!this._rect) {
+    var reference = hostGet(this.reference, "contentRect")[1];
+    this._rect = new DOMRect(hostGet(reference, "x") / 64, hostGet(reference, "y") / 64,
+      hostGet(reference, "width") / 64, hostGet(reference, "height") / 64);
+    releaseHostReferenceLease(reference);
+  }
+  return this._rect;
+} });
+["contentBoxSize", "borderBoxSize", "devicePixelContentBoxSize"].forEach(function (name) {
+  Object.defineProperty(GuestResizeEntry.prototype, name, { get: function () {
+    var key = "_" + name;
+    var result = this[key] ? null : hostGet(this.reference, name);
+    if (!this[key] && result === null) return undefined;
+    if (!this[key]) this[key] = resizeArray(result[1], function (reference) {
+      var size = { inlineSize: hostGet(reference, "inlineSize") / 64,
+        blockSize: hostGet(reference, "blockSize") / 64 };
+      releaseHostReferenceLease(reference);
+      return size;
+    });
+    return this[key];
+  } });
+});
+function GuestResizeObserver(callback) {
+  if (!(this instanceof GuestResizeObserver) || typeof callback !== "function") throw new TypeError("callback required");
+  this.callback = callback;
+  this.reference = null;
+  this._hostReference = null;
+  this.callbackIndex = null;
+  this.targets = [];
+}
+GuestResizeObserver.prototype.observe = function (target, options) {
+  if (!(target instanceof GuestElement)) throw new TypeError("element required");
+  if (options != null && typeof options !== "object" && typeof options !== "function") throw new TypeError("options required");
+  var box = options == null ? undefined : options.box;
+  box = box === undefined ? "content-box" : String(box);
+  if (["content-box", "border-box", "device-pixel-content-box"].indexOf(box) < 0) throw new TypeError("invalid box");
+  if (this.reference === null) {
+    var self = this;
+    var callbackIndex = allocateCallback(function (batch) {
+      // Decode identities only. CodeMirror ignores the entries, so dimensions
+      // cross the bridge only if an application actually reads their getters.
+      var entries = resizeArray(batch.reference, function (reference) { return new GuestResizeEntry(reference); }, batch._hostReference);
+      self.callback(entries, self);
+    }, false);
+    try {
+      this.reference = hostCall(document.reference, "resizeObserver", [callbackIndex])[1];
+      this._hostReference = hostReference(this.reference);
+      this.callbackIndex = callbackIndex;
+    } catch (error) { releaseCallback(callbackIndex); throw error; }
+  }
+  hostCall(this.reference, "observe", [target, box]);
+  if (this.targets.indexOf(target.reference) < 0) this.targets.push(target.reference);
+};
+GuestResizeObserver.prototype.unobserve = function (target) {
+  if (!(target instanceof GuestElement)) throw new TypeError("element required");
+  if (this.reference === null) return;
+  hostCall(this.reference, "unobserve", [target]);
+  var index = this.targets.indexOf(target.reference);
+  if (index >= 0) this.targets.splice(index, 1);
+  if (!this.targets.length) this.disconnect();
+};
+GuestResizeObserver.prototype.disconnect = function () {
+  if (this.reference === null) return;
+  hostCall(this.reference, "disconnect", []);
+  releaseHostReference(this._hostReference);
+  releaseCallback(this.callbackIndex);
+  this.reference = this._hostReference = this.callbackIndex = null;
+  this.targets = [];
+};
 function GuestIntersectionObserver(callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   this.callback = callback;
@@ -1112,7 +1192,7 @@ GuestIntersectionObserver.prototype.takeRecords = function () { return []; };
 // handler returns. Mirror those browser-owned edits on the normal microtask so
 // the guest tree has the same ownership and detached nodes become collectible.
 globalThis.MutationObserver = GuestMutationObserver;
-globalThis.ResizeObserver = EmptyObserver;
+if (hostGet(document.reference, "supportsResizeObserver")) globalThis.ResizeObserver = GuestResizeObserver;
 globalThis.IntersectionObserver = GuestIntersectionObserver;
 function GuestComputedStyle(reference) { GuestObject.call(this, reference); }
 GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
@@ -1594,6 +1674,10 @@ GuestElement.prototype.getAttribute = function (name) {
   else values[name] = value;
   return value;
 };
+Object.defineProperty(GuestElement.prototype, "id", {
+  get: function () { return this.getAttribute("id") || ""; },
+  set: function (value) { this.setAttribute("id", String(value)); }
+});
 GuestElement.prototype.setAttribute = function (name, value) {
   var text = String(value);
   if (name === "class") text = projectClassName(text);

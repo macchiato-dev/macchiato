@@ -24,6 +24,9 @@ function probeReference(json) {
     result = "moved";
   } else if (request.operation === "documentChildren") {
     result = hostCall(document.reference, "childNodeReferences", []);
+  } else if (request.operation === "resizeObserve") {
+    var observer = hostCall(document.reference, "resizeObserver", [allocateCallback(function () {}, false)]);
+    result = hostCall(observer[1], "observe", [capturedTarget, "content-box"]);
   } else if (request.operation === "selectionText" || request.operation === "selectionGeometry") {
     var selection = hostCall(document.reference, "getSelection", []);
     var range = hostCall(selection[1], "getRangeAt", [0]);

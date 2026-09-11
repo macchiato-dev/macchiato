@@ -3501,3 +3501,25 @@ overrides disabled, using the live server after restart. Each loads eight
 expected assets and exercises its editor, iframe output, theme switches, and
 phone layout. Logs are `native-idle-live-cat.log` and
 `native-idle-live-mahjong.log`; these checks likewise make no owner saves.
+
+### Native resize observations — work in progress (2026-09-11)
+
+CodeMirror observes its scroll element to request a remeasurement after pane
+size changes. The canonical guest's empty ResizeObserver never delivered
+these notifications. The new native/guest comparison fails all four baseline
+cases (MicroQuickJS and QuickJS, direct and iframe). Its element sizes change
+without synthetic window-resize or input events. It compares native entry
+geometry, multiple targets and box options, unobserve/disconnect/reobserve,
+retained snapshots, and destruction.
+
+The host now creates real observers, validates each observed target against
+the grant, and tracks active targets so unobserved elements do not remain in
+its cleanup map. Native entries remain referenced; the guest only reads their
+geometry when application code requests it. All 20 raw-reference scope checks
+pass, including a new attempt to observe an unrelated node obtained through
+an outside pointer event. The initial native comparison receives matching
+geometry but exposes an independent missing `element.id` reflection in the
+guest; its small attribute-backed correction is awaiting rebuilt tests.
+Evidence is in `resize-observer-baseline.log`, `resize-observer-native.log`,
+and `resize-reference-scope.log` under `/root/macchiato-work`. This work has
+not replaced the verified native-idle local deployment or Bunny archive.
