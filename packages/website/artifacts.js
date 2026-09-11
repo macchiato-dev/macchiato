@@ -83,6 +83,8 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   files.set("/-/resources-site/project-output-frame.html", bytes(outputFrame));
   files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
   files.set("/-/resources-site/project-builder-quickjs-runtime.wasm", projectBuilder);
+  files.set("/-/resources-site/THIRD-PARTY-NOTICES.txt",
+    bytes(readFileSync(join(directory, "THIRD-PARTY-NOTICES.txt"))));
   files.set("/-/resources-site/project-editor-quickjs-runtime.wasm", editorMachine);
   for (const name of new Set(editorLanguages.map(item => item.package))) {
     files.set(`/-/resources-site/project-editor-language-${name}.bin`,

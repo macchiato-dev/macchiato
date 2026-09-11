@@ -22,6 +22,13 @@ test("inert HTML parsing preserves quoted delimiters and attribute boundaries", 
     '<svg viewBox="0 0 24 24"><path d="M1 2 L3 4" /></svg>',
     '<style>.sample::before { content: "a > b"; }</style><p>Text</p>',
     '<script>var compare = a > b;</script><p>Text</p>',
+    '<p>&nbsp;&amp;&lt;&gt;&quot;&apos; &copy; &NotEqualTilde; &#128049; &#x1f431;</p>',
+    '<p>&amp;lt; &notit; &notin; &unknown; &#0; &#xD800; &#x110000; &#128;</p>',
+    '<p title="&quot; &amp; &#x3e; &notit; &copy=1" data-text=&#65;>A &copy without semicolon</p>',
+    '<textarea>&lt;p&gt;&amp;lt;&nbsp;</textarea>',
+    '<title>A &amp; B</title>',
+    '<style>.sample::before { content: "&amp;"; }</style>',
+    '<script>var literal = "&amp; &#65;";</script>',
   ];
   function tree(node) {
     if (node.nodeType === 3) return [0, node.nodeValue];
@@ -76,6 +83,11 @@ test("the built Wasm compiler agrees with the source compiler on attribute parsi
     '<p style=\'color:red; } p { color:blue;\'>Text</p>',
     '<p style=\'background:url("https://outside.test/pixel")\'>Text</p>',
     '<p data-label="recovered > failure">Text</p>',
+    '<p title="A &amp; B">&nbsp;&NotEqualTilde; &#x1f431; &amp;lt;</p>',
+    '<textarea>&lt;b&gt; &amp; &#128;</textarea>',
+    '<p style="color:&#114;ed">Decoded inline CSS</p>',
+    '<p style="background:&#117;rl(&quot;https://outside.test/pixel&quot;)">Blocked URL</p>',
+    '<p>&lt;img src=&quot;https://outside.test/pixel&quot;&gt;</p>',
   ];
   const expected = sources.map(content => {
     try { return { value: compileProjectFiles([{ path: "index.html", content }]) }; }

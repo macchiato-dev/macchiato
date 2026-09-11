@@ -56,7 +56,9 @@ function parsedAttributes(source) {
     const name = match[1].toLowerCase();
     // HTML keeps the first spelling of a duplicated attribute. Keeping both
     // made getAttribute read the first but guest installation apply the last.
-    if (!names.has(name)) entries.push([name, match[2] ?? match[3] ?? match[4] ?? ""]);
+    // Decode after finding the boundary: an encoded quote stays in the value.
+    // Attribute rules deliberately differ from text for missing semicolons.
+    if (!names.has(name)) entries.push([name, decodeHTMLAttribute(match[2] ?? match[3] ?? match[4] ?? "")]);
     names.add(name);
     rest = rest.slice(match[0].length);
   }
@@ -105,7 +107,7 @@ export function parseProjectHtml(source) {
     }
     if (source[at] !== "<") {
       const end = source.indexOf("<", at);
-      stack.at(-1).append(new ParsedNode(3, "", source.slice(at, end < 0 ? source.length : end)));
+      stack.at(-1).append(new ParsedNode(3, "", decodeHTML(source.slice(at, end < 0 ? source.length : end))));
       at = end < 0 ? source.length : end;
       continue;
     }
@@ -127,10 +129,14 @@ export function parseProjectHtml(source) {
       expression.lastIndex = at;
       const end = expression.exec(source);
       if (!end) throw new SyntaxError(`HTML ${name} element is not closed`);
-      node.append(new ParsedNode(3, "", source.slice(at, end.index)));
+      const text = source.slice(at, end.index);
+      // RCDATA decodes references but never parses the result as markup.
+      // Script and stylesheet source, unlike title/textarea text, stays literal.
+      node.append(new ParsedNode(3, "", name === "textarea" || name === "title" ? decodeHTML(text) : text));
       at = expression.lastIndex;
     } else if (!selfClosing && !voidElements.has(name)) stack.push(node);
   }
   if (stack.length !== 1) throw new SyntaxError(`HTML element is not closed: ${stack.at(-1).localName}`);
   return document;
 }
+import { decodeHTML, decodeHTMLAttribute } from "entities/decode";

@@ -907,6 +907,12 @@ See [`edge/README.md`](edge/README.md) for the threat model and remaining work.
 
 ## Credits
 
+HTML character references are decoded in the compiler guest by
+[entities](https://github.com/fb55/entities), with separate text and attribute
+rules. Its decoder is bundled into the compiler, not downloaded by the browser
+or added to the host. The [license notice](THIRD-PARTY-NOTICES.txt) is also
+included alongside the exported runtime artifacts.
+
 Resources.co uses [QuickJS](https://bellard.org/quickjs/) for JavaScript
 sandboxes and [CodeMirror](https://codemirror.net/) for constrained code-editing
 surfaces. Development, review, writing, and design have been assisted by
