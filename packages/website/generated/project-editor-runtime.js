@@ -401,13 +401,6 @@ function createCssRenderer(dependencies) {
     let lastDeclarations = [], lastAssignments = [];
     function readDeclarations(declarationCount, ruleIndex) {
       if (declarationCount > 128) fail2("stylesheet rule has too many declarations");
-      let index;
-      try {
-        index = probe.insertRule(":root{}", probe.cssRules.length);
-      } catch {
-        fail2(`stylesheet declarations in rule ${ruleIndex + 1} could not be checked`);
-      }
-      const declaration = probe.cssRules[index].style;
       const declarations = [];
       const assignments = [];
       lastDeclarations = declarations;
@@ -498,12 +491,11 @@ function createCssRenderer(dependencies) {
             fail2("stylesheet value node is not representable");
           };
           const value2 = readValue();
-          declaration.setProperty(property, value2, important ? "important" : "");
-          if (!declaration.getPropertyValue(property)) {
+          if (!CSS.supports(property, value2)) {
             fail2(`CSS value for ${property} in rule ${ruleIndex + 1} was not accepted`);
           }
           declarations.push(`  ${property}: ${value2}${important ? " !important" : ""};`);
-          assignments.push([property, value2, important ? "important" : ""]);
+          if (targetStyle && !replace) assignments.push([property, value2, important ? "important" : ""]);
           continue;
         }
         const tokenCount = reader.uint();
@@ -552,10 +544,9 @@ function createCssRenderer(dependencies) {
           } else fail2("stylesheet token is not representable");
         }
         if (depth !== 0) fail2("stylesheet function tokens do not balance");
-        declaration.setProperty(property, value, important ? "important" : "");
-        if (!declaration.getPropertyValue(property)) continue;
+        if (!CSS.supports(property, value)) continue;
         declarations.push(`  ${property}: ${value}${important ? " !important" : ""};`);
-        assignments.push([property, value, important ? "important" : ""]);
+        if (targetStyle && !replace) assignments.push([property, value, important ? "important" : ""]);
       }
       return declarations;
     }
