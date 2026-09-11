@@ -27,6 +27,9 @@ function probeReference(json) {
   } else if (request.operation === "resizeObserve") {
     var observer = hostCall(document.reference, "resizeObserver", [allocateCallback(function () {}, false)]);
     result = hostCall(observer[1], "observe", [capturedTarget, "content-box"]);
+  } else if (request.operation === "mutationObserve") {
+    var mutation = hostCall(document.reference, "mutationObserver", [allocateCallback(function () {}, false)]);
+    result = hostCall(mutation[1], "observe", [capturedTarget, 1]);
   } else if (request.operation === "selectionText" || request.operation === "selectionGeometry") {
     var selection = hostCall(document.reference, "getSelection", []);
     var range = hostCall(selection[1], "getRangeAt", [0]);

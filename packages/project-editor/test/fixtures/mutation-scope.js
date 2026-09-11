@@ -11,10 +11,9 @@ function reportMutations(batch) {
   __wwcPostMessage(JSON.stringify({ values: values }));
   flush();
 }
-var observation = hostCall(document.reference, "mutationObserve", [
-  document, 19, allocateCallback(reportMutations, false)
-]);
+var observation = hostCall(document.reference, "mutationObserver", [allocateCallback(reportMutations, false)]);
 var observationLease = new GuestObject(observation[1]);
+hostCall(observation[1], "observe", [document, 19]);
 function takeScopeRecords() {
   var batch = hostCall(observation[1], "takeRecords", []);
   reportMutations(new GuestObject(batch[1]));

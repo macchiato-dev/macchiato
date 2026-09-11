@@ -1052,28 +1052,55 @@ function readMutationBatch(batchReference, batchToken) {
   return records;
 }
 function GuestMutationObserver(callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
+  if (!(this instanceof GuestMutationObserver) || typeof callback !== "function") throw new TypeError("callback required");
   this.callback = callback;
   this.reference = null;
   this._hostReference = null;
   this.callbackIndex = null;
 }
 GuestMutationObserver.prototype.observe = function (target, options) {
-  this.disconnect();
-  var flags = (options.attributes ? 1 : 0) |
-    (options.attributeOldValue ? 2 : 0) |
-    (options.characterData ? 4 : 0) |
-    (options.characterDataOldValue ? 8 : 0) |
-    (options.subtree ? 16 : 0);
-  var self = this, callbackIndex = allocateCallback(function (batch) {
-    self.callback(readMutationBatch(batch.reference, batch._hostReference), self);
-  }, false);
-  this.callbackIndex = callbackIndex;
-  var result = immediate([3, document.reference, stringIndex("mutationObserve"), [
-    encode(target), encode(flags), encode(callbackIndex)
-  ]]);
-  this.reference = result[1];
-  this._hostReference = hostReference(this.reference);
+  if (!(target instanceof GuestObject)) throw new TypeError("node required");
+  if (options == null) options = {};
+  if (typeof options !== "object" && typeof options !== "function") throw new TypeError("options required");
+  // Read dictionary members once in WebIDL order, preserving the distinction
+  // between omitted and explicitly false options before applying defaults.
+  var filter = options.attributeFilter;
+  if (filter !== undefined) {
+    if (filter === null || typeof filter !== "object" && typeof filter !== "function") throw new TypeError("attributeFilter must be a sequence");
+    var sequence = filter, iterate = filter[Symbol.iterator];
+    if (iterate != null) {
+      if (typeof iterate !== "function") throw new TypeError("attributeFilter must be iterable");
+      sequence = {};
+      sequence[Symbol.iterator] = function () { return iterate.call(filter); };
+    } else if (!Array.isArray(filter) && !(filter instanceof Set)) throw new TypeError("attributeFilter must be iterable");
+    filter = Array.from(sequence, String);
+    if (filter.length > 256 || filter.some(function (name) { return name.length > 256; })) throw new RangeError("attributeFilter is too large");
+  }
+  var attributeOldValue = options.attributeOldValue;
+  var attributes = options.attributes;
+  var characterData = options.characterData;
+  var characterDataOldValue = options.characterDataOldValue;
+  var childList = Boolean(options.childList), subtree = Boolean(options.subtree);
+  attributes = attributes === undefined ? filter !== undefined || attributeOldValue !== undefined : Boolean(attributes);
+  characterData = characterData === undefined ? characterDataOldValue !== undefined : Boolean(characterData);
+  if (!attributes && !characterData && !childList ||
+      !attributes && (filter !== undefined || attributeOldValue) || !characterData && characterDataOldValue) {
+    throw new TypeError("invalid mutation observation options");
+  }
+  var flags = (attributes ? 1 : 0) | (attributeOldValue ? 2 : 0) |
+    (characterData ? 4 : 0) | (characterDataOldValue ? 8 : 0) |
+    (subtree ? 16 : 0) | (childList ? 32 : 0) | (filter !== undefined ? 64 : 0);
+  if (this.reference === null) {
+    var self = this, callbackIndex = allocateCallback(function (batch) {
+      self.callback(readMutationBatch(batch.reference, batch._hostReference), self);
+    }, false);
+    try {
+      this.reference = hostCall(document.reference, "mutationObserver", [callbackIndex])[1];
+      this._hostReference = hostReference(this.reference);
+      this.callbackIndex = callbackIndex;
+    } catch (error) { releaseCallback(callbackIndex); throw error; }
+  }
+  hostCall(this.reference, "observe", [target, flags].concat(filter === undefined ? [] : filter));
 };
 GuestMutationObserver.prototype.disconnect = function () {
   if (this.reference !== null) {
