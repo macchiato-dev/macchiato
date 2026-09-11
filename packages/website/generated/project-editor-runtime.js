@@ -28,7 +28,7 @@ var positionalPseudos = /* @__PURE__ */ new Set([
   "last-of-type",
   "only-of-type"
 ]);
-var pseudoElements = /* @__PURE__ */ new Set(["before", "after", "selection", "placeholder", "marker"]);
+var pseudoElements = /* @__PURE__ */ new Set(["before", "after", "selection", "placeholder", "marker", "backdrop"]);
 var joins = /* @__PURE__ */ new Set(["", " ", ">", "+", "~"]);
 function readSelector(reader) {
   let remaining = 1536;

@@ -194,6 +194,8 @@ test('semantic selector rendering confines native matching context', async t => 
     const sources = await Promise.all(['microquickjs-suite/cat-memory/style.css',
       'microquickjs-suite/mahjong/style.css', 'sqlite-book/style.css'].map(async name => ({ name,
         css: await readFile(new URL('../../../dev/wasm-web-runtimes/examples/' + name, import.meta.url), 'utf8') })));
+    sources.push({ name: 'presentation dialog', minimum: 1,
+      css: '.reset-dialog::backdrop { background: #020806c9; backdrop-filter: blur(5px); }' });
     const page = await browser.newPage();
     try {
       await page.route('http://selector-renderer.test/**', route => {
@@ -229,7 +231,7 @@ test('semantic selector rendering confines native matching context', async t => 
         return { failures, counts };
       }, sources);
       assert.ok(result.counts.CodeMirror > 30, JSON.stringify(result.counts));
-      for (const source of sources) assert.ok(result.counts[source.name] > 10, JSON.stringify(result.counts));
+      for (const source of sources) assert.ok(result.counts[source.name] >= (source.minimum || 10), JSON.stringify(result.counts));
       assert.deepEqual(result.failures, []);
       t.diagnostic(JSON.stringify(result.counts));
     } finally { await page.close(); }
