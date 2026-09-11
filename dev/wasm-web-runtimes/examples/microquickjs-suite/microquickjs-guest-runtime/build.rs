@@ -41,7 +41,10 @@ fn guest_runtime_source(root: &PathBuf) -> String {
     let css_path = root.join("../../../../../packages/project-editor/src/constrained-css.js");
     let css = fs::read_to_string(&css_path).expect("read constrained CSS runtime")
         .replace("\nexport { parseCss as parseConstrainedCss };\n", "\n");
-    css + &fs::read_to_string(root.join("guest-runtime.js")).expect("read guest runtime")
+    let selectors = fs::read_to_string(root.join("../../../../../packages/project-editor/src/constrained-selector.js"))
+        .expect("read selector runtime")
+        .replace("\nexport { parseConstrainedSelector, writeConstrainedSelector };\n", "\n");
+    selectors + &css + &fs::read_to_string(root.join("guest-runtime.js")).expect("read guest runtime")
 }
 
 fn main() {
@@ -203,6 +206,7 @@ fn main() {
     println!("cargo:rerun-if-changed=microquickjs/mqjs");
     println!("cargo:rerun-if-changed=guest-runtime.js");
     println!("cargo:rerun-if-changed=../../../../../packages/project-editor/src/constrained-css.js");
+    println!("cargo:rerun-if-changed=../../../../../packages/project-editor/src/constrained-selector.js");
     println!("cargo:rerun-if-changed=../mahjong");
     println!("cargo:rerun-if-changed=../cat-memory");
     println!("cargo:rerun-if-changed=../vendor/mahjong-tiles");

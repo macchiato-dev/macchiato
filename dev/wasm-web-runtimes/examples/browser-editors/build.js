@@ -21,7 +21,9 @@ const cssPath = resolve(root, "../../../../packages/project-editor/src/constrain
 const surfacePath = resolve(root, "../codemirror/src/canonical-codemirror-dom.js");
 const css = (await readFile(cssPath, "utf8"))
   .replace(/\nexport \{ parseCss as parseConstrainedCss \};\s*$/, "\n");
-const base = css + await readFile(basePath, "utf8");
+const selectors = (await readFile(resolve(root, "../../../../packages/project-editor/src/constrained-selector.js"), "utf8"))
+  .replace(/\nexport \{ parseConstrainedSelector, writeConstrainedSelector \};\s*$/, "\n");
+const base = selectors + css + await readFile(basePath, "utf8");
 const boundary = base.indexOf("function attributes(source)");
 if (boundary < 0) throw new Error("browser runtime boundary was not found");
 const environment = "var FONT_RESOURCES = {};\nvar RUNTIME_RESOURCES = { files: {} };\n" +

@@ -107,6 +107,8 @@ await copyFile(join(workspace, "dev/wasm-web-machine/dist/module/wasm-web-machin
 await copyFile(join(workspace, "dev/wasm-web-machine/dist/module/wasm-web-machine.js.map"),
   join(outputRoot, "wasm-web-machine.js.map"));
 const runtimeSource = [
+  (await readFile(join(workspace, "packages/project-editor/src/constrained-selector.js"), "utf8"))
+    .replace(/\nexport \{ parseConstrainedSelector, writeConstrainedSelector \};\s*$/, "\n"),
   `var DOCUMENT_TITLE=${JSON.stringify("SQLite Documentation Reader")};`,
   `var APPLICATION_SCRIPT=${JSON.stringify("sqlite-book.js")};`,
   "var FONT_RESOURCES={};",

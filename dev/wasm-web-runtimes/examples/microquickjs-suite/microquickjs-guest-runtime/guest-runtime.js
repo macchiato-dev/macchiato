@@ -595,7 +595,15 @@ function fetch(url) {
   });
 }
 
-// The build prepends packages/project-editor/src/constrained-css.js here.
+// The build prepends the shared CSS and selector parsers here.
+
+function encodeSelector(source) {
+  var writer = new Writer(new Uint8Array(16 * 1024));
+  writeConstrainedSelector(writer, parseConstrainedSelector(String(source)));
+  var result = new Uint8Array(writer.at - 4);
+  result.set(writer.bytes.subarray(4, writer.at));
+  return result;
+}
 
 function encodeCss(source, includeFonts) {
   var phase = "parse";
@@ -603,7 +611,7 @@ function encodeCss(source, includeFonts) {
     var rules = parseCss(source);
     phase = "encode";
     var writer = new Writer(new Uint8Array(128 * 1024));
-    writer.uint(4);
+    writer.uint(5);
     var fonts = [], fontName;
     if (includeFonts) {
       for (fontName in FONT_RESOURCES) fonts.push(FONT_RESOURCES[fontName]);
@@ -670,7 +678,7 @@ function encodeCss(source, includeFonts) {
         return;
       }
       writer.byte(1);
-      writer.text(rule.selector);
+      writeConstrainedSelector(writer, parseConstrainedSelector(rule.selector));
       writer.uint(rule.declarations.length);
       writeDeclarations(rule.declarations);
     });

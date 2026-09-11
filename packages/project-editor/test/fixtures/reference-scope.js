@@ -33,14 +33,14 @@ function probeReference(json) {
       result = hostGet(node[1], "textContent");
     }
   } else if (request.operation === "detachedChild") {
-    var child = hostCall(capturedTarget.reference, "querySelector", ["input"]);
+    var child = hostCall(capturedTarget.reference, "querySelector", [encodeSelector("input")]);
     result = hostGet(child[1], "value");
   } else if (request.operation === "removeDocumentRoot") {
     result = hostCall(document.reference, "removeChild", [capturedTarget]);
   } else if (request.operation === "parent") {
     result = hostGet(capturedTarget.reference, "parentNode");
   } else if (request.operation === "closest") {
-    result = hostCall(capturedTarget.reference, "closest", ["#own"]);
+    result = hostCall(capturedTarget.reference, "closest", [encodeSelector("#own")]);
   } else if (request.operation === "type") result = hostGet(capturedTarget.reference, "nodeType");
   else throw Error("Unknown reference probe");
   __wwcPostMessage(JSON.stringify({ result: result }));

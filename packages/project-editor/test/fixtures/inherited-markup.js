@@ -34,7 +34,7 @@ function probeMarkup(json) {
       ? '<img src="http://markup.test/unexpected-template.png">'
       : '<script>window.__escapedMarkup = true</script>';
     immediate([2, target.reference, stringIndex("innerHTML"), "<template>" + markup + "</template>"]);
-    var template = hostCall(target.reference, "querySelector", ["template"]);
+    var template = hostCall(target.reference, "querySelector", [encodeSelector("template")]);
     var content = hostGet(template[1], "content");
     hostCall(hostGet(document.reference, "body")[1], "appendChild", [new GuestObject(content[1])]);
   } else if (request.operation === "resolvedImage") {

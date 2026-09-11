@@ -40,7 +40,10 @@ const cssRuntimePath = new URL(
   "../../../../packages/project-editor/src/constrained-css.js", import.meta.url);
 const cssRuntime = (await readFile(cssRuntimePath, "utf8"))
   .replace(/\nexport \{ parseCss as parseConstrainedCss \};\s*$/, "\n");
-const canonicalRuntime = cssRuntime + await readFile(canonicalRuntimePath, "utf8");
+const selectorRuntime = (await readFile(new URL(
+  "../../../../packages/project-editor/src/constrained-selector.js", import.meta.url), "utf8"))
+  .replace(/\nexport \{ parseConstrainedSelector, writeConstrainedSelector \};\s*$/, "\n");
+const canonicalRuntime = selectorRuntime + cssRuntime + await readFile(canonicalRuntimePath, "utf8");
 const runtimeEnd = canonicalRuntime.indexOf("function attributes(source)");
 if (runtimeEnd < 0) throw new Error("canonical guest runtime boundary was not found");
 const fullEngineSurface = await readFile(

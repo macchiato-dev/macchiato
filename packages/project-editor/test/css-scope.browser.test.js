@@ -16,9 +16,12 @@ test('container styles cannot select siblings of the granted root', async t => {
   const application = resolve(directory, 'application.bin'), output = resolve(directory, 'probe.wasm');
   execFileSync(resolve(examples, 'microquickjs-suite/microquickjs-guest-runtime/microquickjs/mqjs'),
     ['-m32', '-o', application, new URL('fixtures/css-scope.js', import.meta.url).pathname]);
+  const environment = resolve(directory, 'runtime.bin');
+  execFileSync(resolve(examples, 'microquickjs-suite/microquickjs-guest-runtime/microquickjs/mqjs'),
+    ['-m32', '-o', environment, resolve(examples, 'codemirror/generated/microquickjs-runtime.js')]);
   execFileSync(process.execPath, [resolve(examples, 'microquickjs-suite/scripts/stamp-wasm.js'),
     resolve(root, 'packages/website/generated/project-editor-quickjs-runtime.wasm'), output,
-    `runtime.bin=${resolve(root, 'packages/website/generated/project-editor-runtime.bin')}`,
+    `runtime.bin=${environment}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);
   const host = await build({ entryPoints: [resolve(root, 'dev/wasm-web-machine/src/wasm-web-machine.ts')],
@@ -59,7 +62,10 @@ test('container styles cannot select siblings of the granted root', async t => {
         } finally { machine.destroy(); }
       }, selector);
       assert.equal(result.outside, 'rgb(0, 0, 0)', 'neighboring host content must not receive guest CSS');
-      if (denied) assert.match(result.error || '', /root.*sibling|outside.*scope/i);
+      if (denied) {
+        assert.equal(result.error, null);
+        assert.equal(result.inside, 'rgb(0, 0, 0)');
+      }
       else {
         assert.equal(result.error, null);
         assert.equal(result.inside, 'rgb(255, 0, 1)', 'ordinary internal selectors keep working');
@@ -67,12 +73,10 @@ test('container styles cannot select siblings of the granted root', async t => {
     } finally { await page.close(); }
   });
 
-  // These are unresolved confidentiality probes, not passing containment
-  // coverage. Native selector matching can inspect beyond its result subtree.
+  // Exercise the actual byte protocol, including predicates whose matching
+  // subject is owned but whose unguarded context would inspect host state.
   for (const method of ['stylesheet', 'querySelector', 'matches', 'closest']) {
-    await t.test(method + ' cannot inspect host selector context', {
-      todo: 'Constrain selector predicate context without a second host CSS parser',
-    }, async () => {
+    await t.test(method + ' cannot inspect host selector context', async () => {
       const page = await browser.newPage();
       try {
         await page.route('http://css-scope.test/**', route => {
@@ -113,10 +117,43 @@ test('container styles cannot select siblings of the granted root', async t => {
           } finally { machine.destroy(); }
         }, method);
         t.diagnostic(method + ' context result: ' + JSON.stringify(result));
-        if (result.error) assert.match(result.error, /selector.*scope|outside.*scope/);
-        else if (method === 'stylesheet') assert.deepEqual(result.colors, ['rgb(0, 0, 0)', 'rgb(0, 0, 0)']);
+        assert.equal(result.error, null);
+        if (method === 'stylesheet') assert.deepEqual(result.colors, ['rgb(0, 0, 0)', 'rgb(0, 0, 0)']);
         else assert.deepEqual(result.reports, ['false', 'false']);
       } finally { await page.close(); }
     });
   }
+  await t.test('owned queries work before insertion and after removal; raw selectors do not bypass the renderer', async () => {
+    const page = await browser.newPage();
+    try {
+      await page.route('http://css-scope.test/**', route => {
+        const path = new URL(route.request().url()).pathname;
+        return route.fulfill(path === '/machine.js' ? { body: host.outputFiles[0].text, contentType: 'text/javascript' }
+          : path === '/probe.wasm' ? { body: wasm, contentType: 'application/wasm' }
+          : { body: '<div id="own"></div><div id="outside">Host</div>', contentType: 'text/html' });
+      });
+      await page.goto('http://css-scope.test/');
+      const result = await page.evaluate(async () => {
+        const { default: Machine } = await import('/machine.js');
+        const module = await WebAssembly.compileStreaming(fetch('/probe.wasm'));
+        const stamp = new Uint8Array(WebAssembly.Module.customSections(module, 'wasm-web-machine')[0]);
+        const reports = [], rejected = [];
+        const machine = new Machine(module, document.querySelector('#own'), { stamp, onMessage: value => reports.push(value) });
+        try {
+          await machine.onmsg(0);
+          const send = (name, value) => machine.onmsg(new TextEncoder().encode('\u0002' + name + '\0' + JSON.stringify(value)));
+          for (const value of [{}, { attached: true }, { removed: true }]) send('probeOwnedQueries', value);
+          for (const method of ['querySelector', 'querySelectorAll', 'querySelectorAllReferences', 'matches', 'closest']) {
+            try { send('probeRawSelector', { method }); rejected.push(null); }
+            catch (error) { rejected.push(String(error)); }
+          }
+          return { reports, rejected };
+        } finally { machine.destroy(); }
+      });
+      assert.deepEqual(result.reports.map(JSON.parse), Array.from({ length: 3 }, () => ({
+        first: true, last: true, matches: true, closest: true, before: true,
+      })));
+      for (const error of result.rejected) assert.match(error || '', /bounded semantic bytes/);
+    } finally { await page.close(); }
+  });
 });

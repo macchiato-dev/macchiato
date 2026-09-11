@@ -116,6 +116,200 @@
 
 var FONT_RESOURCES = {};
 var RUNTIME_RESOURCES = { files: {} };
+// Guest-side selector parsing. Keep this file ES5 so the same source can run
+// in MicroQuickJS without Babel. The host receives semantic pieces, not CSS.
+// Unsupported syntax fails at its source position; nothing is discarded.
+function parseConstrainedSelector(source) {
+  var at = 0, remaining = 512;
+  function fail() { throw new SyntaxError("Selector is not understood at " + at); }
+  if (typeof source !== "string" || !source.length || source.length > 8192) fail();
+  function space(character) { return !!character && /[\t\n\f\r ]/.test(character); }
+  function trivia() {
+    var whitespace = false;
+    while (at < source.length) {
+      if (space(source[at])) { whitespace = true; at++; }
+      else if (source.slice(at, at + 2) === "/*") {
+        var end = source.indexOf("*/", at + 2);
+        if (end < 0) fail();
+        at = end + 2;
+      } else break;
+    }
+    return whitespace;
+  }
+  function escape() {
+    at++;
+    if (at === source.length || /[\n\r\f]/.test(source[at])) fail();
+    var hex = source.slice(at).match(/^[0-9a-fA-F]{1,6}/);
+    if (!hex) return source[at++];
+    at += hex[0].length;
+    if (source[at] === "\r" && source[at + 1] === "\n") at++;
+    if (space(source[at])) at++;
+    var scalar = parseInt(hex[0], 16);
+    if (!scalar || scalar > 0x10ffff || (scalar >= 0xd800 && scalar <= 0xdfff)) return "\ufffd";
+    if (scalar < 0x10000) return String.fromCharCode(scalar);
+    scalar -= 0x10000;
+    return String.fromCharCode(0xd800 + (scalar >> 10), 0xdc00 + (scalar & 1023));
+  }
+  function identifier() {
+    var value = "", first = source[at], next = source[at + 1];
+    function start(c) { return !!c && /[a-zA-Z_\u0080-\uffff\\]/.test(c); }
+    if (!start(first) && !(first === "-" && (start(next) || next === "-"))) fail();
+    while (at < source.length) {
+      var c = source[at];
+      if (c === "\\") value += escape();
+      else if (/[a-zA-Z0-9_\u0080-\uffff-]/.test(c)) { value += c; at++; }
+      else break;
+    }
+    if (value.length > 256) fail();
+    return value;
+  }
+  function string() {
+    var quote = source[at++], value = "";
+    while (at < source.length && source[at] !== quote) {
+      if (source[at] === "\\") {
+        if (/[\n\r\f]/.test(source[at + 1] || "")) {
+          at++;
+          if (source[at] === "\r" && source[at + 1] === "\n") at++;
+          at++;
+        } else value += escape();
+      } else {
+        if (/[\x00-\x1f\x7f]/.test(source[at])) fail();
+        value += source[at++];
+      }
+    }
+    if (source[at++] !== quote || value.length > 512) fail();
+    return value;
+  }
+  function attribute() {
+    at++; trivia();
+    var name = identifier(), operator = "", value = "";
+    trivia();
+    if (source[at] !== "]") {
+      operator = source[at++];
+      if (operator !== "=") {
+        if (!/^[~|^$*]$/.test(operator) || source[at++] !== "=") fail();
+        operator += "=";
+      }
+      trivia();
+      value = source[at] === '"' || source[at] === "'" ? string() : identifier();
+      trivia();
+    }
+    if (source[at++] !== "]") fail();
+    return ["attribute", name, operator, value];
+  }
+  function pseudo(depth) {
+    at++;
+    var element = source[at] === ":";
+    if (element) at++;
+    var name = identifier().toLowerCase();
+    if (source[at] !== "(") {
+      if (/^(before|after|first-line|first-letter)$/.test(name)) element = true;
+      return [element ? "element" : "pseudo", name];
+    }
+    if (element) fail();
+    at++;
+    var term;
+    if (/^(is|where|not|has)$/.test(name)) term = [name, group(name === "has", depth + 1)];
+    else if (/^nth-(last-)?(child|of-type)$/.test(name)) {
+      var start = at;
+      while (at < source.length && source[at] !== ")") at++;
+      var formula = source.slice(start, at).trim().toLowerCase(), a = 0, b;
+      if (formula === "odd" || formula === "even") { a = 2; b = formula === "odd" ? 1 : 0; }
+      else if (/^[+-]?\d+$/.test(formula)) b = Number(formula);
+      else {
+        var match = formula.match(/^([+-]?\d*)n(?:[\t\n\f\r ]*([+-])[\t\n\f\r ]*(\d+))?$/);
+        if (!match) fail();
+        a = match[1] === "" || match[1] === "+" ? 1 : match[1] === "-" ? -1 : Number(match[1]);
+        b = match[3] ? Number(match[2] + match[3]) : 0;
+      }
+      if (Math.abs(a) > 0x7fffffff || Math.abs(b) > 0x7fffffff) fail();
+      term = ["nth", name, a, b];
+    } else fail();
+    if (source[at++] !== ")") fail();
+    return term;
+  }
+  function group(relative, depth) {
+    if (depth > 8) fail();
+    var selectors = [], parts = [], join = "";
+    trivia();
+    while (at < source.length) {
+      if (/[>+~]/.test(source[at])) {
+        if (!parts.length && !relative) fail();
+        join = source[at++]; trivia();
+      }
+      var terms = [], element = false;
+      while (at < source.length) {
+        var c = source[at], term;
+        if (c === "." || c === "#") { at++; term = [c === "." ? "class" : "id", identifier()]; }
+        else if (c === "[") term = attribute();
+        else if (c === ":") term = pseudo(depth);
+        else if (!terms.length && c === "*") { at++; term = ["tag", "*"]; }
+        else if (!terms.length && /[a-zA-Z_\u0080-\uffff\\-]/.test(c)) term = ["tag", identifier()];
+        else break;
+        if (--remaining < 0 || element) fail();
+        element = term[0] === "element";
+        terms.push(term);
+        // Comments do not introduce a descendant combinator by themselves.
+        while (source.slice(at, at + 2) === "/*") {
+          var end = source.indexOf("*/", at + 2);
+          if (end < 0) fail();
+          at = end + 2;
+        }
+      }
+      if (!terms.length) fail();
+      parts.push([join, terms]);
+      var whitespace = trivia();
+      if (at === source.length || source[at] === ")") break;
+      if (source[at] === ",") {
+        selectors.push(parts); parts = []; join = ""; at++; trivia();
+        if (at === source.length || source[at] === ")") fail();
+      } else {
+        if (element || (!whitespace && !/[>+~]/.test(source[at]))) fail();
+        join = " ";
+      }
+    }
+    if (!parts.length) fail();
+    selectors.push(parts);
+    return selectors;
+  }
+  var selectors = group(false, 0);
+  if (at !== source.length) fail();
+  return selectors;
+}
+
+// Version 1: counted selector lists, counted compounds, then counted terms.
+// Each term carries only its fields; punctuation is supplied by the renderer.
+// The surrounding message already bounds the byte slice. Integers use the
+// existing unsigned LEB128 writer; nth coefficients use zigzag encoding.
+function writeConstrainedSelector(writer, selectors) {
+  var kinds = ["tag", "id", "class", "pseudo", "element", "attribute", "is", "where", "not", "has", "nth"];
+  var joins = ["", " ", ">", "+", "~"];
+  var operators = ["", "=", "~=", "|=", "^=", "$=", "*="];
+  var positions = ["nth-child", "nth-last-child", "nth-of-type", "nth-last-of-type"];
+  function group(list) {
+    writer.uint(list.length);
+    list.forEach(function (parts) {
+      writer.uint(parts.length);
+      parts.forEach(function (part) {
+        writer.byte(joins.indexOf(part[0])); writer.uint(part[1].length);
+        part[1].forEach(function (term) {
+          var kind = kinds.indexOf(term[0]); writer.byte(kind);
+          if (kind < 5) writer.text(term[1]);
+          else if (kind === 5) {
+            writer.text(term[1]); writer.byte(operators.indexOf(term[2])); writer.text(term[3]);
+          } else if (kind === 10) {
+            writer.byte(positions.indexOf(term[1]));
+            writer.uint(term[2] < 0 ? -2 * term[2] - 1 : 2 * term[2]);
+            writer.uint(term[3] < 0 ? -2 * term[3] - 1 : 2 * term[3]);
+          } else group(term[1]);
+        });
+      });
+    });
+  }
+  writer.uint(1);
+  group(selectors);
+}
+
 // Canonical constrained CSS parser shared by server, browser, and guest builds.
 // Keep this source ES5-compatible so MicroQuickJS builds can concatenate it.
 function cssSpace(source, at) {
@@ -458,7 +652,7 @@ function parseCss(source) {
 /* `print` is the unchanged MicroQuickJS native slot used by this build. */
 var bridge = globalThis.bridge;
 
-/* A small guest-side DOM facade. The host sees only interned byte operations;
+/* A small guest-side DOM facade. The host sees compact byte operations;
    the application below uses browser-shaped objects and owns all UI policy. */
 var wireStrings = [];
 var wireIndexes = Object.create(null);
@@ -509,7 +703,8 @@ function stringIndex(text) {
 
 function encode(value) {
   if (value instanceof GuestObject) return ["r", value.reference];
-  if (typeof value === "string") return ["s", stringIndex(value)];
+  // Only operation names are interned. DOM text, input values and method
+  // arguments must not keep every old edit alive for the lifetime of the VM.
   return value;
 }
 
@@ -524,30 +719,44 @@ Writer.prototype.byte = function (value) {
 };
 
 Writer.prototype.uint = function (value) {
+  // Keep the byte loop local in interpreted guests. Arithmetic, rather than
+  // a 32-bit shift, preserves all safe-integer payloads in this wire format.
+  var bytes = this.bytes, at = this.at;
   do {
+    if (at >= bytes.length) {
+      this.at = at;
+      throw new RangeError("wire message too large");
+    }
     var next = value % 128;
-    value = Math.floor(value / 128);
-    this.byte(next | (value ? 128 : 0));
+    value = (value - next) / 128;
+    bytes[at++] = next | (value ? 128 : 0);
   } while (value);
+  this.at = at;
 };
 
 Writer.prototype.text = function (text) {
+  if (typeof __wwcWriteText === "function") {
+    this.at = __wwcWriteText(this.bytes, this.at, text);
+    return;
+  }
   var length = 0;
   for (var index = 0; index < text.length; index++) {
     var code = text.charCodeAt(index);
-    if (code >= 0xd800 && code <= 0xdbff && index + 1 < text.length) {
+    var next = text.charCodeAt(index + 1);
+    if (code >= 0xd800 && code <= 0xdbff && next >= 0xdc00 && next <= 0xdfff) {
       code = 0x10000 + ((code - 0xd800) << 10) +
         (text.charCodeAt(++index) - 0xdc00);
-    }
+    } else if (code >= 0xd800 && code <= 0xdfff) code = 0xfffd;
     length += code < 0x80 ? 1 : code < 0x800 ? 2 : code < 0x10000 ? 3 : 4;
   }
   this.uint(length);
   for (var cursor = 0; cursor < text.length; cursor++) {
     var scalar = text.charCodeAt(cursor);
-    if (scalar >= 0xd800 && scalar <= 0xdbff && cursor + 1 < text.length) {
+    var following = text.charCodeAt(cursor + 1);
+    if (scalar >= 0xd800 && scalar <= 0xdbff && following >= 0xdc00 && following <= 0xdfff) {
       scalar = 0x10000 + ((scalar - 0xd800) << 10) +
         (text.charCodeAt(++cursor) - 0xdc00);
-    }
+    } else if (scalar >= 0xd800 && scalar <= 0xdfff) scalar = 0xfffd;
     if (scalar < 0x80) this.byte(scalar);
     else if (scalar < 0x800) {
       this.byte(0xc0 | scalar >> 6); this.byte(0x80 | scalar & 63);
@@ -565,9 +774,20 @@ function writeValue(writer, value) {
   if (value === null) return writer.byte(0);
   if (value === false) return writer.byte(1);
   if (value === true) return writer.byte(2);
+  if (typeof value === "string") {
+    writer.byte(7);
+    return writer.text(value);
+  }
   if (typeof value === "number") {
-    if (value % 1 !== 0 || !isFinite(value)) {
-      throw new TypeError("wire number must be an integer");
+    if (!isFinite(value)) throw new TypeError("wire number must be finite");
+    if (value % 1 !== 0 || Math.abs(value) > 9007199254740991 || (value === 0 && 1 / value < 0)) {
+      writer.byte(9);
+      // WebAssembly memory and typed-array buffers in this guest are little endian.
+      var number = new Float64Array(1);
+      number[0] = value;
+      var bytes = new Uint8Array(number.buffer);
+      for (var offset = 0; offset < 8; offset++) writer.byte(bytes[offset]);
+      return;
     }
     if (value >= 0) { writer.byte(3); return writer.uint(value); }
     writer.byte(8); return writer.uint(-value * 2 - 1);
@@ -595,9 +815,15 @@ Reader.prototype.byte = function () {
 };
 
 Reader.prototype.uint = function () {
-  var value = 0, scale = 1, byte;
-  do { byte = this.byte(); value += (byte & 127) * scale; scale *= 128; }
-  while (byte & 128);
+  var value = 0, scale = 1, byte, bytes = this.bytes, at = this.at;
+  do {
+    if (at >= this.length) {
+      this.at = at;
+      throw new RangeError("truncated wire message");
+    }
+    byte = bytes[at++]; value += (byte & 127) * scale; scale *= 128;
+  } while (byte & 128);
+  this.at = at;
   return value;
 };
 
@@ -632,11 +858,26 @@ function readValue(reader) {
   if (tag === 4) return ["r", reader.uint()];
   if (tag === 5) return ["s", reader.uint()];
   if (tag === 6) {
-    var length = reader.uint(), bytes = new Uint8Array(length);
-    for (var index = 0; index < length; index++) bytes[index] = reader.byte();
+    var length = reader.uint();
+    if (length > reader.length - reader.at) {
+      reader.at = reader.length;
+      throw new RangeError("truncated wire message");
+    }
+    // Copy, rather than retain a view of the buffer reused by the next call.
+    // TypedArray.set uses the runtime's native byte copy, not an interpreted
+    // property access and function call for every payload byte.
+    var bytes = new Uint8Array(length);
+    bytes.set(reader.bytes.subarray(reader.at, reader.at + length));
+    reader.at += length;
     return bytes;
   }
   if (tag === 7) return reader.text();
+  if (tag === 9) {
+    var number = new Float64Array(1), bytes = new Uint8Array(number.buffer);
+    for (var index = 0; index < 8; index++) bytes[index] = reader.byte();
+    if (!isFinite(number[0])) throw new TypeError("wire number must be finite");
+    return number[0];
+  }
   if (tag === 8) return -(reader.uint() + 1) / 2;
   throw new TypeError("unknown wire value");
 }
@@ -644,11 +885,12 @@ function readValue(reader) {
 function exchange(operations) {
   var writer = new Writer(wireBuffer);
   writer.uint(pendingStrings.length);
-  pendingStrings.forEach(function (text) { writer.text(text); });
+  for (var string = 0; string < pendingStrings.length; string++) writer.text(pendingStrings[string]);
   writer.uint(operations.length);
-  operations.forEach(function (operation) {
+  for (var index = 0; index < operations.length; index++) {
+    var operation = operations[index];
     writer.byte(operation[0]);
-    if (operation[0] === 0) return;
+    if (operation[0] === 0) continue;
     writer.uint(operation[1]);
     writer.uint(operation[2]);
     if (operation[0] === 2) writeValue(writer, operation[3]);
@@ -663,7 +905,7 @@ function exchange(operations) {
       writer.byte(operation[4] === true ? 1 : 0);
     }
     if (operation[0] === 5) writer.uint(operation[3]);
-  });
+  }
   wireBuffer[0] = writer.at - 4;
   wireBuffer[1] = (writer.at - 4) >> 8;
   wireBuffer[2] = (writer.at - 4) >> 16;
@@ -719,22 +961,27 @@ function GuestStyle(reference) {
 }
 GuestStyle.prototype = Object.create(GuestObject.prototype);
 
-["backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis",
+["animationDuration", "animationName", "backgroundColor", "bottom", "boxShadow", "color", "contain", "display", "flexBasis",
   "fontFamily", "fontFeatureSettings", "fontKerning", "fontSize", "fontStyle",
   "fontVariationSettings", "fontWeight", "height", "inset", "left", "letterSpacing",
   "lineHeight", "marginTop", "maxWidth", "minHeight", "objectFit", "overflow",
   "paddingBottom", "paddingLeft", "paddingRight", "paddingTop", "position", "right",
-  "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace",
+  "tabSize", "textDecoration", "textDecorationColor", "top", "transform", "visibility", "whiteSpace",
   "width", "zIndex"].forEach(
   function (name) {
+    var property = "";
+    for (var index = 0; index < name.length; index++) {
+      var letter = name[index];
+      property += letter >= "A" && letter <= "Z"
+        ? "-" + letter.toLowerCase() : letter;
+    }
     Object.defineProperty(GuestStyle.prototype, name, {
+      // Read the actual inline declaration, including changes through cssText
+      // or setProperty. CodeMirror reads animationName before restarting blink.
+      get: function () {
+        return immediate([3, this.reference, stringIndex("getPropertyValue"), [encode(property)]]);
+      },
       set: function (value) {
-        var property = "";
-        for (var index = 0; index < name.length; index++) {
-          var letter = name[index];
-          property += letter >= "A" && letter <= "Z"
-            ? "-" + letter.toLowerCase() : letter;
-        }
         if (value === "") {
           immediate([3, this.reference, stringIndex("removeProperty"), [encode(property)]]);
           return;
@@ -756,7 +1003,7 @@ GuestElement.prototype = Object.create(GuestObject.prototype);
 ["className", "hidden", "src", "textContent", "title", "value"].forEach(function (name) {
   Object.defineProperty(GuestElement.prototype, name, {
     configurable: true,
-    get: name === "value" ? function () {
+    get: name === "value" || name === "textContent" ? function () {
       return immediate([1, this.reference, stringIndex(name)]);
     } : undefined,
     set: function (value) {
@@ -787,15 +1034,15 @@ Object.defineProperty(GuestElement.prototype, "style", {
   });
 });
 
-GuestElement.prototype.append = function (...values) {
+GuestElement.prototype.append = function () {
   var args = [];
-  for (var index = 0; index < values.length; index++) args.push(encode(values[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("append"), args]);
 };
 
-GuestElement.prototype.replaceChildren = function (...values) {
+GuestElement.prototype.replaceChildren = function () {
   var args = [];
-  for (var index = 0; index < values.length; index++) args.push(encode(values[index]));
+  for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
   pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
 };
 
@@ -999,7 +1246,13 @@ function fetch(url) {
   });
 }
 
-// The build prepends packages/project-editor/src/constrained-css.js here.
+// The build prepends the shared CSS and selector parsers here.
+
+function encodeSelector(source) {
+  var writer = new Writer(new Uint8Array(16 * 1024));
+  writeConstrainedSelector(writer, parseConstrainedSelector(String(source)));
+  return writer.bytes.slice(4, writer.at);
+}
 
 function encodeCss(source, includeFonts) {
   var phase = "parse";
@@ -1007,7 +1260,7 @@ function encodeCss(source, includeFonts) {
     var rules = parseCss(source);
     phase = "encode";
     var writer = new Writer(new Uint8Array(128 * 1024));
-    writer.uint(4);
+    writer.uint(5);
     var fonts = [], fontName;
     if (includeFonts) {
       for (fontName in FONT_RESOURCES) fonts.push(FONT_RESOURCES[fontName]);
@@ -1074,7 +1327,7 @@ function encodeCss(source, includeFonts) {
         return;
       }
       writer.byte(1);
-      writer.text(rule.selector);
+      writeConstrainedSelector(writer, parseConstrainedSelector(rule.selector));
       writer.uint(rule.declarations.length);
       writeDeclarations(rule.declarations);
     });
@@ -1206,13 +1459,21 @@ function addEventListener(type, callback) {
 // guest wrapper for that synchronous dispatch so expandos used by delegated
 // event systems have the same meaning they have on the browser Event object.
 var deliveredEvents = Object.create(null);
+var deliveredEventCleanupPending = false;
 function eventForDelivery(reference) {
   var event = deliveredEvents[reference];
   if (event) return event;
   event = deliveredEvents[reference] = new GuestEvent(reference);
-  setTimeout(function () {
-    if (deliveredEvents[reference] === event) delete deliveredEvents[reference];
-  }, 0);
+  // Retire the dispatch cache as a batch. Native editing can emit thousands
+  // of events before timers run; one timer per wrapper exhausts callback IDs.
+  // Application-held events keep their own leases after this cache is gone.
+  if (!deliveredEventCleanupPending) {
+    deliveredEventCleanupPending = true;
+    setTimeout(function () {
+      deliveredEvents = Object.create(null);
+      deliveredEventCleanupPending = false;
+    }, 0);
+  }
   return event;
 }
 
@@ -1261,19 +1522,19 @@ if (!String.prototype.padStart) {
 }
 globalThis.__wwcPostMessage = function (message) {
   pendingOperations.push([3, document.reference, stringIndex("postMessage"), [
-    encode(String(message))
+    String(message)
   ]]);
 };
 globalThis.__wwcServiceCall = function (name, payload) {
   return immediate([3, document.reference, stringIndex("serviceCall"), [
-    encode(String(name)), encode(String(payload))
+    encode(String(name)), String(payload)
   ]]);
 };
 globalThis.__wwcReportError = function (message) {
   // Error reporting must survive a guest exception that prevents the normal
   // operation queue from reaching its next flush.
   immediate([3, document.reference, stringIndex("postMessage"), [
-    encode("__wwcError:" + String(message))
+    "__wwcError:" + String(message)
   ]]);
 };
 document.defaultView = globalThis;
@@ -1559,15 +1820,23 @@ Object.defineProperty(GuestElement.prototype, "namespaceURI", {
 GuestObject.prototype.contains = function (node) {
   return immediate([3, this.reference, stringIndex("contains"), [encode(node)]]);
 };
+["setPointerCapture", "releasePointerCapture", "hasPointerCapture"].forEach(function (name) {
+  GuestElement.prototype[name] = function (pointerId) {
+    return immediate([3, this.reference, stringIndex(name), [encode(pointerId)]]);
+  };
+});
+Object.defineProperty(GuestEvent.prototype, "pointerId", {
+  get: function () { return immediate([1, this.reference, stringIndex("pointerId")]); }
+});
 GuestObject.prototype.closest = function (selector) {
   var result = immediate([3, this.reference, stringIndex("closest"), [
-    encode(String(selector))
+    encode(encodeSelector(selector))
   ]]);
   return result === null ? null : nodeForReference(result[1]);
 };
 GuestElement.prototype.matches = function (selector) {
   return immediate([3, this.reference, stringIndex("matches"), [
-    encode(String(selector))
+    encode(encodeSelector(selector))
   ]]);
 };
 Object.defineProperty(GuestObject.prototype, "nodeValue", {
@@ -1684,17 +1953,25 @@ Object.defineProperties(GuestObject.prototype, {
     var children = childrenOf(this);
     return children.length ? children[children.length - 1] : null;
   } },
+  // A saved index is only a hint: validate the slot on every read, so reorders
+  // and moves between parents cannot make it point at a different node.
   nextSibling: { get: function () {
     var parent = parentOf(this);
     if (!parent) return null;
-    var siblings = childrenOf(parent);
-    return siblings[siblings.indexOf(this) + 1] || null;
+    var siblings = childrenOf(parent), index = this._guestChildIndex;
+    if (index === undefined || siblings[index] !== this) {
+      this._guestChildIndex = index = siblings.indexOf(this);
+    }
+    return index >= 0 ? siblings[index + 1] || null : null;
   } },
   previousSibling: { get: function () {
     var parent = parentOf(this);
     if (!parent) return null;
-    var siblings = childrenOf(parent);
-    return siblings[siblings.indexOf(this) - 1] || null;
+    var siblings = childrenOf(parent), index = this._guestChildIndex;
+    if (index === undefined || siblings[index] !== this) {
+      this._guestChildIndex = index = siblings.indexOf(this);
+    }
+    return index >= 0 ? siblings[index - 1] || null : null;
   } }
 });
 Object.defineProperty(GuestElement.prototype, "children", {
@@ -1894,12 +2171,12 @@ GuestElement.prototype.setCustomValidity = function (message) {
 };
 GuestElement.prototype.querySelector = function (selector) {
   var result = immediate([3, this.reference, stringIndex("querySelector"), [
-    encode(String(selector))
+    encode(encodeSelector(selector))
   ]]);
   return result === null ? null : nodeForReference(result[1]);
 };
 GuestElement.prototype.querySelectorAll = function (selector) {
-  var bytes = hostCall(this.reference, "querySelectorAllReferences", [String(selector)]);
+  var bytes = hostCall(this.reference, "querySelectorAllReferences", [encodeSelector(selector)]);
   var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var nodes = [];
   for (var index = 0; index < length; index++) {
@@ -2360,35 +2637,38 @@ globalThis.cancelAnimationFrame = function (handle) {
   delete animationCallbacks[handle];
   immediate([3, document.reference, stringIndex("cancelAnimationFrame"), [encode(handle)]]);
 };
-globalThis.setImmediate = function (callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  var index = allocateCallback(callback, true);
-  immediate([3, document.reference, stringIndex("task"), [encode(index)]]);
-  return index;
-};
-globalThis.setTimeout = function (callback, delay) {
+var timerCallbacks = Object.create(null);
+function createTimer(callback, delay, repeat, args) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
-  var index = allocateCallback(callback, true);
-  hostCall(document.reference, "timerOnce", [delay, index]);
-  return index;
-};
-var intervalCallbacks = Object.create(null);
-globalThis.setInterval = function (callback, delay) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  delay = Number.isFinite(delay) ? Math.max(0, Math.round(delay)) : 0;
-  var index = allocateCallback(callback, false);
-  var handle = hostCall(document.reference, "timer", [delay, index]);
-  intervalCallbacks[handle] = index;
+  var handle;
+  var index = allocateCallback(function () {
+    if (!repeat) delete timerCallbacks[handle];
+    if (args) callback.apply(globalThis, args);
+    else callback.call(globalThis);
+  }, !repeat);
+  handle = hostCall(document.reference, repeat ? "timer" : "timerOnce", [delay, index]);
+  timerCallbacks[handle] = index;
   return handle;
+}
+globalThis.setTimeout = function (callback, delay) {
+  return createTimer(callback, delay, false, arguments.length > 2 ? Array.prototype.slice.call(arguments, 2) : null);
 };
-globalThis.clearInterval = function (handle) {
-  var index = intervalCallbacks[handle];
+globalThis.setInterval = function (callback, delay) {
+  return createTimer(callback, delay, true, arguments.length > 2 ? Array.prototype.slice.call(arguments, 2) : null);
+};
+globalThis.setImmediate = function (callback) {
+  return createTimer(callback, 0, false, arguments.length > 1 ? Array.prototype.slice.call(arguments, 1) : null);
+};
+globalThis.clearTimeout = function (handle) {
+  handle = Number(handle);
+  var index = timerCallbacks[handle];
   if (index === undefined) return;
-  releaseCallback(index);
-  delete intervalCallbacks[handle];
   hostCall(document.reference, "timerCancel", [handle]);
+  delete timerCallbacks[handle];
+  releaseCallback(index);
 };
+globalThis.clearInterval = globalThis.clearImmediate = globalThis.clearTimeout;
 // Keep a real MediaQueryList lease. Preference changes do not necessarily
 // resize the viewport, and .matches remains live even without a listener.
 function GuestMediaQueryList(reference) { GuestObject.call(this, reference); }
@@ -2410,11 +2690,6 @@ GuestMediaQueryList.prototype.removeListener = function (callback) {
 globalThis.matchMedia = function (query) {
   return new GuestMediaQueryList(hostCall(document.reference, "matchMedia", [String(query)])[1]);
 };
-globalThis.clearTimeout = function (handle) {
-  if (!Number.isInteger(handle)) return;
-  retireOneShotCallback(handle);
-};
-globalThis.clearImmediate = globalThis.clearTimeout;
 globalThis.queueMicrotask = function (callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   Promise.resolve().then(callback);
@@ -2505,16 +2780,20 @@ GuestEvent.prototype.composedPath = function () {
   return path;
 };
 
-// Window events are represented by the canonical document service. Keep
-// listener identity and removal in the guest so the host only needs to emit a
-// small, auditable set of ambient browser signals.
+// Window events use the document service, with listener identity in the guest
+// and real unsubscription in the host. Removed listeners release their callback
+// slots rather than leaving inactive callbacks attached to the browser window.
 var windowListeners = [];
 globalThis.addEventListener = function (type, callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
+  for (var i = 0; i < windowListeners.length; i++) {
+    if (windowListeners[i].type === type && windowListeners[i].callback === callback) return;
+  }
   var record = { type: type, callback: callback, active: true };
   var callbackIndex = allocateCallback(function (event) {
-    if (record.active) record.callback(event || { type: type });
+    if (record.active) record.callback.call(globalThis, event || { type: type });
   }, false);
+  record.index = callbackIndex;
   immediate([3, document.reference, stringIndex("windowListen"), [
     encode(type), encode(callbackIndex)
   ]]);
@@ -2524,17 +2803,21 @@ globalThis.removeEventListener = function (type, callback) {
   for (var i = windowListeners.length - 1; i >= 0; i--) {
     var record = windowListeners[i];
     if (record.active && record.type === type && record.callback === callback) {
+      immediate([3, document.reference, stringIndex("windowUnlisten"), [
+        encode(type), encode(record.index)
+      ]]);
       record.active = false;
       windowListeners.splice(i, 1);
+      releaseCallback(record.index);
       return;
     }
   }
 };
 
 function allocateElementCallback(callback, target) {
-  // A DOM EventTarget may retain this listener for the life of the surface.
-  // Do not reuse callback slots that can still be named by a host listener.
-  var index = callbacks.length;
+  // Removed host listeners release their slots synchronously below. Reuse
+  // those slots rather than exhausting the event word after enough edits.
+  var index = freeCallbacks.length ? freeCallbacks.pop() : callbacks.length;
   if (index >= 4096) throw new RangeError("event callback space exhausted");
   // A browser EventTarget strongly retains its listeners until removal.
   var state = { active: true, callback: callback };
@@ -2573,8 +2856,10 @@ GuestElement.prototype.removeEventListener = function (type, callback) {
     if (record.type === type && record.callback === callback) {
       records.splice(index, 1);
       if (!record.local) {
+        // Unregister on the host before making the index reusable. An older
+        // listener must never dispatch into a newly allocated callback.
+        immediate([5, this.reference, stringIndex(type), record.index]);
         releaseCallback(record.index);
-        pendingOperations.push([5, this.reference, stringIndex(type), record.index]);
       }
       return;
     }
@@ -2699,7 +2984,9 @@ GuestElement.prototype.removeChild = function (child) {
   pendingOperations.push([3, this.reference, stringIndex("removeChild"), [encode(child)]]);
   return child;
 };
-GuestObject.prototype.remove = function () {
+// The base element facade has its own remove(). Override it too, otherwise
+// elements bypass this tree-cache update while text nodes use it correctly.
+GuestElement.prototype.remove = GuestObject.prototype.remove = function () {
   detachGuestNode(this);
   pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
 };

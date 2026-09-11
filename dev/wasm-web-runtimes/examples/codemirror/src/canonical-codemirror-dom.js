@@ -339,13 +339,13 @@ Object.defineProperty(GuestEvent.prototype, "pointerId", {
 });
 GuestObject.prototype.closest = function (selector) {
   var result = immediate([3, this.reference, stringIndex("closest"), [
-    encode(String(selector))
+    encode(encodeSelector(selector))
   ]]);
   return result === null ? null : nodeForReference(result[1]);
 };
 GuestElement.prototype.matches = function (selector) {
   return immediate([3, this.reference, stringIndex("matches"), [
-    encode(String(selector))
+    encode(encodeSelector(selector))
   ]]);
 };
 Object.defineProperty(GuestObject.prototype, "nodeValue", {
@@ -680,12 +680,12 @@ GuestElement.prototype.setCustomValidity = function (message) {
 };
 GuestElement.prototype.querySelector = function (selector) {
   var result = immediate([3, this.reference, stringIndex("querySelector"), [
-    encode(String(selector))
+    encode(encodeSelector(selector))
   ]]);
   return result === null ? null : nodeForReference(result[1]);
 };
 GuestElement.prototype.querySelectorAll = function (selector) {
-  var bytes = hostCall(this.reference, "querySelectorAllReferences", [String(selector)]);
+  var bytes = hostCall(this.reference, "querySelectorAllReferences", [encodeSelector(selector)]);
   var length = bytes[0] | bytes[1] << 8 | bytes[2] << 16 | bytes[3] << 24;
   var nodes = [];
   for (var index = 0; index < length; index++) {

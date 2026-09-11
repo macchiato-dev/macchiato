@@ -1,4 +1,5 @@
 import { parseConstrainedCss } from "./constrained-css.js";
+import { parseConstrainedSelector, writeConstrainedSelector } from "./constrained-selector.js";
 
 class Writer {
   constructor() { this.bytes = []; }
@@ -64,7 +65,7 @@ export function encodeConstrainedCss(source) {
 
 export function encodeConstrainedCssRules(rules) {
   const writer = new Writer();
-  writer.uint(4);
+  writer.uint(5);
   writer.uint(rules.length);
   function writeDeclarations(declarations) {
     for (const declaration of declarations) {
@@ -107,7 +108,8 @@ export function encodeConstrainedCssRules(rules) {
       }
       continue;
     }
-    writer.byte(1); writer.text(rule.selector); writer.uint(rule.declarations.length);
+    writer.byte(1); writeConstrainedSelector(writer, parseConstrainedSelector(rule.selector));
+    writer.uint(rule.declarations.length);
     writeDeclarations(rule.declarations);
   }
   };
