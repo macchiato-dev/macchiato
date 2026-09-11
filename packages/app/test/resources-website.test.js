@@ -698,6 +698,30 @@ test("every Resources starting point exports and imports without losing files or
   assert.deepEqual(errors, []);
 });
 
+test("project close uses its saved return path and otherwise returns home", async (t) => {
+  const port = await getPort();
+  const dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(async () => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`http://resources-edge.localhost:${port}/try`);
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
+  assert.equal(await page.locator(".project-close").getAttribute("href"), "/");
+  await page.evaluate(() => sessionStorage.setItem("resources-project-close-stack", JSON.stringify(["/collections"])));
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
+  assert.equal(await page.locator(".project-close").getAttribute("href"), "/collections");
+  await page.locator(".project-close").click();
+  await page.waitForURL(`http://resources-edge.localhost:${port}/collections`);
+  assert.deepEqual(await page.evaluate(() => JSON.parse(sessionStorage.getItem("resources-project-close-stack"))), []);
+  assert.deepEqual(errors, []);
+});
+
 test("a project build script runs with separate runtime and application inputs", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();
