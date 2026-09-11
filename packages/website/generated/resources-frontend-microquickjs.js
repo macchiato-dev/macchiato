@@ -61,6 +61,9 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             for (var _iterator7 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-slug-source], #project-name, #organization-name, " + slugSelector)), _step7; !(_step7 = _iterator7()).done;) {
               var field = _step7.value;
               field.addEventListener("input", onInput);
+              if (field.value) onInput({
+                target: field
+              });
             }
             for (var _iterator8 = _createForOfIteratorHelperLoose(document.querySelectorAll(slugSelector)), _step8; !(_step8 = _iterator8()).done;) {
               var _field = _step8.value;

@@ -27519,6 +27519,7 @@ function mountContentNameFields() {
     `[data-slug-source], #project-name, #organization-name, ${slugSelector}`
   )) {
     field.addEventListener("input", onInput);
+    if (field.value) onInput({ target: field });
   }
   for (const field of document.querySelectorAll(slugSelector)) {
     field.addEventListener("focusout", onFocusOut);
@@ -27644,7 +27645,7 @@ var STARTING_POINTS = Object.freeze({
   },
   clock: {
     files: [
-      { path: "index.html", content: '<!doctype html>\n<meta charset="utf-8">\n<title>Digital clock</title>\n<main><h1 id="time">--:--:--</h1><p id="date">Waiting for the sandbox\u2026</p></main>\n<script src="./script.js"></script>' },
+      { path: "index.html", content: '<!doctype html>\n<html lang="en">\n<head>\n  <meta charset="utf-8">\n  <meta name="viewport" content="width=device-width">\n  <title>Digital clock</title>\n  <link rel="stylesheet" href="./style.css">\n</head>\n<body>\n  <main><h1 id="time">--:--:--</h1><p id="date">Waiting for the sandbox\u2026</p></main>\n  <script src="./script.js"></script>\n</body>\n</html>' },
       { path: "style.css", content: "body { margin: 0; font-family: ui-monospace, monospace; color: #f5f7f7; background: #171a1a; }\nmain { padding: 3rem; text-align: center; }\nh1 { font-size: clamp(2rem, 10vw, 5rem); }\n" },
       { path: "script.js", content: 'const pad = (value) => String(value).padStart(2, "0");\nfunction tick() {\n  const now = new Date();\n  document.getElementById("time").textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;\n  document.getElementById("date").textContent = now.toLocaleDateString();\n}\ntick();\nsetInterval(tick, 1000);' }
     ],

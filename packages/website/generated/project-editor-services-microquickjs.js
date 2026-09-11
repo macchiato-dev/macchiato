@@ -870,6 +870,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     for (var _iterator8 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-slug-source], #project-name, #organization-name, " + slugSelector)), _step8; !(_step8 = _iterator8()).done;) {
       var field = _step8.value;
       field.addEventListener("input", onInput);
+      if (field.value) onInput({
+        target: field
+      });
     }
     for (var _iterator9 = _createForOfIteratorHelperLoose(document.querySelectorAll(slugSelector)), _step9; !(_step9 = _iterator9()).done;) {
       var _field = _step9.value;
@@ -1054,7 +1057,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     clock: {
       files: [{
         path: "index.html",
-        content: "<!doctype html>\n<meta charset=\"utf-8\">\n<title>Digital clock</title>\n<main><h1 id=\"time\">--:--:--</h1><p id=\"date\">Waiting for the sandbox\u2026</p></main>\n<script src=\"./script.js\"></script>"
+        content: "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width\">\n  <title>Digital clock</title>\n  <link rel=\"stylesheet\" href=\"./style.css\">\n</head>\n<body>\n  <main><h1 id=\"time\">--:--:--</h1><p id=\"date\">Waiting for the sandbox\u2026</p></main>\n  <script src=\"./script.js\"></script>\n</body>\n</html>"
       }, {
         path: "style.css",
         content: "body { margin: 0; font-family: ui-monospace, monospace; color: #f5f7f7; background: #171a1a; }\nmain { padding: 3rem; text-align: center; }\nh1 { font-size: clamp(2rem, 10vw, 5rem); }\n"
