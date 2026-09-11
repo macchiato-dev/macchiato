@@ -3590,3 +3590,11 @@ Fresh authenticated checks of both saved games pass on the actual restarted
 server with asset overrides disabled, including iframe output, editors, theme
 changes, and phone layouts (`native-resize-live-mahjong.log` and
 `native-resize-live-cat.log`). These make no owner saves.
+
+### Native document boundary investigation
+
+The new [document-boundary comparison](project-output-document-boundary.md)
+records four executing TODO failures for canvas painting and `rem` lengths,
+including after a root-font edit. It separates this limitation from the verified
+loading backgrounds and describes the rendering-document/reload tradeoff.
+No production layout, local deployment, or archive changed in this investigation.
