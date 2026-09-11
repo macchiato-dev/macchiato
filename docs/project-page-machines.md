@@ -3739,3 +3739,11 @@ improvement, not a solution to the remaining interpreter/parser latency.
 The complete `42457b9` candidate export passes its 152-file manifest and compressed
 backend execution in Deno. Full-project stress verification is pending. The live
 server and `/root/resources-bunny.tar.gz` have not been replaced by this candidate.
+
+The candidate's full stress run passed all assertions in 138 seconds, with
+the 106 KB paste taking 2.32 seconds and native insertion 41.6 seconds. This is
+slower than the preceding 90-second checkpoint run, so promotion remains held
+while a same-candidate comparison substitutes only the previous editor Wasm.
+That guest is compatible with the additive scheduling capability: its mutation,
+resize, idle, and remaining ABI calls are unchanged. This is a diagnostic
+comparison, not a production mixture. Evidence: `input-pending-stress*`.
