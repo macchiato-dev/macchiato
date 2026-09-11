@@ -16,7 +16,7 @@ const ATTRIBUTES = new Set([
   "role", "tabindex", "type", "value",
 ]);
 const SVG_ELEMENTS = new Map([
-  "svg", "g", "defs", "circle", "ellipse", "line", "linearGradient", "path", "rect", "stop", "text",
+  "svg", "g", "defs", "circle", "ellipse", "line", "linearGradient", "path", "rect", "stop", "text", "title",
 ].map((name) => [name.toLowerCase(), name]));
 const SVG_ATTRIBUTES = new Set([
   "cx", "cy", "d", "fill", "gradientUnits", "height", "offset", "opacity", "r", "rx", "ry",
@@ -115,8 +115,9 @@ export class SingleFileProjectCompiler {
       if (value.nodeType === 3) return [[0, value.textContent]];
       if (value.nodeType !== 1) return [];
       if (WRAPPERS.has(value.localName)) return value.childNodes.flatMap(nodes);
-      if (OMITTED.has(value.localName)) return [];
       const svg = value.namespaceURI === "http://www.w3.org/2000/svg";
+      // An SVG title labels the drawing; only HTML title is page metadata.
+      if (OMITTED.has(value.localName) && (!svg || value.localName !== "title")) return [];
       const name = svg ? SVG_ELEMENTS.get(value.localName) : value.localName;
       if (!name || (!svg && !ELEMENTS.has(name))) throw new Error(`<${value.localName}> is not available in the project surface`);
       const attributes = value.attributeEntries

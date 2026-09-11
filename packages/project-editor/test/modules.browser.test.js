@@ -119,6 +119,18 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   ]);
   const surface = iframe ? page.frameLocator("iframe").locator("main") : page.locator("#guest main");
   assert.equal(await surface.innerText(), "UTF-8 checked");
+  // SVG titles are visible to accessibility even though HTML page metadata
+  // does not belong in the output surface. Exercise the real output loader.
+  await load([{ path: "index.html", content:
+    '<head><title>Do not replace the host title</title></head><main>' +
+    '<svg role="img" aria-labelledby="mark-name" viewBox="0 0 24 24">' +
+    '<title id="mark-name">Cat mark</title><circle cx="12" cy="12" r="4"/>' +
+    '</svg></main>' }]);
+  const mark = surface.getByRole("img", { name: "Cat mark" });
+  await mark.waitFor();
+  assert.equal(await mark.locator("title").evaluate(node => node.namespaceURI),
+    "http://www.w3.org/2000/svg");
+  assert.equal(await mark.evaluate(node => node.ownerDocument.title), "");
   await load([
     { path: "index.html", content: '<main>Click this text</main><script src="keys.js"></script>' },
     { path: "keys.js", content: `

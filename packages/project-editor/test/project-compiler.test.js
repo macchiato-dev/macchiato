@@ -31,6 +31,21 @@ test("inline SVG retains its namespace, viewBox, and drawing attributes", () => 
     [[1, "path", 1, [["d", "M1 2 L3 4"], ["fill", "#abc"]], []]]]);
 });
 
+test("SVG accessible titles survive without retaining HTML page metadata", () => {
+  const result = compile('<head><title>Page title</title></head>' +
+    '<svg role="img" aria-labelledby="mark-name"><title id="mark-name">Cat mark</title>' +
+    '<circle cx="12" cy="12" r="4"/></svg>');
+  assert.equal(result.tree.length, 1);
+  assert.deepEqual(result.tree[0][4][0],
+    [1, "title", 1, [["id", "mark-name"]], [[0, "Cat mark"]]]);
+  assert.throws(() => compile('<svg><foreignObject><div>HTML</div></foreignObject></svg>'),
+    /not available/);
+  const styled = compile('<svg><title>Styled mark</title>' +
+    '<style>circle { fill: #abc; }</style><circle r="4"/></svg>');
+  assert.equal(styled.stylesheets.length, 1, "SVG styles still use semantic CSS operations");
+  assert.deepEqual(styled.tree[0][4].map(node => node[1]), ["title", "circle"]);
+});
+
 test("embedded CSS SVG becomes semantic image data, not a forwarded URL", () => {
   const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="#abc"/></svg>';
   const source = `<style>.card{background-image:url("data:image/svg+xml,${encodeURIComponent(svg)}")}</style><div class="card"></div>`;
