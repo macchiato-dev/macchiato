@@ -3165,7 +3165,21 @@ oversized read and module loading. Five full application workflows pass:
 first paint, repeated theme switches, guest storage failures, storage-denied
 startup, and recovery/API-save/native-publication/ZIP export. The `d795021`
 export verifies all 152 files and runs its compressed backend in Deno.
-Owner-project and full editing checks remain before local promotion.
+Read-only checks of both saved games, 50 tour slides, the SQLite reader,
+expanded/embedded keyboard navigation, themes, and phone views also pass.
+The unprofiled full editing stress test passes in 54.1 seconds, including an
+80-edit burst, scrolling, undo/redo, save/reload, recovery, and phone views.
+Its 106,432-character paste takes 784 ms; native insertion of 106,458 characters
+takes 17,055 ms. The latter remains slow, and these timings do not establish a
+speedup. Game, dark editor, and large-input screenshots were inspected.
+
+The archive was extracted and its inventory reverified before replacing
+`/root/resources-bunny.tar.gz`. The previous archive is retained at
+`/root/archive/2026/09/11/resources-bunny-f34d76d-before-storage-replies.tar.gz`.
+After restarting the local server, six live host/controller/guest/frame assets
+match this export byte-for-byte. Logs and screenshots are under
+`/root/macchiato-work/storage-replies-*`. No owner project was saved and
+nothing was deployed to Bunny.
 
 This closes oversized replies through `storage.request`, not every application
 service or general native exception. Subscription-time storage getter failures
