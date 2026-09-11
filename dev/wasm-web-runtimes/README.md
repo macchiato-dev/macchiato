@@ -59,6 +59,20 @@ Browser tests cover deep visitors, array mutation/receiver semantics, and both
 overflow and recovery through a still-native callback method. Do not remove
 the C-call guard or equate raising it with fixing arbitrary recursive code.
 
+## Reference leases
+
+A returned host reference carries a lease. A new guest wrapper owns that lease
+until its finalizer runs. If the guest already has the wrapper, it releases the
+duplicate lease immediately instead of allocating a temporary finalizer token.
+This does not collect the owning wrapper or change its reachability.
+
+MicroQuickJS's private bridge accepts `(reference + 1, 0)` for this existing
+zero-length ABI control, in addition to its usual byte-buffer messages. It
+checks that the control is an integer in `1..2^20`. QuickJS already uses the
+same direct release. No host method, permission, or Wasm import is added.
+Tests compare the old temporary-token shim with direct release, retain node
+identity through repeated GC, and reject malformed release controls.
+
 ## Guest text encoding
 
 The MicroQuickJS build supplies a private `__wwcWriteText(bytes, offset, text)`
