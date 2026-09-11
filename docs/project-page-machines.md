@@ -2290,6 +2290,48 @@ use this checkpoint; the previous archive is retained at
 No Bunny deployment was performed. Resource-bearing recovery and the broader
 remaining goal requirements are still open.
 
+### Durable project resource recovery
+
+The page-local numeric-handle defect above is fixed. Resource handles are now
+UUIDs, and pending snapshots and unsaved-project histories are stored in one
+atomic session-storage record containing the unchanged guest JSON plus the
+referenced resource bytes. Restoring the same handles preserves history splice
+positions. Validation finishes before modifying the live resource table;
+unknown old handles are never guessed from a new page's allocation order.
+Ordinary storage keys and resource-free snapshots keep their existing format.
+
+ZIP decoding must finish before resource compaction. Current `/api/projects/`
+requests, as well as the older routes, materialize handles before saving and
+compact returned snapshots. Native Create/Save form submission is another
+explicit materialization boundary. Selecting a large file resolves that file
+for display without copying all unopened assets into the editor application.
+The guest fetch payload remains bounded at 2 MiB; after resolving resources,
+a project request uses the server's 70 MiB serialized-project budget.
+
+The outer page asks only whether recovery data exists. The editor requests the
+record and receives either its value or an error as data: a host exception can
+unwind Wasm and cannot be recovered by an ordinary guest JavaScript catch.
+An unavailable recovery record stays in storage, the saved project still
+renders, and an editor error explains the failure. The controller also passes
+the actual navigation type. Guessing that every visit is fresh when the guest
+lacks `performance.getEntriesByType` was deleting unsaved drafts on reload.
+
+Browser coverage now imports a ZIP with a 70 KiB script and SVG, creates a
+project, interrupts autosave, reloads its pending edits, checks server bytes,
+exports the ZIP, opens the large source file, and publishes through the native
+form. It also checks expired-handle preservation and an unsaved project's
+resource-bearing history across reload. Every stored/exported file is compared
+with the original bytes. These are disposable account fixtures; owner project
+data is not changed. Unit coverage additionally checks atomic quota failures,
+malformed/conflicting resource records, history patch replay, and requests with
+resources larger than the guest transport budget.
+
+This is not a general storage-error bridge or a new Machine Host feature.
+Quota failures in ordinary guest storage writes still need browser-level
+recovery coverage; the atomic host write test alone does not prove that UI
+path. Resource-table lifetime and retained live DOM collections also remain
+separate work, along with the broader performance/deployment goal.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
