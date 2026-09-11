@@ -27465,6 +27465,12 @@ function mountContentNameFields() {
   }
 }
 
+// packages/website/project-session.js
+var DRAFT_KEY = "resources_project_draft_v5";
+function pendingProjectSnapshotKey(projectId) {
+  return projectId ? `resources_project_pending_v1:${projectId}` : "";
+}
+
 // packages/website/content-form-client.js
 var PROJECT_IMAGE_TYPES = /* @__PURE__ */ new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
 function isProjectImage(file) {
@@ -27562,7 +27568,6 @@ for (const fields of document.querySelectorAll("[data-project-fields]")) {
     if (event.target === modal) close();
   });
 }
-var DRAFT_KEY = "resources_project_draft_v5";
 var CHECKPOINT_MS = 3e5;
 var STARTING_POINTS = Object.freeze({
   article: {
@@ -27871,7 +27876,7 @@ async function mountProjectRoot(root) {
   const draft = persistence === "session";
   const memoryOnly = persistence === "memory";
   const readOnly2 = root.dataset.readOnly === "true";
-  const pendingSnapshotKey = projectId ? `resources_project_pending_v1:${projectId}` : "";
+  const pendingSnapshotKey = pendingProjectSnapshotKey(projectId);
   const initialProjectLayout = root.closest(".project-create__layout");
   const initialDetailsButton = root.querySelector('[data-project-view="details"]');
   const initiallyNarrow = globalThis.matchMedia?.("(max-width: 760px)").matches === true;
@@ -28100,7 +28105,7 @@ async function mountProjectRoot(root) {
       if (root.dataset.outputMachineError) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
-      if (!projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
+      if (root.dataset.outputMachineState === "waiting" || !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";

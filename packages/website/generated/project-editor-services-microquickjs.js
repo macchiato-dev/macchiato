@@ -806,6 +806,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       _field.addEventListener("focusout", onFocusOut);
     }
   }
+  var DRAFT_KEY = "resources_project_draft_v5";
+  function pendingProjectSnapshotKey(projectId) {
+    return projectId ? "resources_project_pending_v1:" + projectId : "";
+  }
   var PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
   function isProjectImage(file) {
     var extension = String((file == null ? void 0 : file.path) || "").split(".").at(-1).toLowerCase();
@@ -918,7 +922,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   for (var _iterator11 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-fields]")), _step11; !(_step11 = _iterator11()).done;) {
     if (_loop4()) continue;
   }
-  var DRAFT_KEY = "resources_project_draft_v5";
   var CHECKPOINT_MS = 3e5;
   var STARTING_POINTS = Object.freeze({
     article: {
@@ -2338,7 +2341,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       if (__resourcesDatasetGet(root, "data-output-machine-error")) {
                         setStatus("Output stopped: " + __resourcesDatasetGet(root, "data-output-machine-error"), "error", null, "output");
                       }
-                      if (!projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
+                      if (__resourcesDatasetGet(root, "data-output-machine-state") === "waiting" || !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
                       _context5.n = 6;
                       break;
                     case 4:
@@ -2450,7 +2453,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             draft = persistence === "session";
             memoryOnly = persistence === "memory";
             readOnly = __resourcesDatasetGet(root, "data-read-only") === "true";
-            pendingSnapshotKey = projectId ? "resources_project_pending_v1:" + projectId : "";
+            pendingSnapshotKey = pendingProjectSnapshotKey(projectId);
             initialProjectLayout = root.closest(".project-create__layout");
             initialDetailsButton = root.querySelector('[data-project-view="details"]');
             initiallyNarrow = (globalThis.matchMedia == null ? void 0 : globalThis.matchMedia("(max-width: 760px)").matches) === true;

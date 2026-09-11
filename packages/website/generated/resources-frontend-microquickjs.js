@@ -12,7 +12,7 @@ function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 (function () {
   var _resourcesFrontend = _asyncToGenerator(_regenerator().m(function _callee2() {
-    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, root2, mountContentNameFields;
+    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, DRAFT_KEY, pendingProjectSnapshotKey, hasProjectRecovery, root3, navigation, deferOutput, root2, mountContentNameFields;
     return _regenerator().w(function (_context3) {
       while (1) switch (_context3.n) {
         case 0:
@@ -66,6 +66,23 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
               var _field = _step8.value;
               _field.addEventListener("focusout", onFocusOut);
             }
+          };
+          hasProjectRecovery = function _hasProjectRecovery(_ref3, storage) {
+            var projectId = _ref3.projectId,
+              _ref3$persistence = _ref3.persistence,
+              persistence = _ref3$persistence === void 0 ? "stored" : _ref3$persistence,
+              readOnly = _ref3.readOnly,
+              navigationType = _ref3.navigationType;
+            if (readOnly || persistence === "memory") return false;
+            var key = persistence === "session" ? ["reload", "back_forward"].includes(navigationType) ? DRAFT_KEY : "" : pendingProjectSnapshotKey(projectId);
+            try {
+              return !!key && storage.getItem(key) !== null;
+            } catch (_unused9) {
+              return false;
+            }
+          };
+          pendingProjectSnapshotKey = function _pendingProjectSnapsh(projectId) {
+            return projectId ? "resources_project_pending_v1:" + projectId : "";
           };
           mountProjectPresentation = function _mountProjectPresenta(root3) {
             var button = root3.querySelector("[data-project-present]");
@@ -156,7 +173,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             if (persist) {
               try {
                 localStorage.setItem(storageKey, choice);
-              } catch (_unused6) {}
+              } catch (_unused8) {}
             }
             document.dispatchEvent(new CustomEvent("themechange", {
               detail: {
@@ -172,7 +189,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             try {
               var value = localStorage.getItem(storageKey);
               return choices.has(value) ? value : null;
-            } catch (_unused5) {
+            } catch (_unused7) {
               return null;
             }
           };
@@ -397,9 +414,20 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             }
             return frontendFetch;
           }();
+          DRAFT_KEY = "resources_project_draft_v5";
           if (document.querySelector("[data-project-editor]")) {
-            mountProjectPresentation(document.querySelector("[data-project-editor]"));
-            requestFrontendService("editor.mount").catch(function (error) {
+            root3 = document.querySelector("[data-project-editor]");
+            mountProjectPresentation(root3);
+            navigation = typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation")[0] : null;
+            deferOutput = hasProjectRecovery({
+              projectId: __resourcesDatasetGet(root3, "data-project-id"),
+              persistence: __resourcesDatasetGet(root3, "data-persistence"),
+              readOnly: __resourcesDatasetGet(root3, "data-read-only") === "true",
+              navigationType: navigation == null ? void 0 : navigation.type
+            }, sessionStorage);
+            requestFrontendService("editor.mount", {
+              deferOutput: deferOutput
+            }).catch(function (error) {
               var _document$querySelect;
               (_document$querySelect = document.querySelector("[data-project-editor]")) == null || _document$querySelect.setAttribute("data-editor-machine-state", "failed");
               globalThis.__wwcReportError((error == null ? void 0 : error.stack) || (error == null ? void 0 : error.message) || String(error));
