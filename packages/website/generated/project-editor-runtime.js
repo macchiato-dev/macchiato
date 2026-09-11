@@ -1004,6 +1004,7 @@ var WasmWebBridge = class {
       Text
     } = realm;
     const hostNavigator = realm.navigator;
+    const hostScheduling = hostNavigator.scheduling;
     const primaryRoot = documentTarget || messagesOnly ? hostDocument.body : targetRoots[0];
     const documentSubtree = !documentTarget && !messagesOnly && targetRoots.length === 1 && primaryRoot.localName === "html" && primaryRoot.namespaceURI === "http://www.w3.org/1999/xhtml";
     const documentPart = (name) => Array.from(primaryRoot.children).find((node) => node.localName === name && node.namespaceURI === "http://www.w3.org/1999/xhtml") || null;
@@ -1256,6 +1257,9 @@ var WasmWebBridge = class {
         return reference(name === "head" ? logicalHead : name === "documentElement" && documentTarget ? hostDocument.documentElement : primaryRoot);
       }
       if (object === hostDocument && name === "navigator") return reference(hostNavigator);
+      if (object === hostNavigator && name === "scheduling") {
+        return typeof hostScheduling?.isInputPending === "function" ? reference(hostScheduling) : null;
+      }
       if (object === hostDocument && name === "activeElement") {
         return object.activeElement && insideDocument(object.activeElement) ? reference(object.activeElement) : null;
       }
@@ -1556,6 +1560,9 @@ var WasmWebBridge = class {
       frames.delete(id);
     }
     function call(object, name, args) {
+      if (hostScheduling && object === hostScheduling && name === "isInputPending" && args.length === 1 && typeof args[0] === "boolean") {
+        return hostScheduling.isInputPending({ includeContinuous: args[0] });
+      }
       if (object === hostDocument && name === "resizeObserver" && args.length === 1 && typeof ResizeObserver === "function" && Number.isInteger(args[0]) && args[0] >= 0 && args[0] <= 4095) {
         return reference(new ResizeObserver((entries) => deliver(args[0], entries)));
       }

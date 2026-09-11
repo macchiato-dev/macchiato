@@ -2053,6 +2053,25 @@ function GuestNavigator(reference) {
 GuestNavigator.prototype = Object.create(GuestObject.prototype);
 var navigatorReference = immediate([1, document.reference, stringIndex("navigator")]);
 var navigator = new GuestNavigator(navigatorReference[1]);
+function GuestScheduling(reference) {
+  GuestObject.call(this, reference);
+}
+GuestScheduling.prototype = Object.create(GuestObject.prototype);
+GuestScheduling.prototype.isInputPending = function (options) {
+  if (!(this instanceof GuestScheduling)) throw new TypeError("Illegal invocation");
+  if (options != null && typeof options !== "object" && typeof options !== "function") {
+    throw new TypeError("options must be an object");
+  }
+  var continuous = options == null ? false : !!options.includeContinuous;
+  return immediate([3, this.reference, stringIndex("isInputPending"), [continuous]]);
+};
+var schedulingReference = immediate([1, navigator.reference, stringIndex("scheduling")]);
+var scheduling = schedulingReference ? new GuestScheduling(schedulingReference[1]) : undefined;
+Object.defineProperty(GuestNavigator.prototype, "scheduling", {
+  get: function get() {
+    return scheduling;
+  }
+});
 ["language", "languages", "maxTouchPoints", "platform", "userAgent", "vendor"].forEach(function (name) {
   Object.defineProperty(GuestNavigator.prototype, name, {
     get: function get() {
