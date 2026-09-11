@@ -80,7 +80,7 @@ export async function startResourcesMachineController() {
     "navigation.type": () => window.performance.getEntriesByType("navigation")[0]?.type || "navigate",
     "appearance.theme": () => document.documentElement.dataset.theme === "light" ? "light" : "dark",
     "archive.download": (payload) => archiveDevice.download(payload),
-    "resource.read": (payload) => projectResources.read(payload.content),
+    "resource.read": (payload) => projectResources.readChunk(payload.content, payload.offset),
     "project.prepareSubmit": () => editorDevice.prepareSubmission(),
     "editor.workspace.initial": () => editorDevice.getInitialSnapshot(),
     "route.replace": (payload) => {

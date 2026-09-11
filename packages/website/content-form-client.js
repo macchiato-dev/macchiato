@@ -549,10 +549,60 @@ async function mountProjectRoot(root) {
     root.closest("form")?.querySelector("[data-new-draft-flash]")?.removeAttribute("hidden");
   }
 
-  function selectedContent() {
+  let editorDocumentLimits = null;
+  function selectedSource() {
     if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
-    const content = state.files.find((file) => file.path === selected)?.content ?? "";
+    return state.files.find((file) => file.path === selected)?.content ?? "";
+  }
+  function selectedContent() {
+    const content = selectedSource();
     return editorController?.readContent ? editorController.readContent(content) : content;
+  }
+
+  function showSourcePages(source, info) {
+    const panel = document.createElement("section");
+    panel.className = "project-editor__asset-view";
+    const heading = document.createElement("strong");
+    heading.textContent = selected;
+    const summary = document.createElement("p");
+    summary.textContent = `Read-only source · ${info.length} characters · ${info.lines} lines`;
+    const text = document.createElement("pre");
+    text.tabIndex = 0;
+    text.setAttribute("aria-label", "File source");
+    const controls = document.createElement("div");
+    const previous = document.createElement("button"), next = document.createElement("button");
+    previous.type = next.type = "button";
+    previous.textContent = "Previous section";
+    next.textContent = "Next section";
+    const position = document.createElement("span");
+    position.setAttribute("aria-live", "polite");
+    controls.append(previous, position, next);
+    panel.append(heading, summary, text, controls);
+    editorMount.parentElement.append(panel);
+    const pages = [{ offset: 0, line: 1 }];
+    let page = 0, following;
+    function render() {
+      const { offset, line } = pages[page];
+      let value = editorController.readContent ? editorController.readContent(source, offset)
+        : source.slice(offset, offset + 64 * 1024);
+      if (offset + value.length < info.length) {
+        // Prefer complete lines; a single very long line is still bounded.
+        const newline = value.lastIndexOf("\n");
+        if (newline >= 0) value = value.slice(0, newline + 1);
+        else if (/[\uD800-\uDBFF]$/.test(value)) value = value.slice(0, -1);
+      }
+      const newlines = value.split("\n").length - 1;
+      following = { offset: offset + value.length, line: line + newlines };
+      text.textContent = value;
+      text.scrollTop = 0;
+      const lastLine = line + newlines - (value.endsWith("\n") ? 1 : 0);
+      position.textContent = `Lines ${line}–${Math.max(line, lastLine)}`;
+      previous.disabled = page === 0;
+      next.disabled = following.offset >= info.length;
+    }
+    previous.addEventListener("click", () => { page--; render(); });
+    next.addEventListener("click", () => { pages[++page] = following; render(); });
+    render();
   }
 
   function mode() {
@@ -567,14 +617,23 @@ async function mountProjectRoot(root) {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
     const file = state.files.find((file) => file.path === selected);
-    const selectedFile = file && { ...file, content: selectedContent() };
+    const source = selectedSource();
+    const info = editorController.contentInfo?.(source);
+    const selectedFile = file && { ...file, content: info?.content ?? selectedContent() };
     editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
     editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
-    editorMount.hidden = isProjectImage(selectedFile);
+    const largeSource = info && !isProjectImage(selectedFile) && editorDocumentLimits &&
+      (info.length > editorDocumentLimits.maxCharacters || info.lines > editorDocumentLimits.maxLines);
+    editorMount.hidden = isProjectImage(selectedFile) || Boolean(largeSource);
+    if (largeSource) {
+      showSourcePages(source, info);
+      delete root.dataset.editorLoading;
+      return;
+    }
     if (isProjectImage(selectedFile)) {
       const image = document.createElement("img");
       image.className = "project-editor__image-view";
-      image.src = selectedFile.content;
+      image.src = selectedContent();
       image.alt = selectedFile.path;
       editorMount.parentElement.append(image);
       delete root.dataset.editorLoading;
@@ -629,7 +688,9 @@ async function mountProjectRoot(root) {
       editorController = controller;
       root.dataset.editorMachineStage = "snapshot";
       editorController.setSnapshot(state);
-      root.dataset.editorMachineId = controller.inspect()?.machine?.machineId || "quickjs-editor";
+      const inspection = controller.inspect();
+      editorDocumentLimits = inspection?.limits;
+      root.dataset.editorMachineId = inspection?.machine?.machineId || "quickjs-editor";
       root.dataset.editorMachineState = "ready";
       root.dataset.editorMachineStage = "history";
       if (localHistory && historyInEditorMachine) localHistory = editorController.history.initialize(localHistory);

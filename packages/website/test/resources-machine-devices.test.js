@@ -16,6 +16,29 @@ function storageWindow() {
   return { sessionStorage: area(), localStorage: area(), addEventListener() {} };
 }
 
+test("resource reads are bounded chunks with catchable errors and unchanged bytes", () => {
+  const device = new ResourcesProjectResourceDevice();
+  const source = "\0\n\"\\😀".repeat(400000);
+  const compact = device.compactSnapshot({ files: [{ path: "large.txt", content: source }] });
+  const reference = compact.files[0].content;
+  const parts = [];
+  let offset = 0;
+  do {
+    const chunk = device.readChunk(reference, offset);
+    assert.equal(chunk.error, null);
+    assert.equal(chunk.length, source.length);
+    assert.ok(chunk.content.length <= 64 * 1024);
+    assert.ok(JSON.stringify(chunk).length < 2 * 1024 * 1024);
+    assert.equal(chunk.lines, offset === 0 ? 400001 : undefined);
+    parts.push(chunk.content);
+    offset += chunk.content.length;
+  } while (offset < source.length);
+  assert.equal(parts.join(""), source);
+  assert.equal(device.readChunk(reference, source.length).content, "");
+  for (const offset of [-1, 0.5, source.length + 1]) assert.ok(device.readChunk(reference, offset).error);
+  assert.match(device.readChunk("\0resources-project-resource:missing").error, /unavailable/);
+});
+
 test("archive import awaits decoding before compacting resource files", async () => {
   const snapshot = { files: [{ path: "index.html", content: "<h1>Game</h1>" },
     { path: "tile.svg", content: "tile bytes" }], config: {} };

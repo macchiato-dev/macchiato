@@ -1826,6 +1826,47 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.deepEqual(errors, []);
 });
 
+test("large project files remain readable without exceeding the editor service boundary", { timeout: 90_000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const account = await createAccountStore(createNodeSqliteClient(db)).authenticateIdentity({
+    provider: "github", providerUserId: "large-file", login: "large-dev", name: "Large Dev",
+    email: "large@example.test", emailVerified: true,
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.context().addCookies([{ name: "resources_session", value: session,
+    domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const large = "First line\n" + ("source " + "x".repeat(180) + "\n").repeat(12000) + "Last line\n";
+  const snapshot = { files: [
+    { path: "index.html", content: "<h1>Large file fixture</h1>" },
+    { path: "large.txt", content: large },
+  ], config: { entry: "index.html", template: "html" } };
+  await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
+  await page.locator(".cm-content").waitFor();
+  await page.locator("[data-project-archive-file]").setInputFiles({ name: "large.zip",
+    mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
+  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", { name: "Large file fixture" }).waitFor();
+  await page.locator("[data-project-file-trigger]").click();
+  await page.locator('[data-project-file="large.txt"]').click();
+  try {
+    await page.locator(".project-editor__asset-view").getByText("First line", { exact: false }).waitFor({ timeout: 5000 });
+  } catch (error) {
+    t.diagnostic(JSON.stringify({ errors, status: await page.locator("[data-project-status]").textContent() }));
+    throw error;
+  }
+  assert.deepEqual(errors, []);
+});
+
 test("project resources survive session recovery, API saves, native publication, and ZIP export", { timeout: 120_000 }, async t => {
   const port = await getPort(), dataDir = await tempDir();
   const app = startApp(port, dataDir);

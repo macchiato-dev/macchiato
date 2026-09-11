@@ -89,15 +89,35 @@ export function writeProjectRecovery(key, value) {
 
 export async function mountResourcesProjectEditor(options) {
   listeners = options;
-  let lastContent, lastValue;
-  return Object.freeze({
-    readContent(content) {
-      if (content === lastContent) return lastValue;
-      const value = content.startsWith(PROJECT_RESOURCE_PREFIX)
-        ? callHost("resource.read", { content }) : content;
+  let lastContent, lastValue, firstChunk;
+  function chunk(content, offset = 0) {
+    if (content !== lastContent) {
       lastContent = content;
-      lastValue = value;
-      return value;
+      lastValue = firstChunk = undefined;
+    }
+    if (offset === 0 && firstChunk) return firstChunk;
+    const result = content.startsWith(PROJECT_RESOURCE_PREFIX)
+      ? callHost("resource.read", { content, offset })
+      : { content: content.slice(offset, offset + 64 * 1024), length: content.length,
+        lines: offset === 0 ? content.split("\n").length : undefined };
+    if (result.error) throw new Error(result.error);
+    if (offset === 0) firstChunk = result;
+    return result;
+  }
+  return Object.freeze({
+    contentInfo(content) { return chunk(content); },
+    readContent(content, offset) {
+      if (offset !== undefined) return chunk(content, offset).content;
+      if (content === lastContent && lastValue !== undefined) return lastValue;
+      const first = chunk(content), parts = [first.content];
+      let at = first.content.length;
+      while (at < first.length) {
+        const part = chunk(content, at).content;
+        if (!part.length) throw new Error("Project resource ended before its declared length");
+        parts.push(part);
+        at += part.length;
+      }
+      return lastValue = parts.join("");
     },
     prepareSubmit() { return callHost("project.prepareSubmit"); },
     setContent(content, language = "plain", settings = {}) {

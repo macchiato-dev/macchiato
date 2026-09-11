@@ -53,6 +53,23 @@ export class ResourcesProjectResourceDevice {
   read(content) {
     return this.hydrateFiles([{ path: "selected file", content }])[0].content;
   }
+  readChunk(content, offset = 0) {
+    try {
+      if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Invalid resource offset");
+      const value = this.read(content);
+      if (offset > value.length) throw new Error("Resource offset exceeds file length");
+      // Even JSON's worst-case escaping stays below the service text bound.
+      // Count lines only for the first chunk, not on every page of a file.
+      let lines;
+      if (offset === 0) {
+        lines = 1;
+        for (let at = value.indexOf("\n"); at !== -1; at = value.indexOf("\n", at + 1)) lines++;
+      }
+      return { content: value.slice(offset, offset + 64 * 1024), length: value.length, lines, error: null };
+    } catch (error) {
+      return { error: error.message || String(error) };
+    }
+  }
   compilationFiles(files, entry = "index.html") {
     return this.hydrateFiles(files).map(file => {
       const image = /\.(?:gif|jpe?g|png|svg|webp)$/i.test(file.path);
