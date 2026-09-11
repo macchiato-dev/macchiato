@@ -3754,3 +3754,11 @@ insertion 30.6 seconds. That contrasts with the enabled candidate's 43.2-second
 edit checkpoint and 138-second total. A repeat of the enabled candidate is
 needed before attributing the difference; do not promote it based only on its
 functional passes. `input-pending-stress-old-editor` contains that comparison.
+
+The enabled repeat then passed in 80 seconds: the edit checkpoint was 25.1
+seconds, paste 1.40 seconds, and native insertion 26.5 seconds. Thus the 138
+second run is not a reproducible regression in this pair of comparisons, but
+the spread also prevents a reliable speedup claim. Functional assertions are
+unchanged across all three runs. Logs, retained checkpoints, and screenshots:
+`input-pending-stress-repeat*`. Saved-project export checks are next, before
+replacing the live checkpoint.
