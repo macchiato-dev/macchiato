@@ -2414,6 +2414,8 @@ test("large project files remain readable without exceeding the editor service b
 });
 
 test("project resources survive session recovery, API saves, native publication, and ZIP export", { timeout: 120_000 }, async t => {
+  const started = performance.now();
+  const checkpoint = name => t.diagnostic(`${name}: ${Math.round(performance.now() - started)} ms`);
   const port = await getPort(), dataDir = await tempDir();
   const app = startApp(port, dataDir);
   t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
@@ -2429,6 +2431,17 @@ test("project resources survive session recovery, API saves, native publication,
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  // Compare complete exported host/guest sets, never a mismatched single file.
+  if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
+    const directory = resolve(process.env.MACCHIATO_TEST_ASSETS_DIRECTORY);
+    await page.route("**/-/resources-site/**", async route => {
+      const name = new URL(route.request().url()).pathname.split("/").pop();
+      const contentType = name.endsWith(".js") ? "text/javascript" : name.endsWith(".wasm")
+        ? "application/wasm" : name.endsWith(".html") ? "text/html" : name.endsWith(".css")
+        ? "text/css" : "application/octet-stream";
+      await route.fulfill({ body: await readFile(join(directory, name)), contentType });
+    });
+  }
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.context().addCookies([{ name: "resources_session", value: session,
@@ -2486,6 +2499,7 @@ test("project resources survive session recovery, API saves, native publication,
   await page.locator(".cm-content").waitFor();
   await importSnapshot(original);
   await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
+  checkpoint("initial import and output");
   await page.getByLabel("Title", { exact: true }).fill("Resource recovery");
   const creating = page.waitForResponse(response => response.request().method() === "POST" &&
     new URL(response.url()).pathname === "/projects");
@@ -2518,6 +2532,7 @@ test("project resources survive session recovery, API saves, native publication,
   await page.locator(".cm-content").waitFor();
   await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
 
+  checkpoint("created project and oversized recovery rejection");
   // Keep the server checkpoint unchanged while staging a new asset-bearing
   // snapshot. This failure is confined to the disposable fixture's autosave.
   let rejectSave = true;
@@ -2538,6 +2553,7 @@ test("project resources survive session recovery, API saves, native publication,
   const workspace = await (await page.request.get(new URL(workspaceUrl, page.url()).href)).json();
   assert.deepEqual(filesOf(workspace.snapshot), filesOf(changed), "autosave sends actual resource bytes");
   assert.deepEqual(await exportedFiles(), filesOf(changed));
+  checkpoint("recovered snapshot autosave and export");
 
   await page.locator("[data-project-file-trigger]").click();
   await page.locator('[data-project-file="data.js"]').click();
@@ -2555,7 +2571,9 @@ test("project resources survive session recovery, API saves, native publication,
 
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
   await page.locator('[data-tab-path="index.html"] [role="tab"]').click();
+  checkpoint("native publication");
   await fillSessionStorage();
+  checkpoint("saved project storage filled");
   const savedUnderQuota = structuredClone(changed);
   savedUnderQuota.files.find(file => file.path === "index.html").content += '<!--' + "x".repeat(4096) + '-->';
   await page.locator(".cm-content").click();
@@ -2586,6 +2604,7 @@ test("project resources survive session recovery, API saves, native publication,
   assert.equal(await page.evaluate(key => sessionStorage.getItem(key), key), expired);
   await output.getByRole("heading", { name: "Recovered resource", exact: true }).waitFor();
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-warning.png") });
+  checkpoint("quota autosave and expired recovery rejection");
   await page.evaluate(key => sessionStorage.removeItem(key), key);
 
   // Unsaved-project history uses the same transport without flattening its
@@ -2600,9 +2619,11 @@ test("project resources survive session recovery, API saves, native publication,
   await output.getByRole("heading", { name: "Recovered resource", exact: true }).waitFor();
   assert.deepEqual(await exportedFiles(), filesOf(changed));
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-draft.png") });
+  checkpoint("unsaved project history recovery");
 
   const retained = await page.evaluate(() => sessionStorage.getItem("resources_project_draft_v5"));
   await fillSessionStorage();
+  checkpoint("unsaved project storage filled");
   const unsaved = '<h1>After quota</h1><!--' + "x".repeat(4096) + '-->';
   const content = page.locator(".cm-content");
   await content.click();
@@ -2636,6 +2657,7 @@ test("project resources survive session recovery, API saves, native publication,
   await page.getByRole("button", { name: "Editor", exact: true }).click();
   await checkWarningLayout();
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resource-recovery-quota-phone-editor.png") });
+  checkpoint("quota warning desktop and phone layouts");
   await page.locator("[data-project-versions-proxy]").click();
   await page.locator("[data-project-history] [data-version-sequence]").last().click();
   const historical = await page.locator("[data-project-snapshot]").inputValue();
@@ -2654,6 +2676,7 @@ test("project resources survive session recovery, API saves, native publication,
   await page.getByText(/Draft recovery could not be saved/).waitFor({ state: "hidden" });
   await page.reload({ waitUntil: "networkidle" });
   await output.getByRole("heading", { name: "Storage recovered", exact: true }).waitFor();
+  checkpoint("retry and reload complete");
   assert.deepEqual(errors, []);
 });
 
