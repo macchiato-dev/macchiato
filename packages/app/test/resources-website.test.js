@@ -1606,6 +1606,16 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.ok(searchLayout.controls.every((control) => control.top >= searchLayout.panel.top && control.bottom <= searchLayout.panel.bottom));
   assert.ok(searchLayout.controls[0].right - searchLayout.controls[0].left >= 100, "Find input must remain usable");
   await page.screenshot({ path: join(dataDir, "resources-project-search.png") });
+  const beforeReplace = JSON.parse(await page.locator("[data-project-snapshot]").inputValue())
+    .files.find(file => file.path === "index.html").content;
+  assert.ok(beforeReplace.includes("Hypertext"));
+  await page.locator('.cm-search input[name="search"]').pressSequentially("Hypertext");
+  await page.locator(".cm-searchMatch").first().waitFor();
+  await page.locator('.cm-search input[name="replace"]').pressSequentially("Hyperlink");
+  await page.locator('.cm-search button[name="replaceAll"]').click();
+  await page.waitForFunction(expected => JSON.parse(document.querySelector("[data-project-snapshot]").value)
+    .files.find(file => file.path === "index.html").content === expected,
+    beforeReplace.replaceAll("Hypertext", "Hyperlink"));
   await page.keyboard.press("Escape");
   assert.equal(await page.locator(".cm-search").count(), 0);
   assert.equal(await page.locator(".cm-content").evaluate((element) => element.contains(document.activeElement) || element === document.activeElement), true);
@@ -1693,6 +1703,11 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   const browser = await chromium.launch();
   t.after(async () => browser.close());
   const ownerPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const errors = [], editorRequests = [];
+  ownerPage.on("pageerror", error => errors.push(error.message));
+  ownerPage.on("request", request => {
+    if (/project-editor.*\.(?:wasm|bin)(?:\?|$)/.test(request.url())) editorRequests.push(request.url());
+  });
   await ownerPage.context().addCookies([{ name: "resources_session", value: await sessionFor(owner), domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   await ownerPage.goto(`http://resources-edge.localhost:${port}/organizations/new`);
   await ownerPage.waitForFunction(() => document.documentElement.dataset.resourcesFrontendMachineState === "ready");
@@ -1724,6 +1739,7 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   await ownerPage.screenshot({ path: join(dataDir, "resources-organization-admin.png"), fullPage: true });
 
   const invitedPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  invitedPage.on("pageerror", error => errors.push(error.message));
   await invitedPage.context().addCookies([{ name: "resources_session", value: await sessionFor(invited), domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   await invitedPage.goto(`http://resources-edge.localhost:${port}/`);
   await invitedPage.getByLabel("Notifications").click();
@@ -1750,6 +1766,8 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   await invitedPage.getByLabel("Username").fill("renamed-user");
   await invitedPage.getByRole("button", { name: "Save username" }).click();
   assert.equal(await invitedPage.getByLabel("Username").inputValue(), "renamed-user");
+  assert.deepEqual(errors, []);
+  assert.deepEqual(editorRequests, [], "ordinary account forms do not start a project editor");
 });
 
 test("resources design raw file site renders through the server in a real browser", async (t) => {
