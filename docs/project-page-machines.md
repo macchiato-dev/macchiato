@@ -3523,3 +3523,20 @@ guest; its small attribute-backed correction is awaiting rebuilt tests.
 Evidence is in `resize-observer-baseline.log`, `resize-observer-native.log`,
 and `resize-reference-scope.log` under `/root/macchiato-work`. This work has
 not replaced the verified native-idle local deployment or Bunny archive.
+
+With rebuilt environments, the resize API tests pass in both runtimes and
+both realms, including 5,000 observe/unobserve cycles without exhausting the
+callback slots. The target's `id` now reflects the native attribute; setting
+it, reading it, and querying the renamed element preserve the same identity.
+
+`pane-resize.browser.test.js` checks the actual CodeMirror application with
+plain text, so parser redraws cannot hide a missing resize notification. The
+old guest fails after narrowing its pane while the native control passes.
+The corrected guest and native control both pass repeated widths of 260,
+900, 350, and 700 pixels, comparing cached dimensions with native layout and
+checking gutter alignment. No window-resize event is sent or received, and
+no input event is used to force remeasurement. Ordinary typing and undo work
+afterward. The inspected narrow and wide screenshots are byte-for-byte equal
+between native and MicroQuickJS. Evidence is in `resize-observer-corrected.log`,
+`resize-observer-lifecycle.log`, `pane-resize-baseline.log`, and
+`pane-resize-native*`. Full-project and packaged-deployment checks are pending.

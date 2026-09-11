@@ -118,9 +118,17 @@ for (const engine of ["microquickjs", "quickjs"]) {
     assert.deepEqual(await target.evaluate(() => notices.at(-1)), { retained });
     await target.evaluate(() => command({ action: "observe", target: "a", box: "device-pixel-content-box" }));
     await compare(4);
+    await target.evaluate(() => command({ action: "recycle" }));
+    const recycled = await target.evaluate(() => notices.at(-1));
+    assert.equal(recycled.recycled, 5000);
+    assert.ok(recycled.growth <= 2, "removing the last target releases callback slots");
+    await target.evaluate(() => command({ action: "reflect-id" }));
+    assert.deepEqual(await target.evaluate(() => notices.at(-1)), { id: "renamed", attribute: "renamed", identity: true });
+    assert.equal(await target.locator("#a").count(), 1);
     await target.evaluate(() => { dispose(); document.getElementById("a").style.width = "220px"; });
     await target.waitForTimeout(80);
     assert.equal(await target.evaluate(() => notices.filter(value => value.entries).length), 4);
+    assert.equal(await target.evaluate(() => notices.some(value => value.unexpected)), false);
     assert.deepEqual(errors, []); assert.deepEqual(unexpected, []);
   });
 }

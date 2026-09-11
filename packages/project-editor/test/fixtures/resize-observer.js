@@ -25,6 +25,22 @@ function resizeCommand(json) {
     resizeObserver.disconnect();
   } else if (command.action === "retained") {
     resizeReport({ retained: describeResize(retainedResizeEntry) });
+  } else if (command.action === "recycle") {
+    var start = callbacks.length;
+    var transient = new ResizeObserver(function () { resizeReport({ unexpected: true }); });
+    var target = document.getElementById("a");
+    for (var index = 0; index < 5000; index++) {
+      transient.observe(target);
+      transient.unobserve(target);
+    }
+    resizeReport({ recycled: 5000, growth: callbacks.length - start });
+  } else if (command.action === "reflect-id") {
+    var element = document.getElementById("a");
+    element.id = "renamed";
+    resizeReport({ id: element.id, attribute: element.getAttribute("id"),
+      identity: document.getElementById("renamed") === element });
+    element.id = "a";
+    flush();
   }
   return "ok";
 }
