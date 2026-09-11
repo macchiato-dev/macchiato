@@ -3185,3 +3185,34 @@ This closes oversized replies through `storage.request`, not every application
 service or general native exception. Subscription-time storage getter failures
 and other oversized synchronous service replies still need separate handling.
 The viewport/`rem` and input-performance work also remains open.
+
+### Oversized draft recovery without a startup trap
+
+The separate `session.recovery` service had the same reply-size failure. A
+valid saved snapshot containing heavily escaped source reproduced it in the
+full application: the editor never appeared. Recovery now uses the shared
+storage reply check, including its slightly larger `{value,error:null}`
+envelope. It returns an ordinary recovery error before the host's transport
+limit can unwind Wasm. The guest displays the existing recovery warning and
+opens the saved project; it does not delete or truncate the unread record.
+
+Unit cases cover plain size, escaping expansion, the exact envelope boundary,
+and a later repaired record. Nineteen focused tests pass. The rebuilt full-app
+test preserves an oversized valid JSON snapshot, verifies the warning and
+working saved output, then continues through ordinary resource recovery,
+autosave, publication, and ZIP export. First-paint, repeated theme changes,
+and denied-storage startup also pass (four application workflows total).
+The `cd95394` export verifies 152 files and runs the compressed backend in Deno.
+Evidence is in `recovery-reply-*` and `recovery-envelope-*` under
+`/root/macchiato-work`. This adds no host permissions or guest code, and makes
+no new performance claim.
+
+Read-only checks of the four saved owner projects also pass against this
+export, including 50 tour slides and SQLite fragment navigation. The extracted
+archive inventory was verified, then `/root/resources-bunny.tar.gz` was
+updated and the local server restarted. Six live assets match the export
+byte-for-byte. The preceding archive is retained at
+`/root/archive/2026/09/11/resources-bunny-d795021-before-recovery-envelope.tar.gz`.
+No owner data was changed and no Bunny deployment was performed. Subscription
+error handling, other service replies, viewport/`rem` fidelity, and bulk-input
+performance remain open; these checks do not prove the overall goal complete.
