@@ -35,7 +35,7 @@ export async function startResourcesMachineController() {
   const fetchDevice = new ResourcesFetchDevice(window, projectResources);
   const archiveDevice = new ResourcesArchiveDevice(document, projectResources);
   const buildDevice = new ResourcesBuildDevice(projectResources);
-  const storageDevice = new ResourcesStorageDevice(window);
+  const storageDevice = new ResourcesStorageDevice(window, projectResources);
   let asynchronousServices;
   let editorServices;
   let synchronousServices;

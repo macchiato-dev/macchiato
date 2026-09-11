@@ -2,15 +2,27 @@ import { createProjectBuildMachine, createProjectEditorMachine, createProjectOut
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 import { decodeProjectArchive, encodeProjectArchive, projectArchiveFilename } from "../hub/src/project-archive.js";
 import { ProjectOutputStorage } from "./project-output-storage.js";
+import { DRAFT_KEY, PENDING_KEY_PREFIX } from "./project-session.js";
 
 const encoder = new TextEncoder();
 const allowedMethods = new Set(["GET", "POST", "DELETE"]);
 const responseHeaders = new Set(["content-type", "content-length", "etag", "last-modified"]);
 const projectResourcePrefix = "\u0000resources-project-resource:";
+const projectSessionFormat = "resources-project-session-v1";
+
+function sessionReferences(text) {
+  const ids = new Set();
+  JSON.parse(text, (_key, value) => {
+    if (typeof value === "string" && value.startsWith(projectResourcePrefix)) {
+      ids.add(value.slice(projectResourcePrefix.length));
+    }
+    return value;
+  });
+  return ids;
+}
 
 export class ResourcesProjectResourceDevice {
   constructor() {
-    this.nextId = 1;
     this.resources = new Map();
   }
   compactSnapshot(snapshot) {
@@ -19,7 +31,9 @@ export class ResourcesProjectResourceDevice {
       const image = /\.(?:gif|jpe?g|png|svg|webp)$/i.test(String(file?.path || ""));
       if (typeof file?.content !== "string" || (!image && file.content.length <= 64 * 1024) ||
           file.content.startsWith(projectResourcePrefix)) return file;
-      const id = String(this.nextId++);
+      // Persisted histories can retain these handles, including splice ranges
+      // within them. A new page must never assign that handle different bytes.
+      const id = crypto.randomUUID();
       this.resources.set(id, file.content);
       return { ...file, content: `${projectResourcePrefix}${id}` };
     }) };
@@ -59,11 +73,55 @@ export class ResourcesProjectResourceDevice {
     else if (Array.isArray(value?.files)) return JSON.stringify(this.hydrateSnapshot(value));
     return JSON.stringify(value);
   }
+  packSession(text) {
+    const ids = sessionReferences(text);
+    if (!ids.size) return text;
+    const resources = [...ids].map(id => {
+      if (!this.resources.has(id)) throw new Error("Project recovery resource is unavailable");
+      return [id, this.resources.get(id)];
+    });
+    // One atomic Storage write contains the unchanged guest value plus its
+    // resource bytes. No orphan side keys, and no large bytes enter the guest.
+    return JSON.stringify({ format: projectSessionFormat, value: text, resources });
+  }
+  unpackSession(text) {
+    let saved;
+    try { saved = JSON.parse(text); } catch { return text; }
+    if (saved?.format !== projectSessionFormat) {
+      // Plain, resource-free snapshots remain readable. Expired old numeric
+      // handles must fail rather than accidentally resolve through this page.
+      for (const id of sessionReferences(text)) {
+        if (!this.resources.has(id)) throw new Error("Project recovery resource is unavailable");
+      }
+      return text;
+    }
+    if (typeof saved.value !== "string" || !Array.isArray(saved.resources)) {
+      throw new Error("Project recovery resource data is invalid");
+    }
+    const entries = new Map();
+    for (const entry of saved.resources) {
+      if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" ||
+          !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(entry[0]) ||
+          typeof entry[1] !== "string" || entries.has(entry[0]) ||
+          this.resources.has(entry[0]) && this.resources.get(entry[0]) !== entry[1]) {
+        throw new Error("Project recovery resource data is invalid");
+      }
+      entries.set(entry[0], entry[1]);
+    }
+    const ids = sessionReferences(saved.value);
+    if (ids.size !== entries.size || [...ids].some(id => !entries.has(id))) {
+      throw new Error("Project recovery resource data is incomplete");
+    }
+    // Validate the whole record before modifying the live table.
+    for (const [id, value] of entries) this.resources.set(id, value);
+    return saved.value;
+  }
 }
 
 export class ResourcesStorageDevice {
-  constructor(window) {
+  constructor(window, projectResources = null) {
     this.window = window;
+    this.projectResources = projectResources;
     this.listeners = new Map();
     window.addEventListener("storage", (event) => {
       const kind = event.storageArea === window.localStorage ? "local" : "session";
@@ -71,8 +129,19 @@ export class ResourcesStorageDevice {
     });
   }
   area(kind) { return kind === "local" ? this.window.localStorage : this.window.sessionStorage; }
-  get(kind, key) { return this.area(kind).getItem(key); }
-  set(kind, key, value) { this.area(kind).setItem(key, value); }
+  projectSession(kind, key) {
+    return this.projectResources && kind === "session" &&
+      (key === DRAFT_KEY || key.startsWith(PENDING_KEY_PREFIX));
+  }
+  get(kind, key) {
+    const value = this.area(kind).getItem(key);
+    return value !== null && this.projectSession(kind, key)
+      ? this.projectResources.unpackSession(value) : value;
+  }
+  set(kind, key, value) {
+    this.area(kind).setItem(key, this.projectSession(kind, key)
+      ? this.projectResources.packSession(value) : value);
+  }
   delete(kind, key) { this.area(kind).removeItem(key); }
   listen(kind, _key, listener) {
     if (!this.listeners.has(kind)) this.listeners.set(kind, new Set());

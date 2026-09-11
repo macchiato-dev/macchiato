@@ -428,9 +428,19 @@ async function mountProjectRoot(root) {
   // while the existing host history path has the same observable behavior.
   const historyInEditorMachine = snapshotField.value.length <= 256_000;
   let recoveredPendingSnapshot = false;
+  let recoveryFailure = "";
+  function readRecovery(key) {
+    try { return sessionStorage.getItem(key); }
+    catch (error) {
+      // In particular, an old page-local resource handle cannot safely be
+      // guessed. Retain the stored record rather than deleting it as bad JSON.
+      recoveryFailure = error.message || String(error);
+      return null;
+    }
+  }
   if (!readOnly && !draft && !memoryOnly && pendingSnapshotKey) {
     try {
-      const pendingValue = sessionStorage.getItem(pendingSnapshotKey);
+      const pendingValue = readRecovery(pendingSnapshotKey);
       if (pendingValue) {
         const recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
         if (!projectSnapshotsEqual(state, recovered)) {
@@ -518,7 +528,7 @@ async function mountProjectRoot(root) {
       const navigationType = navigationEntries[0]?.type;
       if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
       try {
-        const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
+        const stored = JSON.parse(readRecovery(DRAFT_KEY));
         if (stored?.patches?.length) {
           restoredDraft = true;
           localHistory = stored;
@@ -632,6 +642,8 @@ async function mountProjectRoot(root) {
       // snapshot. Render even when the candidate was invalid or unchanged.
       if (root.dataset.outputMachineState === "waiting" ||
           !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
+      if (recoveryFailure) setStatus(`Draft recovery failed: ${recoveryFailure}. Stored recovery data was kept.`,
+        "error", null, "editor");
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
@@ -814,6 +826,7 @@ async function mountProjectRoot(root) {
     showCurrentVersion();
     viewingHistorical = false;
     state = normalized;
+    recoveryFailure = "";
     editorController?.setSnapshot(state);
     currentUpdatedAt = Date.now();
     currentSnapshot = state;
@@ -841,6 +854,7 @@ async function mountProjectRoot(root) {
   }
 
   function checkpointDraft({ destructive = false } = {}) {
+    if (recoveryFailure) return;
     const now = Date.now();
     if (editorController && historyInEditorMachine) {
       localHistory = editorController.history.checkpoint(state, {

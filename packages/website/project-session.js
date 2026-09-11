@@ -1,7 +1,8 @@
 export const DRAFT_KEY = "resources_project_draft_v5";
+export const PENDING_KEY_PREFIX = "resources_project_pending_v1:";
 
 export function pendingProjectSnapshotKey(projectId) {
-  return projectId ? `resources_project_pending_v1:${projectId}` : "";
+  return projectId ? `${PENDING_KEY_PREFIX}${projectId}` : "";
 }
 
 // This only decides whether to wait for the editor's recovery logic. Do not
