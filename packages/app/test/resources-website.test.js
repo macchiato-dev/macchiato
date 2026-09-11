@@ -1113,7 +1113,8 @@ if (${denied}) {
 }
 document.getElementById("result").textContent = results.join(",");
 document.getElementById("again").addEventListener("click", () => {
-  document.getElementById("result").textContent = "Still running";
+  try { localStorage.setItem("event", "x".repeat(9000)); }
+  catch (error) { document.getElementById("result").textContent = "Still running: " + error.name; }
 });
 </script>`;
     await page.locator(".cm-content").fill(source);
@@ -1122,12 +1123,46 @@ document.getElementById("again").addEventListener("click", () => {
     assert.equal(await output.locator("#result").textContent(), denied
       ? "SecurityError,SecurityError,SecurityError"
       : "null,RangeError,RangeError,TypeError,RangeError,original,updated,null");
+    // The long result overflows horizontally. Entering the iframe must not
+    // focus-scroll its root and move this button before pointerup completes.
+    const scrollBefore = await output.locator("#again").evaluate(() => window.scrollY);
     await output.getByRole("button", { name: "Continue", exact: true }).click();
-    assert.equal(await output.locator("#result").textContent(), "Still running");
+    await output.getByRole("heading", { name: "Still running: " + (denied ? "SecurityError" : "RangeError"), exact: true })
+      .waitFor({ timeout: 5000 });
+    assert.equal(await output.locator("#again").evaluate(() => window.scrollY), scrollBefore);
     assert.equal(await page.evaluate(() => localStorage.getItem("website-only")), "not a project resource");
     assert.deepEqual(errors, []);
     await page.close();
   }
+});
+
+test("project focus options preserve native scroll behavior", { timeout: 60000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
+  await page.locator(".cm-content").fill(`<button id="still">Keep position</button>
+<button id="scroll">Scroll to input</button><button id="default">Default focus</button>
+<input id="destination" style="display: block; margin-top: 1200px;">
+<script>
+const target = document.getElementById("destination");
+document.getElementById("still").addEventListener("click", () => target.focus({ preventScroll: true }));
+document.getElementById("scroll").addEventListener("click", () => target.focus({ preventScroll: false }));
+document.getElementById("default").addEventListener("click", () => target.focus());
+</script>`);
+  const output = page.frameLocator("[data-project-output-mount] iframe");
+  for (const [id, shouldScroll] of [["still", false], ["scroll", true], ["default", true]]) {
+    await output.locator("#" + id).click();
+    assert.equal(await output.locator("#destination").evaluate(node => document.activeElement === node), true);
+    assert.equal(await output.locator("#destination").evaluate(() => window.scrollY > 500), shouldScroll);
+  }
+  assert.deepEqual(errors, []);
 });
 
 test("Resources editor remains usable when browser storage access is denied", { timeout: 60000 }, async t => {

@@ -7,7 +7,7 @@ const pendingFetches = new Map();
 // The iframe can receive focus with its native body active, outside our grant.
 // Enter the application surface without replacing an existing input selection.
 globalThis.__resourcesOutputFocus = () => {
-  if (!document.activeElement) document.body.focus();
+  if (!document.activeElement) document.body.focus({ preventScroll: true });
   return "null";
 };
 

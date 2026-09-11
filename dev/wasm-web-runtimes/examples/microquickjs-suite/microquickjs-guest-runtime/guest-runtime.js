@@ -409,8 +409,10 @@ GuestElement.prototype.requestFullscreen = function () {
   return immediate([3, this.reference, stringIndex("requestFullscreen"), []]);
 };
 
-GuestElement.prototype.focus = function () {
-  immediate([3, this.reference, stringIndex("focus"), []]);
+GuestElement.prototype.focus = function (options) {
+  immediate([3, this.reference, stringIndex("focus"), options === undefined ? [] : [
+    !!(options && options.preventScroll)
+  ]]);
 };
 
 GuestElement.prototype.select = function () {

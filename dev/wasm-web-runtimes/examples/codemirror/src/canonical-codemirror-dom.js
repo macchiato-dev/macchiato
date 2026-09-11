@@ -651,8 +651,10 @@ GuestWebGLContext.prototype.drawArrays = function (mode, first, count) {
 GuestWebGPUContext.prototype.renderTriangle = function () {
   hostCall(this.reference, "renderTriangle", []);
 };
-GuestElement.prototype.focus = function () {
-  hostCall(this.reference, "focus", []);
+GuestElement.prototype.focus = function (options) {
+  hostCall(this.reference, "focus", options === undefined ? [] : [
+    !!(options && options.preventScroll)
+  ]);
 };
 GuestElement.prototype.blur = function () {
   hostCall(this.reference, "blur", []);

@@ -11,11 +11,14 @@ test("QuickJS sessions share a Wasm instance but not globals, callbacks, or leas
 }, async t => {
   const root = new URL("../../../", import.meta.url).pathname;
   const target = join(root, "../macchiato-work/quickjs-sessions-target");
+  const application = join(target, "project-output-bootstrap.js");
+  await build({ entryPoints: [join(root, "packages/website/project-output-bootstrap.js")],
+    bundle: true, format: "iife", platform: "neutral", target: "es2022", outfile: application });
   execFileSync("cargo", ["build", "--release", "--target", "wasm32-unknown-unknown"], {
     cwd: join(root, "dev/wasm-web-runtimes/quickjs"),
     env: { ...process.env, CARGO_TARGET_DIR: target, WWC_CANONICAL_HOST: "1", WWC_MULTICONTEXT: "1",
       WWC_GUEST_ENVIRONMENT: join(root, "dev/wasm-web-runtimes/examples/codemirror/generated/canonical-dom.js"),
-      WWC_APPLICATION_SOURCE: join(root, "packages/website/project-output-bootstrap.js") },
+      WWC_APPLICATION_SOURCE: application },
     stdio: "pipe",
   });
   const wasm = await readFile(join(target, "wasm32-unknown-unknown/release/wasm_web_container_quickjs_runtime.wasm"));
