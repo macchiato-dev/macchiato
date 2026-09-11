@@ -3305,3 +3305,25 @@ confirmed that mismatch as `unknown wire value` with the previous generated
 guest. The nested reader now starts at byte zero. Both fixes require rebuilding
 the host and guest together; the preceding verified export remains live while
 the corrected build is checked.
+
+The corrected `2734fd8` export passes all 152 inventory checks and its
+compressed backend runs in Deno (42 ms in this run). Both QuickJS browser
+paths, direct and iframe, catch 5,000 denied subscriptions, then successfully
+register and receive a storage event without reloading. Raw callback IDs -1,
+0.5, and 4096 never enter the service; 0 and 4095 register and dispose normally.
+Long error names/messages are bounded without corrupting escapes or Unicode.
+The MicroQuickJS language tests also recover from 5,000 missing-service
+failures with at most one added callback slot, then continue editing.
+
+The 27 language, live-child, module, and reference-containment checks pass,
+as do seven storage/mutation unit checks and twenty CSS/compiler/SQL-policy
+checks. All four full-app workflows pass: backing during editor startup,
+repeated system/explicit themes, denied storage, and recovery/save/export.
+The unprofiled editing stress test passes in 65.2 seconds, including its
+80-edit burst, scrolling, undo/redo, output failure recovery, and phone views.
+The 106,432-character paste takes 923 ms; native insertion of 106,458 characters
+still takes 22.0 seconds. That remains an open performance problem, and these
+variable timings do not establish a speedup from storage error handling.
+Light and dark editor screenshots were inspected. Evidence is under
+`subscription-corrected-*` and `subscription-policy-unit.log` in
+`/root/macchiato-work`.
