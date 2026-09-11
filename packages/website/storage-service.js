@@ -1,7 +1,20 @@
 // Storage failures are ordinary guest exceptions, not traps crossing Wasm.
 // Dispatch explicitly: guest input never selects arbitrary device methods.
 const replyLimit = 2 * 1024 * 1024;
-const valueEnvelopeLength = JSON.stringify({ value: "" }).length;
+const smallValueLimit = (replyLimit - JSON.stringify({ value: "", error: null }).length) / 6;
+
+// Used by ordinary reads and draft recovery. The latter includes error:null,
+// so measure the actual envelope near the limit rather than just the value.
+export function boundedStorageReply(reply) {
+  const value = reply.value;
+  // Older apps may have stored larger values. Escaping grows a UTF-16 unit
+  // at most sixfold; small replies need no second serialization.
+  if (typeof value === "string" && (value.length > replyLimit ||
+      value.length > smallValueLimit && JSON.stringify(reply).length > replyLimit)) {
+    throw new RangeError("Storage response exceeds its text limit");
+  }
+  return reply;
+}
 
 export function storageResponse(storage, request) {
   try {
@@ -10,18 +23,7 @@ export function storageResponse(storage, request) {
     if (kind !== "session" && kind !== "local") throw new TypeError("Unknown storage area");
     switch (operation) {
       case "has": return { value: storage.has(kind, key) };
-      case "get": {
-        const value = storage.get(kind, key), result = { value };
-        // Browser storage or an older app may contain values larger than the
-        // service transport. JSON escaping can grow each UTF-16 unit sixfold.
-        // Small replies need no second serialization; check larger ones exactly
-        // so the error is returned as data, without truncating the stored value.
-        if (typeof value === "string" && (value.length > replyLimit - valueEnvelopeLength ||
-            value.length > (replyLimit - valueEnvelopeLength) / 6 && JSON.stringify(result).length > replyLimit)) {
-          throw new RangeError("Storage response exceeds its text limit");
-        }
-        return result;
-      }
+      case "get": return boundedStorageReply({ value: storage.get(kind, key) });
       case "set": storage.set(kind, key, value); return { value: null };
       case "delete": storage.delete(kind, key); return { value: null };
       default: throw new TypeError("Unknown storage operation");

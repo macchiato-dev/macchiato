@@ -94,6 +94,31 @@ test("recovery presence does not decode assets and recovery errors cross as data
   assert.equal(window.sessionStorage.getItem(key), expired);
 });
 
+test("oversized recovery replies leave the saved record intact and return an error", () => {
+  const window = storageWindow();
+  const storage = new ResourcesStorageDevice(window, new ResourcesProjectResourceDevice());
+  const key = pendingProjectSnapshotKey("large");
+  const limit = 2 * 1024 * 1024;
+  const overhead = JSON.stringify({ value: "", error: null }).length;
+  // Simulate records from a previous app. Both plain size and JSON escaping
+  // can exceed the transport, even when native browser storage accepts them.
+  for (const value of ["x".repeat(limit), "\\".repeat(1100000), "\0".repeat(400000)]) {
+    window.sessionStorage.setItem(key, value);
+    const reply = storage.readRecovery(key);
+    assert.ok(JSON.stringify(reply).length <= limit, "the host must return before the guest handles the error");
+    assert.deepEqual(reply, { value: null, error: "Storage response exceeds its text limit" });
+    assert.equal(window.sessionStorage.getItem(key), value, "never delete or truncate an unreadable recovery record");
+  }
+  const largest = "x".repeat(limit - overhead);
+  window.sessionStorage.setItem(key, largest);
+  assert.deepEqual(storage.readRecovery(key), { value: largest, error: null });
+  window.sessionStorage.setItem(key, largest + "x");
+  assert.equal(storage.readRecovery(key).value, null, "include the recovery envelope in the limit");
+  const repaired = JSON.stringify({ files: [{ path: "index.html", content: "<p>Recovered</p>" }] });
+  window.sessionStorage.setItem(key, repaired);
+  assert.deepEqual(storage.readRecovery(key), { value: repaired, error: null });
+});
+
 test("current project API reads compact resources and writes their bytes, never handles", async () => {
   const resources = new ResourcesProjectResourceDevice();
   const snapshot = { files: [{ path: "tile.svg", content: "tile bytes" },

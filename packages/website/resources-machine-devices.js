@@ -2,7 +2,7 @@ import { createProjectBuildMachine, createProjectEditorMachine, createProjectOut
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 import { decodeProjectArchive, encodeProjectArchive, projectArchiveFilename } from "../hub/src/project-archive.js";
 import { ProjectOutputStorage } from "./project-output-storage.js";
-import { storageResponse } from "./storage-service.js";
+import { boundedStorageReply, storageResponse } from "./storage-service.js";
 import { DRAFT_KEY, PENDING_KEY_PREFIX, PROJECT_RESOURCE_PREFIX as projectResourcePrefix } from "./project-session.js";
 
 const encoder = new TextEncoder();
@@ -156,7 +156,7 @@ export class ResourcesStorageDevice {
   has(kind, key) { return this.area(kind).getItem(key) !== null; }
   request(payload) { return storageResponse(this, payload); }
   readRecovery(key) {
-    try { return { value: this.get("session", key), error: null }; }
+    try { return boundedStorageReply({ value: this.get("session", key), error: null }); }
     catch (error) { return { value: null, error: error.message || String(error) }; }
   }
   writeRecovery(key, value) {

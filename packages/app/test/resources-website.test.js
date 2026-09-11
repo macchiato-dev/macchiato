@@ -2482,6 +2482,26 @@ test("project resources survive session recovery, API saves, native publication,
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
   await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
 
+  const key = await page.locator("[data-project-editor]").getAttribute("data-project-id")
+    .then(id => `resources_project_pending_v1:${id}`);
+  // A valid old JSON snapshot can fit native storage yet exceed the service
+  // limit after being escaped again as its reply value. Keep it for recovery;
+  // failing to read it must not prevent the saved project from opening.
+  const oversizedLength = await page.evaluate(key => {
+    const record = JSON.stringify({ files: [{ path: "index.html", content: "\\".repeat(550000) }], config: {} });
+    sessionStorage.setItem(key, record);
+    return record.length;
+  }, key);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator(".cm-content").waitFor({ timeout: 10000 });
+  await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
+  await page.locator("[data-project-status]").getByText(/Draft recovery failed.*Storage response exceeds its text limit/).waitFor();
+  assert.equal(await page.evaluate(key => sessionStorage.getItem(key)?.length, key), oversizedLength);
+  await page.evaluate(key => sessionStorage.removeItem(key), key);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator(".cm-content").waitFor();
+  await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
+
   // Keep the server checkpoint unchanged while staging a new asset-bearing
   // snapshot. This failure is confined to the disposable fixture's autosave.
   let rejectSave = true;
@@ -2489,8 +2509,6 @@ test("project resources survive session recovery, API saves, native publication,
     ? route.fulfill({ status: 503, contentType: "application/json", body: '{"message":"Fixture autosave held"}' })
     : route.continue());
   await importSnapshot(changed);
-  const key = await page.locator("[data-project-editor]").getAttribute("data-project-id")
-    .then(id => `resources_project_pending_v1:${id}`);
   const pending = await page.evaluate(key => JSON.parse(sessionStorage.getItem(key)), key);
   assert.equal(pending.format, "resources-project-session-v1");
   assert.equal(pending.resources.length, 2);
