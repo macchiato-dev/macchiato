@@ -89,7 +89,7 @@ await build({
 // these files and must regenerate them from source, not use an old checkout's
 // generated DOM facade.
 const microEnvironment = (await readFile(ponyfills, "utf8")) + "\n" +
-  "function releaseHostReferenceLease(reference) { new HostReference(reference); }\n" +
+  "function releaseHostReferenceLease(reference) { bridge(reference + 1, 0); }\n" +
   "function releaseHostReference(reference) { void reference; }\n" +
   "var devicePixelRatio, innerHeight, innerWidth, pageXOffset, pageYOffset;\n" +
   (await readFile(canonicalEnvironment, "utf8"))

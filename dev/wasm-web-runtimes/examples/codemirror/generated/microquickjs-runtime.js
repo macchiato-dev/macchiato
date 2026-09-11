@@ -799,7 +799,7 @@
   }
 })();
 function releaseHostReferenceLease(reference) {
-  new HostReference(reference);
+  bridge(reference + 1, 0);
 }
 function releaseHostReference(reference) {
   void reference;

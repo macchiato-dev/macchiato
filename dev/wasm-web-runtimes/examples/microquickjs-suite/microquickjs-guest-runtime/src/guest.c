@@ -355,8 +355,20 @@ static JSValue js_bridge(JSContext *ctx, JSValue *this_value,
     size_t capacity;
     int32_t used;
     UNUSED(this_value);
-    if (argc < 2 || JS_GetUint8Array(ctx, argv[0], &bytes, &capacity) ||
-        JS_ToInt32(ctx, &used, argv[1]) || used < 4 || (size_t)used > capacity) {
+    if (argc < 2 || JS_ToInt32(ctx, &used, argv[1]))
+        return JS_ThrowTypeError(ctx, "bridge expects bytes and used length");
+    /* The ABI's zero-length control releases a duplicate reference lease.
+       Unlike a wrapper's owning lease, it needs no allocation or GC token. */
+    if (used == 0) {
+        uint32_t control;
+        if (!JS_IsInt(argv[0]) || JS_ToUint32(ctx, &control, argv[0]) ||
+            control == 0 || control > (1u << CONTROL_PAYLOAD_BITS))
+            return JS_ThrowRangeError(ctx, "invalid reference release control");
+        msg(control, 0);
+        return JS_UNDEFINED;
+    }
+    if (JS_GetUint8Array(ctx, argv[0], &bytes, &capacity) ||
+        used < 4 || (size_t)used > capacity) {
         return JS_ThrowTypeError(ctx, "bridge expects bytes and used length");
     }
     uint32_t response = msg((uint32_t)(uintptr_t)bytes, (uint32_t)capacity);

@@ -23,16 +23,20 @@ test("fresh child-list reads agree with native DOM before observer delivery", as
     resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"), output,
     `runtime.bin=${environment}`, `application.bin=${application}`]);
   const wasm = await readFile(output), source = await readFile(fixture, "utf8");
+  const quickjs = await readFile(resolve(root, "packages/website/generated/project-quickjs-runtime.wasm"));
+  const runtimeSource = await readFile(resolve(root, "dev/wasm-web-runtimes/quickjs/context-runtime.js"));
   const machine = await readFile(resolve(root, "dev/wasm-web-machine/dist/module/machine.js"));
   const browser = await chromium.launch();
   t.after(() => browser.close());
-  for (const mode of ["native", "microquickjs"]) await t.test(mode, async () => {
+  for (const mode of ["native", "microquickjs", "quickjs"]) await t.test(mode, async () => {
     const page = await browser.newPage(), errors = [];
     try {
       page.on("pageerror", error => errors.push(error.message));
       await page.route("http://children.test/**", route => {
         const path = new URL(route.request().url()).pathname;
         return route.fulfill(path === "/machine.js" ? { body: machine, contentType: "text/javascript" }
+          : path === "/context-runtime.js" ? { body: runtimeSource, contentType: "text/javascript" }
+          : path === "/quickjs.wasm" ? { body: quickjs, contentType: "application/wasm" }
           : path === "/probe.wasm" ? { body: wasm, contentType: "application/wasm" }
           : { body: '<div id="own"><div id="child-probe"><b>inherited</b>text</div></div>', contentType: "text/html" });
       });
@@ -46,6 +50,22 @@ test("fresh child-list reads agree with native DOM before observer delivery", as
           window.callGuest = name => window[name]();
         } else {
           const { default: Machine } = await import("/machine.js");
+          if (mode === "quickjs") {
+            const { QuickJSRuntime } = await import("/context-runtime.js");
+            window.engine = new QuickJSRuntime(await WebAssembly.compileStreaming(fetch("/quickjs.wasm")));
+            window.machine = new Machine(engine.createSession(), document.querySelector("#own"), {
+              onMessage: text => reports.push(JSON.parse(text)),
+            });
+            await machine.onmsg(0);
+            window.run = source => {
+              const text = new TextEncoder().encode(source), bytes = new Uint8Array(text.length + 1);
+              bytes[0] = 1; bytes.set(text, 1);
+              return machine.onmsg(bytes);
+            };
+            await run(source);
+            window.callGuest = name => run(name + "()");
+            return;
+          }
           const module = await WebAssembly.compileStreaming(fetch("/probe.wasm"));
           const stamp = new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]);
           window.machine = new Machine(module, document.querySelector("#own"), {
@@ -80,7 +100,7 @@ test("fresh child-list reads agree with native DOM before observer delivery", as
         { nodes: ["#text:guest text", "SPAN:added"], elements: ["SPAN"], count: 1, first: true, last: true, same: true },
       ]);
       assert.deepEqual(errors, []);
-      if (mode !== "native") await page.evaluate(() => machine.destroy());
+      if (mode !== "native") await page.evaluate(() => { machine.destroy(); window.engine?.destroy(); });
     } finally { await page.close(); }
   });
 });

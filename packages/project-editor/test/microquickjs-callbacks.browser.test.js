@@ -9,6 +9,7 @@ for (const [fixture, expected] of [
   ["browser-timers", ["argument", "immediate", "interval", "timeout"]],
   ["promise-rejection", ["compile: invalid CSS"]],
   ["svg-names", ["linearGradient", "linearGradient", "http://www.w3.org/2000/svg"]],
+  ["reference-lease-release", { same: true, text: "still owned", parent: true, denied: 8 }],
   ["transient-messages", { requests: 24, serviceStrings: 0 }],
   ["transient-dom-values", { updates: 24, retained: 0 }],
   ["wire-numbers", { equal: true, denied: 3 }],
