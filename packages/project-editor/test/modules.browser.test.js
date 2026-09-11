@@ -296,11 +296,11 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   assert.equal(await surface.innerText(), "Fresh");
   const documentFrame = iframe ? page.frames().find(frame => frame !== page.mainFrame()) : page;
   assert.equal(await documentFrame.evaluate(() => outputInstances), 1, "loads reuse the actual Wasm instance");
-  assert.equal(await documentFrame.locator('style').count(), 1, "old application styles are removed");
+  assert.equal(await documentFrame.locator('.project-output-root style').count(), 1, "old application styles are removed");
   classic[1].content = 'document.querySelector("main").textContent = "Failed replacement"; throw Error("New code failed");';
   await assert.rejects(load(classic), /New code failed/);
   assert.equal(await surface.innerText(), "Fresh", "failed preparation keeps the visible application");
-  assert.equal(await documentFrame.locator('style').count(), 1);
+  assert.equal(await documentFrame.locator('.project-output-root style').count(), 1);
   classic[1].content = 'const broken = ;';
   await assert.rejects(load(classic), /SyntaxError/);
   assert.equal(await surface.innerText(), "Fresh", "the output runtime rejects malformed JavaScript without replacing the current application");
