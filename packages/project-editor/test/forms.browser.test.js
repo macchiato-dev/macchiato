@@ -97,9 +97,13 @@ for (const documentMode of [false, true]) test(`dialog forms work without networ
     }
     document.body.appendChild(node(${JSON.stringify(tree[0])}));
     document.getElementById('modal').showModal();
+    document.getElementById('modal').setAttribute('data-open-state', String(document.getElementById('modal').open));
   `), project.tree);
+  assert.equal(await page.locator('#modal').getAttribute('data-open-state'), 'true');
   await page.getByRole("button", { name: "Cancel" }).click();
   assert.equal(await page.locator("dialog").evaluate(node => node.open), false);
+  await page.evaluate(() => run("document.getElementById('modal').setAttribute('data-open-state', String(document.getElementById('modal').open));"));
+  assert.equal(await page.locator('#modal').getAttribute('data-open-state'), 'false');
   const before = requests.length;
   await page.evaluate(() => run(`
     var form = document.createElement('form');
