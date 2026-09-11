@@ -208,6 +208,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   }
   assert.deepEqual(errors, [], "divider dragging leaves the editor usable");
   await page.getByLabel("Title", { exact: true }).fill("Editing Marathon");
+  assert.equal(await page.getByLabel("Name", { exact: true }).inputValue(), "editing-marathon",
+    "the project title field still generates a name with field-scoped input listeners");
   await page.getByLabel("Name", { exact: true }).fill("editing-marathon");
 
   const rows = Array.from({ length: 100 }, (_, index) =>

@@ -2082,6 +2082,41 @@ end-to-end timings. Profiles and traces are test-only; the production host has
 no added observer or profiler. Layout alternatives are being measured before
 changing the shipped workspace.
 
+The follow-up first-page typing check enters a phrase, makes a typo, and
+corrects it using actual key events, checking the complete document after each
+one. With the 106 KB document, key actions took 5–7 ms native and 53–64 ms in
+MicroQuickJS. This makes the remaining interpreter cost visible rather than
+mistaking the bulk browser insertion cost for normal typing performance.
+
+Experimental `size layout style` containment and pane-relative absolute
+positioning did not show a decisive benefit, so neither was applied to the
+production stylesheet. A fixed-position diagnostic improved the synthetic
+insertion more, but it is not a suitable responsive pane implementation. These
+are explicitly opt-in test variants, not alternate production layouts.
+
+The name-generation helper now binds to its title/name controls rather than
+delegating every document input event. CodeMirror events still follow their
+normal path, but no longer invoke unrelated form validation. A repeated prior
+editor-artifact run took 18.7 seconds versus 17.7 seconds in the first scoped
+run; earlier baseline runs were 19.8–21.3 seconds. This is a modest improvement,
+not evidence that the workspace's bulk-insertion delay has been eliminated.
+
+The scoped run repeated at 17.8 seconds with no other tests or builds running.
+The final correctness run also checks automatic project naming explicitly.
+Five account/editor workflows, the complete editing stress scenario, 43
+compiler/DOM/runtime regressions, and 67 backend checks pass. Export `fdacacc`
+passes the Deno compressed-backend test and all 151 deployment-file checks.
+Read-only browser checks cover Mahjong, Cat Memory, the tour, and SQLite with
+the exported assets. No owner project was saved during these checks.
+
+The local server and `/root/resources-bunny.tar.gz` contain this checkpoint;
+the prior archive is retained at
+`/root/archive/2026/09/11/resources-bunny-72f4598-before-input-scope.tar.gz`.
+Nothing was deployed to Bunny. Remaining bulk-layout latency is still an open
+performance item, alongside the previously noted DOM collection fidelity and
+broader workspace-flow coverage. The profiler and layout variants remain
+opt-in test instrumentation only.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
