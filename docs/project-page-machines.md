@@ -2650,6 +2650,55 @@ previous archive is preserved at
 No owner project was saved and no Bunny deployment was performed. These checks
 do not close the broader performance, compiler-fidelity, and containment audit.
 
+### Compiled inline declarations
+
+Rendered elements now retain inline style declarations as an optional sixth
+field in the compiled node tuple. This is the existing semantic CSS byte format,
+not a raw CSS attribute sent to the host. The compiler checks the same property
+and value policy as stylesheets and rejects external images and additional rules
+inside an attribute. Embedded SVG is converted to semantic SVG data. The output
+guest uses the style object's existing declaration operation, leaving the host's
+permission surface unchanged.
+
+Native comparison exposed a separate precedence error in that operation:
+replaying declarations with `setProperty` made a later normal declaration erase
+an earlier `!important`. The renderer now parses its checked output block to
+obtain native cascade behavior for multiple declarations. A single-property
+mutation retains its existing path. The browser test compares computed colors,
+padding, margins, borders, and dimensions to the same HTML outside Wasm, verifies
+inline animation lookup, and changes a property through the guest's click handler.
+An external-URL edit is rejected without replacing the working output or making
+a network request.
+
+Content is created before stylesheets, with inline declarations applied after
+scoped keyframe names are established. A subsequent content update preserves
+machine-owned style elements in the container's logical head. Structural matches
+keep their nodes while their checked inline declarations are replaced, including
+clearing them. Tests verify node identity, stylesheet identity, clearing/removal,
+and unchanged neighboring host content.
+
+This does not mean arbitrary browser CSS or HTML is supported. The current
+parser still rejects some valid shorthand forms, such as a border shorthand
+without an explicit color. Attributes on stripped document wrappers (`html` and
+`body`) also need a deliberate mapping to the granted root; this change applies
+to elements in the compiled content tree. These are remaining compiler-fidelity
+tasks, alongside the previously recorded performance and service-boundary work.
+
+The `63f6480` export verifies all 151 files before and after archive extraction;
+its compressed backend runs in Deno. The blog-example tests, resource recovery,
+publication, ZIP export, isolated-session lifecycle, and the full editing stress
+test pass. The latter records 817 ms for pasting 106,432 characters and 16,945 ms
+for native insertion of 106,458 characters; this is not a claimed speedup over
+the variable results in the preceding checkpoint. Seventeen CSS scope/image
+checks pass, along with the focused inline, storage, and focus browser tests.
+
+Read-only owner checks pass for both games, fifty tour slides with keyboard
+navigation, and SQLite fragments, including desktop/phone theme switching.
+The local server and `/root/resources-bunny.tar.gz` use this export. The previous
+archive is at
+`/root/archive/2026/09/11/resources-bunny-01f8efe-before-inline-styles.tar.gz`.
+No owner project was saved and nothing was deployed to Bunny.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

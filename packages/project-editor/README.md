@@ -25,7 +25,8 @@ saved Resources projects. The Resources build guest explicitly selects a
 retain their smaller default budget. Neither changes the machine's DOM or
 network authority.
 
-Inline `style` attributes use the same semantic CSS encoding as stylesheets.
+Inline `style` attributes on compiled elements use the same semantic CSS encoding
+as stylesheets.
 The compiled element tuple is `[1, tag, svg, attributes, children, inline?]`;
 the optional final field contains declaration-operation bytes, not CSS source.
 The output guest applies them to the element's style capability. This preserves
