@@ -196,7 +196,8 @@ export class ResourcesArchiveDevice {
     const file = input?.files?.[0];
     if (!file) throw new Error("Choose a project ZIP to import");
     if (file.size > 50 * 1024 * 1024) throw new Error("Archive exceeds 50 MB");
-    return this.projectResources.compactSnapshot(decodeProjectArchive(await file.arrayBuffer()));
+    const snapshot = await decodeProjectArchive(await file.arrayBuffer());
+    return this.projectResources.compactSnapshot(snapshot);
   }
   download(payload) {
     const bytes = encodeProjectArchive(this.projectResources.hydrateSnapshot(payload.snapshot));
@@ -348,6 +349,7 @@ export class ResourcesEditorDevice {
     // Native form submission is another persistence boundary. Materialize
     // there, without copying every unopened resource into the editor guest.
     field.value = this.projectResources.hydrateText(field.value);
+    return null;
   }
   async mountInitialOutput(root) {
     // The workspace also contains the details form; output state belongs on

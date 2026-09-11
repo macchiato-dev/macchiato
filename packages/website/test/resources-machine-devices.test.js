@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ResourcesProjectResourceDevice, ResourcesStorageDevice, ResourcesFetchDevice } from "../resources-machine-devices.js";
+import { ResourcesProjectResourceDevice, ResourcesStorageDevice, ResourcesFetchDevice, ResourcesArchiveDevice } from "../resources-machine-devices.js";
+import { encodeProjectArchive } from "../../hub/src/project-archive.js";
 import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "../project-session.js";
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot } from "../../hub/src/project-history.js";
@@ -14,6 +15,17 @@ function storageWindow() {
   };
   return { sessionStorage: area(), localStorage: area(), addEventListener() {} };
 }
+
+test("archive import awaits decoding before compacting resource files", async () => {
+  const snapshot = { files: [{ path: "index.html", content: "<h1>Game</h1>" },
+    { path: "tile.svg", content: "tile bytes" }], config: {} };
+  const file = new Blob([encodeProjectArchive(snapshot)]);
+  const resources = new ResourcesProjectResourceDevice();
+  const device = new ResourcesArchiveDevice({ querySelector: () => ({ files: [file] }) }, resources);
+  const compact = await device.import();
+  assert.notEqual(compact.files.find(file => file.path === "tile.svg").content, "tile bytes");
+  assert.deepEqual(resources.hydrateSnapshot(compact), snapshot);
+});
 
 test("pending snapshots retain resource bytes across a new page's resource table", () => {
   const window = storageWindow();

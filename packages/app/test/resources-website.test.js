@@ -1863,7 +1863,7 @@ test("project resources survive session recovery, API saves, native publication,
     await page.getByRole("button", { name: "Editor menu" }).click();
     const downloading = page.waitForEvent("download");
     await page.getByRole("menuitem", { name: "Export ZIP" }).click();
-    return filesOf(decodeProjectArchive(await readFile(await (await downloading).path())));
+    return filesOf(await decodeProjectArchive(await readFile(await (await downloading).path())));
   }
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
   await page.locator(".cm-content").waitFor();
