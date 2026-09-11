@@ -3775,3 +3775,13 @@ and iframe HTML now match the export byte-for-byte (`input-pending-live-assets.l
 A fresh live cat playthrough also exits successfully. This release step adopts
 the verified native capability; it does not claim to solve parser latency or
 the unresolved native-document layout boundary.
+
+The fresh live Mahjong check also exits successfully, including iframe sizing,
+theme switches, and phone layout (`input-pending-live-mahjong.log`). The extracted
+archive passes all 152 manifest checks. `/root/resources-bunny.tar.gz` now has
+SHA-256 `f7465044be156cd943b305e68ae280e79aed8501b9029df92657f1a41bd92962`.
+The predecessor is retained at
+`/root/archive/2026/09/11/resources-bunny-d7bd432-before-input-pending.tar.gz`.
+No Bunny deployment was performed. The native hint, functional passes, timing
+variation, and interrupted diagnostic teardown are all retained in the history;
+the broader goal is still open.
