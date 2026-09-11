@@ -50,45 +50,6 @@ function cssEdges(property, value) {
   ];
 }
 
-function cssBorder(value) {
-  if (value === "0" || value === "none") {
-    return ["top", "right", "bottom", "left"].map(function (side) {
-      return ["border-" + side + (value === "0" ? "-width" : "-style"), value];
-    });
-  }
-  var parts = cssParts(value);
-  if (parts.length !== 3 || !/^\d/.test(parts[0]) ||
-      !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-    throw new SyntaxError("border shorthand is not understood: " + value);
-  }
-  var result = [];
-  ["top", "right", "bottom", "left"].forEach(function (side) {
-    result.push(["border-" + side + "-width", parts[0]]);
-    result.push(["border-" + side + "-style", parts[1]]);
-    result.push(["border-" + side + "-color", parts[2]]);
-  });
-  return result;
-}
-
-function cssBorderSide(property, value) {
-  var side = property.slice("border-".length);
-  if (value === "0") return [[property + "-width", "0"]];
-  if (value === "none") return [[property + "-style", "none"]];
-  var parts = cssParts(value);
-  if (parts.length === 2 && /^\d/.test(parts[0])) {
-    return [[property + "-width", parts[0]], [property + "-color", parts[1]]];
-  }
-  if (parts.length !== 3 || !/^\d/.test(parts[0]) ||
-      !/^(?:solid|dashed|dotted|double|none)$/.test(parts[1])) {
-    throw new SyntaxError(property + " shorthand is not understood: " + value);
-  }
-  return [
-    ["border-" + side + "-width", parts[0]],
-    ["border-" + side + "-style", parts[1]],
-    ["border-" + side + "-color", parts[2]]
-  ];
-}
-
 function cssRadius(value) {
   var halves = value.split("/");
   if (halves.length > 2) throw new SyntaxError("border radius is not understood");
@@ -113,10 +74,6 @@ function cssRadius(value) {
 function canonicalCss(property, value) {
   if (property === "-moz-tab-size") return [];
   if (property === "padding" || property === "margin") return cssEdges(property, value);
-  if (property === "border") return cssBorder(value);
-  if (/^border-(?:top|right|bottom|left)$/.test(property)) {
-    return cssBorderSide(property, value);
-  }
   if (property === "border-radius") return cssRadius(value);
   if (property === "gap") return [["row-gap", value], ["column-gap", value]];
   if (property === "overflow") {
@@ -215,6 +172,8 @@ function cssValueTree(value) {
         return valueList(items);
       }
       if (token[0] === 7) items.push([7, token[1], read(true)]);
+      // Structured tag 11 is an embedded SVG, unlike token-kind 11 (math).
+      else if (token[0] === 11) items.push([12, token[1]]);
       else if (token[0] === 0) {
         if (items.length && !items[items.length - 1].separator) items.push({ separator: " " });
       } else if (token[0] === 5) {
@@ -269,7 +228,8 @@ function parseCss(source) {
       if (!value) throw new SyntaxError("CSS declaration value is empty");
       try {
         canonicalCss(property, value).forEach(function (entry) {
-          var structured = entry[0] === "background" || entry[0] === "background-image";
+          var structured = entry[0] === "background" || entry[0] === "background-image" ||
+            /^border(?:-(?:top|right|bottom|left))?$/.test(entry[0]);
           declarations.push({ property: entry[0], tokens: structured ? null : cssTokens(entry[1]),
             value: structured ? cssValueTree(entry[1]) : null, important: important });
         });

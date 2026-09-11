@@ -50,7 +50,7 @@ function writeValue(writer, node) {
     image.bytes.forEach((byte) => writer.byte(byte));
     return;
   }
-  if ((node[0] >= 1 && node[0] <= 4) || node[0] === 9) writer.text(node[1]);
+  if ((node[0] >= 1 && node[0] <= 4) || node[0] === 9 || node[0] === 12) writer.text(node[1]);
   else if (node[0] === 7) { writer.text(node[1]); writeValue(writer, node[2]); }
   else if (node[0] === 10) {
     writer.byte(node[1]);

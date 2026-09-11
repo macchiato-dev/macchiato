@@ -33,3 +33,20 @@ test("rejects media queries outside the bounded feature set", () => {
     @media (scripting: enabled) { body { display: none; } }
   `)), /media condition is not allowed/);
 });
+
+test("border shorthands retain semantic values instead of guessed longhands", () => {
+  for (const property of ["border", "border-top", "border-right", "border-bottom", "border-left"]) {
+    for (const value of ["2px solid", "none", "0", "solid red", "red dotted thin", "var(--edge)", "inherit", "calc(1px + 1px) solid"]) {
+      const [rule] = validateConstrainedCssRules(parseConstrainedCss(`p { ${property}: ${value}; }`));
+      assert.equal(rule.declarations.length, 1);
+      assert.equal(rule.declarations[0].property, property);
+      assert.ok(rule.declarations[0].value, `${property}: ${value}`);
+      assert.ok(encodeConstrainedCss(`p { ${property}: ${value}; }`).length > 0);
+    }
+  }
+  for (const property of ["border", "border-top"]) {
+    assert.throws(() => validateConstrainedCssRules(parseConstrainedCss(
+      `p { ${property}: url("https://example.test/track"); }`,
+    )), /url/);
+  }
+});

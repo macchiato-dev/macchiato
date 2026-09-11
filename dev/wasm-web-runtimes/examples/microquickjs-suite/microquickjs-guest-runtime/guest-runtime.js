@@ -640,6 +640,7 @@ function encodeCss(source, includeFonts) {
           (function writeValue(node) {
             writer.byte(node[0]);
             if (node[0] >= 1 && node[0] <= 4 || node[0] === 9) writer.text(node[1]);
+            else if (node[0] === 12) writer.text(node[1]);
             else if (node[0] === 7) { writer.text(node[1]); writeValue(node[2]); }
             else if (node[0] === 10) {
               writer.byte(node[1]); writer.uint(node[2].length); node[2].forEach(writeValue);

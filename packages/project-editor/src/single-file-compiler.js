@@ -64,7 +64,9 @@ function cssImages(rules) {
     if (rule.rules) cssImages(rule.rules);
     if (rule.frames) cssImages(rule.frames);
     for (const declaration of rule.declarations || []) {
-      if (declaration.value) declaration.value = image(declaration.value);
+      if (declaration.value && (declaration.property === "background" || declaration.property === "background-image")) {
+        declaration.value = image(declaration.value);
+      }
     }
   }
   return rules;
