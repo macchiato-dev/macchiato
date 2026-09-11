@@ -21,6 +21,8 @@ test("project editor embeds bytecode compiled from the current guest runtime", a
     "the project UI must not carry a second output compiler/renderer");
   assert.doesNotMatch(projectText, /resources-project-output-frame-v1/,
     "the removed alternate iframe transport must not enter the UI bytecode");
+  assert.match(projectText, /if \(message\.type === "output-error"\) return previousEditorReceive/,
+    "output events must bypass the UI request-ID namespace in the shipped code");
   const editorSource = join(root, "packages/website/generated/project-editor-microquickjs.js");
   const source = await readFile(editorSource, "utf8");
   assert.match(source, /records\.length > 128 \? new Map\(\) : null/,
