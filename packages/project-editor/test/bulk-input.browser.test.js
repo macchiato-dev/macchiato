@@ -83,7 +83,10 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     const content = page.locator(".cm-content");
     const geometry = await page.locator(".cm-scroller").evaluate(node => {
       const style = getComputedStyle(node), box = node.getBoundingClientRect();
-      return { width: box.width, height: box.height, font: style.font, lineHeight: style.lineHeight };
+      const content = node.querySelector(".cm-content");
+      return { width: box.width, height: box.height, font: style.font, lineHeight: style.lineHeight,
+        contentEditable: content.contentEditable,
+        userModify: getComputedStyle(content).getPropertyValue("-webkit-user-modify") };
     });
     results.push({ run, mode, method: "geometry", ...geometry });
     t.diagnostic(JSON.stringify(results.at(-1)));
