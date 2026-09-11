@@ -220,10 +220,10 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   for (const selector of escapedStyles) {
     boundaryFiles[0].content = `<style>${selector} { color: #ff0001; }</style><main>Scoped</main>`;
     const before = await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color);
-    await assert.rejects(load(boundaryFiles), /root.*sibling|outside.*scope/i, selector);
+    await load(boundaryFiles);
     assert.equal(await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color), before);
-    assert.equal(await surface.innerText(), '[true,true,true]',
-      'a rejected stylesheet must preserve the active application');
+    assert.equal(await surface.innerText(), 'Scoped',
+      'a confined selector remains valid without gaining access to host siblings');
   }
   boundaryFiles[0].content = '<main></main><script src="boundary.js"></script>';
   boundaryFiles[1].content = `

@@ -14,6 +14,7 @@ test("the host renders embedded CSS SVG and rejects unsafe image data before app
   const source = `
     import { createCssRenderer } from './dev/wasm-web-machine/src/devices/css-renderer.ts';
     import { createSvgRenderer } from './dev/wasm-web-machine/src/devices/svg-renderer.ts';
+    import { readSelector, renderSelector } from './dev/wasm-web-machine/src/devices/selector-renderer.ts';
     import { CONSTRAINED_CSS_VALUE_FUNCTIONS, isAllowedCssProperty } from './packages/project-editor/src/constrained-css-policy.js';
     class Reader {
       constructor(bytes) { this.bytes = bytes; this.at = 0; }
@@ -25,6 +26,7 @@ test("the host renders embedded CSS SVG and rejects unsafe image data before app
     window.install = createCssRenderer({ Reader, CSS_VALUE_FUNCTIONS: CONSTRAINED_CSS_VALUE_FUNCTIONS,
       hostDocument: document, logicalHead: document.head, installedStyles: new Set(),
       options: {}, pendingChecks: [], reject: fail, isAllowedProperty: isAllowedCssProperty,
+      scopeClass: null, readSelector, renderSelector,
       renderSvg: createSvgRenderer(Reader, new TextEncoder(), fail) }).installStylesheet;
   `;
   const code = await build({ stdin: { contents: source, resolveDir: new URL("../../../", import.meta.url).pathname },

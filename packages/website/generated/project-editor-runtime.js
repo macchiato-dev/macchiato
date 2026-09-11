@@ -1,4 +1,155 @@
 // dev/wasm-web-machine/dist/module/wasm-web-machine.js
+var localPseudos = /* @__PURE__ */ new Set([
+  "scope",
+  "root",
+  "hover",
+  "active",
+  "focus",
+  "focus-visible",
+  "focus-within",
+  "checked",
+  "disabled",
+  "enabled",
+  "empty",
+  "indeterminate",
+  "placeholder-shown",
+  "read-only",
+  "read-write",
+  "required",
+  "optional",
+  "valid",
+  "invalid"
+]);
+var positionalPseudos = /* @__PURE__ */ new Set([
+  "first-child",
+  "last-child",
+  "only-child",
+  "first-of-type",
+  "last-of-type",
+  "only-of-type"
+]);
+var pseudoElements = /* @__PURE__ */ new Set(["before", "after", "selection", "placeholder", "marker"]);
+var joins = /* @__PURE__ */ new Set(["", " ", ">", "+", "~"]);
+function readSelector(reader) {
+  let remaining = 1536;
+  const fail2 = () => {
+    throw new Error("selector wire data is not representable");
+  };
+  function count() {
+    const size = reader.uint();
+    if (!Number.isInteger(size) || size < 1 || size > 512 || (remaining -= size) < 0) fail2();
+    return size;
+  }
+  function choose(choices) {
+    const value = choices[reader.byte()];
+    if (value === void 0) fail2();
+    return value;
+  }
+  function signed() {
+    const value = reader.uint();
+    if (!Number.isInteger(value) || value < 0 || value > 4294967294) fail2();
+    return value % 2 ? -(value + 1) / 2 : value / 2;
+  }
+  function group(depth) {
+    if (depth > 8) fail2();
+    return Array.from({ length: count() }, () => Array.from({ length: count() }, () => {
+      const join = choose(["", " ", ">", "+", "~"]);
+      const terms = Array.from({ length: count() }, () => {
+        const kind = choose(["tag", "id", "class", "pseudo", "element", "attribute", "is", "where", "not", "has", "nth"]);
+        if (kind === "attribute") return [kind, reader.text(), choose(["", "=", "~=", "|=", "^=", "$=", "*="]), reader.text()];
+        if (kind === "nth") return [kind, choose(["nth-child", "nth-last-child", "nth-of-type", "nth-last-of-type"]), signed(), signed()];
+        if (kind === "is" || kind === "where" || kind === "not" || kind === "has") return [kind, group(depth + 1)];
+        return [kind, reader.text()];
+      });
+      return [join, terms];
+    }));
+  }
+  if (reader.uint() !== 1) fail2();
+  return group(0);
+}
+function renderSelector(list, scopeClass, logicalRoot = false) {
+  let remaining = 512;
+  const fail2 = () => {
+    throw new Error("selector data is not representable");
+  };
+  function identifier(value) {
+    if (typeof value !== "string" || !value || value.length > 256) fail2();
+    return CSS.escape(value);
+  }
+  const scope = scopeClass === null ? "" : "." + identifier(scopeClass);
+  const guard = scope ? `:where(${scope}, ${scope} *)` : "";
+  function position(native, rootMatches) {
+    if (!scope) return native;
+    return rootMatches ? `:is(${scope}, :where(:not(${scope}))${native})` : `:where(:not(${scope}))${native}`;
+  }
+  function group(selectors, relative, depth) {
+    if (depth > 8 || !Array.isArray(selectors) || !selectors.length) fail2();
+    return selectors.map((parts) => {
+      if (!Array.isArray(parts) || !parts.length) fail2();
+      return parts.map(([join, terms], index) => {
+        if (!joins.has(join) || index === 0 && !relative && join !== "" || index > 0 && join === "" || !Array.isArray(terms) || !terms.length) fail2();
+        let element = "";
+        const compound = terms.map((term, termIndex) => {
+          if (--remaining < 0 || !Array.isArray(term) || element) fail2();
+          const kind = term[0];
+          if (kind === "tag" || kind === "id" || kind === "class") {
+            if (term.length !== 2) fail2();
+            if (kind === "tag") {
+              if (termIndex !== 0) fail2();
+              if (scope && logicalRoot && /^(html|body)$/i.test(term[1])) return `:where(${scope}):is(${term[1]}, *)`;
+              return term[1] === "*" ? "*" : identifier(term[1]);
+            }
+            return (kind === "id" ? "#" : ".") + identifier(term[1]);
+          }
+          if (kind === "attribute") {
+            const [, name, operator, value] = term;
+            if (term.length !== 4 || !["", "=", "~=", "|=", "^=", "$=", "*="].includes(operator) || typeof value !== "string" || value.length > 512 || /[\x00-\x1f\x7f]/.test(value)) fail2();
+            const quoted = '"' + value.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
+            return `[${identifier(name)}${operator ? operator + quoted : ""}]`;
+          }
+          if (kind === "pseudo") {
+            if (term.length !== 2) fail2();
+            if (positionalPseudos.has(term[1])) return position(":" + term[1], true);
+            if (!localPseudos.has(term[1])) fail2();
+            if (scope && logicalRoot && (term[1] === "root" || term[1] === "scope")) return scope;
+            return ":" + term[1];
+          }
+          if (kind === "element") {
+            if (depth !== 0 || term.length !== 2 || !pseudoElements.has(term[1])) fail2();
+            element = "::" + term[1];
+            return "";
+          }
+          if (kind === "nth") {
+            const [, name, a, b] = term;
+            if (term.length !== 4 || !/^nth-(?:last-)?(?:child|of-type)$/.test(name) || !Number.isSafeInteger(a) || !Number.isSafeInteger(b) || Math.abs(a) > 2147483647 || Math.abs(b) > 2147483647) fail2();
+            const n = (1 - b) / a;
+            return position(
+              `:${name}(${a}n${b < 0 ? "" : "+"}${b})`,
+              a === 0 ? b === 1 : Number.isInteger(n) && n >= 0
+            );
+          }
+          if (kind === "is" || kind === "where" || kind === "not" || kind === "has") {
+            if (term.length !== 2) fail2();
+            if (scope && kind === "has") {
+              if (!Array.isArray(term[1]) || !term[1].length) fail2();
+              return ":is(" + term[1].map((parts2) => {
+                const child = group([parts2], true, depth + 1);
+                const sibling2 = ["+", "~"].includes(parts2[0][0]);
+                return (sibling2 ? `:where(:not(${scope}))` : "") + `:has(${child})`;
+              }).join(", ") + ")";
+            }
+            return `:${kind}(${group(term[1], kind === "has", depth + 1)})`;
+          }
+          return fail2();
+        }).join("");
+        if (element && index !== parts.length - 1) fail2();
+        const sibling = scope && index + 1 < parts.length && ["+", "~"].includes(parts[index + 1][0]);
+        return join + guard + `:is(${compound || "*"})` + (sibling ? `:where(:not(${scope}))` : "") + element;
+      }).join("");
+    }).join(", ");
+  }
+  return group(list, false, 0);
+}
 var CSS_PROPERTIES = /* @__PURE__ */ new Set([
   "-webkit-user-modify",
   "-webkit-user-select",
@@ -203,7 +354,6 @@ var CSS_VALUE_FUNCTIONS = /* @__PURE__ */ new Set([
   "translateY",
   "var"
 ]);
-var SAFE_SELECTOR = /^[a-z0-9_.*#:\s>+~(),\[\]="'-]+$/i;
 function isAllowedCssProperty(name) {
   return CSS_PROPERTIES.has(name) || /^--[a-z][a-z0-9-]{0,63}$/i.test(name);
 }
@@ -221,7 +371,8 @@ function createCssRenderer(dependencies) {
     pendingChecks,
     reject: fail2,
     scopeClass,
-    scopeSelector: scopeSelector2,
+    readSelector: readSelector2,
+    renderSelector: renderSelector2,
     renderSvg
   } = dependencies;
   const keyframeNames = /* @__PURE__ */ new Map();
@@ -235,7 +386,7 @@ function createCssRenderer(dependencies) {
       fail2("stylesheet operation must contain bounded bytes");
     }
     const reader = new Reader(bytes);
-    if (reader.uint() !== 4) fail2("stylesheet operation version is not supported");
+    if (reader.uint() !== 5) fail2("stylesheet operation version is not supported");
     const itemCount = reader.uint();
     if (itemCount > 2048) fail2("stylesheet has too many items");
     if (targetStyle && itemCount !== 1) fail2("inline style must contain one rule");
@@ -463,12 +614,9 @@ ${frames.join("\n")}
           continue;
         }
         if (itemKind !== 1) fail2("stylesheet item is not representable");
-        const selector = reader.text();
-        if (!selector || selector.length > 512 || !/^[a-z0-9_.*#:\s>+~(),\[\]="'-]+$/i.test(selector)) {
-          fail2(`stylesheet selector is not representable: ${selector.slice(0, 120)}`);
-        }
+        const selector = readSelector2(reader);
         const declarationCount = reader.uint();
-        const renderedSelector = scopeClass ? scopeSelector2(selector, scopeClass) : selector;
+        const renderedSelector = renderSelector2(selector, scopeClass, true);
         let index;
         try {
           index = probe.insertRule(`${renderedSelector}{}`, probe.cssRules.length);
@@ -747,52 +895,6 @@ var ATTRIBUTES = /* @__PURE__ */ new Set([
   "y2",
   "stop-color"
 ]);
-function selectorParts(selector) {
-  const parts = [];
-  let at = 0, start = 0, depth = 0, quote = "";
-  for (; at < selector.length; at++) {
-    const character = selector[at];
-    if (quote) {
-      if (character === "\\") at++;
-      else if (character === quote) quote = "";
-    } else if (character === '"' || character === "'") quote = character;
-    else if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) {
-      parts.push(selector.slice(start, at));
-      start = at + 1;
-    }
-  }
-  parts.push(selector.slice(start));
-  return parts;
-}
-function scopeSelector(selector, scopeClass) {
-  const scope = `.${scopeClass}`;
-  return selectorParts(selector).map((part) => {
-    const trimmed = part.trim();
-    const root = trimmed.match(/^(?::root|html|body)(?=$|[.#[:\s>+~])/i);
-    if (root) {
-      let depth = 0, quote = "";
-      for (let at = root[0].length; at < trimmed.length; at++) {
-        const character = trimmed[at];
-        if (quote) {
-          if (character === "\\") at++;
-          else if (character === quote) quote = "";
-        } else if (character === '"' || character === "'") quote = character;
-        else if (character === "(" || character === "[") depth++;
-        else if (character === ")" || character === "]") depth--;
-        else if (depth === 0 && /[\s>+~]/.test(character)) {
-          if (/^[+~]/.test(trimmed.slice(at).trimStart())) {
-            fail("CSS root sibling selector is outside the granted scope");
-          }
-          break;
-        }
-      }
-      return scope + trimmed.slice(root[0].length);
-    }
-    return `${scope} ${trimmed}`;
-  }).join(", ");
-}
 function fail(message2) {
   throw new Error(`wasm-web-machine: ${message2}`);
 }
@@ -1033,6 +1135,17 @@ var WasmWebBridge = class {
     }
     function requireNode(node) {
       if (!accessibleNode(node)) fail("node is outside the granted roots");
+    }
+    function querySelectorText(node, args) {
+      if (args.length !== 1 || !(args[0] instanceof Uint8Array) || args[0].length > 16 * 1024) {
+        fail("selector operation must contain bounded semantic bytes");
+      }
+      const reader = new Reader(args[0]);
+      const selector = readSelector(reader);
+      if (reader.at !== reader.bytes.length) fail("trailing selector operation data");
+      const tree = node.getRootNode();
+      const detachedGrant = tree !== hostDocument && accessibleNode(tree);
+      return renderSelector(selector, detachedGrant ? null : scopeClass);
     }
     function requireRange(range) {
       requireNode(range.startContainer);
@@ -1944,18 +2057,13 @@ var WasmWebBridge = class {
         return null;
       }
       if (object instanceof Node && name === "closest") {
-        if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 128 || !SAFE_SELECTOR.test(args[0])) {
-          fail(`closest selector is not allowed: ${JSON.stringify(args[0])}`);
-        }
+        const selector = querySelectorText(object, args);
         const element = object instanceof Element ? object : object.parentElement;
-        const found = element?.closest(args[0]);
+        const found = element?.closest(selector);
         return found && insideDocument(found) ? reference(found) : null;
       }
       if (object instanceof Element && name === "matches") {
-        if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 128 || !SAFE_SELECTOR.test(args[0])) {
-          fail("matches selector is not allowed");
-        }
-        return object.matches(args[0]);
+        return object.matches(querySelectorText(object, args));
       }
       if (object instanceof Element && name === "childAt") {
         const index = args[0];
@@ -1991,14 +2099,12 @@ var WasmWebBridge = class {
         return reference(object.getBoundingClientRect());
       }
       if (object instanceof Element && ["querySelector", "querySelectorAll", "querySelectorAllReferences"].includes(name)) {
-        if (args.length !== 1 || typeof args[0] !== "string" || args[0].length > 512 || !SAFE_SELECTOR.test(args[0])) {
-          fail(`query selector is not allowed: ${JSON.stringify(args[0])}`);
-        }
+        const selector = querySelectorText(object, args);
         if (name === "querySelector") {
-          const found2 = object.querySelector(args[0]);
+          const found2 = object.querySelector(selector);
           return found2 ? reference(found2) : null;
         }
-        const found = Array.from(object.querySelectorAll(args[0]));
+        const found = Array.from(object.querySelectorAll(selector));
         if (name === "querySelectorAll") return reference(found);
         const bytes = new Uint8Array(4 + found.length * 4);
         const view = new DataView(bytes.buffer);
@@ -2310,7 +2416,8 @@ var WasmWebBridge = class {
       pendingChecks,
       reject: fail,
       scopeClass,
-      scopeSelector,
+      readSelector,
+      renderSelector,
       renderSvg
     });
     function readValue(reader) {
