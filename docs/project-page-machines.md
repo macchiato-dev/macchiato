@@ -2720,6 +2720,29 @@ wire tests bypass the compiler and reject SVG borders, URL functions, and
 arbitrary operator strings, preserving the previous styles without network
 requests. The Resources storage, inline-style, and focus checks also pass.
 
+The `f1c12f3` deployment export passes its 151-file inventory/digest check both
+before and after archive extraction. Its compressed routing, document, and SQL
+policy guests execute in Deno. The full editing stress run passes with the same
+fixed input as the preceding checkpoint: 785 ms to paste 106,432 characters and
+16,911 ms for native insertion of 106,458 characters. This is essentially
+unchanged, not a demonstrated performance improvement. Its screenshots and
+recording are retained in `/root/macchiato-work/border-stress/`.
+
+First-paint checks cover the public home, signed-in home, blog pages, and project
+form without waiting for the frontend machine, on desktop and phone with system,
+explicit, absent, invalid, and inaccessible stored preferences. Repeated
+CodeMirror theme changes, rejected-output recovery, blog examples, session
+recovery, publication, and ZIP export also pass. Read-only checks using exported
+assets pass for the saved Mahjong and cat games, fifty tour slides with keyboard
+navigation, and SQLite fragments. No owner project was saved.
+
+The local server has been restarted with the rebuilt artifacts.
+`/root/resources-bunny.tar.gz` contains the verified export; the previous archive
+is `/root/archive/2026/09/11/resources-bunny-63f6480-before-borders.tar.gz`.
+Nothing was deployed to Bunny. Wrapper-attribute fidelity, bulk-edit performance,
+and the remaining service-boundary cases above are still open; these checks do
+not establish completion of the overall project-page goal.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
