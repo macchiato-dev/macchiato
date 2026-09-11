@@ -456,6 +456,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     }
     return patterns;
   }
+  var DRAFT_KEY = "resources_project_draft_v5";
+  var PENDING_KEY_PREFIX = "resources_project_pending_v1:";
+  var PROJECT_RESOURCE_PREFIX = "\0resources-project-resource:";
+  function pendingProjectSnapshotKey(projectId) {
+    return projectId ? "" + PENDING_KEY_PREFIX + projectId : "";
+  }
   var listeners = null;
   var nextRequest = 1;
   var pending = new Map();
@@ -553,16 +559,39 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       path: path
     });
   }
+  function navigationType() {
+    return callHost("navigation.type");
+  }
+  function readProjectRecovery(key) {
+    var result2 = callHost("session.recovery", {
+      key: key
+    });
+    if (result2.error) throw new Error(result2.error);
+    return result2.value;
+  }
   function mountResourcesProjectEditor(_x) {
     return _mountResourcesProjectEditor.apply(this, arguments);
   }
   function _mountResourcesProjectEditor() {
     _mountResourcesProjectEditor = _asyncToGenerator(_regenerator().m(function _callee(options) {
+      var lastContent, lastValue;
       return _regenerator().w(function (_context) {
         while (1) switch (_context.n) {
           case 0:
             listeners = options;
             return _context.a(2, Object.freeze({
+              readContent: function readContent(content) {
+                if (content === lastContent) return lastValue;
+                var value = content.startsWith(PROJECT_RESOURCE_PREFIX) ? callHost("resource.read", {
+                  content: content
+                }) : content;
+                lastContent = content;
+                lastValue = value;
+                return value;
+              },
+              prepareSubmit: function prepareSubmit() {
+                return callHost("project.prepareSubmit");
+              },
               setContent: function setContent(content, language, settings) {
                 if (language === void 0) {
                   language = "plain";
@@ -805,10 +834,6 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
       var _field = _step9.value;
       _field.addEventListener("focusout", onFocusOut);
     }
-  }
-  var DRAFT_KEY = "resources_project_draft_v5";
-  function pendingProjectSnapshotKey(projectId) {
-    return projectId ? "resources_project_pending_v1:" + projectId : "";
   }
   var PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
   function isProjectImage(file) {
@@ -1465,8 +1490,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
   }
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
-      var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, _navigationEntries$, navigationEntries, navigationType, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, selectedContent, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i2, _arr2, _arr2$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i3, _arr3, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop8, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop9, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -1523,8 +1548,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 validateAllowedUrlPatterns(allowedLinkPatterns);
                 linkPatterns == null || linkPatterns.setCustomValidity("");
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "false");
-              } catch (_error13) {
-                linkPatterns == null || linkPatterns.setCustomValidity(_error13.message);
+              } catch (_error18) {
+                linkPatterns == null || linkPatterns.setCustomValidity(_error18.message);
                 linkPatterns == null || linkPatterns.setAttribute("aria-invalid", "true");
                 return;
               }
@@ -1695,12 +1720,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   var _state$config5;
                   var debounceMs = Math.min(5e3, Math.max(250, Number((_state$config5 = state.config) == null || (_state$config5 = _state$config5.output) == null ? void 0 : _state$config5.debounceMs) || 900));
                   editorPreviewTimer = setTimeout(function () {
-                    var _editorController4;
-                    return (_editorController4 = editorController) == null ? void 0 : _editorController4.renderSnapshot();
+                    var _editorController5;
+                    return (_editorController5 = editorController) == null ? void 0 : _editorController5.renderSnapshot();
                   }, debounceMs);
                 }
-              } catch (_error12) {
-                setStatus("Editor update failed: " + (_error12.message || String(_error12)), "error", null, "editor");
+              } catch (_error17) {
+                setStatus("Editor update failed: " + (_error17.message || String(_error17)), "error", null, "editor");
               }
             };
             _renderStoredVersions = function _renderStoredVersions3() {
@@ -2016,6 +2041,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               var _ref8 = _temp5 === void 0 ? {} : _temp5,
                 _ref8$destructive = _ref8.destructive,
                 destructive = _ref8$destructive === void 0 ? false : _ref8$destructive;
+              if (recoveryFailure) return;
               var now = Date.now();
               if (editorController && historyInEditorMachine) {
                 localHistory = editorController.history.checkpoint(state, {
@@ -2038,7 +2064,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               if (draft) sessionStorage.setItem(DRAFT_KEY, JSON.stringify(localHistory));
             };
             updateSnapshot = function _updateSnapshot(next, _temp4) {
-              var _editorController3, _root$closest8;
+              var _editorController4, _root$closest8;
               var _ref7 = _temp4 === void 0 ? {} : _temp4,
                 _ref7$destructive = _ref7.destructive,
                 destructive = _ref7$destructive === void 0 ? false : _ref7$destructive;
@@ -2048,7 +2074,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               showCurrentVersion();
               viewingHistorical = false;
               state = normalized;
-              (_editorController3 = editorController) == null || _editorController3.setSnapshot(state);
+              recoveryFailure = "";
+              (_editorController4 = editorController) == null || _editorController4.setSnapshot(state);
               currentUpdatedAt = Date.now();
               currentSnapshot = state;
               var serialized = JSON.stringify(state);
@@ -2281,7 +2308,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             };
             _mountEditorMachine = function _mountEditorMachine3() {
               _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee5(reason) {
-                var _editorController6;
+                var _editorController7;
                 var generation, _controller$inspect, controller, _t4;
                 return _regenerator().w(function (_context5) {
                   while (1) switch (_context5.p = _context5.n) {
@@ -2291,7 +2318,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                       }
                       generation = ++editorGeneration;
                       ready = false;
-                      (_editorController6 = editorController) == null || _editorController6.destroy();
+                      (_editorController7 = editorController) == null || _editorController7.destroy();
                       editorController = null;
                       __resourcesDatasetDelete(root, "data-editor-machine-id");
                       __resourcesDatasetSet(root, "data-editor-machine-state", "starting");
@@ -2342,6 +2369,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         setStatus("Output stopped: " + __resourcesDatasetGet(root, "data-output-machine-error"), "error", null, "output");
                       }
                       if (__resourcesDatasetGet(root, "data-output-machine-state") === "waiting" || !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
+                      if (recoveryFailure) setStatus("Draft recovery failed: " + recoveryFailure + ". Stored recovery data was kept.", "error", null, "editor");
                       _context5.n = 6;
                       break;
                     case 4:
@@ -2367,11 +2395,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               return _mountEditorMachine.apply(this, arguments);
             };
             renderPreview = function _renderPreview() {
-              var _editorController, _editorController2;
+              var _editorController2, _editorController3;
               clearTimeout(editorPreviewTimer);
               editorPreviewTimer = 0;
-              (_editorController = editorController) == null || _editorController.setSnapshot(state);
-              (_editorController2 = editorController) == null || _editorController2.renderSnapshot();
+              (_editorController2 = editorController) == null || _editorController2.setSnapshot(state);
+              (_editorController3 = editorController) == null || _editorController3.renderSnapshot();
             };
             sendContent = function _sendContent(_temp3) {
               var _editorMount$parentEl, _editorMount$parentEl2;
@@ -2380,8 +2408,11 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 resetHistoryOnEdit = _ref5$resetHistoryOnE === void 0 ? false : _ref5$resetHistoryOnE;
               if (!ready || !editorController) return;
               __resourcesDatasetSet(root, "data-editor-loading", "true");
-              var selectedFile = state.files.find(function (file) {
-                return file.path === selected;
+              var file = state.files.find(function (file2) {
+                return file2.path === selected;
+              });
+              var selectedFile = file && _extends({}, file, {
+                content: selectedContent()
               });
               (_editorMount$parentEl = editorMount.parentElement.querySelector(".project-editor__image-view")) == null || _editorMount$parentEl.remove();
               (_editorMount$parentEl2 = editorMount.parentElement.querySelector(".project-editor__asset-view")) == null || _editorMount$parentEl2.remove();
@@ -2409,11 +2440,12 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               return selected.endsWith(".md") ? "markdown" : "code";
             };
             selectedContent = function _selectedContent() {
-              var _state$files$find$con, _state$files$find;
+              var _state$files$find$con, _state$files$find, _editorController;
               if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
-              return (_state$files$find$con = (_state$files$find = state.files.find(function (file) {
+              var content = (_state$files$find$con = (_state$files$find = state.files.find(function (file) {
                 return file.path === selected;
               })) == null ? void 0 : _state$files$find.content) != null ? _state$files$find$con : "";
+              return (_editorController = editorController) != null && _editorController.readContent ? editorController.readContent(content) : content;
             };
             showSelectedVersion = function _showSelectedVersion(label, timestamp) {
               currentVersion.textContent = label;
@@ -2434,6 +2466,14 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               currentVersion.textContent = relativeVersionTime(currentUpdatedAt);
               __resourcesDatasetSet(currentVersion, "data-version-time", String(currentUpdatedAt));
               currentVersion.title = formatVersionDateTime(currentUpdatedAt);
+            };
+            readRecovery = function _readRecovery(key) {
+              try {
+                return readProjectRecovery(key);
+              } catch (_error16) {
+                recoveryFailure = _error16.message || String(_error16);
+                return null;
+              }
             };
             editorMount = root.querySelector("[data-project-editor-mount]");
             preview = root.querySelector("[data-project-preview]");
@@ -2522,9 +2562,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             initialOutputSnapshot = state;
             historyInEditorMachine = snapshotField.value.length <= 256e3;
             recoveredPendingSnapshot = false;
+            recoveryFailure = "";
             if (!readOnly && !draft && !memoryOnly && pendingSnapshotKey) {
               try {
-                pendingValue = sessionStorage.getItem(pendingSnapshotKey);
+                pendingValue = readRecovery(pendingSnapshotKey);
                 if (pendingValue) {
                   recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
                   if (!projectSnapshotsEqual(state, recovered)) {
@@ -2584,11 +2625,10 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
             refreshSubmitLabel();
             if (draft || memoryOnly) {
               if (draft) {
-                navigationEntries = typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation") : [];
-                navigationType = (_navigationEntries$ = navigationEntries[0]) == null ? void 0 : _navigationEntries$.type;
-                if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+                navigation = navigationType();
+                if (navigation !== "reload" && navigation !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
                 try {
-                  stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
+                  stored = JSON.parse(readRecovery(DRAFT_KEY));
                   if (stored != null && (_stored$patches = stored.patches) != null && _stored$patches.length) {
                     restoredDraft = true;
                     localHistory = stored;
@@ -2790,8 +2830,8 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                 var _root$closest9;
                 var projectName = String(((_root$closest9 = root.closest("form")) == null || (_root$closest9 = _root$closest9.elements) == null || (_root$closest9 = _root$closest9.namedItem("slug")) == null ? void 0 : _root$closest9.value) || __resourcesDatasetGet(root, "data-project-slug") || "").trim();
                 downloadProjectArchive(state, projectName);
-              } catch (_error11) {
-                setStatus(_error11.message, "error");
+              } catch (_error14) {
+                setStatus(_error14.message, "error");
               }
             });
             archiveInput.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee2() {
@@ -2911,7 +2951,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                   case 0:
                     button = _step23.value;
                     button.addEventListener("click", function () {
-                      var _editorController7;
+                      var _editorController8;
                       var detailsButton = projectDetails;
                       if (__resourcesDatasetGet(button, "data-project-view") === "details") {
                         if (narrowWorkspace.matches) {
@@ -2938,7 +2978,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
                         }
                       }
                       renderStatusState();
-                      if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController7 = editorController) == null || _editorController7.focus();
+                      if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController8 = editorController) == null || _editorController8.focus();
                     });
                   case 1:
                     return _context0.a(2);
@@ -3120,14 +3160,23 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
               }
             }, 3e4);
             if (!readOnly && !draft && !memoryOnly) renderStoredVersions();
+            (_root$closest1 = root.closest("form")) == null || _root$closest1.addEventListener("submit", function (event) {
+              try {
+                if (!editorController) throw new Error("The project editor is still loading");
+                editorController.prepareSubmit == null || editorController.prepareSubmit();
+              } catch (_error15) {
+                event.preventDefault();
+                setStatus("Save failed: " + (_error15.message || String(_error15)), "error", null, "editor");
+              }
+            });
             renderTabs();
             mountEditorMachine();
             if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);
             addEventListener("pagehide", function () {
-              var _editorController5;
+              var _editorController6;
               historyPanel.remove();
               editorGeneration += 1;
-              (_editorController5 = editorController) == null || _editorController5.destroy();
+              (_editorController6 = editorController) == null || _editorController6.destroy();
               clearTimeout(editorPreviewTimer);
             }, {
               once: true

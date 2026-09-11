@@ -27280,6 +27280,14 @@ function validateAllowedUrlPatterns(patterns) {
   return patterns;
 }
 
+// packages/website/project-session.js
+var DRAFT_KEY = "resources_project_draft_v5";
+var PENDING_KEY_PREFIX = "resources_project_pending_v1:";
+var PROJECT_RESOURCE_PREFIX = "\0resources-project-resource:";
+function pendingProjectSnapshotKey(projectId) {
+  return projectId ? `${PENDING_KEY_PREFIX}${projectId}` : "";
+}
+
 // packages/website/project-editor-application-services.js
 var listeners = null;
 var nextRequest = 1;
@@ -27352,9 +27360,28 @@ function importProjectArchive() {
 function replaceFrontendPath(path) {
   return callHost("route.replace", { path });
 }
+function navigationType() {
+  return callHost("navigation.type");
+}
+function readProjectRecovery(key) {
+  const result2 = callHost("session.recovery", { key });
+  if (result2.error) throw new Error(result2.error);
+  return result2.value;
+}
 async function mountResourcesProjectEditor(options) {
   listeners = options;
+  let lastContent, lastValue;
   return Object.freeze({
+    readContent(content2) {
+      if (content2 === lastContent) return lastValue;
+      const value = content2.startsWith(PROJECT_RESOURCE_PREFIX) ? callHost("resource.read", { content: content2 }) : content2;
+      lastContent = content2;
+      lastValue = value;
+      return value;
+    },
+    prepareSubmit() {
+      return callHost("project.prepareSubmit");
+    },
     setContent(content2, language3 = "plain", settings = {}) {
       callGuest("__resourcesProjectSelectFile", { path: settings.path || "" });
       return callGuest("__codeEditorSetContent", { content: content2, language: language3, ...settings });
@@ -27463,12 +27490,6 @@ function mountContentNameFields() {
   for (const field of document.querySelectorAll(slugSelector)) {
     field.addEventListener("focusout", onFocusOut);
   }
-}
-
-// packages/website/project-session.js
-var DRAFT_KEY = "resources_project_draft_v5";
-function pendingProjectSnapshotKey(projectId) {
-  return projectId ? `resources_project_pending_v1:${projectId}` : "";
 }
 
 // packages/website/content-form-client.js
@@ -27918,9 +27939,18 @@ async function mountProjectRoot(root) {
   const initialOutputSnapshot = state;
   const historyInEditorMachine = snapshotField.value.length <= 256e3;
   let recoveredPendingSnapshot = false;
+  let recoveryFailure = "";
+  function readRecovery(key) {
+    try {
+      return readProjectRecovery(key);
+    } catch (error) {
+      recoveryFailure = error.message || String(error);
+      return null;
+    }
+  }
   if (!readOnly2 && !draft && !memoryOnly && pendingSnapshotKey) {
     try {
-      const pendingValue = sessionStorage.getItem(pendingSnapshotKey);
+      const pendingValue = readRecovery(pendingSnapshotKey);
       if (pendingValue) {
         const recovered = normalizeProjectSnapshot(JSON.parse(pendingValue));
         if (!projectSnapshotsEqual(state, recovered)) {
@@ -27998,11 +28028,10 @@ async function mountProjectRoot(root) {
   }
   if (draft || memoryOnly) {
     if (draft) {
-      const navigationEntries = typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation") : [];
-      const navigationType = navigationEntries[0]?.type;
-      if (navigationType !== "reload" && navigationType !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
+      const navigation = navigationType();
+      if (navigation !== "reload" && navigation !== "back_forward") sessionStorage.removeItem(DRAFT_KEY);
       try {
-        const stored = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
+        const stored = JSON.parse(readRecovery(DRAFT_KEY));
         if (stored?.patches?.length) {
           restoredDraft = true;
           localHistory = stored;
@@ -28024,7 +28053,8 @@ async function mountProjectRoot(root) {
   }
   function selectedContent() {
     if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
-    return state.files.find((file) => file.path === selected)?.content ?? "";
+    const content2 = state.files.find((file) => file.path === selected)?.content ?? "";
+    return editorController?.readContent ? editorController.readContent(content2) : content2;
   }
   function mode() {
     return selected.endsWith(".md") ? "markdown" : "code";
@@ -28035,7 +28065,8 @@ async function mountProjectRoot(root) {
   function sendContent({ resetHistoryOnEdit = false } = {}) {
     if (!ready || !editorController) return;
     root.dataset.editorLoading = "true";
-    const selectedFile = state.files.find((file) => file.path === selected);
+    const file = state.files.find((file2) => file2.path === selected);
+    const selectedFile = file && { ...file, content: selectedContent() };
     editorMount.parentElement.querySelector(".project-editor__image-view")?.remove();
     editorMount.parentElement.querySelector(".project-editor__asset-view")?.remove();
     editorMount.hidden = isProjectImage(selectedFile);
@@ -28106,6 +28137,12 @@ async function mountProjectRoot(root) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
       if (root.dataset.outputMachineState === "waiting" || !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
+      if (recoveryFailure) setStatus(
+        `Draft recovery failed: ${recoveryFailure}. Stored recovery data was kept.`,
+        "error",
+        null,
+        "editor"
+      );
     } catch (error) {
       if (generation !== editorGeneration) return;
       root.dataset.editorMachineState = "failed";
@@ -28275,6 +28312,7 @@ async function mountProjectRoot(root) {
     showCurrentVersion();
     viewingHistorical = false;
     state = normalized;
+    recoveryFailure = "";
     editorController?.setSnapshot(state);
     currentUpdatedAt = Date.now();
     currentSnapshot = state;
@@ -28300,6 +28338,7 @@ async function mountProjectRoot(root) {
     return true;
   }
   function checkpointDraft({ destructive = false } = {}) {
+    if (recoveryFailure) return;
     const now = Date.now();
     if (editorController && historyInEditorMachine) {
       localHistory = editorController.history.checkpoint(state, {
@@ -28993,6 +29032,15 @@ async function mountProjectRoot(root) {
     }
   }, 3e4);
   if (!readOnly2 && !draft && !memoryOnly) renderStoredVersions();
+  root.closest("form")?.addEventListener("submit", (event) => {
+    try {
+      if (!editorController) throw new Error("The project editor is still loading");
+      editorController.prepareSubmit?.();
+    } catch (error) {
+      event.preventDefault();
+      setStatus(`Save failed: ${error.message || String(error)}`, "error", null, "editor");
+    }
+  });
   renderTabs();
   mountEditorMachine();
   if (recoveredPendingSnapshot) saveTimer = setTimeout(save, 0);

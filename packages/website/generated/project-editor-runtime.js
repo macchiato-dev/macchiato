@@ -3365,6 +3365,12 @@ async function createProjectEditorMachine({
 }
 
 // packages/website/project-editor-runtime.js
+function readProjectRecovery(key) {
+  return sessionStorage.getItem(key);
+}
+function navigationType() {
+  return performance.getEntriesByType("navigation")[0]?.type || "navigate";
+}
 async function mountResourcesProjectEditor(options) {
   const controller = await createProjectEditorMachine({
     root: options.root,
@@ -3475,5 +3481,7 @@ export {
   createProjectBuildMachine,
   createProjectOutputMachine,
   mountResourcesProjectEditor,
-  mountResourcesProjectPreview
+  mountResourcesProjectPreview,
+  navigationType,
+  readProjectRecovery
 };

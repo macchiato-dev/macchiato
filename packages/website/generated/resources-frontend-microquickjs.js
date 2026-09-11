@@ -12,7 +12,7 @@ function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 (function () {
   var _resourcesFrontend = _asyncToGenerator(_regenerator().m(function _callee2() {
-    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, DRAFT_KEY, pendingProjectSnapshotKey, hasProjectRecovery, root3, navigation, deferOutput, root2, mountContentNameFields;
+    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, call, hasSessionValue, navigationType, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, DRAFT_KEY, PENDING_KEY_PREFIX, pendingProjectSnapshotKey, hasProjectRecovery, root3, deferOutput, root2, mountContentNameFields;
     return _regenerator().w(function (_context3) {
       while (1) switch (_context3.n) {
         case 0:
@@ -72,9 +72,9 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
               _ref3$persistence = _ref3.persistence,
               persistence = _ref3$persistence === void 0 ? "stored" : _ref3$persistence,
               readOnly = _ref3.readOnly,
-              navigationType = _ref3.navigationType;
+              navigationType2 = _ref3.navigationType;
             if (readOnly || persistence === "memory") return false;
-            var key = persistence === "session" ? ["reload", "back_forward"].includes(navigationType) ? DRAFT_KEY : "" : pendingProjectSnapshotKey(projectId);
+            var key = persistence === "session" ? ["reload", "back_forward"].includes(navigationType2) ? DRAFT_KEY : "" : pendingProjectSnapshotKey(projectId);
             try {
               return !!key && storage.getItem(key) !== null;
             } catch (_unused9) {
@@ -82,7 +82,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             }
           };
           pendingProjectSnapshotKey = function _pendingProjectSnapsh(projectId) {
-            return projectId ? "resources_project_pending_v1:" + projectId : "";
+            return projectId ? "" + PENDING_KEY_PREFIX + projectId : "";
           };
           mountProjectPresentation = function _mountProjectPresenta(root3) {
             var button = root3.querySelector("[data-project-present]");
@@ -148,6 +148,20 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
                 payload: payload
               }));
             });
+          };
+          navigationType = function _navigationType() {
+            return call("navigation.type");
+          };
+          hasSessionValue = function _hasSessionValue(key) {
+            return call("session.has", {
+              key: key
+            });
+          };
+          call = function _call(name, payload) {
+            if (payload === void 0) {
+              payload = {};
+            }
+            return JSON.parse(globalThis.__wwcServiceCall(name, JSON.stringify(payload)));
           };
           closeMenus = function _closeMenus(except) {
             if (except === void 0) {
@@ -415,16 +429,20 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
             return frontendFetch;
           }();
           DRAFT_KEY = "resources_project_draft_v5";
+          PENDING_KEY_PREFIX = "resources_project_pending_v1:";
           if (document.querySelector("[data-project-editor]")) {
             root3 = document.querySelector("[data-project-editor]");
             mountProjectPresentation(root3);
-            navigation = typeof performance.getEntriesByType === "function" ? performance.getEntriesByType("navigation")[0] : null;
             deferOutput = hasProjectRecovery({
               projectId: __resourcesDatasetGet(root3, "data-project-id"),
               persistence: __resourcesDatasetGet(root3, "data-persistence"),
               readOnly: __resourcesDatasetGet(root3, "data-read-only") === "true",
-              navigationType: navigation == null ? void 0 : navigation.type
-            }, sessionStorage);
+              navigationType: navigationType()
+            }, {
+              getItem: function getItem(key) {
+                return hasSessionValue(key) ? "" : null;
+              }
+            });
             requestFrontendService("editor.mount", {
               deferOutput: deferOutput
             }).catch(function (error) {
