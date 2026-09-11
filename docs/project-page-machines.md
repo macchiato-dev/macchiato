@@ -3598,3 +3598,36 @@ records four executing TODO failures for canvas painting and `rem` lengths,
 including after a root-font edit. It separates this limitation from the verified
 loading backgrounds and describes the rendering-document/reload tradeoff.
 No production layout, local deployment, or archive changed in this investigation.
+
+### Native mutation registrations and named-call completion
+
+The guest previously disconnected its MutationObserver on every `observe()`.
+The new native comparison loses the first target and its pending record in
+both runtimes, direct and iframe. The host also always enabled `childList` and
+the guest omitted option defaults and attribute filters. The corrected bridge
+creates an observer once, then forwards independently validated registrations.
+Reobserving replaces only that target's options. The compact flags include
+child-list selection and the presence of an attribute-name filter; names are
+ordinary string arguments, not a JSON envelope. Disconnected observers leave
+the host's active cleanup set. Raw document observations still expand only to
+the granted roots.
+
+The first corrected run exposed two further defects rather than full parity:
+MicroQuickJS returned from named calls with unflushed writes, so a mutation
+callback could flush the remaining writes and create a second delivery; and
+`Text.data` assigned only a guest property. Named calls now use the existing
+flush dispatch before returning successfully. Text and comment data properties
+go through ordinary scoped property access, with their existing size limits.
+Unlike nullable `nodeValue`/`textContent`, the `data` setter stringifies null.
+
+All 32 registration, document-scope, and raw-reference checks pass after the
+rebuild. They compare multiple targets, queued records, same-target option
+replacement, old-value defaults, arrays/Sets/custom filter iterators, dictionary
+getter order, `takeRecords`, invalid options preserving existing registrations,
+and 5,000 disconnect/reobserve cycles. A final named call with no observer and
+no explicit flush must leave its text visible immediately. The raw ABI also
+rejects observation of an unrelated node obtained through an outside event.
+Logs: `mutation-observer-baseline.log`, `mutation-observer-corrected.log`, and
+`mutation-observer-boundary.log` under `/root/macchiato-work`. Full application
+and packaged-deployment verification are pending. The document-frame decision
+remains open and is not changed by these observer fixes.

@@ -1288,7 +1288,7 @@ var WasmWebBridge = class {
       if (object instanceof MutationRecord && ["addedNodeCount", "removedNodeCount"].includes(name)) {
         return object[name === "addedNodeCount" ? "addedNodes" : "removedNodes"].length;
       }
-      if (object instanceof Text && (name === "nodeValue" || name === "textContent")) {
+      if ((object instanceof Text || object instanceof Comment) && ["data", "nodeValue", "textContent"].includes(name)) {
         return object[name];
       }
       if (object instanceof Element && name === "textContent" && (ownedNodes.has(object) || insideDocument(object))) return object.textContent;
@@ -1529,11 +1529,11 @@ var WasmWebBridge = class {
         object[name] = next;
         return null;
       }
-      if (object instanceof Comment && name === "textContent" && typeof next === "string" && next.length <= 4096) {
-        object.textContent = next;
+      if (object instanceof Comment && ["data", "nodeValue", "textContent"].includes(name) && typeof next === "string" && next.length <= 4096) {
+        object[name] = next;
         return null;
       }
-      if (object instanceof Text && (name === "nodeValue" || name === "textContent") && typeof next === "string" && next.length <= 1024 * 1024) {
+      if (object instanceof Text && ["data", "nodeValue", "textContent"].includes(name) && typeof next === "string" && next.length <= 1024 * 1024) {
         object[name] = next;
         return null;
       }
@@ -1875,25 +1875,31 @@ var WasmWebBridge = class {
       if (object === hostDocument && name === "matchMedia" && args.length === 1 && typeof args[0] === "string" && args[0].length <= 256) {
         return reference(hostDocument.defaultView.matchMedia(args[0]));
       }
-      if (object === hostDocument && name === "mutationObserve" && args.length === 3 && args[0] instanceof Node && Number.isInteger(args[1]) && Number.isInteger(args[2])) {
+      if (object === hostDocument && name === "mutationObserver" && args.length === 1 && Number.isInteger(args[0]) && args[0] >= 0 && args[0] <= 4095) {
+        return reference(new MutationObserver((records) => deliver(args[0], records)));
+      }
+      if (object instanceof MutationObserver && name === "observe" && args.length >= 2 && args[0] instanceof Node && Number.isInteger(args[1])) {
         const flags = args[1];
-        if (flags < 0 || flags > 31) fail("mutation observer flags are not allowed");
+        if (flags < 0 || flags > 127 || args.length > 258 || !(flags & 64) && args.length !== 2 || args.slice(2).some((name2) => typeof name2 !== "string" || name2.length > 256)) {
+          fail("mutation observer options are not allowed");
+        }
         const targets = args[0] === hostDocument && !documentTarget ? roots : [args[0]];
         if (targets.some((node) => !insideDocument(node) && !ownedNodes.has(node))) {
           fail("mutation observer target is outside the granted roots");
         }
-        const observer = new MutationObserver((records) => deliver(args[2], records));
+        if (!mutationObservers.has(object) && mutationObservers.size >= 1024) fail("too many mutation observers");
         const settings = {
           attributes: Boolean(flags & 1),
           attributeOldValue: Boolean(flags & 2),
           characterData: Boolean(flags & 4),
           characterDataOldValue: Boolean(flags & 8),
-          childList: true,
-          subtree: Boolean(flags & 16)
+          childList: Boolean(flags & 32),
+          subtree: Boolean(flags & 16),
+          ...flags & 64 ? { attributeFilter: args.slice(2) } : {}
         };
-        for (const node of targets) observer.observe(node, settings);
-        mutationObservers.add(observer);
-        return reference(observer);
+        for (const node of targets) object.observe(node, settings);
+        mutationObservers.add(object);
+        return null;
       }
       if (object === hostDocument && name === "timer") {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 2147483647 || !Number.isInteger(args[1]) || timers.size >= 1024) fail("timer is not allowed");
@@ -2010,6 +2016,7 @@ var WasmWebBridge = class {
       }
       if (object instanceof MutationObserver && name === "disconnect" && args.length === 0) {
         object.disconnect();
+        mutationObservers.delete(object);
         return null;
       }
       if (object instanceof Element && name === "getAttribute") {
