@@ -2117,6 +2117,49 @@ performance item, alongside the previously noted DOM collection fidelity and
 broader workspace-flow coverage. The profiler and layout variants remain
 opt-in test instrumentation only.
 
+### Live attribute reads
+
+`getAttribute()` now flushes pending guest writes and reads the current native
+value. Previously its positive and negative caches survived browser-side
+changes. That could disagree with the already-live `hasAttribute()`, and a
+later `classList.add()` could overwrite a class the browser had just added.
+The fix is in the guest environment; the host's attribute and root checks are
+unchanged. It also removes the negative-lookup cache.
+
+The same application fixture runs natively, in MicroQuickJS, and in QuickJS.
+All three now agree when attributes are added, removed, and changed natively,
+when pending guest writes are read immediately, and when a guest adds a class
+after a native class change. Mutations and reads share one browser task, without
+depending on an observer callback to repair the values. The old MicroQuickJS
+environment fails this test, including overwriting the native class.
+
+Matched 106 KB editor comparisons retain correct paste, bulk input, first-page
+typing, typo correction, undo, and redo. Native bulk insertion remains around
+6 seconds; MicroQuickJS remains around 8 seconds. Repeating with the previous
+environment also shows occasional 94–105 ms key actions, alongside the usual
+roughly 55–65 ms actions. These runs do not isolate a new keypress regression,
+nor do they establish that the outstanding performance work is complete.
+The prior-environment override exists only in the benchmark.
+
+Public `children`, `childNodes`, and attribute enumeration still need their
+own live-collection work; fixing individual attribute reads does not establish
+full DOM collection equivalence. The internal tree mirror continues to serve
+connection/lifetime bookkeeping and must not become the authority for browser
+changes that have not yet reached observer delivery.
+
+The rebuilt checkpoint passes 43 focused caret/drag, mutation/reference scope,
+callback, and form checks, plus the three-runtime attribute comparison. Five
+workspace/account workflows, the full editing stress scenario, and 67 backend
+checks pass. Native and MicroQuickJS text-drag screenshots match. Read-only
+checks of the exported assets cover the four owner projects, both themes, 50
+tour slides, and SQLite fragment navigation, without saving project data.
+
+Export `15880ea` runs its compressed backend in Deno and verifies all 151 files
+after extraction from `/root/resources-bunny.tar.gz`. The prior archive is
+`/root/archive/2026/09/11/resources-bunny-fdacacc-before-live-attributes.tar.gz`.
+No Bunny deployment was performed. This checkpoint fixes an observed stale
+attribute bug, not the remaining collection or large-input performance work.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
