@@ -1802,6 +1802,26 @@ the toolbar listeners, and an early Expand click is lost. The ready-workspace
 layout traversal waits for project controls; it does not certify this earlier
 interval. Fixing that ownership/readiness handoff remains required.
 
+After readiness, expanded view also passes all 387 slides, boundary buttons,
+notes, and history. Phone traversal reaches all slides without script errors,
+but **160 slides overflow**. A representative failing slide (4) also overflows
+when the exact saved project runs natively at the iframe's 390×688 dimensions.
+Its `wide-code` layout retains the more-specific desktop two-column rule:
+the portrait override only names ordinary, compact, and dual layouts. Narrow
+reading columns then wrap into very tall paragraphs. This is an application
+stylesheet problem, not evidence for relaxing the Machine's CSS boundary.
+The phone presentation layout still needs correction and a complete recheck.
+
+The updated site passes the 15 appearance/first-paint cases, all four exported
+project loading checks, and compressed backend execution in Deno. These green
+checks do not erase the two wider interaction/layout failures found by the
+new traversal. Read-only diagnostics are in `/root/macchiato-work/` under
+`tour-full-audit-*` and `tour-native-layout`; no stored owner project was saved.
+The local server and `/root/resources-bunny.tar.gz` use export `1344f49`;
+the archive's 151 entries were verified after extraction. The previous
+`d1d8d45` archive is under `/root/archive/2026/09/11/`. No Bunny deployment
+was performed, and the broader readiness goal remains open.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
