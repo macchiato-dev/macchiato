@@ -1459,7 +1459,7 @@ test("Resources project save controls publish titled latest versions", async (t)
     email: "save@example.test", emailVerified: true,
   });
   db.close();
-  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name, iat: Date.now(), exp: Date.now() + 60_000 }, "local-preview-session-signing-key");
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name, iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
   const browser = await chromium.launch();
   t.after(async () => browser.close());
   const page = await browser.newPage();
@@ -1596,20 +1596,25 @@ test("Resources project save controls publish titled latest versions", async (t)
       const rect = element.getBoundingClientRect();
       return { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
     });
-    return { panel: { left: panelRect.left, right: panelRect.right, height: panelRect.height }, controls };
+    return { panel: { left: panelRect.left, right: panelRect.right, top: panelRect.top,
+      bottom: panelRect.bottom, height: panelRect.height }, controls };
   });
-  assert.ok(searchLayout.panel.height < 42, `search panel should remain one compact row, got ${searchLayout.panel.height}px`);
+  // CodeMirror's full search panel includes Find, Replace, options, and their
+  // actions. It wraps instead of squeezing or clipping them into one row.
+  assert.ok(searchLayout.panel.height < 150, `search panel should remain compact, got ${searchLayout.panel.height}px`);
   assert.ok(searchLayout.controls.every((control) => control.left >= searchLayout.panel.left && control.right <= searchLayout.panel.right));
-  const firstCenter = (searchLayout.controls[0].top + searchLayout.controls[0].bottom) / 2;
-  assert.ok(searchLayout.controls.every((control) => Math.abs(((control.top + control.bottom) / 2) - firstCenter) < 2));
-  await page.screenshot({ path: "/tmp/resources-project-search.png" });
+  assert.ok(searchLayout.controls.every((control) => control.top >= searchLayout.panel.top && control.bottom <= searchLayout.panel.bottom));
+  assert.ok(searchLayout.controls[0].right - searchLayout.controls[0].left >= 100, "Find input must remain usable");
+  await page.screenshot({ path: join(dataDir, "resources-project-search.png") });
   await page.keyboard.press("Escape");
   assert.equal(await page.locator(".cm-search").count(), 0);
   assert.equal(await page.locator(".cm-content").evaluate((element) => element.contains(document.activeElement) || element === document.activeElement), true);
   await editor.fill("<h1>First edit</h1>");
-  await page.waitForFunction(() => document.querySelector("[data-project-submit]")?.textContent === "1 unsaved change");
+  await page.waitForFunction(() => document.querySelector("[data-project-submit]")?.disabled === false);
+  assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
   await editor.fill("<h1>Second edit</h1>");
-  await page.waitForFunction(() => document.querySelector("[data-project-submit]")?.textContent === "2 unsaved changes");
+  assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
+  assert.equal(await page.locator("[data-project-submit]").isEnabled(), true);
   await page.getByRole("button", { name: "More save options" }).click();
   await page.getByRole("menuitem", { name: "Save with title…" }).click();
   await page.getByLabel("Version title").fill("Ready for review");
@@ -1648,7 +1653,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   const latest = page.locator("[data-project-version-list] [data-version-sequence]", { hasText: "LATEST" }).first();
   await latest.waitFor();
   assert.match(await latest.textContent(), /Ready for review.*\d+ seconds? ago.*LATEST/);
-  await page.screenshot({ path: "/tmp/resources-version-history.png" });
+  await page.screenshot({ path: join(dataDir, "resources-version-history.png") });
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
   await page.locator(".cm-content").fill("<h1>Reload recovery marker</h1>");

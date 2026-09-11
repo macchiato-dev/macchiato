@@ -1083,10 +1083,11 @@ html[data-theme="light"] .project-editor__mount { --resources-editor-fg: #263338
 html:not([data-theme="light"]) .project-editor__mount .cm-editor { background: #1d2020; }
 .project-editor__mount .cm-scroller { overflow: auto; }
 .project-editor__mount .cm-panels-bottom { max-width: 100%; }
-.project-editor__mount .cm-panel.cm-search { box-sizing: border-box; display: flex; width: 100%; min-width: 0; align-items: center; gap: 5px; padding: 5px 7px; overflow: hidden; }
-.project-editor__mount .cm-panel.cm-search input[name="search"] { flex: 1 1 auto; width: auto; min-width: 0; margin: 0; padding: 4px 7px; border: 1px solid #55615f; border-radius: 3px; color: #e8efed; background: #151818; font: inherit; }
-.project-editor__mount .cm-panel.cm-search button { flex: 0 0 auto; min-width: 25px; min-height: 25px; margin: 0; padding: 2px 6px; border: 1px solid #55615f; border-radius: 3px; color: #d8e0de; background: #292e2d; font: inherit; cursor: pointer; }
-.project-editor__mount .cm-panel.cm-search button:hover { color: #fff; background: #353c3a; }
+/* Keep CodeMirror's standard wrapping Find/Replace layout. These controls sit
+   inside the project form but must not inherit its full-width field styling. */
+.project-editor__mount .cm-search .cm-textfield { width: 12em; max-width: calc(100% - 32px); padding: 3px 6px; border: 1px solid var(--resources-editor-border); border-radius: 3px; color: var(--resources-editor-fg); background: var(--resources-editor-bg); font: inherit; }
+.project-editor__mount .cm-search input[type="checkbox"] { width: auto; padding: 0; vertical-align: middle; }
+.project-editor__mount .cm-search .cm-button { border: 1px solid var(--resources-editor-border); border-radius: 3px; color: var(--resources-editor-fg); background: var(--resources-editor-panel); font: inherit; cursor: pointer; }
 .project-editor__splitter { position: relative; cursor: col-resize; background: #454b4a; box-shadow: inset 1px 0 #202524; outline: none; }
 html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-shadow: inset 1px 0 #e8edef; }
 .project-editor__splitter::after { display: none; }
