@@ -34,7 +34,9 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const checkpoints = process.env.MACCHIATO_TYPING_CHECKPOINTS
     ? `globalThis.__bulkParseBudget = ${parseBudget};\n` + await readFile(
       new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
+  const disableInputPending = process.env.MACCHIATO_TEST_DISABLE_INPUT_PENDING === "1";
   await writeFile(application, 'globalThis.__CODE_EDITOR_DEFER_START__=true;\n' +
+    (disableInputPending ? 'Object.defineProperty(navigator,"scheduling",{value:undefined});\n' : '') +
     'load("editor.bin");load("language.bin");\n' + setup + "\n" + checkpoints);
   execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", join(directory, "application.bin"), application]);
   execFileSync(process.execPath, [join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/stamp-wasm.js"),
@@ -200,6 +202,31 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     }
     results.push({ run, mode, method: "first-page-typing", characters: text.length, keyMilliseconds });
     t.diagnostic(JSON.stringify(results.at(-1)));
+    if (process.env.MACCHIATO_TEST_INPUT_BURST === "1") {
+      // Queue keys at a fixed cadence without waiting for each acknowledgement.
+      // Serial Playwright key presses cannot expose yielding to already queued
+      // input while a background parser is busy on the main thread.
+      const session = await context.newCDPSession(page);
+      const letters = "abcdefghij", started = performance.now();
+      const acknowledgements = [];
+      await Promise.all([...letters].map((key, index) => new Promise((resolve, reject) => {
+        setTimeout(() => {
+          const code = "Key" + key.toUpperCase();
+          const down = session.send("Input.dispatchKeyEvent", { type: "keyDown", key, code, text: key });
+          const up = session.send("Input.dispatchKeyEvent", { type: "keyUp", key, code });
+          Promise.all([down, up]).then(() => {
+            acknowledgements[index] = Math.round(performance.now() - started - index * 30);
+            resolve();
+          }, reject);
+        }, index * 30);
+      })));
+      await session.detach();
+      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
+        text.slice(0, 4) + inserted + letters + text.slice(4));
+      results.push({ run, mode, method: "queued-typing", disableInputPending,
+        interval: 30, acknowledgements });
+      t.diagnostic(JSON.stringify(results.at(-1)));
+    }
     assert.deepEqual(errors, []);
     await page.evaluate(() => window.machine?.destroy());
     await context.close();
