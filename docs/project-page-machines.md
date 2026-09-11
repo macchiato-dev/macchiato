@@ -3762,3 +3762,16 @@ the spread also prevents a reliable speedup claim. Functional assertions are
 unchanged across all three runs. Logs, retained checkpoints, and screenshots:
 `input-pending-stress-repeat*`. Saved-project export checks are next, before
 replacing the live checkpoint.
+
+Saved-project export checks passed for the complete cat playthrough/reset,
+Mahjong, the 50-slide tour with keyboard navigation, and SQLite fragment links.
+Each also exercised editor/output loading, theme switching, and phone layout.
+The grouped run received signal 15 after Mahjong's successful assertions during
+teardown, so the remaining cases were run individually and exited successfully.
+No owner project was saved. Evidence: `input-pending-owner-*`.
+
+The restarted local server's host, controller, frontend/editor/output Wasm,
+and iframe HTML now match the export byte-for-byte (`input-pending-live-assets.log`).
+A fresh live cat playthrough also exits successfully. This release step adopts
+the verified native capability; it does not claim to solve parser latency or
+the unresolved native-document layout boundary.
