@@ -12,10 +12,53 @@ function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 (function () {
   var _resourcesFrontend = _asyncToGenerator(_regenerator().m(function _callee2() {
-    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, root2;
+    var isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, root2, mountContentNameFields;
     return _regenerator().w(function (_context3) {
       while (1) switch (_context3.n) {
         case 0:
+          mountContentNameFields = function _mountContentNameFiel() {
+            var generatedSlugs = new WeakMap();
+            var pattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+            var slugSelector = "#project-slug, #organization-slug";
+            function slugify(value) {
+              var text = String(value || "");
+              var normalized = typeof text.normalize === "function" ? text.normalize("NFKD") : text;
+              return normalized.replace(new RegExp("[\\u0300-\\u036f]", "g"), "").toLowerCase().replace(new RegExp("[\u2019']", "g"), "").replace(new RegExp("[^a-z0-9]+", "g"), "-").replace(new RegExp("^-+|-+$", "g"), "").slice(0, 63).replace(new RegExp("-+$", "g"), "");
+            }
+            function validate(slug, touched) {
+              if (touched === void 0) {
+                touched = true;
+              }
+              var error = document.getElementById(slug.getAttribute("aria-describedby"));
+              if (!error) return;
+              var invalid = slug.value !== "" && !pattern.test(slug.value);
+              slug.setCustomValidity(invalid ? __resourcesDatasetGet(error, "data-message") : "");
+              slug.setAttribute("aria-invalid", invalid ? "true" : "false");
+              error.hidden = !invalid || !touched;
+            }
+            document.addEventListener("input", function (event) {
+              var source = event.target.closest == null ? void 0 : event.target.closest("[data-slug-source], #project-name, #organization-name");
+              if (source) {
+                var _generatedSlugs$get;
+                var id = __resourcesDatasetGet(source, "data-slug-source") || (source.id === "project-name" ? "project-slug" : source.id === "organization-name" ? "organization-slug" : "");
+                var slug2 = document.getElementById(id);
+                if (!slug2) return;
+                var previous = (_generatedSlugs$get = generatedSlugs.get(source)) != null ? _generatedSlugs$get : "";
+                if (slug2.value !== "" && slug2.value !== previous) return;
+                var generated = slugify(source.value);
+                generatedSlugs.set(source, generated);
+                slug2.value = generated;
+                validate(slug2, false);
+                return;
+              }
+              var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
+              if (slug) validate(slug);
+            });
+            document.addEventListener("focusout", function (event) {
+              var slug = event.target.closest == null ? void 0 : event.target.closest(slugSelector);
+              if (slug) validate(slug);
+            });
+          };
           mountProjectPresentation = function _mountProjectPresenta(root3) {
             var button = root3.querySelector("[data-project-present]");
             var close = root3.querySelector("[data-project-present-close]");
@@ -388,6 +431,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
               if (grid.childElementCount) root2.replaceChildren(grid);
             }).catch(function () {});
           }
+          if (!document.querySelector("[data-project-editor]")) mountContentNameFields();
         case 4:
           return _context3.a(2);
       }
