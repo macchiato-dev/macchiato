@@ -2279,6 +2279,17 @@ interpret an old reference through a new page's table. The probe uses synthetic
 data only; no owner data was modified. Text-only recovery checks do not prove
 resource-bearing snapshot recovery.
 
+Checkpoint `be3cb8f` passes the recovery workflow, seven focused unit/artifact
+checks, the complete editing stress scenario, and 20 first-paint/theme checks.
+The recovered-output screenshot was reviewed. Read-only exported-asset checks
+cover all four owner projects, 50 tour slides, theme changes, and SQLite
+navigation. Its compressed backend executes in Deno and all 151 files verify
+after archive extraction. The local server and `/root/resources-bunny.tar.gz`
+use this checkpoint; the previous archive is retained at
+`/root/archive/2026/09/11/resources-bunny-b280d85-before-output-recovery.tar.gz`.
+No Bunny deployment was performed. Resource-bearing recovery and the broader
+remaining goal requirements are still open.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
