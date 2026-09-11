@@ -57,6 +57,8 @@ async function stopApp(child) {
 }
 
 test("Resources creates and heavily edits a project without code-editor-use", { timeout: 180_000 }, async (t) => {
+  const started = performance.now();
+  const checkpoint = name => t.diagnostic(`${name}: ${Math.round(performance.now() - started)} ms`);
   const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-stress-"))]);
   const app = startApp(port, dataDir);
   t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
@@ -89,6 +91,11 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       route.fulfill({ body, contentType: "text/javascript" }));
   }
   const languageDownloads = [];
+  if (process.env.MACCHIATO_TEST_BUILDER_FILE) {
+    const body = await readFile(process.env.MACCHIATO_TEST_BUILDER_FILE);
+    await page.route("**/project-builder-quickjs-runtime.wasm*", route =>
+      route.fulfill({ body, contentType: "application/wasm" }));
+  }
   page.on("request", request => {
     const name = new URL(request.url()).pathname.split("/").pop();
     if (/^project-editor-language-.*\.bin$/.test(name)) languageDownloads.push(name);
@@ -247,6 +254,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.evaluate(() => outputBuildObserver.disconnect());
   await assertDividersAligned("output refresh");
   await page.screenshot({ path: join(artifacts, "editor-light.png") });
+  checkpoint("light editor and output");
 
   const expandedFrame = await page.locator("iframe.project-editor__output-frame").elementHandle();
   const outputHeading = await output.locator("h1").elementHandle();
@@ -296,6 +304,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.emulateMedia({ colorScheme: "dark" });
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await page.screenshot({ path: join(artifacts, "editor-dark.png") });
+  checkpoint("typing, scrolling, undo/redo, and dark theme");
 
   await page.getByRole("button", { name: "Create project" }).click();
   await page.getByRole("button", { name: "Save project" }).waitFor().catch(async cause => {
@@ -320,6 +329,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
 
   // The output's asynchronous failures belong beneath the output, not just
   // in its iframe's console or in the CodeMirror error channel.
+  checkpoint("saved project reloaded");
   await page.locator(".cm-content").fill('<button id="fail">Fail later</button><script>' +
     'document.getElementById("fail").addEventListener("click", function () {' +
     'setTimeout(function () { throw new Error("output timer regression"); }, 10);' +
@@ -419,6 +429,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.locator('[data-project-view="editor"]').click();
   await content.waitFor({ state: "visible" });
   await page.screenshot({ path: join(artifacts, "phone-editor.png") });
+  checkpoint("output recovery and phone views");
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.waitForFunction(() => document.querySelector(".project-editor__workspace").dataset.view === "split");
   await outputFrame.waitFor({ state: "visible" });
