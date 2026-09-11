@@ -1545,6 +1545,29 @@ it, extend the native parity checks to cascade specificity and root-tag
 remapping as well as matching results; correct matching alone does not prove
 that competing declarations retain their original precedence.
 
+The follow-up browser comparison reproduced a precedence error in the
+prototype: translating a `body` type selector into the scope class let it beat
+an ordinary class rule. The renderer now remaps the root with zero-weight
+matching plus the original type weight. Native/scoped competing-rule checks
+pass in both source orders. This changes the prototype, not the live export.
+
+The guest selector parser and semantic wire writer now exist in
+`packages/project-editor/src/constrained-selector.js`; the machine prototype
+has the matching bounded reader. No CSS source parser was added to the host.
+The parser executes directly in MicroQuickJS without Babel. The focused suite
+passes 27 tests, including truncated-message rejection, native matching,
+cascade comparisons, and acceptance of 247 selectors from the Cat Memory,
+Mahjong, SQLite reader, and initialized native CodeMirror styles. The host
+prototype separately passes TypeScript checking. These are preparatory tests,
+not proof that the live selector boundary is fixed.
+
+Next, connect the stylesheet and query consumers together, remove the old
+scoped raw-string entry points, and rebuild the guest artifacts. Queries on
+detached owned nodes need explicit parity coverage: adding only an in-document
+scope guard would incorrectly make those queries return no match. Keep the
+four raw-Wasm context probes unresolved until they exercise the integrated
+protocol and pass, then rerun the full editor/game and deployment checks.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
