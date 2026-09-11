@@ -2826,6 +2826,21 @@ Separate emulated-system cases cover dark/light startup and system changes.
 Screenshots and logs are retained in `/root/macchiato-work/output-backing-shots/`
 and `/root/macchiato-work/output-backing-*.log`.
 
+Export `site/resources-co-8e17e5e` passed the 151-file manifest verification,
+the Deno backend artifact test, and the read-only browser check of both saved
+games, 50 successive tour slides, and the SQLite reader's fragment navigation.
+The first-paint matrix and repeated CodeMirror theme checks passed, including
+phone layouts. The complete recorded editing stress test also passed (about
+89 seconds); the reload recording visibly retains the dark backing around the
+light guest surface. Its 106KB native insertion still took about 28 seconds,
+so this is not a claim that the bulk-input performance work is finished.
+
+The local server was restarted and `/root/resources-bunny.tar.gz` updated from
+the verified export. The previous archive is retained beneath
+`/root/archive/2026/09/11/`. No owner project was saved and nothing was deployed
+to Bunny. Remaining fidelity work includes HTML document-root semantics and
+character references, in addition to the larger performance/service checks.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
