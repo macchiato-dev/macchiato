@@ -1796,6 +1796,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   }).waitFor();
   assert.deepEqual(outputStartupContents, ["Reload recovery marker"],
     "output must not first show the superseded server snapshot either");
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/project-recovered-output.png") });
   await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "Saved");
   // A candidate is not necessarily a valid or different snapshot. Deferring
   // output must not strand these cases behind their loading indicator.

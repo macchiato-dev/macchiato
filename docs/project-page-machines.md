@@ -2248,6 +2248,37 @@ again cover all four owner projects, theme changes, 50 tour slides, and SQLite
 fragments using export `b280d85`. Its compressed backend runs in Deno; all 151
 files verify. Nothing was deployed to Bunny.
 
+### Output recovery before the first render
+
+A startup observer in the output iframe reproduced a stale-output flash:
+reloading with pending edits rendered the saved heading before the recovered
+one. The outer guest now checks whether applicable recovery data exists and
+asks the editor device to defer initial output in that case. The editor guest
+still owns validation and snapshot selection; the host does not gain a second
+recovery parser. The UI renders once it has selected the actual snapshot, even
+if the recovery candidate was malformed or identical to the saved snapshot.
+
+Ordinary opens keep the earlier output-first path. The full editing stress
+test still proves that output works while the editor download is held, and
+that expanded view does not need the editor to have finished loading. The
+fixed 106 KB input passes paste, insertion, undo/redo, and subsequent editing:
+paste took 769 ms and native insertion 18,710 ms in this run. This is not a
+claim that the outstanding bulk-input latency has been fixed.
+
+The saved-project reload test now observes only the recovered heading and
+also covers malformed and unchanged candidates. A unit matrix covers stored,
+session, memory-only, read-only, fresh navigation, reload, and unavailable
+storage without duplicating the editor's validation policy.
+
+An additional recovery defect remains: resource handles are currently
+page-local numeric IDs, but pending session snapshots can contain them. A
+small device-level reproduction stores an old tile reference, creates a new
+resource device with a different tile at the same ID, and recovers the wrong
+tile. Persistence must retain the referenced bytes or a durable identity, not
+interpret an old reference through a new page's table. The probe uses synthetic
+data only; no owner data was modified. Text-only recovery checks do not prove
+resource-bearing snapshot recovery.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
