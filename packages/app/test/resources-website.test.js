@@ -1516,17 +1516,21 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(saveSplitGeometry.gap, 0);
   assert.equal(saveSplitGeometry.primaryTopRight, "0px");
   assert.equal(saveSplitGeometry.arrowTopLeft, "0px");
+  assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["index.html"]);
+  await page.getByRole("button", { name: "Select a file or view" }).click();
+  await page.getByRole("menuitemradio", { name: "style.css", exact: true }).click();
+  await page.getByRole("tab", { name: "index.html", exact: true }).click();
   assert.deepEqual(await page.locator("[data-project-tabs] [role='tab']").allTextContents(), ["index.html", "style.css"]);
   const indexTab = page.getByRole("tab", { name: "index.html" });
   await indexTab.dispatchEvent("pointerenter");
   await page.waitForTimeout(30);
-  assert.equal(await page.locator("body > .instant-tooltip").count(), 0, "a fully visible root file should not have a tooltip");
+  assert.equal(await page.locator(".instant-tooltip").count(), 0, "a fully visible root file should not have a tooltip");
   await indexTab.evaluate((element) => { element.style.width = "24px"; });
   await indexTab.dispatchEvent("pointerenter");
   await page.waitForTimeout(100);
-  assert.equal(await page.locator("body > .instant-tooltip").count(), 0, "pointer tooltips should respect the native-style delay");
+  assert.equal(await page.locator(".instant-tooltip").count(), 0, "pointer tooltips should respect the native-style delay");
   await page.waitForTimeout(550);
-  assert.equal(await page.locator("body > .instant-tooltip").textContent(), "index.html");
+  assert.equal(await page.locator(".instant-tooltip").textContent(), "index.html");
   await indexTab.dispatchEvent("pointerleave");
   await indexTab.evaluate((element) => { element.style.removeProperty("width"); });
   const crowdedTabGeometry = await page.locator("[data-project-editor]").evaluate((root) => {
@@ -1580,7 +1584,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(outputOnlyLayout.divider, "none");
   await page.getByRole("button", { name: "Editor" }).click();
   assert.equal(await page.locator(".project-editor__toolbar-split").evaluate((element) => getComputedStyle(element).display), "none");
-  assert.equal(await page.getByRole("button", { name: "Full screen" }).isHidden(), true);
+  assert.equal(await page.getByRole("button", { name: "Expanded view", exact: true }).isHidden(), true);
   await page.getByRole("button", { name: "Split view" }).click();
   const editor = page.locator(".cm-content");
   await editor.click();
@@ -1662,7 +1666,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
   await page.getByRole("button", { name: "Project menu" }).click();
   assert.equal(await page.getByRole("menuitem", { name: "Delete project" }).isVisible(), true);
-  await page.screenshot({ path: "/tmp/resources-save-controls.png" });
+  await page.screenshot({ path: join(dataDir, "resources-save-controls.png") });
 });
 
 test("Resources Edge manages usernames, invitations, notifications, and roles in Chromium", async (t) => {
