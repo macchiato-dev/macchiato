@@ -222,6 +222,8 @@ test("Resources.co blog container examples render and surface schema errors in t
       assert.equal(await surface.evaluate(node => getComputedStyle(node).backgroundColor), "rgb(23, 26, 26)",
         "the clock must load its own stylesheet through its HTML entry");
       assert.equal(await surface.locator("main").evaluate(node => getComputedStyle(node).textAlign), "center");
+      const height = await surface.evaluate(node => ({ surface: node.getBoundingClientRect().height, viewport: innerHeight }));
+      assert.ok(height.surface >= height.viewport, `the document background must fill its iframe: ${JSON.stringify(height)}`);
       await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-clock.png") });
       await page.locator("[data-project-file-trigger]").click();
       await page.locator('[data-project-file="script.js"]').click();
@@ -236,6 +238,21 @@ test("Resources.co blog container examples render and surface schema errors in t
       assert.equal(await clock.textContent(), initialTime);
       await page.waitForTimeout(4_200);
       assert.notEqual(await clock.textContent(), initialTime);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole("button", { name: "Output View", exact: true }).click();
+      const frame = await (await page.locator("[data-project-output-mount] iframe").elementHandle()).contentFrame();
+      const fillsViewport = () => {
+        const node = document.querySelector("#project-output-a > :not([inert]) > .project-output-root");
+        return node && Math.abs(node.getBoundingClientRect().height - innerHeight) <= 1 &&
+          document.documentElement.scrollHeight === innerHeight;
+      };
+      await frame.waitForFunction(fillsViewport);
+      await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-clock-mobile.png") });
+      await page.getByRole("button", { name: "Expanded view", exact: true }).click();
+      await frame.waitForFunction(fillsViewport);
+      await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-clock-expanded.png") });
+      await page.locator("[data-project-present-close]").click();
+      await frame.waitForFunction(fillsViewport);
     }
     if (template === "article") {
       const sourceEditor = page.locator(".cm-content");
@@ -253,12 +270,27 @@ test("Resources.co blog container examples render and surface schema errors in t
       });
       assert.equal(await surface.evaluate((node) => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
       assert.equal(await surface.locator("h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
+      const editedArticle = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
+      await page.locator("[data-project-output-mount] iframe").evaluate(frame => {
+        frame.contentWindow.__templateUndoFrame = true;
+      });
       await page.getByLabel("Template").selectOption("mark");
       await page.locator("[data-project-file-trigger]").click();
       await assert.doesNotReject(page.locator('[data-project-file="image.svg"]').waitFor());
       assert.equal(JSON.parse(await page.locator("[data-project-snapshot]").inputValue()).config.template, "mark");
       await page.waitForTimeout(1_700);
       assert.equal(await page.locator("[data-project-save]").textContent(), "");
+      await page.locator("[data-project-file-trigger]").click();
+      await surface.locator("svg circle").waitFor();
+      await page.locator("[data-project-notice]").getByRole("button", { name: "Undo", exact: true }).click();
+      assert.deepEqual(JSON.parse(await page.locator("[data-project-snapshot]").inputValue()), editedArticle);
+      assert.equal(await page.getByLabel("Template").inputValue(), "article");
+      await surface.locator("h1", { hasText: "A changed article" }).waitFor();
+      assert.equal(await surface.evaluate(node => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
+      assert.equal(await surface.locator("h1").evaluate(node => getComputedStyle(node).fontSize), "41px");
+      assert.equal(await page.locator("[data-project-notice]").isHidden(), true);
+      assert.equal(await page.locator("[data-project-output-mount] iframe").evaluate(frame =>
+        frame.contentWindow.__templateUndoFrame), true, "template replacement and undo reuse the output iframe");
     }
     await page.close();
   }

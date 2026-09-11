@@ -7,7 +7,9 @@
   <title>Project output</title>
   <style>
     html, body { min-height: 100%; margin: 0; background: transparent; }
-    :where(.project-output-root) { min-height: 100%; }
+    /* A guest document fills this frame even through auto-height staging
+       wrappers. Its own body styles can override this low-specificity default. */
+    :where(.project-output-root) { min-height: 100vh; }
     .project-output-root[hidden] { display: none; }
   </style>
 </head>
