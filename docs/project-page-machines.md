@@ -2020,6 +2020,43 @@ characters. This is not a matched performance comparison with the earlier
 fixture. The remaining broad-suite failures, full close-stack recording, and
 public DOM collection fidelity still require work; the overall goal stays open.
 
+### Dialogs, form ownership, and recoverable output failures
+
+Further ordinary-page checks found two missing native reflections: dialog
+`open` and a form control's `form` association. The guest now reads both from
+the browser. Associated forms are returned only within the machine's granted
+roots; no new navigation permission is implied. Palette Escape handling and
+instant language changes now pass the browser interaction check.
+
+RGB colors use the same semantic function/value checks as RGBA. An invalid
+project build now reports through the output status channel, not the fatal
+editor-runtime channel. The five-second error delay is retained. Browser
+coverage verifies that a rejected document leaves the previous output alive,
+the status rail follows the visible pane, and a subsequent valid edit recovers
+without reloading. Nested asynchronous rejection also has a small independent
+MicroQuickJS regression.
+
+The SVG template exposed two separate issues: resource compaction discarded
+the entry markup as an image dependency, and guest `createElementNS` lowercased
+case-sensitive SVG names. Entry source now reaches the normal compiler, and
+namespaced element names retain their casing. This does not bypass either the
+compiler or the host's SVG allowlist. Non-entry image bytes still stay out of
+the compiler machine.
+
+Checkpoint `72f4598` passes all five template previews, the output rejection and
+recovery interaction, and the outer-page keyboard/language/account check. It
+also passes 43 focused compiler/DOM/runtime tests and 67 backend tests. Its
+compressed backend runs in Deno, and all 151 deployment files verify after
+extracting the handoff archive. Read-only exported-asset checks cover the four
+owner projects, both themes, 50 tour slides, and SQLite fragment navigation;
+no project data was saved. SVG and output-error screenshots were reviewed.
+
+The local server has been restarted with these artifacts. The archive at
+`/root/resources-bunny.tar.gz` now contains this checkpoint; the previous one is
+`/root/archive/2026/09/11/resources-bunny-da43c0b-before-output-recovery.tar.gz`.
+Nothing was deployed to Bunny. These checks do not close the outstanding large
+insertion performance, collection fidelity, or broader workspace-flow work.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

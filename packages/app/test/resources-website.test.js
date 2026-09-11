@@ -209,6 +209,9 @@ test("Resources.co blog container examples render and surface schema errors in t
     const surface = output.locator("#project-output-a > :not([inert]) > .project-output-root");
     const preview = surface.locator(previewSelector);
     await preview.waitFor();
+    if (template === "mark") await page.screenshot({
+      path: resolve(repoRoot, "../macchiato-work/template-mark.png"),
+    });
     assert.equal(await preview.count(), 1);
     assert.equal(await page.locator("[data-project-status]").getAttribute("data-state"), "normal");
     assert.equal(await page.locator("[data-project-status]").isHidden(), true);
@@ -274,7 +277,7 @@ test("Resources.co rejected documents retain the last output and recover on edit
   const originalHeading = await surface.locator("h1").textContent();
   await editor.click();
   await page.keyboard.press("Control+A");
-  await page.keyboard.type('<article><h1 id="allowed">Waiting</h1><iframe><p>Blocked subtree</p></iframe></article><script>document.getElementById("allowed").textContent = "Allowed guest code still runs";</script>');
+  await editor.fill('<article><h1 id="allowed">Waiting</h1><iframe><p>Blocked subtree</p></iframe></article><script>document.getElementById("allowed").textContent = "Allowed guest code still runs";</script>');
   await page.locator("[data-project-status][data-state='error']").waitFor();
   // The compiler rejects the unsafe document as a whole and leaves the last
   // valid output alive; it does not execute a partially stripped document.
@@ -289,7 +292,8 @@ test("Resources.co rejected documents retain the last output and recover on edit
   await page.getByRole("button", { name: "Split view", exact: true }).click();
   assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__preview");
   assert.equal(await page.locator("[data-project-tip-controls]").isVisible(), false);
-  assert.match(await page.locator("[data-project-error]").textContent(), /Output stopped: build.compile:/);
+  assert.match(await page.locator("[data-project-error]").textContent(), /Output stopped: build.compile:.*iframe/);
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-output-error.png") });
   assert.equal(await page.locator("[data-project-save]").textContent(), "");
   await editor.fill('<article><h1 id="allowed">Waiting</h1></article><script>document.getElementById("allowed").textContent = "Allowed guest code still runs";</script>');
   await surface.locator("h1", { hasText: "Allowed guest code still runs" }).waitFor();
