@@ -3683,3 +3683,18 @@ Screenshots were inspected. An additional cat playthrough completed all eight
 pairs in eight moves and reset, then printed all successful assertions, but its
 process exited with signal 15 during teardown. That run's process completion is
 not called a pass. Logs: `native-mutations-owner-*` in `/root/macchiato-work`.
+
+The restarted local server now serves the `d7bd432` candidate host, controller,
+frontend/editor/output Wasm, and iframe HTML byte-for-byte. Fresh live checks of
+both saved games exited successfully; the cat check includes the complete
+eight-pair playthrough and reset. Neither check saved owner project content.
+Evidence: `native-mutations-live-{assets,cat,mahjong}.log`.
+
+The extracted replacement archive passes all 152 manifest checks.
+`/root/resources-bunny.tar.gz` has SHA-256
+`521c640a04acdf6d6b5bf676f43c919fc3f8bbc48e7f2cd5893834ee9894e33e`.
+The previous verified archive is preserved at
+`/root/archive/2026/09/11/resources-bunny-165a650-before-native-mutations.tar.gz`.
+Nothing was deployed to Bunny. The earlier timeout/interruption remain recorded;
+this checkpoint does not prove the broader performance and native-document
+fidelity requirements complete.

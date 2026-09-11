@@ -79,7 +79,8 @@ Before choosing the two-frame option, test rather than assume:
 - Repeated replacements reclaim old sessions/documents and do not accumulate
   frames, listeners, references, or substantial memory.
 
-The live deployment and Bunny archive remain the verified resize build. This
-comparison is evidence for the next design change, not a change to those
-artifacts. Diagnostic output and the inspected side-by-side screenshot are
-under `/root/macchiato-work/native-document-viewport*`.
+This comparison did not change the live deployment or Bunny archive. The later
+mutation-observer checkpoint updated those artifacts without changing this
+document-boundary design; see [project-page verification](project-page-machines.md).
+Diagnostic output and the inspected side-by-side screenshot are under
+`/root/macchiato-work/native-document-viewport*`.
