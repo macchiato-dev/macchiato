@@ -3065,6 +3065,27 @@ and repeated cleanup cannot remove a later machine's reused identifier.
 
 Type checking and 102 browser checks pass, including direct and iframe module
 loading, CSS/image handling, selector predicates, ranges, references, document
-parts, and inline output updates. The matched Resources export and its full
-application checks are still required before promoting this host locally.
-The viewport/`rem` and bulk-input performance work remains open.
+parts, and inline output updates. An additional deep-clone/fragment probe
+confirms that nested grant markers stay only on the original nodes.
+
+The complete `f34d76d` export passes its 152-file verification and compressed
+backend execution in Deno. Read-only owner checks cover both saved games, fifty
+tour slides and embedded/expanded keyboard navigation, SQLite fragment links,
+theme switches, and phone layouts. The two first-paint/theme tests pass,
+including the iframe backing pixel before editor readiness and after reload.
+
+The unprofiled, screenshot-only editing stress run passes in 60.41 seconds.
+Its 80-edit burst completes at 19.66 seconds; the 106,432-character paste takes
+847 ms and native insertion of 106,458 characters takes 19,746 ms. These are
+observations, not a claimed speedup: the bulk insertion remains too slow and
+earlier timings vary considerably. Screenshots of the light/dark editor, both
+games, and large input were inspected. Evidence is under `scope-marker-*` in
+`/root/macchiato-work`.
+
+The local server was restarted and six live host/controller/guest/frame assets
+match the verified export byte-for-byte. `/root/resources-bunny.tar.gz` contains
+the same verified export; the previous archive is retained at
+`/root/archive/2026/09/11/resources-bunny-a1889af-before-scope-marker.tar.gz`.
+No owner project was saved and nothing was deployed to Bunny. Viewport canvas
+propagation, the native `rem` basis, bulk-input performance, and the remaining
+service-boundary checks are still open.
