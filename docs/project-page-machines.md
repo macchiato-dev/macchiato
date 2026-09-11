@@ -2926,6 +2926,28 @@ containment checks. Logs and the baseline checkout are under
 `/root/macchiato-work/document-root-*`. The test accepts optional baseline host
 source and output-runtime paths; it does not alter production behavior.
 
+Full export `23561c6` passed its 152-file inventory and Deno backend execution
+check, but its full editing verification is unresolved. The recorded run hit
+the 180-second deadline (light output at 15s, editing/theme checks at 144s).
+An unrecorded run also timed out (50s / 118s, reload at 140s). The same test with
+the complete previous `82e85a0` resource directory also timed out (38s / 99s,
+reload at 116s, recovery/phone at 170s). Thus the recording alone does not
+explain the slowdown, and these runs do not isolate a query-path regression.
+CPU pressure was observable but cgroup CPU throttling was zero; this is not a
+diagnosis of the underlying cause. The full previous pair can be selected with
+`MACCHIATO_TEST_ASSETS_DIRECTORY`, and finer test-only checkpoints now split the
+expanded-view, undo/redo, and 80-edit-burst phases.
+
+A subsequent refinement composes the private scope marker into the class value
+before setting it. Root class assignment/removal now makes one native attribute
+mutation, rather than writing and then repairing it; the browser test checks
+one observer record for each of three mutation paths. This refinement follows
+the candidate export, which therefore is not the final package. The running
+3030 server and `/root/resources-bunny.tar.gz` were deliberately left on the
+previous verified `82e85a0` pair (live artifact hashes checked). Neither a Bunny
+deployment nor owner-project edits were performed. Root-attribute integration,
+complete editor revalidation, and performance attribution remain open.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

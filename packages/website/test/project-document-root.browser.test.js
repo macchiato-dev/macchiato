@@ -78,6 +78,8 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
       }
       const actual = [own, body, body.querySelector("p")].map(appearance);
       const mutations = [];
+      const observer = new MutationObserver(() => {}), records = [];
+      observer.observe(own, { attributes: true, attributeFilter: ["class"] });
       for (const change of [
         'document.documentElement.removeAttribute("class")',
         'document.documentElement.setAttribute("class", "page")',
@@ -85,9 +87,11 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
       ]) {
         run(change + '; __wwcPostMessage("scope:" + (document.querySelector(":root") === document.documentElement));');
         mutations.push(reports.pop());
+        records.push(observer.takeRecords().length);
       }
+      observer.disconnect();
       return { reports: reports.filter(value => value.startsWith("{")).map(JSON.parse),
-        actual, mutations,
+        actual, mutations, records,
         expected: [frame.contentDocument.documentElement, frame.contentDocument.body,
           frame.contentDocument.querySelector("p")].map(appearance),
         stylesInHead: head.querySelectorAll("style").length,
@@ -99,6 +103,7 @@ test("a granted HTML document subtree has distinct head, body, and root semantic
     bodyQuery: true, rootQuery: true, scopeQuery: true, parent: true, outside: true, rootParent: true }]);
   assert.deepEqual(result.actual, result.expected);
   assert.deepEqual(result.mutations, ["scope:true", "scope:true", "scope:true"]);
+  assert.deepEqual(result.records, [1, 1, 1]);
   assert.equal(result.stylesInHead, 1);
   assert.equal(result.stylesInBody, 0);
   assert.equal(result.host.color, "rgb(0, 0, 0)");
