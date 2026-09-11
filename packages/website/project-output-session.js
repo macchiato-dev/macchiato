@@ -199,6 +199,8 @@ export class ProjectOutput {
 
   inspect = () => ({ runtime: "quickjs", programs: this.programs });
 
+  focus = () => this.active?.session.call("__resourcesOutputFocus", null);
+
   destroy = () => {
     if (this.destroyed) return;
     this.destroyed = true;

@@ -8,6 +8,9 @@ const encoder = new TextEncoder(), decoder = new TextDecoder();
 let output, storage, ownerPort;
 let destroyed = false;
 
+// Forward frame activation to the current guest, not a hidden replacement.
+addEventListener("focus", () => output?.focus());
+
 function reportError(error) {
   ownerPort?.postMessage({ protocol, type: "error", error: error?.message || String(error) });
 }

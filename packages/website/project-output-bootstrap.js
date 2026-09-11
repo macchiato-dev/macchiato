@@ -2,6 +2,13 @@
 let nextFetch = 1;
 const pendingFetches = new Map();
 
+// The iframe can receive focus with its native body active, outside our grant.
+// Enter the application surface without replacing an existing input selection.
+globalThis.__resourcesOutputFocus = () => {
+  if (!document.activeElement) document.body.focus();
+  return "null";
+};
+
 // Each session has its own native module cache. The prefix separates project
 // resources from runtime code, not one source edit from the next.
 globalThis.__wwcModuleSource = name => {
