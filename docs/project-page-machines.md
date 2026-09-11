@@ -3460,3 +3460,44 @@ A direct browser check also confirms that primitive options throw `TypeError`
 and a timeout getter is read once. The guest now follows those rules before
 allocating a callback; the regression fixture covers both. Rebuilt deployment
 artifacts and full-project checks must use this final guest revision together.
+
+The final export is `resources-bunny-native-idle-final`, revision `cce29ab`,
+under `/root/macchiato-work`. Its inventory and an extracted copy of the archive
+both verify all 152 files. The compressed backend runs its routing, document,
+and SQL-policy guests in Deno (39 ms for that test, not a deployment cold-start
+measurement). The final idle fixture passes all four runtime/realm cases;
+MicroQuickJS required distinct catch bindings in the fixture's two checks.
+The 22 compiler, selector/CSS, mutation, storage, and SQL-policy unit checks pass.
+
+All four full-app workflows pass: startup backing, repeated explicit/system
+themes, storage denial, and recovery/save/publication/ZIP export in disposable
+accounts. The unprofiled stress run passes in 79.8 seconds, including 80 edits,
+scrolling, undo/redo, output-error recovery, and phone layouts. A 106,432-character
+paste takes 1,119 ms; native insertion of 106,458 characters takes 25.4 seconds.
+Those variable timings are not a speedup claim. Light, dark, expanded, and
+phone screenshots were inspected. The fixture's body margins still show the
+surrounding canvas color rather than receiving the body background as in a
+standalone document: viewport/background propagation and `rem` fidelity remain
+open, along with the guest's empty ResizeObserver and large-file parsing costs.
+
+The saved Mahjong and cat projects pass the exported-asset checks. That combined
+process then terminated with status 143; it is not counted as a completed
+four-project run. Separate fresh browser runs pass the remaining tour (50
+successive slides and keyboard navigation) and SQLite reader (fragment links),
+including theme changes and phone layouts. No saved owner projects were edited
+or saved. Evidence is in `native-idle-full-app.log`, `native-idle-stress*`,
+`native-idle-owner-*`, and `native-idle-final-*` in the working directory.
+
+After the local server restart, the live host, controller, frontend/editor/output
+Wasm artifacts, and output-frame HTML match the export byte-for-byte. The new
+`/root/resources-bunny.tar.gz` has SHA-256
+`5d949c29e8980c4a80ea6673852a08d6a9c7f9f78cd3f7b558227b61dfb741b3`.
+The previous archive is preserved at
+`/root/archive/2026/09/11/resources-bunny-2734fd8-before-native-idle.tar.gz`.
+No deployment to Bunny was performed. The broader goal remains open.
+
+Fresh authenticated browser checks of both saved games also pass with asset
+overrides disabled, using the live server after restart. Each loads eight
+expected assets and exercises its editor, iframe output, theme switches, and
+phone layout. Logs are `native-idle-live-cat.log` and
+`native-idle-live-mahjong.log`; these checks likewise make no owner saves.
