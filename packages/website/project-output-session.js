@@ -209,9 +209,15 @@ export class ProjectOutput {
   destroy = () => {
     if (this.destroyed) return;
     this.destroyed = true;
-    this.remove(this.preparing);
-    this.remove(this.active);
+    const entries = [this.preparing, this.active];
     this.preparing = this.active = null;
-    this.runtime.destroy();
+    // A failing release hook must not leave another session or the engine
+    // alive. Retire everything before propagating the first cleanup error.
+    const errors = [];
+    for (const entry of entries) {
+      try { this.remove(entry); } catch (error) { errors.push(error); }
+    }
+    try { this.runtime.destroy(); } catch (error) { errors.push(error); }
+    if (errors.length) throw errors[0];
   };
 }
