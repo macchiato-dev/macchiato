@@ -1753,8 +1753,25 @@ An uninstrumented new/old pair inserted the same 109,485 characters in
 20.1/20.4 seconds, with first-page insert/backspace medians of 149/154 ms.
 Exact source and error checks passed; owner writes were intercepted. This pair
 shows no obvious added cost, not a statistically established speedup. The large
-native-input delay remains. Integration checks are pending at this checkpoint;
-collection and attribute caches still need independent fidelity checks.
+native-input delay remains. Collection and attribute caches still need
+independent fidelity checks.
+
+The rebuilt site passes 209 integrated regression checks and 15 first-paint/
+theme cases. Text coercion is compared directly with browser setters, including
+Unicode, empty strings, null, undefined, numbers, and booleans. The integrated
+workflow preserves exact text and undo/redo after a 110 KB paste (0.88 seconds)
+and native insertion (24.3 seconds). Light/dark editor and both game screenshots
+were inspected. The restarted local server passes modern JavaScript editing,
+aligned divider dragging, and invalid-to-valid CSS recovery with 144 tiles,
+no page errors, and three intercepted autosaves; stored owner data is unchanged.
+
+Export `d1d8d45` passes all four stored-project loading checks, 50 consecutive
+tour slides, SQLite fragment navigation, and compressed backend execution in
+Deno. All 151 manifest entries also pass after archive extraction.
+`/root/resources-bunny.tar.gz` contains this build (33,964,779 bytes); the
+previous `6e52623` archive is preserved under `/root/archive/2026/09/11/`.
+Nothing was deployed to Bunny. This is an integrated accuracy checkpoint,
+not a claim that the entire performance and DOM-fidelity goal is complete.
 
 ### Standalone compiler parity
 
