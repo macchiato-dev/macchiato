@@ -854,7 +854,9 @@ test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the proje
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
 
   await page.getByLabel("Template").selectOption("paint");
-  let canvas = page.locator('[data-project-output-mount] canvas[aria-label="Click to paint colorful squares"]');
+  const output = page.frameLocator("[data-project-output-mount] iframe")
+    .locator(".project-output-root:not([hidden])");
+  let canvas = output.locator('canvas[aria-label="Click to paint colorful squares"]');
   await canvas.waitFor();
   await canvas.click({ position: { x: 100, y: 100 } });
   const painted = await canvas.evaluate((element) => {
@@ -866,7 +868,7 @@ test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the proje
   assert.ok(painted[1] > painted[0], `painted pixel should be teal: ${painted}`);
 
   await page.getByLabel("Template").selectOption("webgl");
-  canvas = page.locator('[data-project-output-mount] canvas[aria-label="A triangle drawn with WebGL"]');
+  canvas = output.locator('canvas[aria-label="A triangle drawn with WebGL"]');
   await canvas.waitFor();
   const pixel = await canvas.evaluate((element) => {
     const gl = element.getContext("webgl");
@@ -878,7 +880,7 @@ test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the proje
     `WebGL center pixel should be teal: ${pixel}\n${errors.join("\n")}\n${await page.locator("body").innerText()}`);
 
   await page.getByLabel("Template").selectOption("three");
-  canvas = page.locator('[data-project-output-mount] canvas[aria-label="A triangle built with Three.js"]');
+  canvas = output.locator('canvas[aria-label="A triangle built with Three.js"]');
   await canvas.waitFor();
   const threePixel = await canvas.evaluate((element) => {
     const gl = element.getContext("webgl");
@@ -890,10 +892,9 @@ test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the proje
     `Three.js center pixel should be coral: ${threePixel}\n${errors.join("\n")}`);
 
   await page.getByLabel("Template").selectOption("webgpu");
-  canvas = page.locator('[data-project-output-mount] canvas[aria-label="A triangle drawn with WebGPU"]');
+  canvas = output.locator('canvas[aria-label="A triangle drawn with WebGPU"]');
   await canvas.waitFor();
-  await page.waitForFunction(() => document.querySelector('canvas[aria-label="A triangle drawn with WebGPU"]')
-    ?.dataset.webgpuStatus === "ready", null, { timeout: 15_000 }).catch(async () => assert.fail(
+  await canvas.and(output.locator('[data-webgpu-status="ready"]')).waitFor({ timeout: 15_000 }).catch(async () => assert.fail(
       `WebGPU did not render: ${await canvas.getAttribute("data-webgpu-status")}\n${errors.join("\n")}`));
 });
 
@@ -923,7 +924,9 @@ test("Resources project CodeMirror follows repeated explicit and system theme ch
     editor: getComputedStyle(document.querySelector(".cm-editor")).backgroundColor,
     gutter: getComputedStyle(document.querySelector(".cm-gutters")).backgroundColor,
   }));
-  const dark = { choice: "dark", theme: "dark", editor: "rgb(29, 32, 32)", gutter: "rgb(40, 44, 52)" };
+  // Match the shared --resources-editor-* palette, not CodeMirror One Dark's
+  // default gutter. Resources intentionally uses a slightly darker gutter.
+  const dark = { choice: "dark", theme: "dark", editor: "rgb(29, 32, 32)", gutter: "rgb(25, 28, 28)" };
   const light = { choice: "light", theme: "light", editor: "rgb(217, 225, 227)", gutter: "rgb(203, 214, 217)" };
 
   for (const expected of [light, dark, light, dark]) {

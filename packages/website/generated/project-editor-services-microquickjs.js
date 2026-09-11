@@ -1173,7 +1173,7 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
     } catch (_unused9) {}
     if (!Array.isArray(stack)) stack = [];
     var previous = stack.at(-1);
-    close.href = typeof previous === "string" && previous.startsWith("/") ? previous : "/";
+    close.setAttribute("href", typeof previous === "string" && previous.startsWith("/") && !previous.startsWith("//") ? previous : "/");
     close.addEventListener("click", function () {
       stack.pop();
       sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));

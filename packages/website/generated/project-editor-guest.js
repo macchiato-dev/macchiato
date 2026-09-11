@@ -27717,7 +27717,7 @@ for (const close of document.querySelectorAll(".project-close")) {
   }
   if (!Array.isArray(stack)) stack = [];
   const previous = stack.at(-1);
-  close.href = typeof previous === "string" && previous.startsWith("/") ? previous : "/";
+  close.setAttribute("href", typeof previous === "string" && previous.startsWith("/") && !previous.startsWith("//") ? previous : "/");
   close.addEventListener("click", () => {
     stack.pop();
     sessionStorage.setItem("resources-project-close-stack", JSON.stringify(stack));
