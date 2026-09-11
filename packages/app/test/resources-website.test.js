@@ -1678,7 +1678,7 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   const invited = await accounts.authenticateIdentity({ provider: "github", providerUserId: "org-invited", login: "invited-user", name: "Invited User", email: "invited@example.test", emailVerified: true });
   db.close();
   async function sessionFor(account) {
-    return seal({ v: 1, sub: account.id, provider: "github", login: account.login, name: account.name, iat: Date.now(), exp: Date.now() + 60_000 }, "local-preview-session-signing-key");
+    return seal({ v: 1, sub: account.id, provider: "github", login: account.login, name: account.name, iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
   }
 
   const browser = await chromium.launch();
@@ -1686,7 +1686,19 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   const ownerPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await ownerPage.context().addCookies([{ name: "resources_session", value: await sessionFor(owner), domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   await ownerPage.goto(`http://resources-edge.localhost:${port}/organizations/new`);
+  await ownerPage.waitForFunction(() => document.documentElement.dataset.resourcesFrontendMachineState === "ready");
+  const organizationName = ownerPage.getByLabel("Name", { exact: true });
+  await organizationName.fill("chosen-name");
+  await ownerPage.getByLabel("Title", { exact: true }).fill("First title");
+  assert.equal(await organizationName.inputValue(), "chosen-name", "a manual name survives the first title edit");
+  await organizationName.fill("");
   await ownerPage.getByLabel("Title", { exact: true }).fill("Browser Team");
+  assert.equal(await organizationName.inputValue(), "browser-team",
+    "the outer guest must initialize organization name generation without an editor machine");
+  await organizationName.fill("bad_name");
+  assert.equal(await organizationName.evaluate(input => input.checkValidity()), false);
+  await organizationName.fill("browser-team");
+  assert.equal(await organizationName.evaluate(input => input.checkValidity()), true);
   await ownerPage.getByLabel("Description (optional)").fill("A browser-tested café organization.");
   await ownerPage.getByRole("button", { name: "Create organization" }).click();
   await ownerPage.getByRole("link", { name: /Browser Team/ }).click();
@@ -1700,7 +1712,7 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   assert.equal(inviteResponse.status(), 303,
     inviteResponse.status() === 303 ? undefined : await inviteResponse.text());
   await ownerPage.waitForTimeout(300);
-  await ownerPage.screenshot({ path: "/tmp/resources-organization-admin.png", fullPage: true });
+  await ownerPage.screenshot({ path: join(dataDir, "resources-organization-admin.png"), fullPage: true });
 
   const invitedPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await invitedPage.context().addCookies([{ name: "resources_session", value: await sessionFor(invited), domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
@@ -1718,7 +1730,7 @@ test("Resources Edge manages usernames, invitations, notifications, and roles in
   await invitedPage.getByRole("button", { name: "Accept" }).click();
   await invitedPage.getByRole("heading", { name: "Browser Team" }).waitFor();
   await invitedPage.waitForTimeout(300);
-  await invitedPage.screenshot({ path: "/tmp/resources-organization-mobile.png", fullPage: true });
+  await invitedPage.screenshot({ path: join(dataDir, "resources-organization-mobile.png"), fullPage: true });
 
   await ownerPage.reload();
   await ownerPage.getByLabel("Role for invited-user").selectOption("member");

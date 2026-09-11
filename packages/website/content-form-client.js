@@ -4,6 +4,7 @@ import { containerElementNames } from "/-/resources-site/container-elements.js";
 import { buildProject as buildProjectInMachine, downloadProjectArchive, frontendTheme, importProjectArchive, mountResourcesProjectEditor, mountResourcesProjectPreview, replaceFrontendPath } from "/-/resources-site/project-editor-runtime.js";
 import { parseProjectHtml } from "./project-html-parser.js";
 import { editorLanguageForPath } from "../project-editor/src/languages.js";
+import { mountContentNameFields } from "./content-name-fields.js";
 
 const PROJECT_IMAGE_TYPES = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
 function isProjectImage(file) {
@@ -93,16 +94,6 @@ for (const fields of document.querySelectorAll("[data-project-fields]")) {
     fields.closest("form")?.requestSubmit(fields.querySelector("[data-project-submit]"));
   });
   modal.addEventListener("pointerdown", (event) => { if (event.target === modal) close(); });
-}
-
-const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function slugify(value) {
-  const text = String(value || "");
-  const normalized = typeof text.normalize === "function" ? text.normalize("NFKD") : text;
-  return normalized.replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "").slice(0, 63).replace(/-+$/g, "");
 }
 
 const DRAFT_KEY = "resources_project_draft_v5";
@@ -222,43 +213,7 @@ for (const select of document.querySelectorAll("[data-project-template]")) {
   }
 }
 
-const generatedSlugs = new WeakMap();
-function slugPair(source) {
-  const slugId = source.dataset.slugSource || (source.id === "project-name" ? "project-slug" : source.id === "organization-name" ? "organization-slug" : "");
-  const slug = document.getElementById(slugId);
-  const error = document.getElementById(slug?.getAttribute("aria-describedby"));
-  return slug && error ? { slug, error } : null;
-}
-function validateSlug(slug, error, touched = true) {
-  const invalid = slug.value !== "" && !slugPattern.test(slug.value);
-  slug.setCustomValidity(invalid ? error.dataset.message : "");
-  slug.setAttribute("aria-invalid", invalid ? "true" : "false");
-  error.hidden = !invalid || !touched;
-}
-document.addEventListener("input", (event) => {
-  const source = event.target.closest?.("[data-slug-source], #project-name, #organization-name");
-  if (source) {
-    const pair = slugPair(source);
-    if (!pair) return;
-    const previous = generatedSlugs.get(source) ?? pair.slug.value;
-    if (pair.slug.value !== "" && pair.slug.value !== previous) return;
-    const generated = slugify(source.value);
-    generatedSlugs.set(source, generated);
-    pair.slug.value = generated;
-    validateSlug(pair.slug, pair.error, false);
-    return;
-  }
-  const slug = event.target.closest?.("#project-slug, #organization-slug");
-  if (!slug) return;
-  const error = document.getElementById(slug.getAttribute("aria-describedby"));
-  if (error) validateSlug(slug, error);
-});
-document.addEventListener("focusout", (event) => {
-  const slug = event.target.closest?.("#project-slug, #organization-slug");
-  if (!slug) return;
-  const error = document.getElementById(slug.getAttribute("aria-describedby"));
-  if (error) validateSlug(slug, error);
-});
+mountContentNameFields();
 document.querySelector("[data-try-form]")?.addEventListener("submit", (event) => event.preventDefault());
 function attachInstantTooltip(button, label = button.dataset.instantTooltip, shouldShow = () => true) {
   if (!label || button.dataset.instantTooltipAttached === "true") return;
