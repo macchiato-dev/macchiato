@@ -3667,3 +3667,19 @@ The first candidate stress run terminated with signal 15 and no test result
 dark, and phone screenshots were inspected, but that is not a completed stress
 test. An optional progress file now retains checkpoints outside Node's buffered
 test report, with no production instrumentation and no deadline increase.
+
+The repeated stress test passed in 90 seconds (`native-mutations-stress-repeat`
+log, progress file, and screenshots). The 80-edit sequence completed at 29.3
+seconds from test startup. A 106,432-character paste took 1.49 seconds; native
+insertion of 106,458 characters took 30.8 seconds. Both preserved source and
+undo/redo. These noisy measurements do not establish a speedup, and the native
+bulk-insertion cost remains unfinished performance work.
+
+Read-only owner-project checks against the same export passed for Mahjong,
+Cat Memory Match, the tour, and SQLite, including iframe output, theme changes,
+and phone layouts. The tour also advanced 50 slides and exercised embedded and
+expanded keyboard navigation; SQLite kept fragment navigation within output.
+Screenshots were inspected. An additional cat playthrough completed all eight
+pairs in eight moves and reset, then printed all successful assertions, but its
+process exited with signal 15 during teardown. That run's process completion is
+not called a pass. Logs: `native-mutations-owner-*` in `/root/macchiato-work`.
