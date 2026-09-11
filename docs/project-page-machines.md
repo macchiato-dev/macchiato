@@ -3747,3 +3747,10 @@ while a same-candidate comparison substitutes only the previous editor Wasm.
 That guest is compatible with the additive scheduling capability: its mutation,
 resize, idle, and remaining ABI calls are unchanged. This is a diagnostic
 comparison, not a production mixture. Evidence: `input-pending-stress*`.
+
+The same-candidate run with the previous editor passed in 90 seconds: its
+80-edit sequence completed at 29.7 seconds, paste took 1.09 seconds, and native
+insertion 30.6 seconds. That contrasts with the enabled candidate's 43.2-second
+edit checkpoint and 138-second total. A repeat of the enabled candidate is
+needed before attributing the difference; do not promote it based only on its
+functional passes. `input-pending-stress-old-editor` contains that comparison.
