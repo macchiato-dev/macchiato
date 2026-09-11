@@ -1616,6 +1616,38 @@ predecessor is preserved at
 `/root/archive/2026/09/11/resources-bunny-1571583-before-semantic-selectors.tar.gz`.
 The local server is updated. No Bunny deployment was performed.
 
+### September 11 selector simplification and input controls
+
+A fresh DevTools timeline on the integrated selector build inserted 109,485
+characters in 67 seconds. It recorded 8,092 layouts (27.8 seconds), 8,094
+style/layout-tree updates (9.5 seconds), and 4,000 native input events. These
+overlapping event and callback durations must not be added to layout costs.
+The trace is outside the repository, with no instrumentation in the shipped
+host. A separate, unprofiled native CodeMirror control in the captured workspace
+inserted 109,473 characters in 27.3 seconds, verified the exact document, and
+retained the 585 by 798 pixel editor. This control has native CodeMirror setup,
+not the whole Resources application; it establishes a browser-side cost, not
+an exact estimate of Wasm overhead. An earlier control hit its diagnostic
+deadline before checking the document and is not accepted as a passing run.
+
+The semantic renderer now places its zero-specificity ownership guard after
+each compound and before the optional pseudo-element. A redundant outer
+`:is()` is unnecessary when the type selector stays first. This makes the
+rendered CSS simpler without dropping any compound or predicate boundary.
+All 44 parser, native-cascade, and live guest containment checks pass, including
+host ancestor/sibling probes and root type specificity. An unprofiled pair
+took 33.6 seconds with this change and 34.9 seconds with the prior host;
+first-page insert/backspace pair medians were 238 and 217 ms respectively.
+These variable samples do not establish a performance improvement. Keep the
+change for simplicity, not as a claimed fix for the large-insertion slowdown.
+
+A separate first-page typing profile after clipboard paste attributed 86% of
+its samples to guest delivery, unlike the bulk-input timeline dominated by
+native browser work. That is the next profiling distinction to preserve:
+optimizing ordinary editing and optimizing a multi-thousand-line native input
+operation are not interchangeable. Live-owner diagnostics intercepted saves
+and left stored project contents unchanged.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a

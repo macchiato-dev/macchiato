@@ -144,7 +144,7 @@ function renderSelector(list, scopeClass, logicalRoot = false) {
         }).join("");
         if (element && index !== parts.length - 1) fail2();
         const sibling = scope && index + 1 < parts.length && ["+", "~"].includes(parts[index + 1][0]);
-        return join + guard + `:is(${compound || "*"})` + (sibling ? `:where(:not(${scope}))` : "") + element;
+        return join + (compound || "*") + guard + (sibling ? `:where(:not(${scope}))` : "") + element;
       }).join("");
     }).join(", ");
   }
