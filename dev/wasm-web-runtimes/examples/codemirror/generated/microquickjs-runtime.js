@@ -2637,26 +2637,14 @@ Object.defineProperties(GuestObject.prototype, {
   },
   nextSibling: {
     get: function get() {
-      var parent = parentOf(this);
-      if (!parent) return null;
-      var siblings = childrenOf(parent),
-        index = this._guestChildIndex;
-      if (index === undefined || siblings[index] !== this) {
-        this._guestChildIndex = index = siblings.indexOf(this);
-      }
-      return index >= 0 ? siblings[index + 1] || null : null;
+      var result = hostGet(this.reference, "nextSibling");
+      return result === null ? null : nodeForReference(result[1]);
     }
   },
   previousSibling: {
     get: function get() {
-      var parent = parentOf(this);
-      if (!parent) return null;
-      var siblings = childrenOf(parent),
-        index = this._guestChildIndex;
-      if (index === undefined || siblings[index] !== this) {
-        this._guestChildIndex = index = siblings.indexOf(this);
-      }
-      return index >= 0 ? siblings[index - 1] || null : null;
+      var result = hostGet(this.reference, "previousSibling");
+      return result === null ? null : nodeForReference(result[1]);
     }
   }
 });

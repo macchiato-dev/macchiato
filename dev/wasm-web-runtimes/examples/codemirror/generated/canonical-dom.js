@@ -1839,25 +1839,15 @@ Object.defineProperties(GuestObject.prototype, {
     var children = childrenOf(this);
     return children.length ? children[children.length - 1] : null;
   } },
-  // A saved index is only a hint: validate the slot on every read, so reorders
-  // and moves between parents cannot make it point at a different node.
+  // Native editing can reorder siblings before MutationObserver delivery.
+  // Read the current relationship; the host checks the returned node's grant.
   nextSibling: { get: function () {
-    var parent = parentOf(this);
-    if (!parent) return null;
-    var siblings = childrenOf(parent), index = this._guestChildIndex;
-    if (index === undefined || siblings[index] !== this) {
-      this._guestChildIndex = index = siblings.indexOf(this);
-    }
-    return index >= 0 ? siblings[index + 1] || null : null;
+    var result = hostGet(this.reference, "nextSibling");
+    return result === null ? null : nodeForReference(result[1]);
   } },
   previousSibling: { get: function () {
-    var parent = parentOf(this);
-    if (!parent) return null;
-    var siblings = childrenOf(parent), index = this._guestChildIndex;
-    if (index === undefined || siblings[index] !== this) {
-      this._guestChildIndex = index = siblings.indexOf(this);
-    }
-    return index >= 0 ? siblings[index - 1] || null : null;
+    var result = hostGet(this.reference, "previousSibling");
+    return result === null ? null : nodeForReference(result[1]);
   } }
 });
 Object.defineProperty(GuestElement.prototype, "children", {

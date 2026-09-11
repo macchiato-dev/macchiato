@@ -402,26 +402,30 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     const parent = document.querySelector("#sibling-probe");
     const [first, middle, last] = parent.children;
     parent.prepend(last);
-    // The mirror follows native MutationObserver delivery. Reading before
-    // delivery is still a documented parity gap, not covered by this cache.
+    const movedImmediately = window.callGuest("inspectSiblingProbe", {});
     await Promise.resolve();
     const moved = window.callGuest("inspectSiblingProbe", {});
     parent.remove();
     const detached = window.callGuest("inspectSiblingProbe", {});
     middle.remove();
+    const removedImmediately = window.callGuest("inspectSiblingProbe", {});
     await Promise.resolve();
     const removed = window.callGuest("inspectSiblingProbe", {});
     const restored = window.callGuest("moveSiblingProbe", {});
-    return { initial, moved, detached, removed, restored };
+    return { initial, movedImmediately, moved, detached, removedImmediately, removed, restored };
   });
   assert.deepEqual(siblings.initial.next, ["middle", "last", null]);
   assert.deepEqual(siblings.initial.previous, [null, "first", "middle"]);
   assert.ok(siblings.initial.identity);
   assert.deepEqual(siblings.moved.next, ["middle", null, "first"]);
   assert.deepEqual(siblings.moved.previous, ["last", "first", null]);
+  assert.deepEqual(siblings.movedImmediately, siblings.moved,
+    "native reordering is visible synchronously, before observer delivery");
   assert.deepEqual(siblings.detached, siblings.moved, "owned detached siblings remain usable");
   assert.deepEqual(siblings.removed.next, [null, null, "first"]);
   assert.deepEqual(siblings.removed.previous, ["last", null, null]);
+  assert.deepEqual(siblings.removedImmediately, siblings.removed,
+    "native removal in a retained detached subtree is visible synchronously");
   assert.deepEqual(siblings.restored, siblings.initial, "guest moves invalidate stale index hints synchronously");
   for (const state of Object.values(siblings)) {
     assert.ok(state.rootNext && state.rootPrevious, "root siblings remain outside the grant");
