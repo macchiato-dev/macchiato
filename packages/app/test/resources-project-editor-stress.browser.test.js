@@ -430,7 +430,22 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   // separately; this test checks data, undo/redo, and error-free recovery.
   const nativeSource = large + "\n<!-- native insertion -->";
   const mount = editor.locator(".project-editor__source > .project-editor__mount");
-  assert.equal(await mount.evaluate(node => getComputedStyle(node).contain), "size");
+  if (process.env.MACCHIATO_EDITOR_CONTAIN) {
+    await mount.evaluate((node, contain) => { node.style.contain = contain; }, process.env.MACCHIATO_EDITOR_CONTAIN);
+  }
+  if (process.env.MACCHIATO_EDITOR_STATIC_LAYOUT) {
+    await mount.evaluate((node, mode) => {
+      if (mode === "absolute") {
+        node.style.position = "relative";
+        Object.assign(node.querySelector(".cm-editor").style, { position: "absolute", inset: "0" });
+        return;
+      }
+      const box = node.getBoundingClientRect();
+      Object.assign(node.style, { position: "fixed", left: `${box.left}px`, top: `${box.top}px`,
+        width: `${box.width}px`, height: `${box.height}px` });
+    }, process.env.MACCHIATO_EDITOR_STATIC_LAYOUT);
+  }
+  assert.equal(await mount.evaluate(node => getComputedStyle(node).contain), process.env.MACCHIATO_EDITOR_CONTAIN || "size");
   const originalSize = await mount.boundingBox();
   for (const native of [false, true]) {
     const text = native ? nativeSource : large;

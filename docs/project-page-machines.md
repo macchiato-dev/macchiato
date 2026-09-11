@@ -2057,6 +2057,31 @@ The local server has been restarted with these artifacts. The archive at
 Nothing was deployed to Bunny. These checks do not close the outstanding large
 insertion performance, collection fidelity, or broader workspace-flow work.
 
+### Bulk-input performance investigation
+
+The bulk-input comparison runs the same generated editor and HTML language
+sources natively and in MicroQuickJS, in one Chromium process with separate
+page contexts, a fixed 1440×900 viewport, and native/Wasm/Wasm/native order.
+Both get an input warmup and the same 106,432-character inert HTML document.
+This is not a comparison of different editor configurations or load times.
+
+In the initial run, native `insertText` took 6.1–6.4 seconds and MicroQuickJS
+took 8.1–8.2 seconds. Chromium dispatched one `beforeinput` and 3,874 `input`
+events in both. Each editor produced one document change with correct text,
+undo, and redo. Paste used a different browser path: approximately 34 ms native
+and 700 ms in MicroQuickJS. These measurements concern very large insertion,
+not ordinary keypress latency.
+
+The complete workspace still took 21.3 seconds without video capture, so video
+overhead did not explain its difference from the isolated editor. An opt-in
+DevTools trace recorded about 7.5 seconds of layout and 2.6 seconds of style
+recalculation across roughly 7,800 layout passes. Most passed through the whole
+document. CPU samples attributed most remaining time to browser work rather
+than interpreter execution. These categories can nest and are not additive
+end-to-end timings. Profiles and traces are test-only; the production host has
+no added observer or profiler. Layout alternatives are being measured before
+changing the shipped workspace.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
