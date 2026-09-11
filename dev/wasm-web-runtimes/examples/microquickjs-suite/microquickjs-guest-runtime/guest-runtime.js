@@ -558,9 +558,23 @@ GuestStorage.prototype.removeItem = function (name) {
 GuestStorage.prototype.listen = function (name, callback) {
   if (typeof callback !== "function") throw new TypeError("callback required");
   var index = allocateCallback(callback, false);
-  immediate([3, document.reference, stringIndex("storageListen"), [
-    encode(this.kind), encode(String(name)), encode(index)
-  ]]);
+  try {
+    var result = immediate([3, document.reference, stringIndex("storageListen"), [
+      encode(this.kind), encode(String(name)), encode(index)
+    ]]);
+    if (result !== null) {
+      var reader = new Reader(result, result.length);
+      var errorName = readValue(reader), message = readValue(reader);
+      var ErrorType = errorName === "TypeError" ? TypeError : errorName === "RangeError" ? RangeError : Error;
+      var error = new ErrorType(message);
+      error.name = errorName;
+      throw error;
+    }
+  } catch (error) {
+    // No host subscription owns this slot when registration failed.
+    releaseCallback(index);
+    throw error;
+  }
 };
 
 function resolved(value) {

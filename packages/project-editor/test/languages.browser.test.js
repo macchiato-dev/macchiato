@@ -337,6 +337,9 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     else assert.ok(Math.abs(measurement.width / narrowTab - size / 2) < 0.02, "native tab geometry follows the state facet");
   }
   const beforeListeners = await page.evaluate(() => window.callGuest("inspectListeners", {}));
+  const unavailable = await page.evaluate(() => window.callGuest("probeUnavailableStorage", {}));
+  assert.equal(unavailable.caught, 5000, "missing storage service errors are catchable inside MicroQuickJS");
+  assert.ok(unavailable.growth <= 1, "failed subscriptions must not exhaust guest callback IDs");
   const recycled = await page.evaluate(() => window.callGuest("recycleListeners", {}));
   assert.ok(recycled.slots <= beforeListeners.slots + 4,
     "5,000 temporary listeners reuse slots instead of consuming the 4,096 callback IDs");

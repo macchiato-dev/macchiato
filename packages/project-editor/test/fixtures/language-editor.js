@@ -141,6 +141,19 @@ function inspectListeners() {
   __wwcPostMessage('__wwcResponse:' + JSON.stringify({ hits: listenerProbeHits, slots: callbacks.length }));
   flush();
 }
+
+function probeUnavailableStorage() {
+  var before = callbacks.length, caught = 0;
+  for (var index = 0; index < 5000; index++) {
+    try { localStorage.listen("settings", function () {}); }
+    catch (error) {
+      if (error.name !== "Error" || error.message !== "storage is not available") throw error;
+      caught++;
+    }
+  }
+  __wwcPostMessage("__wwcResponse:" + JSON.stringify({ caught: caught, growth: callbacks.length - before }));
+  flush();
+}
 function removeProbeListener() {
   document.removeEventListener('pointermove', listenerProbe);
   inspectListeners();

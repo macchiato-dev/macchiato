@@ -67,6 +67,51 @@ for (const framed of [false, true]) test(`storage replies and subscription dispo
   await target.getByRole("button", { name: "Read storage", exact: true }).click();
   assert.equal(await target.locator("#result").textContent(), "recovered: still working");
   await target.evaluate(() => { output.destroy(); storage.destroy(); });
+  const deniedProgram = compileProjectFiles([{ path: "index.html", content: `
+    <button id="subscribe">Subscribe</button><p id="result"></p><script>
+      var failures = 0;
+      for (var i = 0; i < 5000; i++) {
+        try { localStorage.listen("settings", function () {}); }
+        catch (error) {
+          if (error.name !== "SecurityError") throw error;
+          failures++;
+        }
+      }
+      document.getElementById("result").textContent = String(failures);
+      document.getElementById("subscribe").addEventListener("click", function () {
+        var invalid;
+        try { localStorage.listen(Array(1026).join("x"), function () {}); }
+        catch (error) { invalid = error instanceof TypeError; }
+        if (!invalid) throw new Error("Expected a catchable key validation error");
+        localStorage.listen("settings", function () {
+          document.getElementById("result").textContent = "changed after recovery";
+        });
+        document.getElementById("result").textContent = "subscribed after recovery";
+      });
+    </script>` }]);
+  await target.evaluate(async program => {
+    const { Machine, ProjectOutput, ProjectOutputStorage } = await import("/module.js");
+    const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
+    const descriptor = Object.getOwnPropertyDescriptor(window, "localStorage");
+    Object.defineProperty(window, "localStorage", { configurable: true, get() {
+      throw new DOMException("Storage denied", "SecurityError");
+    } });
+    window.storage = new ProjectOutputStorage(window, "subscription-test");
+    window.output = new ProjectOutput(Machine, module, document.querySelector("#mount"),
+      () => ({ services: { storage } }), error => { throw error; });
+    try { await output.load(program); }
+    finally { Object.defineProperty(window, "localStorage", descriptor); }
+  }, deniedProgram);
+  assert.equal(await target.locator("#result").textContent(), "5000", "failed subscriptions reuse callback slots");
+  assert.equal(await target.evaluate(() => storage.listeners.size), 0);
+  await target.getByRole("button", { name: "Subscribe", exact: true }).click();
+  assert.equal(await target.locator("#result").textContent(), "subscribed after recovery");
+  assert.equal(await target.evaluate(() => storage.listeners.size), 1);
+  await target.evaluate(() => window.dispatchEvent(new StorageEvent("storage", {
+    storageArea: localStorage, key: storage.key("settings"),
+  })));
+  assert.equal(await target.locator("#result").textContent(), "changed after recovery");
+  await target.evaluate(() => { output.destroy(); storage.destroy(); });
   const subscriptionProgram = compileProjectFiles([{ path: "index.html", content:
     '<script>localStorage.listen("settings", function () { __wwcPostMessage("changed"); });</script>' }]);
   const subscriptions = await target.evaluate(async program => {
