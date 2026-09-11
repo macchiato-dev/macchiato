@@ -2332,6 +2332,25 @@ recovery coverage; the atomic host write test alone does not prove that UI
 path. Resource-table lifetime and retained live DOM collections also remain
 separate work, along with the broader performance/deployment goal.
 
+Checkpoint `0351f98` is built and verified: fourteen focused unit/artifact
+checks, both persistence browser workflows, twenty appearance checks, and the
+four read-only owner-project checks (including fifty tour slides and SQLite
+fragments). The compressed backend executes in Deno and all 151 exported files
+verify again after tar extraction. The local server returns the same controller
+bytes as this export. `/root/resources-bunny.tar.gz` contains this checkpoint;
+the previous archive is retained under
+`/root/archive/2026/09/11/resources-bunny-be3cb8f-before-durable-recovery.tar.gz`.
+No Bunny deployment was performed.
+
+The fixed 106,432-character editing stress case passes twice. Paste takes
+785/795 ms; native insertion takes 22,989/24,316 ms. Those native-insertion
+results are slower than the earlier roughly 19-second checkpoint, so this is
+not a performance-win claim. A standalone 4,000-write probe of recovery
+packing takes about 587 ms; checking for the required escaped NUL prefix first
+takes about 300 ms. That overhead alone does not explain the bulk-input
+difference. No speculative parser fast path was shipped; browser layout and
+the complete native input sequence need another controlled profile.
+
 ### Standalone compiler parity
 
 The temporary playground keeps its page integration behind a controller and a
