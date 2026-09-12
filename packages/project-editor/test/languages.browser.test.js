@@ -319,6 +319,23 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   }).filter(message => message?.type === "change").at(-1));
   assert.equal(change.content, "// comment\n" + modern);
   assert.equal(change.syntaxErrors, false, "valid project JavaScript must not be classified as invalid ES5");
+  // A recoverable editor grammar is for highlighting, not a project-wide
+  // execution gate. Even invalid source may be an unused or data-only file.
+  for (const [path, source, language] of [
+    ['incomplete.json', '{"value": }', 'json'],
+    ['incomplete.rs', 'fn main( {', 'rust'],
+    ['incomplete.py', 'def greet(:', 'python'],
+    ['incomplete.ts', 'const value: =', 'typescript'],
+  ]) {
+    await select(path, source, language);
+    await page.evaluate(head => window.callGuest('selectPosition', { head }), source.length);
+    await page.keyboard.type(' ');
+    const notice = await page.evaluate(() => guestNotices.map(text => {
+      try { return JSON.parse(text); } catch { return null; }
+    }).filter(message => message?.type === 'change').at(-1));
+    assert.equal(notice.content, source + ' ');
+    assert.equal(notice.syntaxErrors, false, path + ' must reach the actual project build/output validator');
+  }
   for (const theme of ["dark", "light", "dark"]) {
     const expected = theme === "dark" ? "rgb(62, 82, 111)" : "rgb(185, 180, 220)";
     await page.evaluate(({ theme, color }) => {

@@ -13,7 +13,6 @@ import { tags } from "@lezer/highlight";
 import { historyField, redo, undo } from "@codemirror/commands";
 import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
-import { hasSyntaxErrors } from "./syntax.js";
 import { editorLanguages, editorLanguageForPath, createEditorLanguageLoader } from "./languages.js";
 import { cacheHighlightStyle } from "./highlight-cache.js";
 
@@ -187,7 +186,10 @@ function editorExtensions() {
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
-          syntaxErrors: hasSyntaxErrors(update.state, currentLanguage),
+          // Highlighting recovery is not project validation. The debounced
+          // builder/runtime checks the code it actually uses; configuration
+          // JSON is validated by its owner, not by the editor's parse tree.
+          syntaxErrors: false,
         });
       }
     }),
