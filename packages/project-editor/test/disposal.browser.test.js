@@ -4,6 +4,75 @@ import test from "node:test";
 import { build } from "esbuild";
 import { chromium } from "playwright";
 
+test("retaining a destroyed machine does not retain its DOM, memory, or stamp", async t => {
+  const code = (await build({
+    stdin: { resolveDir: new URL("../../../", import.meta.url).pathname,
+      contents: "export { default } from './dev/wasm-web-machine/src/wasm-web-machine.ts';" },
+    bundle: true, write: false, format: "esm", platform: "browser",
+  })).outputFiles[0].text;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  await page.route("http://retention.test/**", route => route.fulfill(
+    new URL(route.request().url()).pathname === "/machine.js"
+      ? { body: code, contentType: "text/javascript" }
+      : { body: '<!doctype html><title>Machine retention</title>', contentType: "text/html" }));
+  await page.goto("http://retention.test/");
+  await page.evaluate(async () => {
+    const { default: Machine } = await import("/machine.js");
+    window.machines = [];
+    window.references = [];
+    for (const state of ["active", "disposed", "cleanup throws"]) {
+      const root = document.createElement("div");
+      root.append(document.createElement("p"));
+      document.body.append(root);
+      const memory = new WebAssembly.Memory({ initial: 1 });
+      const stamp = new Uint8Array(1024 * 1024);
+      // The documented trusted-adapter surface isolates the machine lifetime
+      // from any one interpreter's finalizers. It has no asynchronous work.
+      const machine = new Machine({ instantiate() {
+        return { exports: { memory, onmsg() {} }, destroy() {
+          if (state === "cleanup throws") throw Error("Fixture cleanup failed");
+        } };
+      } }, root, { stamp });
+      await machine.onmsg(0);
+      machines.push(machine);
+      references.push({ state, root: new WeakRef(root), memory: new WeakRef(memory), stamp: new WeakRef(stamp) });
+      root.remove();
+      if (state !== "active") {
+        let message;
+        try { machine.destroy(); } catch (error) { message = error.message; }
+        if (message !== (state === "cleanup throws" ? "Fixture cleanup failed" : undefined))
+          throw Error("Unexpected cleanup result: " + message);
+        machine.destroy();
+        for (const send of [() => machine.msg(0, 0), () => machine.onmsg(0)]) {
+          let failure;
+          try { send(); } catch (error) { failure = error.message; }
+          if (failure !== "wasm-web-machine: machine was destroyed")
+            throw Error("Destroyed machine accepted a message: " + failure);
+        }
+      }
+    }
+  });
+  // A separate task and DevTools GC avoid keeping WeakRef targets alive in
+  // the creation job. Keep each machine itself strongly reachable throughout.
+  const client = await page.context().newCDPSession(page);
+  await client.send("HeapProfiler.collectGarbage");
+  const retained = await page.evaluate(() => references.map(record => ({ state: record.state,
+    root: !!record.root.deref(), memory: !!record.memory.deref(), stamp: !!record.stamp.deref() })));
+  t.diagnostic(JSON.stringify(retained));
+  assert.deepEqual(retained, [
+    { state: "active", root: true, memory: true, stamp: true },
+    { state: "disposed", root: false, memory: false, stamp: false },
+    { state: "cleanup throws", root: false, memory: false, stamp: false },
+  ]);
+  await page.evaluate(() => machines[0].destroy());
+  await client.send("HeapProfiler.collectGarbage");
+  assert.equal(await page.evaluate(() => references.some(record =>
+    record.root.deref() || record.memory.deref() || record.stamp.deref())), false);
+  await client.detach();
+});
+
 test("disposing a machine cancels pending work and ambient listeners", async t => {
   const runtime = await readFile(new URL("../../website/generated/project-quickjs-runtime.wasm", import.meta.url));
   const machine = await build({
