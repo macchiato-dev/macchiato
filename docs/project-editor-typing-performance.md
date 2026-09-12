@@ -334,3 +334,31 @@ latency improvement or a per-tab context/history implementation. The separate
 explicit construction benchmark still destroys its view intentionally and is
 not a language-switch measurement. Before/after evidence is in
 `/root/macchiato-work/language-reconfigure-{before,after}.log`.
+
+## Highlighting recovery is not project validation
+
+The editor used to walk the available Lezer tree after every non-JS/HTML/CSS
+edit, returning `syntaxErrors: true` on the first recovery node. Both project
+refresh schedulers used that flag to block the whole output. Thus an unfinished
+JSON, Rust, Python, or TypeScript resource could block refresh even if the app
+did not consume it. A highlighting grammar is also not the application's
+parser, and a partially parsed tree cannot establish that a file is valid.
+
+The editor now reports source changes without this execution veto. The real
+debounced builder and output runtime retain their checks and error handling;
+the workspace owner still parses configuration JSON separately. Existing
+consumers receive the same `syntaxErrors` field, set to false by the editor.
+The obsolete tree-walking helper and its two policy tests are removed, with
+replacement tests at the editor notification and owner-validation boundaries.
+
+Before the change, both stamped/downloaded browser tests fail on the malformed
+JSON fixture's blocking flag. After rebuilding, malformed JSON/Rust/Python/TS
+edits reach the actual build/output validator. Owner tests verify invalid
+configuration is delayed and blocked without a compilation request, valid
+configuration recovers, and ordinary data resources reach compilation unchanged.
+
+This removes a linear traversal of the available parse tree from each edit;
+it does not make parsing, highlighting, or document serialization free, and
+no proportional end-to-end speedup is claimed. No tree cache, host primitive,
+or permission was added. Evidence is under
+`/root/macchiato-work/editor-validation-{before,after}.log`.

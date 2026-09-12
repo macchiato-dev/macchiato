@@ -27196,16 +27196,6 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     }
     return spec.get;
   }
-  function hasSyntaxErrors(state, language3) {
-    if (language3 === "javascript" || language3 === "html" || language3 === "css") {
-      return false;
-    }
-    var cursor = _syntaxTree(state).cursor();
-    do {
-      if (cursor.type.isError) return true;
-    } while (cursor.next());
-    return false;
-  }
   var editorLanguages = [{
     name: "javascript",
     title: "JavaScript",
@@ -27694,7 +27684,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
-          syntaxErrors: hasSyntaxErrors(update.state, currentLanguage)
+          syntaxErrors: false
         });
       }
     })];

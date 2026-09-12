@@ -26291,18 +26291,6 @@ function getSpecializer(spec) {
   return spec.get;
 }
 
-// packages/project-editor/src/syntax.js
-function hasSyntaxErrors(state, language3) {
-  if (language3 === "javascript" || language3 === "html" || language3 === "css") {
-    return false;
-  }
-  const cursor = syntaxTree(state).cursor();
-  do {
-    if (cursor.type.isError) return true;
-  } while (cursor.next());
-  return false;
-}
-
 // packages/project-editor/src/languages.js
 var editorLanguages = [
   { name: "javascript", title: "JavaScript", extensions: ["js", "mjs", "cjs"], aliases: ["js"], package: "javascript" },
@@ -26666,7 +26654,10 @@ function editorExtensions() {
           content: update.state.doc.toString(),
           characters: update.state.doc.length,
           lines: update.state.doc.lines,
-          syntaxErrors: hasSyntaxErrors(update.state, currentLanguage)
+          // Highlighting recovery is not project validation. The debounced
+          // builder/runtime checks the code it actually uses; configuration
+          // JSON is validated by its owner, not by the editor's parse tree.
+          syntaxErrors: false
         });
       }
     })
