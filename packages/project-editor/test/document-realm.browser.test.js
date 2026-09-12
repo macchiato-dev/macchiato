@@ -16,9 +16,15 @@ test("DOM services belong to the granted document, not the controller realm", as
   const application = resolve(directory, "application.bin"), output = resolve(directory, "realm.wasm");
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", application,
     new URL("fixtures/document-realm.js", import.meta.url).pathname]);
+  let environment = resolve(root, "packages/website/generated/project-editor-runtime.bin");
+  if (process.env.MACCHIATO_TEST_RUNTIME_FILE) {
+    environment = resolve(directory, "runtime.bin");
+    execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", environment,
+      resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
+  }
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"), output,
-    `runtime.bin=${resolve(root, "packages/website/generated/project-editor-runtime.bin")}`,
+    process.env.MACCHIATO_TEST_RUNTIME_FILE || resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"), output,
+    `runtime.bin=${environment}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);
   const machine = await readFile(resolve(root, "dev/wasm-web-machine/dist/module/machine.js"));
@@ -78,6 +84,8 @@ test("DOM services belong to the granted document, not the controller realm", as
           await call({ font });
           await vm.onmsg(0);
           await call({ scroll: true });
+          frame.style.width = "360px";
+          frame.style.height = "220px";
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           const before = child.performance.now();
           await call({});
@@ -135,11 +143,14 @@ test("DOM services belong to the granted document, not the controller realm", as
           } finally { child.FontFace = nativeFontFace; }
         }
       }, { grant, font: font.toString("base64"), navigate });
+      assert.deepEqual(JSON.parse(result.reports[1]).globals, [420, 260, 0, 120, 0, 120],
+        "scroll aliases update in the scrolling callback, without waiting for an event");
       const snapshot = JSON.parse(result.reports.at(-2));
       const now = snapshot.now; delete snapshot.now;
       assert.ok(now >= Math.floor(result.before) && now <= Math.ceil(result.after),
         `guest clock ${now} must use child time origin (${result.before}–${result.after})`);
-      assert.deepEqual(snapshot, { width: 420, height: 260, scroll: 120,
+      assert.deepEqual(snapshot, { width: 360, height: 220, scroll: 120,
+        globals: [360, 220, 0, 120, 0, 120],
         fontSize: "24px", selectionOffset: 3, privateVisible: false });
       assert.equal(result.reports.at(-1), "pointer");
       const pointer = result.traces.find(event => event.type === "event-deliver" && event.eventType === "mousedown");

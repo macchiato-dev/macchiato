@@ -150,20 +150,14 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
 });
 // Navigator identity is host-backed by the base runtime. UI libraries use it
 // for browser behavior and to distinguish Command shortcuts from Emacs keys.
-// Full QuickJS can read these live through global accessors. MicroQuickJS
-// binds bare globals to value slots; do not introduce snapshot scroll aliases
-// there while that binding limitation remains. No new host calls are needed.
-["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"]
-  .concat(globalThis.__microQuickJS ? [] : ["scrollX", "scrollY"]).forEach(
+// Both engines read viewport values live, including within the callback that
+// changes scroll position. The aliases need no additional host capability.
+["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset", "scrollX", "scrollY"].forEach(
   function (name) {
-    if (globalThis.__microQuickJS) {
-      globalThis[name] = immediate([1, document.reference, stringIndex(name)]);
-    } else {
-      var property = name === "scrollX" ? "pageXOffset" : name === "scrollY" ? "pageYOffset" : name;
-      Object.defineProperty(globalThis, name, {
-        get: function () { return immediate([1, document.reference, stringIndex(property)]); }
-      });
-    }
+    var property = name === "scrollX" ? "pageXOffset" : name === "scrollY" ? "pageYOffset" : name;
+    Object.defineProperty(globalThis, name, {
+      get: function () { return immediate([1, document.reference, stringIndex(property)]); }
+    });
   }
 );
 globalThis.visualViewport = null;

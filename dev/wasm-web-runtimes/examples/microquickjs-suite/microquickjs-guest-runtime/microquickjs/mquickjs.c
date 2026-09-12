@@ -163,7 +163,11 @@ typedef struct {
 typedef struct JSVarRef {
     JS_MB_HEADER;
     JSWord is_detached : 1;
-    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 1);
+    // CUSTOMIZATION: 1 lines below commented out: reserve a global-property reference flag.
+    // JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 1);
+    // CUSTOMIZATION: 2 lines below added: reuse header padding without growing the reference.
+    JSWord is_global_property : 1;
+    JSWord dummy: JS_MB_PAD(JS_MTAG_BITS + 2);
     union {
         JSValue value; /* is_detached = true */
         struct {
@@ -3215,6 +3219,29 @@ static JSValue JS_DefinePropertyInternal(JSContext *ctx, JSValue obj,
                     goto error_modify;
                 }
             } else if (flags & (JS_DEF_PROP_HAS_GET | JS_DEF_PROP_HAS_SET)) {
+                // CUSTOMIZATION: 22 lines below added: keep prelinked global references live when installing an accessor.
+                if (obj == ctx->global_obj && pr->prop_type == JS_PROP_VARREF) {
+                    JSValueArray *created;
+                    JSVarRef *pv;
+                    JS_PUSH_VALUE(ctx, obj);
+                    JS_PUSH_VALUE(ctx, prop);
+                    JS_PUSH_VALUE(ctx, val);
+                    JS_PUSH_VALUE(ctx, setter);
+                    created = js_alloc_value_array(ctx, 0, 2);
+                    JS_POP_VALUE(ctx, setter);
+                    JS_POP_VALUE(ctx, val);
+                    JS_POP_VALUE(ctx, prop);
+                    JS_POP_VALUE(ctx, obj);
+                    if (!created)
+                        return JS_EXCEPTION;
+                    pr = find_own_property(ctx, JS_VALUE_TO_PTR(obj), prop);
+                    pv = JS_VALUE_TO_PTR(pr->value);
+                    pv->is_global_property = TRUE;
+                    pv->u.value = prop;
+                    created->arr[0] = created->arr[1] = JS_UNDEFINED;
+                    pr->prop_type = JS_PROP_GETSET;
+                    pr->value = JS_VALUE_FROM_PTR(created);
+                }
                 if (pr->prop_type != JS_PROP_GETSET) {
                 error_modify:
                     return JS_ThrowTypeError(ctx, "cannot modify getter/setter/value kind");
@@ -3280,6 +3307,8 @@ static JSValue JS_DefinePropertyInternal(JSContext *ctx, JSValue obj,
         if (!pv)
             return JS_EXCEPTION;
         pv->is_detached = TRUE;
+        // CUSTOMIZATION: 1 lines below added: ordinary globals keep their direct value slot.
+        pv->is_global_property = FALSE;
         pv->u.value = val;
         val = JS_VALUE_FROM_PTR(pv);
     } else {
@@ -3324,6 +3353,20 @@ static JSValue add_global_var(JSContext *ctx, JSValue prop, BOOL define_flag)
     p = JS_VALUE_TO_PTR(ctx->global_obj);
     pr = find_own_property(ctx, p, prop);
     if (pr) {
+        // CUSTOMIZATION: 13 lines below added: link later bytecode to an existing global accessor by its traced property key.
+        if (pr->prop_type == JS_PROP_GETSET) {
+            JSVarRef *pv;
+            JSGCRef prop_ref;
+            JS_PUSH_VALUE(ctx, prop);
+            pv = js_malloc(ctx, sizeof(JSVarRef) - sizeof(JSValue), JS_MTAG_VARREF);
+            JS_POP_VALUE(ctx, prop);
+            if (!pv)
+                return JS_EXCEPTION;
+            pv->is_detached = TRUE;
+            pv->is_global_property = TRUE;
+            pv->u.value = prop;
+            return JS_VALUE_FROM_PTR(pv);
+        }
         if (pr->prop_type != JS_PROP_VARREF)
             return JS_ThrowReferenceError(ctx, "global variable '%"JSValue_PRI"' must be a reference", prop);
         if (define_flag) {
@@ -3959,6 +4002,8 @@ static JSValue get_var_ref(JSContext *ctx, JSValue *pfirst_var_ref, JSValue *pva
     if (!p)
         return JS_EXCEPTION;
     p->is_detached = FALSE;
+    // CUSTOMIZATION: 1 lines below added: captured locals never use global-property lookup.
+    p->is_global_property = FALSE;
     p->u.pvalue = pval;
     p->u.next = *pfirst_var_ref;
     val = JS_VALUE_FROM_PTR(p);
@@ -6003,6 +6048,21 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
                 idx = get_u16(pc);
                 p = JS_VALUE_TO_PTR(fp[FRAME_OFFSET_FUNC_OBJ]);
                 pv = JS_VALUE_TO_PTR(p->u.closure.var_refs[idx]);
+                // CUSTOMIZATION: 14 lines below added: use the ordinary getter tail-call path for accessor-backed globals.
+                if (unlikely(pv->is_global_property)) {
+                    JSValue prop = pv->u.value;
+                    *--sp = ctx->global_obj;
+                    SAVE();
+                    val = JS_GetPropertyInternal(ctx, ctx->global_obj, prop, TRUE);
+                    RESTORE();
+                    if (unlikely(JS_IsExceptionOrTailCall(val))) {
+                        sp = ctx->sp;
+                        goto exception;
+                    }
+                    pc += 2;
+                    sp[0] = val;
+                    BREAK;
+                }
                 if (pv->is_detached)
                     val = pv->u.value;
                 else
@@ -6029,6 +6089,22 @@ JSValue JS_Call(JSContext *ctx, int call_flags)
                 idx = get_u16(pc);
                 p = JS_VALUE_TO_PTR(fp[FRAME_OFFSET_FUNC_OBJ]);
                 pv = JS_VALUE_TO_PTR(p->u.closure.var_refs[idx]);
+                // CUSTOMIZATION: 15 lines below added: setters retain normal receiver, exception, and stack behavior.
+                if (unlikely(pv->is_global_property)) {
+                    JSValue prop = pv->u.value;
+                    val = sp[0];
+                    sp[0] = ctx->global_obj;
+                    SAVE();
+                    val = JS_SetPropertyInternal(ctx, ctx->global_obj, prop, val, TRUE);
+                    RESTORE();
+                    if (unlikely(JS_IsExceptionOrTailCall(val))) {
+                        sp = ctx->sp;
+                        goto exception;
+                    }
+                    pc += 2;
+                    sp++;
+                    BREAK;
+                }
                 if (pv->is_detached)
                     pval = &pv->u.value;
                 else

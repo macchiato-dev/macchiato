@@ -32,6 +32,7 @@ function documentRealmProbe(json) {
     now: hostCall(document.reference, "performanceNow", []),
     height: hostGet(document.reference, "innerHeight"),
     scroll: hostGet(document.reference, "pageYOffset"),
+    globals: [innerWidth, innerHeight, pageXOffset, pageYOffset, scrollX, scrollY],
     fontSize: hostCall(computed[1], "getPropertyValue", ["font-size"]),
     selectionOffset: hostGet(selection[1], "anchorOffset"),
     privateVisible: Boolean(document.getElementById("controller-private"))

@@ -167,13 +167,17 @@ and reading the position within one guest callback, without waiting for a
 later event. This does not establish complete browser parity: the host's
 existing integer-valued offset protocol remains unchanged.
 
-MicroQuickJS still has a separate global-binding limitation. Its bytecode
-loader binds bare global names to value slots; installing an accessor for
-such a name produces `cannot modify getter/setter/value kind`. The existing
-viewport globals on that engine are initialization snapshots, not live
-getters. Do not extend that workaround with more cached aliases or claim
-resize/scroll fidelity for those globals. Resolving it needs an explicit
-binding strategy rather than a QuickJS-only accessor copied into that engine.
+MicroQuickJS's original global bindings were value slots, so installing an
+accessor for a prelinked name failed. The candidate engine now marks such a
+reference with a bit from its existing header padding and stores the traced
+property key. Reads and writes use the ordinary getter/setter execution path;
+ordinary variables keep their direct-value path. Later-loaded bytecode can
+bind the same accessor. This is an engine binding change, not event-driven
+viewport caching, and does not implement every ECMAScript property descriptor.
+The shared guest environment therefore uses live viewport and scroll getters
+on both engines. Candidate tests cover binding before/after installation,
+getter/setter errors, GC, and iframe resize/scroll. Full editor and deployment
+verification must follow before treating this candidate as shipped.
 
 Likewise, this fixture does not yet establish real-project font swaps,
 full-screen focus behavior, first-paint handoff under delayed resources, or

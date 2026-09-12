@@ -21,6 +21,7 @@ for (const [fixture, expected] of [
   ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
   ["collection-identity", { keys: 18, compacted: true, lookups: 12000 }],
+  ["global-accessors", { live: true, late: true, receivers: true, errors: 4, compacted: true }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
   ["rom-string-keys", { before: true, after: true, same: true }],
   ["dom-removal", { before: 3, afterElement: [2, true, true, true],
@@ -39,13 +40,20 @@ for (const [fixture, expected] of [
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", application,
     new URL(`fixtures/${fixture}.js`, import.meta.url).pathname]);
   const output = resolve(directory, "callbacks.wasm");
+  const extraFiles = [];
+  if (fixture === "global-accessors") {
+    const later = resolve(directory, "global-accessors-later.bin");
+    execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", later,
+      new URL("fixtures/global-accessors-later.js", import.meta.url).pathname]);
+    extraFiles.push(`global-accessors-later.bin=${later}`);
+  }
   const environment = resolve(directory, "runtime.bin");
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", environment,
     resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
     process.env.MACCHIATO_TEST_RUNTIME_FILE || resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"),
     output, `runtime.bin=${environment}`,
-    `application.bin=${application}`]);
+    `application.bin=${application}`, ...extraFiles]);
   const wasm = await readFile(output);
   const machine = await readFile(resolve(root, "dev/wasm-web-machine/dist/module/machine.js"));
   const browser = await chromium.launch();
