@@ -3859,3 +3859,37 @@ The previous archive is preserved at
 `/root/archive/2026/09/12/resources-bunny-80adaab-before-weak-node-cache.tar.gz`.
 No Bunny deployment was performed. The native-document and observer gaps and
 remaining parser/view-update latency still leave the broader goal incomplete.
+
+### Native intersection checkpoint (2026-09-12)
+
+The `4631446` export replaces the always-visible IntersectionObserver shim with
+native observations in the granted document's realm. The guest retains active
+observers and uses weak callback owners after their last target is unobserved.
+Entries preserve native snapshots; foreign roots and targets remain denied.
+See [native intersections](guest-intersection-observer.md) for supported options,
+lifetime behavior and explicit compatibility limitations.
+
+All 40 runtime/editor regression tests pass with no TODO cases, along with 23
+reference-scope tests. The full editor stress test passes in 70 seconds. Its
+80-edit checkpoint is 22.8 seconds, 106 KB paste 0.93 seconds, and native
+insertion 23.1 seconds. These are observations, not evidence of a typing speedup.
+Light/dark and narrow-pane screenshots were inspected. The test exercises
+undo/redo, scrolling, theme changes, output-error recovery and saved reload.
+
+Read-only exported-project checks pass for all eight cat pairs and reset,
+Mahjong's 144 tiles and full-height layout, 50 successive tour slides with
+keyboard navigation, and SQLite fragment navigation. They include theme/phone
+checks and do not save any owner project. The restarted local server's six
+host/controller/runtime/frame artifacts match the export byte-for-byte.
+Evidence is under `/root/macchiato-work/native-intersections-*`.
+
+The export and extracted archive pass all 152 manifest checks; its compressed
+backend executes routing/document guests in Deno. Native-document sizing and
+canvas painting, broader DOM fidelity, and parser/view-update latency still
+leave the overall goal incomplete. No Bunny deployment was performed.
+
+Cat and Mahjong also pass against the restarted live server. The refreshed
+`/root/resources-bunny.tar.gz` has SHA-256
+`d3ebd17a6e883261d114c06a1708c0628723de30f10ac3c6e239fd508a9b4530`.
+Its predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-f2e3355-before-native-intersections.tar.gz`.

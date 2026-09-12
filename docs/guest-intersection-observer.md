@@ -55,5 +55,16 @@ Native CodeMirror keeps its last measured inView value while offscreen; the test
 checks its intersection flag and its visible state when the pane returns.
 No special editor redraw or altered scheduling policy was added.
 
-Evidence under `/root/macchiato-work/intersection-*`. This is still a candidate
-until full editor, containment, deployment and saved-project checks pass.
+The rebuilt `4631446` export passes 40 runtime/editor regression tests and 23
+reference-scope tests. The latter bypass the facade and attempt to use a foreign
+node as an observer root or target; both operations are rejected. Its full
+editor stress test passes in 70 seconds, including repeated edits, undo/redo,
+scrolling, theme changes, output-error recovery and saved-project reload. The
+106 KB paste takes 0.93 seconds and native insertion takes 23.1 seconds; this
+correctness change is not a typing-speedup claim. Light/dark and narrow-pane
+screenshots were inspected.
+
+All 152 deployment manifest entries verify, and the compressed backend executes
+its routing/document guests in Deno. Evidence is under
+`/root/macchiato-work/native-intersections-*` and `intersection-*`. Local release
+and saved-project checks are recorded in [project page machines](project-page-machines.md).

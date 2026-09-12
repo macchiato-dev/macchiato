@@ -76,5 +76,7 @@ second, independent mismatch: the guest's current IntersectionObserver always
 reports visibility, including for an offscreen target. The native Chromium
 control checks clipping, thresholds, unobserve, disconnect and re-observe. A
 separate native probe records Chromium clearing queued records on disconnect.
-The Wasm parity cases remain executing TODO tests until native forwarding is
-implemented; passing controls do not imply guest parity.
+At that checkpoint the Wasm parity cases remained executing TODO tests; passing
+controls did not imply guest parity. The subsequent
+[native intersection implementation](guest-intersection-observer.md) replaces
+the shim and passes the direct/iframe cases for both guest engines.
