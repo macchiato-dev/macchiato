@@ -63,3 +63,37 @@ Local evidence under `/root/macchiato-work`: `lifecycle-typing-profile.log`,
 `lifecycle-typing-profiles/`, `fully-parsed-typing.log`, `parsed-dom-phases.log`,
 `catchup-dom-phases.log`, and their result directories. These changes add only
 diagnostic coverage; the live server and Bunny archive are unchanged.
+
+## View-update breakdown and rejected iterator experiment
+
+The checkpoints also measure the root tile's DOM synchronization and each
+installed plugin's update. Plugin labels include their index and constructor
+name from this build, not a stable CodeMirror API identifier. Instrumentation
+remains entirely in the optional test fixture.
+
+With a complete syntax tree, the two initial guest runs spent about 35 ms in
+root DOM synchronization within 94–95 ms of DOM-tree updates. The syntax
+highlighter accounted for 53–54 ms within 71–73 ms of plugin updates. This
+distinguishes actual DOM synchronization from building CodeMirror's tile tree;
+it does not justify caching live browser state or skipping highlighting.
+
+An external build-only experiment reused the private result object in Babel's
+array-fallback iteration helper instead of allocating one per loop step. The
+custom-iterator branch was unchanged. Both the core and language sources define
+the helper, so the meaningful candidate changes both, not just the core.
+It passed the existing content, undo/redo, and parse-readiness assertions, but
+did not demonstrate a speedup: DOM-tree updates measured 107–109 ms, versus
+100–106 ms in the subsequent unchanged control. The initial control had been
+94–95 ms, illustrating why adjacent repeat controls matter. The candidate is
+not shipped and is not a generally validated helper replacement.
+
+The benchmark now accepts `MACCHIATO_TEST_EDITOR_SOURCE_FILE` and
+`MACCHIATO_TEST_LANGUAGE_SOURCE_FILE` for such external candidates. It compiles
+the selected sources into temporary bytecode before browser measurements and
+uses those same sources in the native comparison. Defaults still select the
+generated production sources; no generated production artifact is overwritten.
+
+Evidence under `/root/macchiato-work`: `parsed-sync-phases*`,
+`reused-iterator-both-phases*`, and `parsed-sync-control-repeat*`.
+`experiment-iterator-result.js` and the two `reused-iterator-*.js` outputs retain
+the rejected candidate outside the repository. No production speedup is claimed.

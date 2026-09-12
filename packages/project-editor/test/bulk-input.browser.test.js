@@ -21,12 +21,15 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   // Compare a previous DOM environment without changing the editor, language,
   // document, or input sequence. Production artifacts always use the default.
   const environment = process.env.MACCHIATO_TEST_ENVIRONMENT_FILE || join(generated, "project-editor-runtime.bin");
+  const coreSource = process.env.MACCHIATO_TEST_EDITOR_SOURCE_FILE || join(generated, "project-editor-microquickjs.js");
   const runtime = join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/microquickjs-guest-runtime");
   const application = join(directory, "application.js");
   const selectedLanguage = process.env.MACCHIATO_TEST_EDITOR_LANGUAGE || "html";
   const parser = editorLanguages.find(entry => entry.name === selectedLanguage)?.package;
   assert.ok(parser || selectedLanguage === "plain", "known editor language required");
   const parserName = parser || "html";
+  const languageSource = process.env.MACCHIATO_TEST_LANGUAGE_SOURCE_FILE ||
+    join(generated, `project-editor-language-${parserName}.js`);
   const setup = `__codeEditorSetContent(JSON.stringify({language:${JSON.stringify(selectedLanguage)},content:"Initial"}));`;
   const parseBudget = Number(process.env.MACCHIATO_TEST_PARSE_BUDGET || 0);
   assert.ok(Number.isInteger(parseBudget) && parseBudget >= 0 && parseBudget <= 20);
@@ -42,15 +45,19 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     (disableInputPending ? 'Object.defineProperty(navigator,"scheduling",{value:undefined});\n' : '') +
     'load("editor.bin");load("language.bin");\n' + setup + "\n" + checkpoints);
   execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", join(directory, "application.bin"), application]);
+  const coreBytecode = join(directory, "editor.bin");
+  execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", coreBytecode, coreSource]);
+  const languageBytecode = join(directory, "language.bin");
+  execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", languageBytecode, languageSource]);
   execFileSync(process.execPath, [join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/stamp-wasm.js"),
     join(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
     join(directory, "editor.wasm"), `runtime.bin=${environment}`,
-    `application.bin=${join(directory, "application.bin")}`, `editor.bin=${join(generated, "project-editor-core.bin")}`,
-    `language.bin=${join(generated, `project-editor-language-${parserName}.bin`)}`]);
+    `application.bin=${join(directory, "application.bin")}`, `editor.bin=${coreBytecode}`,
+    `language.bin=${languageBytecode}`]);
   const wasm = await readFile(join(directory, "editor.wasm"));
   const machine = await readFile(join(root, "dev/wasm-web-machine/dist/module/machine.js"));
-  const core = await readFile(join(generated, "project-editor-microquickjs.js"));
-  const language = await readFile(join(generated, `project-editor-language-${parserName}.js`));
+  const core = await readFile(coreSource);
+  const language = await readFile(languageSource);
   const moduleSource = await readFile(process.env.MACCHIATO_TEST_SOURCE_FILE ||
     join(root, "packages/website/content-form-client.js"), "utf8");
   // The default matches the workspace stress test's inert output. Raw source

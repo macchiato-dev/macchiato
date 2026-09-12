@@ -26,6 +26,12 @@ bulkMeasure(bulkView.docView, "updateInner", "DOM tree update");
 bulkMeasure(bulkView.docView, "updateDeco", "decorations update");
 bulkMeasure(bulkView.docView, "updateSelection", "selection update");
 bulkMeasure(bulkView, "updatePlugins", "plugin updates");
+bulkMeasure(Object.getPrototypeOf(bulkView.docView.tile), "sync", "root DOM sync");
+bulkView.plugins.forEach(function (plugin, index) {
+  if (plugin.value && typeof plugin.value.update === "function") {
+    bulkMeasure(plugin.value, "update", "plugin " + index + " " + plugin.value.constructor.name);
+  }
+});
 bulkMeasure(bulkView.viewState, "update", "viewport update");
 bulkMeasure(globalThis, "__browserUseNotify", "notify");
 var bulkParse = globalThis.__codeMirrorRequire("@codemirror/language").ParseContext.prototype;
