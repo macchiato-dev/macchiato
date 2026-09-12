@@ -38,7 +38,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   assert.ok(!parseBeforeTyping || process.env.MACCHIATO_TYPING_CHECKPOINTS,
     "parse readiness experiment requires checkpoints");
   const checkpoints = process.env.MACCHIATO_TYPING_CHECKPOINTS
-    ? `globalThis.__bulkParseBudget = ${parseBudget};\n` + await readFile(
+    ? `globalThis.__bulkParseBudget = ${parseBudget};\nglobalThis.__bulkWireCheckpoints = ${process.env.MACCHIATO_WIRE_CHECKPOINTS === "1"};\n` + await readFile(
       new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
   const disableInputPending = process.env.MACCHIATO_TEST_DISABLE_INPUT_PENDING === "1";
   await writeFile(application, 'globalThis.__CODE_EDITOR_DEFER_START__=true;\n' +

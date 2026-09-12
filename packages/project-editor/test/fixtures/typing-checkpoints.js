@@ -49,16 +49,16 @@ bulkMeasure(bulkParse, "work", "parser work");
 bulkMeasure(bulkParse, "takeTree", "parser finish");
 bulkMeasure(globalThis.__codeMirrorRequire("@codemirror/state").Text.prototype, "toString", "document string");
 bulkMeasure(JSON, "stringify", "JSON stringify");
-if (typeof Reader === "function" && typeof exchange === "function") {
+if (globalThis.__bulkWireCheckpoints && typeof Reader === "function" && typeof exchange === "function") {
   // Count at the callers, not inside exchange: an alternative encoder may
   // bypass that batch helper without changing the number of actual host calls.
   bulkMeasure(globalThis, "bridge", "host wire call");
-  function countWireOperations(operations) {
+  var countWireOperations = function (operations) {
     for (var index = 0; index < operations.length; index++) {
       var operation = operations[index], name = operation[0] + ":" + wireStrings[operation[2]];
       bulkWireOperations[name] = (bulkWireOperations[name] || 0) + 1;
     }
-  }
+  };
   var bulkImmediate = immediate, bulkFlush = flush;
   immediate = function (operation) {
     countWireOperations([operation]);
