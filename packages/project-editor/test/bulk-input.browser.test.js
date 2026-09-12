@@ -284,6 +284,9 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       await writeFile(join(typingDirectory, `${run}-${mode}-typing.cpuprofile`), JSON.stringify(profile));
       await typingProfiler.detach();
     }
+    // Exercise queued input before waiting for parser catch-up. Waiting first
+    // would hide contention between background work and newly arriving keys.
+    if (process.env.MACCHIATO_TEST_INPUT_BURST === "1") await typeQueuedBurst();
     if (checkpoints) {
       const timings = await page.evaluate(() => {
         typingCheckpoint("reportTypingCheckpoints");
@@ -298,8 +301,10 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1).viewportParsed;
       }, null, { timeout: 10000 });
+      const completed = await page.evaluate(() =>
+        messages.filter(message => message.type === "typing-checkpoints").at(-1));
       results.push({ run, mode, method: "viewport-parse-wait", position: typingPosition,
-        milliseconds: Math.round(performance.now() - parseWaitStarted) });
+        milliseconds: Math.round(performance.now() - parseWaitStarted), timings: completed.timings });
       t.diagnostic(JSON.stringify(results.at(-1)));
     }
     results.push({ run, mode, method: typingPosition + "-page-typing", offset: typingOffset,
@@ -321,11 +326,15 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
     results.push({ run, mode, method: "first-page-highlighting", lines: await content.evaluate(node =>
       Array.from(node.querySelectorAll(".cm-line"), line => ({ text: line.textContent,
         spans: Array.from(line.querySelectorAll("span"), span => ({ text: span.textContent, class: span.className })) }))) });
-    if (process.env.MACCHIATO_TEST_INPUT_BURST === "1") {
+    async function typeQueuedBurst() {
       // Queue keys at a fixed cadence without waiting for each acknowledgement.
       // Serial Playwright key presses cannot expose yielding to already queued
       // input while a background parser is busy on the main thread.
       const session = await context.newCDPSession(page);
+      const viewportParsedBefore = checkpoints ? await page.evaluate(() => {
+        typingCheckpoint("reportTypingCheckpoints");
+        return messages.filter(message => message.type === "typing-checkpoints").at(-1).viewportParsed;
+      }) : null;
       const letters = "abcdefghij", started = performance.now();
       const acknowledgements = [];
       await Promise.all([...letters].map((key, index) => new Promise((resolve, reject) => {
@@ -342,7 +351,7 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       await session.detach();
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
         text.slice(0, typingOffset) + inserted + letters + text.slice(typingOffset));
-      results.push({ run, mode, method: "queued-typing", disableInputPending,
+      results.push({ run, mode, method: "queued-typing", disableInputPending, viewportParsedBefore,
         interval: 30, acknowledgements });
       t.diagnostic(JSON.stringify(results.at(-1)));
     }

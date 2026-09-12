@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { shortenForegroundParsing } from "../codemirror-parse-budget.js";
+import { shortenForegroundParsing, shortenIdleParserPause } from "../codemirror-parse-budget.js";
 
 test("foreground parsing adaptation changes only the two installed allowances", async () => {
   const source = await readFile(new URL(import.meta.resolve("@codemirror/language")), "utf8");
@@ -13,4 +13,15 @@ test("foreground parsing adaptation changes only the two installed allowances", 
   assert.throws(() => shortenForegroundParsing(adapted), /Review CodeMirror/);
   assert.throws(() => shortenForegroundParsing(source.replace("newCx.work(20", "newCx.work(25")), /Review CodeMirror/);
   assert.throws(() => shortenForegroundParsing(source + "\nparseState.work(20 /* Work.Apply */, 1)"), /Review CodeMirror/);
+});
+
+test("idle pause adaptation preserves the maximum wait and all other parser work", async () => {
+  const source = await readFile(new URL(import.meta.resolve("@codemirror/language")), "utf8");
+  const adapted = shortenIdleParserPause(source);
+  assert.notEqual(adapted, source);
+  assert.equal(adapted.replaceAll("25 /* Work.MinPause */", "100 /* Work.MinPause */"), source);
+  assert.match(adapted, /timeout: 500 \/\* Work.MaxPause \*\/ - 25 \/\* Work.MinPause \*\//);
+  assert.match(adapted, /\}, 25 \/\* Work.MinPause \*\/\);/);
+  assert.throws(() => shortenIdleParserPause(adapted), /Review CodeMirror/);
+  assert.throws(() => shortenIdleParserPause(source + "100 /* Work.MinPause */"), /Review CodeMirror/);
 });

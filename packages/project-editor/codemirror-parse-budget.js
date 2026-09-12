@@ -12,3 +12,14 @@ export function shortenForegroundParsing(source) {
   }
   return source;
 }
+
+// An interpreter needs more slices for the same source. Avoid spending as
+// long asleep between slices as it spends parsing. Keep the combined timer
+// and idle-callback maximum at 500 ms, including the browser's cancellation.
+export function shortenIdleParserPause(source) {
+  const before = "100 /* Work.MinPause */";
+  if (source.split(before).length !== 3) {
+    throw new Error("Review CodeMirror idle parser pause");
+  }
+  return source.replaceAll(before, "25 /* Work.MinPause */");
+}
