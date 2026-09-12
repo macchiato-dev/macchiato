@@ -1033,10 +1033,46 @@ test("saved project output keeps its backing while the editor is still loading",
     const label = `${emulated || "native"}-${choice}`;
     await page.context().addCookies([{ name: "resources_session", value: session,
       domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
-    await page.addInitScript(choice => localStorage.setItem("macchiato-theme", choice), choice);
+    await page.addInitScript(({ choice, expected }) => {
+      if (window !== window.top) return;
+      localStorage.setItem("macchiato-theme", choice);
+      const palette = expected === "light" ? "rgb(219, 228, 255)" : "rgb(23, 34, 110)";
+      window.paintAudit = { frames: 0, violations: [], frontend: false, editor: false, output: false };
+      function sample() {
+        const audit = window.paintAudit;
+        if (audit.stopped || audit.frames >= 2000) return;
+        const root = document.documentElement;
+        const workspace = document.querySelector('[data-project-editor]');
+        const toolbar = document.querySelector('.project-editor__toolbar');
+        if (toolbar) {
+          audit.frames++;
+          const wrong = [];
+          if (root.dataset.theme !== expected) wrong.push(['theme', root.dataset.theme]);
+          if (getComputedStyle(toolbar).backgroundColor !== palette)
+            wrong.push(['toolbar', getComputedStyle(toolbar).backgroundColor]);
+          for (const pane of document.querySelectorAll('.project-editor__pane-loading')) {
+            if (pane.checkVisibility() && getComputedStyle(pane).backgroundColor !== palette)
+              wrong.push(['loading pane', getComputedStyle(pane).backgroundColor]);
+          }
+          const frame = document.querySelector('.project-editor__output-frame');
+          if (frame && getComputedStyle(frame).colorScheme !== expected)
+            wrong.push(['iframe scheme', getComputedStyle(frame).colorScheme]);
+          if (wrong.length && audit.violations.length < 10) audit.violations.push({ frame: audit.frames, wrong });
+          audit.frontend ||= root.dataset.resourcesFrontendMachineState === 'ready';
+          audit.editor ||= workspace?.dataset.editorMachineStage === 'ready';
+          audit.output ||= workspace?.dataset.outputMachineState === 'ready';
+        }
+        requestAnimationFrame(sample);
+      }
+      requestAnimationFrame(sample);
+    }, { choice, expected });
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
-    let release = () => {}, delayed;
+    let release = () => {}, delayed, releaseFrontend = () => {}, frontendDelayed;
+    await page.route("**/resources-frontend-microquickjs.wasm*", async route => {
+      await frontendDelayed;
+      if (!page.isClosed()) await route.continue();
+    });
     await page.route("**/project-editor-quickjs-runtime.wasm*", async route => {
       await delayed;
       if (!page.isClosed()) await route.continue();
@@ -1044,8 +1080,12 @@ test("saved project output keeps its backing while the editor is still loading",
     try {
       for (const reload of [false, true]) {
         delayed = new Promise(resolve => { release = resolve; });
+        frontendDelayed = new Promise(resolve => { releaseFrontend = resolve; });
         if (reload) await page.reload();
         else await page.goto(`http://resources-edge.localhost:${port}/paint-test/paint-fixture`);
+        await page.waitForFunction(() => window.paintAudit.frames >= 6);
+        if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-${reload ? "reload" : "first"}-before-frontend.png`) });
+        releaseFrontend();
         const output = page.frameLocator(".project-editor__output-frame");
         await output.getByRole("heading", { name: "Paint fixture", exact: true }).waitFor();
         await output.locator("#scheme").filter({ hasText: expected }).waitFor();
@@ -1054,9 +1094,12 @@ test("saved project output keeps its backing while the editor is still loading",
         if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-${reload ? "reload" : "first"}-waiting.png`) });
         release();
         await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.editorMachineStage === 'ready');
+        await page.waitForFunction(() => window.paintAudit.frontend && window.paintAudit.editor && window.paintAudit.output);
+        const audit = await page.evaluate(() => { window.paintAudit.stopped = true; return window.paintAudit; });
+        assert.deepEqual(audit.violations, [], `${label}: every sampled frame through guest startup must use the chosen palette`);
         const after = await backing(page);
         if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-${reload ? "reload" : "first"}-ready.png`) });
-        t.diagnostic(JSON.stringify({ system, emulated, choice, reload, before, after }));
+        t.diagnostic(JSON.stringify({ system, emulated, choice, reload, before, after, sampledFrames: audit.frames }));
         assert.deepEqual(before.pixel, colors[expected], "initial iframe canvas exposes the themed backing");
         assert.deepEqual(after.pixel, before.pixel, "editor startup must not change the output backing");
       }
@@ -1090,7 +1133,7 @@ test("saved project output keeps its backing while the editor is still loading",
         }
       }
       assert.deepEqual(errors, []);
-    } finally { release(); await page.close(); }
+    } finally { releaseFrontend(); release(); await page.close(); }
   }
 });
 

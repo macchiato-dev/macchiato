@@ -4107,3 +4107,21 @@ The previous archive is preserved at
 Nothing was deployed to Bunny. The broader goal remains open: in particular,
 the native-document fidelity TODOs and further editing-performance work are
 not resolved by this checkpoint.
+
+### Startup handoff paint sampling
+
+The saved-project backing test now holds the frontend download for at least
+six painted frames, then holds the editor download independently while the
+output starts. An init-script sampler records theme, toolbar/loading colors,
+and iframe color scheme through all three machines becoming ready. This
+complements the static-document test, which deliberately runs no frontend.
+
+All ten startup/reload cases passed on the font-readiness build (21–29 sampled
+frames each): native system, explicit dark/light, and emulated dark/light
+system preferences. Actual canvas pixels before/after editor startup matched;
+phone layout and repeated explicit/system changes also passed without replacing
+the iframe. Screenshots before the frontend, while waiting for CodeMirror, and
+after readiness are in `/root/macchiato-work/theme-handoff-paints`; results are
+in the adjacent `.log`. This is sampled first-paint evidence, not proof that
+every possible frame or platform is flicker-free. No production change was
+needed for these cases.
