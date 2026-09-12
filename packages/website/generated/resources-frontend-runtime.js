@@ -566,14 +566,6 @@
       return result;
     };
   }
-  if (typeof WeakRef === "undefined") {
-    globalThis.WeakRef = function WeakRefPonyfill(value) {
-      this.value = value;
-    };
-    WeakRef.prototype.deref = function () {
-      return this.value;
-    };
-  }
   if (!Array.prototype.find) {
     Array.prototype.find = function (predicate, receiver) {
       for (var index = 0; index < this.length; index++) {
@@ -1402,7 +1394,7 @@ function stringIndex(text) {
   return index;
 }
 function encode(value) {
-  if (value instanceof GuestObject) return ["r", value.reference];
+  if (value instanceof GuestObject) return ["r", value.reference, value];
   return value;
 }
 function Writer(bytes) {
@@ -1590,7 +1582,7 @@ function exchange(operations) {
     var operation = operations[index];
     writer.byte(operation[0]);
     if (operation[0] === 0) continue;
-    writer.uint(operation[1]);
+    writer.uint(typeof operation[1] === "number" ? operation[1] : operation[1].reference);
     writer.uint(operation[2]);
     if (operation[0] === 2) writeValue(writer, operation[3]);
     if (operation[0] === 3) {
@@ -1684,7 +1676,7 @@ GuestElement.prototype = Object.create(GuestObject.prototype);
       if (name === "className" && globalThis.__wwcProjectClassName) {
         projected = globalThis.__wwcProjectClassName(projected);
       }
-      pendingOperations.push([2, this.reference, stringIndex(name), encode(projected)]);
+      pendingOperations.push([2, this, stringIndex(name), encode(projected)]);
     }
   });
 });
@@ -1707,15 +1699,15 @@ Object.defineProperty(GuestElement.prototype, "style", {
 GuestElement.prototype.append = function () {
   var args = [];
   for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
-  pendingOperations.push([3, this.reference, stringIndex("append"), args]);
+  pendingOperations.push([3, this, stringIndex("append"), args]);
 };
 GuestElement.prototype.replaceChildren = function () {
   var args = [];
   for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
-  pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
+  pendingOperations.push([3, this, stringIndex("replaceChildren"), args]);
 };
 GuestElement.prototype.setAttribute = function (name, value) {
-  pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [encode(name), encode(value)]]);
+  pendingOperations.push([3, this, stringIndex("setAttribute"), [encode(name), encode(value)]]);
 };
 GuestElement.prototype.scrollIntoView = function () {
   immediate([3, this.reference, stringIndex("scrollIntoView"), []]);
@@ -1730,11 +1722,11 @@ GuestElement.prototype.select = function () {
   immediate([3, this.reference, stringIndex("select"), []]);
 };
 GuestElement.prototype.remove = function () {
-  pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
+  pendingOperations.push([3, this, stringIndex("remove"), []]);
 };
 GuestElement.prototype.addEventListener = function (type, callback) {
   var index = allocateCallback(callback, false);
-  pendingOperations.push([4, this.reference, stringIndex(type), index]);
+  pendingOperations.push([4, this, stringIndex(type), index]);
 };
 function GuestEvent(reference) {
   GuestObject.call(this, reference);
@@ -1787,7 +1779,7 @@ GuestDocument.prototype.getElementById = function (id) {
 };
 GuestDocument.prototype.addEventListener = function (type, callback) {
   var index = allocateCallback(callback, false);
-  pendingOperations.push([4, this.reference, stringIndex(type), index]);
+  pendingOperations.push([4, this, stringIndex(type), index]);
 };
 function decodeBase64(source) {
   var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -2430,18 +2422,36 @@ function projectClassName(value) {
 }
 globalThis.__wwcProjectClassName = projectClassName;
 var guestNodes = Object.create(null);
+var guestNodeKeys = [],
+  guestNodeSweep = 0;
+var makeNodeReference = typeof __wwcWeakCell === "function" ? __wwcWeakCell : function (node) {
+  return new WeakRef(node);
+};
+var readNodeReference = typeof __wwcWeakDeref === "function" ? __wwcWeakDeref : function (entry) {
+  return entry.deref();
+};
 function rememberNode(node) {
-  guestNodes[node.reference] = new WeakRef(node);
+  for (var scan = 0; scan < 4 && guestNodeKeys.length; scan++) {
+    if (guestNodeSweep >= guestNodeKeys.length) guestNodeSweep = 0;
+    var key = guestNodeKeys[guestNodeSweep],
+      entry = guestNodes[key];
+    if (entry && readNodeReference(entry)) guestNodeSweep++;else {
+      delete guestNodes[key];
+      var last = guestNodeKeys.pop();
+      if (guestNodeSweep < guestNodeKeys.length) guestNodeKeys[guestNodeSweep] = last;
+    }
+  }
+  if (!guestNodes[node.reference]) guestNodeKeys.push(node.reference);
+  guestNodes[node.reference] = makeNodeReference(node);
   return node;
 }
 function nodeForReference(reference) {
   var entry = guestNodes[reference];
-  var known = entry && entry.deref();
+  var known = entry && readNodeReference(entry);
   if (known) {
     releaseHostReferenceLease(reference);
     return known;
   }
-  if (entry) delete guestNodes[reference];
   var nodeType = immediate([1, reference, stringIndex("nodeType")]);
   var node = rememberNode(nodeType === 1 ? new GuestElement(reference) : new GuestObject(reference));
   node._nodeType = nodeType;
@@ -2517,7 +2527,7 @@ GuestElement.prototype.matches = function (selector) {
     },
     set: function set(value) {
       value = (name === "data" ? value === null : value == null) ? "" : String(value);
-      pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
+      pendingOperations.push([2, this, stringIndex(name), encode(value)]);
     }
   });
 });
@@ -2578,7 +2588,7 @@ globalThis.reconcileGuestConnectivity = function () {
   for (var at = 0; at + 3 < bytes.length; at += 4) {
     var reference = bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24;
     var entry = guestNodes[reference],
-      node = entry && entry.deref();
+      node = entry && readNodeReference(entry);
     if (!node || !parentOf(node)) continue;
     var root = node,
       guard = 0;
@@ -2649,7 +2659,7 @@ Object.defineProperty(GuestElement.prototype, "className", {
 });
 Object.defineProperty(GuestElement.prototype, "innerHTML", {
   set: function set(value) {
-    pendingOperations.push([2, this.reference, stringIndex("innerHTML"), encode(String(value))]);
+    pendingOperations.push([2, this, stringIndex("innerHTML"), encode(String(value))]);
   }
 });
 function GuestSelection(reference) {
@@ -2750,13 +2760,13 @@ GuestElement.prototype.getContext = function (type, options) {
 ["fillStyle", "strokeStyle"].forEach(function (name) {
   Object.defineProperty(GuestCanvasContext.prototype, name, {
     set: function set(value) {
-      pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
+      pendingOperations.push([2, this, stringIndex(name), encode(value)]);
     }
   });
 });
 Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
   set: function set(value) {
-    pendingOperations.push([2, this.reference, stringIndex("lineWidth"), encode(Math.round(Number(value) * 1024))]);
+    pendingOperations.push([2, this, stringIndex("lineWidth"), encode(Math.round(Number(value) * 1024))]);
   }
 });
 ["arc", "beginPath", "clearRect", "closePath", "fill", "fillRect", "lineTo", "moveTo", "restore", "rotate", "save", "scale", "stroke", "strokeRect", "translate"].forEach(function (name) {
@@ -2765,7 +2775,7 @@ Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
     for (var index = 0; index < arguments.length; index++) {
       args.push(encode(Math.round(Number(index < 0 || arguments.length <= index ? undefined : arguments[index]) * 1024)));
     }
-    pendingOperations.push([3, this.reference, stringIndex(name), args]);
+    pendingOperations.push([3, this, stringIndex(name), args]);
   };
 });
 var webGLConstants = {
@@ -3106,7 +3116,7 @@ function inlineCssBytes(source) {
 }
 GuestStyle.prototype.installDeclarationOperations = function (bytes) {
   if (!(bytes instanceof Uint8Array)) throw new TypeError("inline style operations must be bytes");
-  pendingOperations.push([3, this.reference, stringIndex("replaceDeclarations"), [encode(bytes)]]);
+  pendingOperations.push([3, this, stringIndex("replaceDeclarations"), [encode(bytes)]]);
 };
 Object.defineProperty(GuestStyle.prototype, "cssText", {
   get: function get() {
@@ -3114,15 +3124,15 @@ Object.defineProperty(GuestStyle.prototype, "cssText", {
   },
   set: function set(value) {
     this._cssText = String(value);
-    pendingOperations.push([3, this.reference, stringIndex("replaceDeclarations"), [encode(inlineCssBytes(this._cssText))]]);
+    pendingOperations.push([3, this, stringIndex("replaceDeclarations"), [encode(inlineCssBytes(this._cssText))]]);
   }
 });
 GuestStyle.prototype.setProperty = function (name, value, priority) {
   var suffix = priority ? " !" + priority : "";
-  pendingOperations.push([3, this.reference, stringIndex("applyDeclarations"), [encode(inlineCssBytes(String(name) + ": " + String(value) + suffix + ";"))]]);
+  pendingOperations.push([3, this, stringIndex("applyDeclarations"), [encode(inlineCssBytes(String(name) + ": " + String(value) + suffix + ";"))]]);
 };
 GuestStyle.prototype.removeProperty = function (name) {
-  pendingOperations.push([3, this.reference, stringIndex("removeProperty"), [encode(String(name))]]);
+  pendingOperations.push([3, this, stringIndex("removeProperty"), [encode(String(name))]]);
   return "";
 };
 function hostCall(reference, name, args) {
@@ -3705,7 +3715,7 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
     capture: capture,
     local: local
   });
-  if (!local) pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
+  if (!local) pendingOperations.push([4, this, stringIndex(type), index, capture]);
 };
 GuestElement.prototype.removeEventListener = function (type, callback) {
   var records = this._eventListeners || [];
@@ -3736,7 +3746,7 @@ GuestDocument.prototype.addEventListener = function (type, callback, options) {
 };
 Object.defineProperty(GuestElement.prototype, "tabIndex", {
   set: function set(value) {
-    pendingOperations.push([2, this.reference, stringIndex("tabIndex"), encode(value)]);
+    pendingOperations.push([2, this, stringIndex("tabIndex"), encode(value)]);
   }
 });
 Object.defineProperty(GuestElement.prototype, "hidden", {
@@ -3800,14 +3810,14 @@ GuestElement.prototype.appendChild = function (child) {
       setParent(fragmentChild, this);
       if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
     }
-    pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
+    pendingOperations.push([3, this, stringIndex("appendChild"), [encode(child)]]);
     return child;
   }
   detachGuestNode(child);
   childrenOf(this).push(child);
   setParent(child, this);
   if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
-  pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
+  pendingOperations.push([3, this, stringIndex("appendChild"), [encode(child)]]);
   return child;
 };
 GuestElement.prototype.insertBefore = function (child, next) {
@@ -3828,7 +3838,7 @@ GuestElement.prototype.insertBefore = function (child, next) {
       setParent(fragmentChild, this);
       if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
     }
-    pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [encode(child), encode(next)]]);
+    pendingOperations.push([3, this, stringIndex("insertBefore"), [encode(child), encode(next)]]);
     return child;
   }
   detachGuestNode(child);
@@ -3838,18 +3848,18 @@ GuestElement.prototype.insertBefore = function (child, next) {
   children.splice(index, 0, child);
   setParent(child, this);
   if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
-  pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [encode(child), encode(next)]]);
+  pendingOperations.push([3, this, stringIndex("insertBefore"), [encode(child), encode(next)]]);
   return child;
 };
 GuestElement.prototype.removeChild = function (child) {
   if (parentOf(child) !== this) throw new TypeError("node is not a child");
   detachGuestNode(child);
-  pendingOperations.push([3, this.reference, stringIndex("removeChild"), [encode(child)]]);
+  pendingOperations.push([3, this, stringIndex("removeChild"), [encode(child)]]);
   return child;
 };
 GuestElement.prototype.remove = GuestObject.prototype.remove = function () {
   detachGuestNode(this);
-  pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
+  pendingOperations.push([3, this, stringIndex("remove"), []]);
 };
 GuestObject.prototype.before = function (node) {
   var parent = parentOf(this);
@@ -3886,7 +3896,7 @@ GuestElement.prototype.replaceChildren = function () {
     if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
     args.push(encode(child));
   }
-  pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
+  pendingOperations.push([3, this, stringIndex("replaceChildren"), args]);
 };
 Object.defineProperty(GuestElement.prototype, "attributes", {
   get: function get() {
@@ -3923,12 +3933,12 @@ GuestElement.prototype.setAttribute = function (name, value) {
     this.style.cssText = text;
     return;
   }
-  pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [encode(String(name)), encode(text)]]);
+  pendingOperations.push([3, this, stringIndex("setAttribute"), [encode(String(name)), encode(text)]]);
 };
 GuestElement.prototype.removeAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
   delete values[name];
-  pendingOperations.push([3, this.reference, stringIndex("removeAttribute"), [encode(String(name))]]);
+  pendingOperations.push([3, this, stringIndex("removeAttribute"), [encode(String(name))]]);
 };
 function GuestClassList(element) {
   this.element = element;
