@@ -101,9 +101,13 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
     window.messages = [];
     const pendingTimers = new Set(), pendingFrames = new Set(), listeners = new Map();
     const subscriptions = new Set();
-    const subscribe = callback => {
+    const subscribe = (callback, failCleanup = false) => {
       subscriptions.add(callback);
-      return () => subscriptions.delete(callback);
+      return () => {
+        subscriptions.delete(callback);
+        callback('/during-cleanup');
+        if (failCleanup) throw Error('Fixture unsubscribe failed');
+      };
     };
     const timeout = window.setTimeout, clear = window.clearTimeout;
     const frame = window.requestAnimationFrame, cancel = window.cancelAnimationFrame;
@@ -136,7 +140,7 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
         onMessage: message => messages.push(message),
         services: {
           route: { get: () => '/', listen: subscribe },
-          storage: { listen: (_kind, _key, callback) => subscribe(callback) },
+          storage: { listen: (_kind, _key, callback) => subscribe(callback, index % 2 === 1) },
         },
       });
       await machine.onmsg(0);
@@ -162,7 +166,14 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
       const message = new Uint8Array(code.length + 1);
       message[0] = 1; message.set(code, 1);
       machine.onmsg(message);
-      machine.destroy();
+      // An integration's unsubscribe may throw after releasing its own work.
+      // That must not prevent later subscriptions, timers, or frames from
+      // being released, and the original error must still reach the caller.
+      const lateCallbacks = [...subscriptions];
+      let cleanupFailure;
+      try { machine.destroy(); } catch (error) { cleanupFailure = error.message; }
+      if (cleanupFailure !== (index % 2 ? 'Fixture unsubscribe failed' : undefined))
+        throw Error('Unexpected unsubscribe result: ' + cleanupFailure);
       machine.destroy();
       if (pendingTimers.size || pendingFrames.size || listeners.size || subscriptions.size) {
         throw new Error('Native work retained after disposal: ' + JSON.stringify({
@@ -170,6 +181,7 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
           subscriptions: subscriptions.size,
         }));
       }
+      for (const callback of lateCallbacks) callback('/late');
     }
     dispatchEvent(new Event('resize'));
     dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
