@@ -71,6 +71,11 @@ the MicroQuickJS editor's `Function` constructor. Recompiling on every edit
 both wastes work and rejects valid modern project syntax. Invalid replacements
 leave the last successful output visible; the output error is delayed while
 the user types. HTML and CSS likewise use the output compiler and renderer.
+The editor's recovery tree is only for editor features, not a project-wide
+validation gate: an incomplete data/source file may not be used by the app at
+all. Other languages therefore also reach the real build/output validator
+without an extra tree walk on each edit. The workspace separately validates
+configuration JSON before requesting compilation.
 For optional large-file keyboard timings, run the language browser test with
 `MACCHIATO_EDITOR_TIMINGS=1`. It edits the actual workspace form source at the
 beginning, middle, and end, checks the resulting document, and reports keyboard

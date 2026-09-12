@@ -4342,3 +4342,36 @@ The predecessor is preserved at
 Nothing was deployed to Bunny. The separate rendering-document decision and
 remaining parser/view latency are still open; this checkpoint does not imply
 completion of the broader architecture or fidelity goal.
+
+### Output-owned validation checkpoint: 2026-09-12
+
+Editor highlighting recovery no longer blocks project execution or walks the
+available parse tree after every edit. Actual build/runtime checks remain in
+place, and configuration JSON is still validated by the workspace owner. The
+obsolete helper and its two policy tests are replaced by browser notification
+and owner-validation tests. No host permission or controller behavior changed.
+
+The first broad run exposed a native CodeMirror resize-test failure: recorded
+`Date.now()` moved backward by 53 ms between ResizeObserver callbacks, leaving
+the native 75 ms resize guard active. This is evidence of clock movement, not
+proof of its system-level cause. No timeout or native behavior was changed.
+The unchanged focused resize rerun passed, followed by all 393 tests in the
+unchanged broad rerun. Full editing stress passed in 49.5 seconds; all ten
+delayed-loading theme scenarios passed, and light/dark screenshots were inspected.
+
+Read-only checks passed against both the export and live server for the four
+saved projects: full-height Mahjong, Cat Memory's eight pairs/reset, 50 tour
+slides, and SQLite fragment links. Six principal live assets match the export.
+No owner files or tour notes were saved. Evidence is under
+`/root/macchiato-work/editor-validation-*`.
+
+The `site/resources-co-99f8c03` export and extracted archive pass all 152 manifest
+checks, and its compressed backend runs in Deno. Editor Wasm is 1,579,024 bytes,
+340 bytes smaller; the host and controller are unchanged. The archive at
+`/root/resources-bunny.tar.gz` has SHA-256
+`c9dd1d407c468937e4e9786c0fac3d236cb6537e2bf6b1afa6992bf86f0d20ca`.
+Its predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-84bee29-before-editor-validation.tar.gz`.
+Nothing was deployed to Bunny. The pending rendering-document decision, four
+known native-document fidelity failures, and remaining parser/view latency
+still leave the broader goal open.
