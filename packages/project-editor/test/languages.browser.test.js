@@ -119,11 +119,24 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     const before = await page.evaluate(() => window.callGuest("inspectEditor", {}));
     assert.equal(before.document, original + " extra");
     assert.equal(before.languageLoaded, false);
+    await page.evaluate(() => { window.editorContent = document.querySelector('.cm-content'); });
+    // A late grammar must not turn a newly selected plain-text file into HTML.
+    // Changing only its interpretation must not manufacture an undo step.
+    await page.evaluate(content => window.callGuest("selectFile", { path: "notes.txt", content }), before.document);
     releaseHtml();
-    await page.waitForFunction(() => window.callGuest("inspectEditor", {}).syntaxTree !== "");
+    await page.waitForFunction(() => window.callGuest("inspectEditor", {}).registeredLanguages.includes("html"));
+    const plain = await page.evaluate(() => window.callGuest("inspectEditor", {}));
+    assert.equal(plain.language, "plain");
+    assert.equal(plain.syntaxTree, "");
+    assert.equal(plain.document, before.document);
+    assert.deepEqual(plain.selection, before.selection);
+    await page.evaluate(content => window.callGuest("selectFile", { path: "index.html", content }), before.document);
     const after = await page.evaluate(() => window.callGuest("inspectEditor", {}));
+    assert.notEqual(after.syntaxTree, "");
     assert.equal(after.document, before.document);
     assert.deepEqual(after.selection, before.selection);
+    assert.equal(await page.evaluate(() => window.editorContent === document.querySelector('.cm-content')), true,
+      "language changes retain the native editor surface");
     await page.keyboard.press("Control+z");
     assert.equal((await page.evaluate(() => window.callGuest("inspectEditor", {}))).document, original);
   }
@@ -136,6 +149,10 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
     'native guest writer and JavaScript fallback match browser TextEncoder');
   async function select(path, content, language) {
     let info = await page.evaluate((request) => window.callGuest("selectFile", request), { path, content });
+    assert.equal(await page.evaluate(() => {
+      if (!window.editorContent) window.editorContent = document.querySelector('.cm-content');
+      return window.editorContent === document.querySelector('.cm-content');
+    }), true, path + " reconfigures the existing editor instead of rebuilding it");
     if (downloaded) {
       await page.waitForFunction(() => {
         const state = window.callGuest("inspectEditor", {});

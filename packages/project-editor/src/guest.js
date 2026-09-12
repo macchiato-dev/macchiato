@@ -387,23 +387,25 @@ globalThis.__codeEditorSetContent = (json) => {
   const readOnlyChanged = currentReadOnly !== (request.readOnly === true);
   currentLanguage = request.language;
   currentReadOnly = request.readOnly === true;
-  if (!globalThis.__codeEditorView || languageChanged) {
-    globalThis.__codeEditorView?.destroy();
-    parent.replaceChildren();
+  if (!globalThis.__codeEditorView) {
     const view = mountEditor(request.content);
     return JSON.stringify(documentUsage(view.state.doc));
   }
   const view = globalThis.__codeEditorView;
   const effects = [];
+  if (languageChanged) effects.push(language.reconfigure(languageExtension(currentLanguage)));
   if (readOnlyChanged) effects.push(editability.reconfigure([
     EditorState.readOnly.of(currentReadOnly),
     EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" }),
   ]));
   applyingHostContent = true;
   try {
+    // Reinterpret the same document without replacing its text, selection, or
+    // history. CodeMirror owns the parser/view update, including late grammars.
+    const contentChanged = request.content !== view.state.doc.toString();
     view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: request.content },
-      selection: { anchor: 0 },
+      changes: contentChanged ? { from: 0, to: view.state.doc.length, insert: request.content } : undefined,
+      selection: contentChanged ? { anchor: 0 } : undefined,
       effects,
     });
   } finally {
