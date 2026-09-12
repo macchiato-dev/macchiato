@@ -26350,6 +26350,31 @@ function createEditorLanguageLoader(load) {
   };
 }
 
+// packages/project-editor/src/highlight-cache.js
+function cacheHighlightStyle(highlighter) {
+  const resolve = highlighter.style;
+  if (resolve([]) !== null) return highlighter;
+  const cache = /* @__PURE__ */ new WeakMap();
+  highlighter.style = function(tags2) {
+    let result2 = null;
+    for (let index = 0; index < tags2.length; index++) {
+      const tag = tags2[index], parents = tag.set;
+      let entry = cache.get(tag);
+      let same2 = entry && entry.parents.length === parents.length;
+      for (let parent2 = 0; same2 && parent2 < parents.length; parent2++) {
+        if (entry.parents[parent2] !== parents[parent2]) same2 = false;
+      }
+      if (!same2) {
+        entry = { parents: parents.slice(), style: resolve([tag]) };
+        cache.set(tag, entry);
+      }
+      if (entry.style) result2 = result2 ? result2 + " " + entry.style : entry.style;
+    }
+    return result2;
+  };
+  return highlighter;
+}
+
 // packages/project-editor/src/source-envelope.js
 var isSafeInteger = (value) => typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
 var SOURCE_LIMITS = Object.freeze({
@@ -26509,7 +26534,7 @@ var editorTheme = EditorView.theme({
     backgroundColor: "var(--resources-editor-panel)"
   }
 });
-var editorHighlightStyle = HighlightStyle.define([
+var editorHighlightStyle = cacheHighlightStyle(HighlightStyle.define([
   { tag: tags.keyword, color: "var(--resources-editor-keyword)" },
   { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: "var(--resources-editor-name)" },
   { tag: [tags.function(tags.variableName), tags.labelName], color: "var(--resources-editor-function)" },
@@ -26520,7 +26545,7 @@ var editorHighlightStyle = HighlightStyle.define([
   { tag: [tags.meta, tags.comment], color: "var(--resources-editor-comment)", fontStyle: "italic" },
   { tag: tags.string, color: "var(--resources-editor-string)" },
   { tag: tags.invalid, color: "var(--resources-editor-invalid)" }
-]);
+]));
 var currentTheme = "dark";
 var applyingHostContent = false;
 var currentLanguage = "javascript";

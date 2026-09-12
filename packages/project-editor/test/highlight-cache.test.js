@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { HighlightStyle, highlightingFor, syntaxHighlighting } from "@codemirror/language";
-import { EditorState } from "@codemirror/state";
+import { Compartment, EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { Tag, tags } from "@lezer/highlight";
 import { cacheHighlightStyle } from "../src/highlight-cache.js";
 
@@ -65,5 +66,22 @@ test("all styles remain native, and separate palettes never share class choices"
   for (const palette of [first, second, first]) {
     const state = EditorState.create({ extensions: syntaxHighlighting(palette) });
     assert.equal(highlightingFor(state, [tags.keyword]), palette.style([tags.keyword]));
+  }
+});
+
+test("theme-selected palettes keep their original modules and switch repeatedly", () => {
+  const dark = HighlightStyle.define([{ tag: tags.keyword, color: "var(--dark-keyword)" }], { themeType: "dark" });
+  const light = HighlightStyle.define([{ tag: tags.keyword, color: "var(--light-keyword)" }], { themeType: "light" });
+  const darkModule = dark.module, lightModule = light.module;
+  const darkClass = dark.style([tags.keyword]), lightClass = light.style([tags.keyword]);
+  cacheHighlightStyle(dark); cacheHighlightStyle(light);
+  assert.equal(dark.module, darkModule);
+  assert.equal(light.module, lightModule);
+  const theme = new Compartment();
+  let state = EditorState.create({ extensions: [theme.of(EditorView.darkTheme.of(false)),
+    syntaxHighlighting(dark), syntaxHighlighting(light)] });
+  for (const isDark of [false, true, false, true, false]) {
+    state = state.update({ effects: theme.reconfigure(EditorView.darkTheme.of(isDark)) }).state;
+    assert.equal(highlightingFor(state, [tags.keyword]), isDark ? darkClass : lightClass);
   }
 });

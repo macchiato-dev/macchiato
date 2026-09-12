@@ -60,7 +60,7 @@ bulkView.plugins.forEach(function (plugin, index) {
     bulkMeasure(plugin.value, "update", "plugin " + index + " " + plugin.value.constructor.name);
   }
 });
-if (globalThis.__bulkHighlightCheckpoints || globalThis.__bulkMemoizedHighlight) {
+if (globalThis.__bulkHighlightCheckpoints) {
   // Obtain the installed highlighter facet from a throwaway extension, without
   // installing a different highlighter. These fine-grained timers are costly:
   // use them only to locate work, not for candidate/control latency comparisons.
@@ -71,35 +71,8 @@ if (globalThis.__bulkHighlightCheckpoints || globalThis.__bulkMemoizedHighlight)
   var measuredHighlighters = bulkView.state.facet(highlightProvider.facet);
   if (!measuredHighlighters.length) throw Error("No active highlighter to measure");
   measuredHighlighters.forEach(function (highlighter, index) {
-    if (globalThis.__bulkMemoizedHighlight) {
-      // Experiment for this editor's static palette only. It has no `all`
-      // style. Weak keys avoid retaining discarded language tags; compare
-      // parent lists so even in-place changes to a tag's set invalidate it.
-      // Keep source ranges, tree traversal, and decoration building unchanged.
-      var originalStyle = highlighter.style, tagStyles = new WeakMap();
-      if (originalStyle([]) !== null) throw Error("Experiment needs a palette without an all style");
-      highlighter.style = function (tags) {
-        var result = null;
-        for (var tagIndex = 0; tagIndex < tags.length; tagIndex++) {
-          var tag = tags[tagIndex], parents = tag.set, cached = tagStyles.get(tag);
-          var same = cached && cached.parents.length === parents.length;
-          for (var parentIndex = 0; same && parentIndex < parents.length; parentIndex++) {
-            if (cached.parents[parentIndex] !== parents[parentIndex]) same = false;
-          }
-          if (!same) {
-            cached = { parents: parents.slice(), style: originalStyle([tag]) };
-            tagStyles.set(tag, cached);
-          }
-          var style = cached.style;
-          if (style) result = result ? result + " " + style : style;
-        }
-        return result;
-      };
-    }
-    if (globalThis.__bulkHighlightCheckpoints) bulkMeasure(highlighter, "style", "highlight style " + index);
+    bulkMeasure(highlighter, "style", "highlight style " + index);
   });
-}
-if (globalThis.__bulkHighlightCheckpoints) {
   bulkView.plugins.forEach(function (plugin) {
     if (plugin.value && plugin.value.markCache && typeof plugin.value.buildDeco === "function") {
       bulkMeasure(plugin.value, "buildDeco", "highlight decorations");

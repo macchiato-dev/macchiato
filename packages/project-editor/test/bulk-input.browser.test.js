@@ -42,7 +42,6 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
 globalThis.__bulkWireCheckpoints = ${process.env.MACCHIATO_WIRE_CHECKPOINTS === "1"};
 globalThis.__bulkCollectionCheckpoints = ${process.env.MACCHIATO_COLLECTION_CHECKPOINTS === "1"};
 globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKPOINTS === "1"};
-globalThis.__bulkMemoizedHighlight = ${process.env.MACCHIATO_TEST_MEMOIZED_HIGHLIGHT === "1"};
 ` + await readFile(
       new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
   const disableInputPending = process.env.MACCHIATO_TEST_DISABLE_INPUT_PENDING === "1";

@@ -27329,6 +27329,33 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       loaded.add(entry.package);
     };
   }
+  function cacheHighlightStyle(highlighter) {
+    var resolve = highlighter.style;
+    if (resolve([]) !== null) return highlighter;
+    var cache = new WeakMap();
+    highlighter.style = function (tags2) {
+      var result = null;
+      for (var index = 0; index < tags2.length; index++) {
+        var tag = tags2[index],
+          parents = tag.set;
+        var entry = cache.get(tag);
+        var same = entry && entry.parents.length === parents.length;
+        for (var parent2 = 0; same && parent2 < parents.length; parent2++) {
+          if (entry.parents[parent2] !== parents[parent2]) same = false;
+        }
+        if (!same) {
+          entry = {
+            parents: parents.slice(),
+            style: resolve([tag])
+          };
+          cache.set(tag, entry);
+        }
+        if (entry.style) result = result ? result + " " + entry.style : entry.style;
+      }
+      return result;
+    };
+    return highlighter;
+  }
   var isSafeInteger = function isSafeInteger(value) {
     return typeof value === "number" && value >= -2147483648 && value <= 2147483647 && (value | 0) === value;
   };
@@ -27519,7 +27546,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       backgroundColor: "var(--resources-editor-panel)"
     }
   });
-  var editorHighlightStyle = _HighlightStyle2.define([{
+  var editorHighlightStyle = cacheHighlightStyle(_HighlightStyle2.define([{
     tag: _tags.keyword,
     color: "var(--resources-editor-keyword)"
   }, {
@@ -27550,7 +27577,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }, {
     tag: _tags.invalid,
     color: "var(--resources-editor-invalid)"
-  }]);
+  }]));
   var currentTheme = "dark";
   var applyingHostContent = false;
   var currentLanguage = "javascript";
