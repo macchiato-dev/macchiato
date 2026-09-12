@@ -410,3 +410,67 @@ The final combined run reports 13 passes and five known failing TODOs: the
 four existing production layout comparisons and this experimental history
 comparison. The delayed-font screenshot was inspected. The history failure
 is not counted as a successful integration gate.
+
+## Stable documents and controller-owned routes: 2026-09-12
+
+The next experiment keeps both native Documents as well as both frame elements
+and browsing contexts. A rendering frame loads its fixed script-free Blob shell
+only once. After retiring a session, its frame becomes hidden and inert. On
+reuse, the controller replaces its document element with fresh, host-created
+`html`, `head`, and `body` nodes before granting the next session. It does not
+call `document.open`, reload, or navigate to a new Blob. The two Blob URLs live
+until controller destruction. The old implementation remains as an executing
+negative TODO in the browser-only history comparison.
+
+The persistent output controller owns the fragment. The test application
+intercepts its own ordinary fragment-link clicks in QuickJS and calls the
+existing generic service bridge. That controller service changes only its
+`location.hash`, accepts bounded fragment strings only from the active session,
+and returns an error string for denied requests. A preparing session cannot
+navigate. Initially throwing for this expected denial escaped the guest's
+JavaScript catch through the host bridge; returning a service result keeps that
+ordinary refusal distinct from a host execution failure.
+
+On a native controller hash change, the controller calls the active guest's
+explicit application callback through the existing `onmsg` entry point. The
+guest reads the route service and resolves local anchors with native
+`scrollIntoView`. Handoff also notifies the new active guest. No machine API,
+host-side DOM event simulation, or fake native `HashChangeEvent` was added.
+This deliberately tests an application/controller routing contract, **not** a
+complete browser-compatible location/history facade for arbitrary projects.
+The actual website's address remains unchanged; the output controller's
+fragment changes.
+
+The real QuickJS experiment now checks Back and Forward after replacement,
+retaining the new DOM and counter state, and ten further swaps that preserve
+both Document identities without appending history entries. Native root units,
+body canvas paint, font preparation, focus/caret through both expanded modes,
+timers, input, media updates, and session isolation still have their existing
+assertions. A click test initially missed an offscreen counter after anchor
+scrolling; scrolling it into view before coordinate input fixed that test.
+
+With persistent Documents, counting retired Document weak references would
+mistake intentional reuse for a leak. The fixture additionally tracks each
+retired document element. While running, only the idle frame's last DOM remains
+among retired roots; earlier roots are collectible. Final destruction releases
+the two frames, their Documents, and every retired root. This is reachability
+evidence, not a byte-cost measurement for large projects.
+
+A separate browser-only containment probe removes the original CSP meta while
+replacing the root three times. Each external image attempt is blocked by the
+still-active document policy before making a request; inserted scripts never
+execute. This probes browser enforcement independently of the machine, whose
+element/attribute/resource restrictions remain unchanged. The expected browser
+policy diagnostics stay in that isolated test, not the clean application test.
+
+This is still test-only. Production uses the previous output hierarchy and its
+four native-layout comparisons still fail. A production choice must cover
+ordinary guest routing semantics, real-project regression tests, first-paint
+handoff, and overhead of the extra browsing contexts. No local deployment,
+owner project, or Bunny archive was changed. Evidence is under
+`/root/macchiato-work/rendering-stable-*`.
+
+The combined run in `rendering-stable-verified.log` reports 15 passes and five
+known failing TODOs (four production layout cases and the rejected history
+arrangement). The delayed-font side-by-side screenshot was visually inspected;
+native and guest typography, root-relative geometry, and canvas color match.

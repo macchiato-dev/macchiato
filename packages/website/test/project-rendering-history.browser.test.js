@@ -33,8 +33,7 @@ for (const stableDocuments of [false, true]) test(`fragment history across a liv
       first.addEventListener('hashchange', resolve, { once: true });
       first.location.hash = hash;
     });
-    // Prepare the other existing frame, carrying the active route into its
-    // fresh document. Replacing an entry avoids appending one per edit.
+    // Compare resetting an existing DOM with replacing its entire Document.
     if (stableDocuments) {
       const doc = frames[1].contentDocument;
       const content = doc.createElement('p');
@@ -66,4 +65,54 @@ for (const stableDocuments of [false, true]) test(`fragment history across a liv
   assert.deepEqual(result, { sameDocument: true, appPresent: true,
     activeRoute: '/chapter.html#details', outerURL: 'http://history.test/' });
   if (stableDocuments) assert.equal(await page.evaluate(() => activeDocument.body.textContent), 'Application revision 2');
+});
+
+test('a reused rendering Document retains its CSP after replacing the root', async t => {
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage();
+  const requests = [];
+  await page.route('**/*', route => {
+    if (route.request().url() === 'http://policy.test/') return route.fulfill({
+      contentType: 'text/html', body: '<!doctype html><main></main>',
+    });
+    requests.push(route.request().url());
+    return route.abort();
+  });
+  await page.goto('http://policy.test/');
+  const result = await page.evaluate(async () => {
+    const frame = document.createElement('iframe');
+    frame.sandbox = 'allow-same-origin';
+    const url = URL.createObjectURL(new Blob([
+      '<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; img-src data:"><body></body>',
+    ], { type: 'text/html' }));
+    frame.src = url;
+    await new Promise(resolve => { frame.onload = resolve; document.body.append(frame); });
+    const doc = frame.contentDocument;
+    const violations = [];
+    doc.addEventListener('securitypolicyviolation', event => violations.push(event.effectiveDirective));
+    for (let index = 0; index < 3; index++) {
+      const root = doc.createElement('html');
+      root.append(doc.createElement('head'), doc.createElement('body'));
+      doc.replaceChild(root, doc.documentElement);
+      // The policy's original meta no longer exists. The browser must still
+      // reject external images, independently of the machine's allowlisting.
+      const image = doc.createElement('img');
+      await new Promise(resolve => {
+        image.onerror = resolve;
+        image.src = 'https://untrusted.invalid/leak-' + index;
+        doc.body.append(image);
+      });
+      const script = doc.createElement('script');
+      script.textContent = 'globalThis.unexpectedExecution = true';
+      doc.body.append(script);
+    }
+    const result = { sameDocument: frame.contentDocument === doc,
+      executed: frame.contentWindow.unexpectedExecution === true,
+      imageViolations: violations.filter(name => name === 'img-src').length };
+    frame.remove(); URL.revokeObjectURL(url);
+    return result;
+  });
+  assert.deepEqual(result, { sameDocument: true, executed: false, imageViolations: 3 });
+  assert.deepEqual(requests, [], 'blocked resources never reach the network');
 });

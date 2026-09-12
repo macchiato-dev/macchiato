@@ -51,7 +51,8 @@ test("independent rendering documents share an engine without sharing page state
         if (!link || event.defaultPrevented || event.button !== 0 ||
             event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
-        __wwcServiceCall('route.push', link.getAttribute('href'));
+        var error = __wwcServiceCall('route.push', link.getAttribute('href'));
+        if (error) throw new Error(error);
       });`) }]);
   const font = await readFile(new URL("../../../dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/assets/fonts/libre-baskerville-latin-wght-normal.woff2", import.meta.url));
   const fontSource = source(24)
@@ -171,7 +172,7 @@ test("independent rendering documents share an engine without sharing page state
             listen() { throw new Error('This test app uses an explicit route callback'); },
           }, call(name, fragment) {
             if (name !== 'route.push' || active !== id || !fragment.startsWith('#') || fragment.length > 2048)
-              throw new Error('Route request denied');
+              return 'Route request denied';
             // Assigning only hash cannot turn this service into navigation to
             // an arbitrary path/origin. The guest still handles its anchors.
             location.hash = fragment;
@@ -317,6 +318,7 @@ test("independent rendering documents share an engine without sharing page state
     await page.evaluate(() => {
       window.renderingFrames = [...document.querySelectorAll('#mount iframe')].map(frame => new WeakRef(frame));
       window.renderingWindows = renderingFrames.map(frame => new WeakRef(frame.deref().contentWindow));
+      window.renderingDocuments = renderingFrames.map(frame => new WeakRef(frame.deref().contentDocument));
     });
     assert.equal((await measure(view(second))).box[2], 240, "hidden replacement has native rem layout");
     await clickApp(first);
@@ -557,6 +559,9 @@ test("independent rendering documents share an engine without sharing page state
     const reloadedRoute = await page.evaluate(program => experiment.prepare(program, { routes: true }), routeProgram);
     assert.equal(await report(reloadedRoute, 'location.pathname'), 'details',
       'a live-update candidate starts on the currently selected route');
+    assert.equal(await report(reloadedRoute, `__wwcServiceCall('route.push', '#/hidden')`),
+      'Route request denied', 'a preparing guest cannot change the active route');
+    assert.equal(await report(routing, 'location.pathname'), 'details');
     await reveal(reloadedRoute);
     await page.evaluate(selector => {
       window.reloadedRoot = new WeakRef(document.querySelector(selector).contentDocument.documentElement);
@@ -577,8 +582,9 @@ test("independent rendering documents share an engine without sharing page state
     for (let index = 0; index < 10; index++) {
       await reveal(await prepare(programs[index % 2]));
       assert.equal(await page.evaluate(() => [...document.querySelectorAll('#mount iframe')].every((frame, index) =>
-        frame === renderingFrames[index].deref() && frame.contentWindow === renderingWindows[index].deref())), true,
-        'live updates keep both native iframe elements and browsing contexts');
+        frame === renderingFrames[index].deref() && frame.contentWindow === renderingWindows[index].deref() &&
+        frame.contentDocument === renderingDocuments[index].deref())), true,
+        'live updates keep both iframe elements, browsing contexts, and Documents');
     }
     assert.equal(await page.locator("#mount iframe").count(), 2);
     assert.equal(await page.evaluate(() => history.length), historyBeforeSwaps,
