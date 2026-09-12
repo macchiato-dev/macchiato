@@ -228,3 +228,46 @@ same names with `.log`). No live assets, owner projects, server process, or
 Bunny archive changed. Real-project swaps, the full frame hierarchy,
 full-screen focus, and overhead measurements remain integration work; this
 bounded font experiment does not establish those properties.
+
+## Nested engine and view-mode focus: 2026-09-12
+
+The experiment now runs its controller, machine, and shared QuickJS engine
+inside a persistent outer output iframe. The active/preparing script-free
+rendering documents are children of that iframe. Its native comparison page
+is also inside the outer frame for equal-sized measurement. The previous
+layout, delayed-font, input, isolation, and collectible-document checks still
+pass with this additional boundary. No interpreter/controller is installed
+in the top website realm.
+
+New controls exercise both a CSS expanded view and the browser Fullscreen API.
+Native fullscreen is checked in both ancestors: the controller's fullscreen
+element is its output mount, and the top document's is the persistent iframe.
+The rendered guest viewport changes from 600×400 to 1240×600 and returns to
+600×400. The controller document, active session, input value, and counter
+remain intact. Screenshot pixels retain the application's canvas color.
+
+The first focus test failed: clicking a controller control took focus away
+from the input, so later typing went nowhere. Merely focusing the iframe
+element or its window did not restore that control in this Chromium test.
+The experimental controller now remembers its last focused native element
+weakly, restores it only if it still belongs to the document, and removes the
+focus listener when retiring the session. It does not copy caret coordinates,
+text, selections, or keyboard events, and adds no machine permissions. The
+test reads the input's native selection for verification rather than expanding
+the guest API just to support that probe.
+
+Mouse and keyboard activation each pass for expansion and native fullscreen.
+After entry and exit, real typing inserts characters at a caret in the middle
+of an unsaved value, without a second click. The same 15 retired frame elements
+and documents remain collectible after the additional focus listeners.
+Native fullscreen exit is requested through the browser API in this test;
+it does not establish Escape-key behavior on every browser or operating system.
+
+Evidence, including inspected expanded/fullscreen screenshots, is under
+`/root/macchiato-work/rendering-{nested-engine,view-modes-before-focus,window-focus,retained-focus,view-modes-regressions}`
+and the corresponding `.log` files. The final combined run reports six passes
+and the four existing production layout TODO failures. This is still a test-only
+controller, not Resources Edge integration or approval of the proposed frame
+hierarchy. Real-project focus during hot reload, fragment services through the
+full hierarchy, browser diversity, and overhead measurements remain open.
+Live assets and the Bunny archive are unchanged by this experiment.

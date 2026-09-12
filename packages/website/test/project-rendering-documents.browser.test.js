@@ -110,6 +110,12 @@ test("independent rendering documents share an engine without sharing page state
           allowFont: holdFont ? () => new Promise(resolve => fontDecisions.set(id, resolve)) : undefined,
         });
         const entry = { frame, machine, reports, doc };
+        // Focusing a frame/window resets the focused control in Chromium.
+        // Retain only its identity weakly, not a copied selection or DOM tree.
+        entry.rememberFocus = event => {
+          if (typeof event.target.focus === 'function') entry.focused = new WeakRef(event.target);
+        };
+        doc.addEventListener('focusin', entry.rememberFocus);
         entries.set(id, entry);
         try {
           await machine.onmsg(0);
@@ -137,6 +143,11 @@ test("independent rendering documents share an engine without sharing page state
         fontDecisions.delete(id);
         approve(allowed);
       },
+      focus() {
+        const entry = entries.get(active), target = entry?.focused?.deref();
+        if (target && entry.doc.contains(target)) target.focus({ preventScroll: true });
+        else entry?.doc.defaultView.focus();
+      },
       reveal(id) {
         const { frame } = entries.get(id), previous = active;
         frame.style.visibility = '';
@@ -148,6 +159,7 @@ test("independent rendering documents share an engine without sharing page state
       remove(id) {
         const entry = entries.get(id);
         if (!entry) return;
+        entry.doc.removeEventListener('focusin', entry.rememberFocus);
         released.push({ frame: new WeakRef(entry.frame), document: new WeakRef(entry.doc) });
         try { entry.machine.destroy(); }
         finally { entry.frame.remove(); entries.delete(id); fontDecisions.delete(id); }
@@ -159,8 +171,10 @@ test("independent rendering documents share an engine without sharing page state
     };
     document.querySelector('#expanded').onclick = () => {
       mount.classList.toggle('expanded');
+      experiment.focus();
     };
     document.querySelector('#fullscreen').onclick = () => mount.requestFullscreen();
+    document.addEventListener('fullscreenchange', () => experiment.focus());
   });
   const prepare = program => page.evaluate(program => experiment.prepare(program), program);
   const reveal = id => page.evaluate(id => experiment.reveal(id), id);
@@ -347,21 +361,37 @@ test("independent rendering documents share an engine without sharing page state
     await browserPage.keyboard.press('End');
     await browserPage.keyboard.type(' in progress');
     let draft = 'Unsaved note in progress';
+    let caret = 8;
+    await browserPage.keyboard.press('Home');
+    for (let index = 0; index < caret; index++) await browserPage.keyboard.press('ArrowRight');
     const counterBeforeModes = await count(active);
     const controllerDocument = await browserPage.evaluate(() => {
       window.outputDocument = document.querySelector('#output').contentDocument;
       return window.outputDocument.location.pathname;
     });
     assert.equal(controllerDocument, '/controller');
-    for (const mode of ['expanded', 'fullscreen', 'expanded', 'fullscreen']) {
+    for (const [index, mode] of ['expanded', 'fullscreen', 'expanded', 'fullscreen'].entries()) {
       const before = await draftState(active);
-      assert.deepEqual(before, [draft, draft.length]);
-      await page.locator('#' + mode).click();
+      assert.deepEqual(before, [draft, caret]);
+      if (index < 2) await page.locator('#' + mode).click();
+      else {
+        await page.locator('#' + mode).focus();
+        await browserPage.keyboard.press('Enter');
+      }
       if (mode === 'fullscreen') await page.waitForFunction(() => document.fullscreenElement?.id === 'mount');
+      if (mode === 'fullscreen') assert.equal(await browserPage.evaluate(() =>
+        document.fullscreenElement === document.querySelector('#output')), true,
+        'native fullscreen includes the persistent outer iframe, not merely a CSS overlay');
+      assert.deepEqual(await page.evaluate(selector => {
+        const frame = document.querySelector(selector), doc = frame.contentDocument;
+        return { controllerFocus: document.activeElement?.tagName, inputFocus: doc.activeElement?.id,
+          documentFocused: doc.hasFocus() };
+      }, view(active)), { controllerFocus: 'IFRAME', inputFocus: 'draft', documentFocused: true });
       await browserPage.keyboard.type('!');
-      draft += '!';
+      draft = draft.slice(0, caret) + '!' + draft.slice(caret);
+      caret++;
       assert.deepEqual(await draftState(active),
-        [draft, draft.length], mode + ' restores input focus and the existing caret without an extra click');
+        [draft, caret], mode + ' restores input focus and the existing caret without an extra click');
       const viewport = await page.evaluate(() => {
         const mount = document.querySelector('#mount');
         return [mount.clientWidth, mount.clientHeight];
@@ -378,7 +408,9 @@ test("independent rendering documents share an engine without sharing page state
         await page.waitForFunction(() => !document.fullscreenElement);
       } else await page.locator('#expanded').click();
       await browserPage.keyboard.type('?');
-      draft += '?';
+      draft = draft.slice(0, caret) + '?' + draft.slice(caret);
+      caret++;
+      assert.deepEqual(await draftState(active), [draft, caret]);
       assert.equal(await report(active, 'document.getElementById("draft").value'), draft,
         mode + ' exit also restores the input focus');
       assert.deepEqual(await report(active, '[innerWidth, innerHeight]'), [600, 400]);
