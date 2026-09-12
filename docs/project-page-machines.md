@@ -3893,3 +3893,39 @@ Cat and Mahjong also pass against the restarted live server. The refreshed
 `d3ebd17a6e883261d114c06a1708c0628723de30f10ac3c6e239fd508a9b4530`.
 Its predecessor is preserved at
 `/root/archive/2026/09/12/resources-bunny-f2e3355-before-native-intersections.tar.gz`.
+
+### Bounded binary-copy checkpoint (2026-09-12)
+
+The `f915c1d` export uses a checked TypedArray.set for outbound guest binary
+payloads, rather than interpreting a byte-writer call for each byte. The host,
+permissions, message format and synchronous scheduling are unchanged. The
+independent wire fixture verifies offsets, capacity failures, empty payloads,
+exact bytes and copy independence. Its 32 × 64 KiB write control took 620 ms;
+the native-copy version took under 1 ms. This is a focused encoding result, not
+an application-wide speedup claim.
+
+Twenty-five runtime regressions pass, including the QuickJS output in direct
+and iframe modes, MicroQuickJS callbacks, node-cache lifetimes and native
+intersections. The complete editor stress test passes in 69 seconds: 80 edits
+finish at 22.1 seconds, the 106 KB paste takes 0.91 seconds, and native insertion
+still takes 23.7 seconds. Light/dark screenshots were inspected. The remaining
+large-input latency has not been solved by this binary-resource optimization.
+
+The export and extracted archive pass all 152 manifest checks, and the compressed
+backend executes in Deno. The separate single-property-read experiment is not
+shipped: its small timing benefit did not justify an additional encoder branch.
+See [typing diagnostics](project-editor-typing-performance.md). Evidence is under
+`/root/macchiato-work/binary-write-copy-*`.
+
+Read-only saved-project checks pass for the cat game (eight pairs and reset),
+Mahjong (144 tiles and full-height surface), 50 tour slides, and SQLite fragment
+navigation, including theme/phone checks. Cat and Mahjong pass again against
+the restarted local server; six live host/controller/runtime/frame files match
+the export. No owner project was saved and no Bunny deployment was performed.
+
+`/root/resources-bunny.tar.gz` has SHA-256
+`eb160fa8f17c8dfa907380e1e906764db47e9f72bfd417ff82d1e1d3d717ae0a`.
+The preceding archive is retained at
+`/root/archive/2026/09/12/resources-bunny-4631446-before-binary-write-copy.tar.gz`.
+The broader goal remains open: native-document sizing/painting and large-input
+editing latency still require work.
