@@ -480,3 +480,49 @@ seconds, including repeated invalid font edits, live-output interaction during
 rejection, recovery without reload, undo/redo, scrolling, themes, disposable
 save/reload, phone views, and large input. No host permission or runtime API is
 added by this change.
+
+## Shorter pauses between idle slices
+
+The build now also changes the two `Work.MinPause` constants from 100 ms to
+25 ms. This changes how long the worker waits before requesting an idle slice,
+not its parsing algorithm, slice allowance, publication, or input handling.
+The combined timer/idle-callback maximum remains 500 ms, as does the timer-only
+fallback. Browser cancellation and the upstream input-pending check remain
+unchanged. A build test reverses the two replacements and compares the entire
+result to the installed upstream source; incompatible upgrades fail the build.
+
+Last-page comparisons use the same 106,402-character JavaScript file, corrected
+monospace font/palette, 585px editor, and native/guest/guest/native order. The
+control already includes the 5 ms foreground allowance. Its guest post-input
+parse waits were 2,176 and 2,124 ms, versus 1,287 and 1,331 ms with shorter idle
+pauses. Final checkpoints report approximately 1.0–1.1 seconds of inclusive
+parser work in both conditions. Shorter sleeps reduce elapsed catch-up time;
+this is not a faster parser or a whole-application speedup claim.
+
+The queued-input diagnostic now sends its ten letters *before* waiting for
+viewport parsing to finish. Both guest runs confirm that parsing was still
+incomplete before the burst. Candidate acknowledgements were 16–24 ms, versus
+16–24 ms in the control, with exact resulting content checked. This probes
+input during catch-up; the former placement after readiness did not. It does
+not establish responsiveness under every load or browser scheduler.
+
+The experimental candidate and rebuilt editor JavaScript have identical SHA-256
+`4230dbfb4269cc5d6d494f1d2517cf19261f5377a9cd02c621617a1a130f4614`.
+The generated source changes only those two idle constants. Core bytecode stays
+979,732 bytes and editor Wasm stays 1,579,016 bytes. All 395 tests pass, as does
+the 72.4-second Resources editing/recovery workflow. No host/controller or
+permission change accompanies this adaptation. Measurements are under
+`/root/macchiato-work/`: `parser-pause-control`, `parser-pause25-candidate`,
+and `parser-pause-burst-{candidate,control}`; logs use the same prefixes.
+Remaining parser work and native-document fidelity issues are still open.
+
+A final recorded run uses the rebuilt source, last-page typing, and the queued
+burst together. Exact input and eventual parsing pass; inspected ending
+native/guest screenshots agree in wrapping, gutters, and visible syntax. Frame
+samples for the unchanged `button.textContent` line reach their final spans
+at 2,688–2,782 ms in the guest, versus 79–84 ms natively, and do not lose them
+afterward. These times start at the beginning of the recorded input sequence,
+not after its final key, and include recording/sampling overhead. They are not
+the ordinary post-input waits above. The visible delay is still substantial;
+matching final screenshots do not make the whole interaction native-speed.
+Recordings, frame data, and screenshots are in `parser-pause-rebuilt-visual`.

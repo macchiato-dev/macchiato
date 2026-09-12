@@ -4410,3 +4410,30 @@ The predecessor is preserved at
 Nothing was deployed to Bunny. The rendering-document decision, its four
 known native-document fidelity failures, and remaining parsing/view latency
 keep the broader goal open.
+
+### Idle parser catch-up: 2026-09-12
+
+The editor build now waits 25 ms rather than 100 ms before asking for an idle
+parser slice. The combined maximum wait remains 500 ms; slice budgets,
+input-pending checks, cancellation, and tree publication are unchanged. The
+two-constant adaptation adds no runtime/host API or permission and does not
+grow the bytecode or Wasm. See
+[the measured catch-up comparison](project-editor-typing-performance.md#shorter-pauses-between-idle-slices).
+
+All 395 editor/runtime tests pass. The full Resources editing workflow passes
+in 72.4 seconds, including repeated invalid-font rejection and recovery while
+the previous output remains interactive. All ten delayed-loading theme
+scenarios pass. Light/dark and invalid-output screenshots were inspected.
+Read-only export and live checks pass for full-height Mahjong, Cat Memory's
+eight pairs/reset, 50 tour slides, and SQLite fragment navigation. No owner
+files or notes were saved. Six principal live assets match the export after
+restart. Evidence is under `/root/macchiato-work/parser-pause-*`.
+
+The `site/resources-co-7966d8d` build and extracted archive pass all 152 manifest
+checks, and its compressed backend runs in Deno. `/root/resources-bunny.tar.gz`
+has SHA-256 `aa4036fc0ae9984cd84b79c7984f99a384c363b1672335d703ce48df8a227b38`.
+The preceding archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-7f0b6b4-before-parser-pause.tar.gz`.
+Nothing was deployed to Bunny. The proposed native rendering-document
+arrangement remains unadopted; its four known production fidelity failures
+and remaining performance work still leave the goal open.
