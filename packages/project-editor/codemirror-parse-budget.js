@@ -23,3 +23,16 @@ export function shortenIdleParserPause(source) {
   }
   return source.replaceAll(before, "25 /* Work.MinPause */");
 }
+
+// Finalizing an in-progress parse can publish newer reusable fragments. Take
+// the snapshot afterward, so the next edit doesn't throw that work away. The
+// upstream change-range invalidation still decides what is safe to retain.
+export function retainFinishedParsing(source) {
+  const snapshot = "        let { fragments, tree, treeLen, viewport, skipped } = this;";
+  const finish = "        this.takeTree();";
+  const before = snapshot + "\n" + finish;
+  if (source.split(before).length !== 2) {
+    throw new Error("Review CodeMirror parser fragment snapshot");
+  }
+  return source.replace(before, finish + "\n" + snapshot);
+}

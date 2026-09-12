@@ -368,6 +368,14 @@ instead of 100 ms. The combined maximum pause stays 500 ms, as does the
 timer-only fallback. Idle slice sizes, cancellation, and input-pending checks
 are unchanged; queued-input tests run before waiting for parser catch-up.
 
+On an edit, the build also moves the snapshot of reusable parser fragments
+after `takeTree()`. In the installed version the snapshot precedes finalizing
+the pending parse, so it loses work completed between keystrokes. Change-range
+invalidation remains upstream's own. Deterministic tests compare partial-parse
+edits with fresh JavaScript, JSON, and HTML parses, including malformed input,
+deletion, full replacement, and no-op transactions. The build fails if this
+upstream snapshot changes; this is not a second parser or a host-side cache.
+
 Multi-memory WebAssembly is worth testing for runtime builds: interpreter state,
 guest resources or bytecode, and shared device buffers need not compete in one
 linear memory. A post-link transformation tool such as Walrus may be useful for
