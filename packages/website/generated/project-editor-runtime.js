@@ -1074,7 +1074,7 @@ var WasmWebBridge = class {
       if (options.allowNavigate === "fragment") return isVirtualHref(value2);
       if (options.allowNavigate === "self") {
         try {
-          return new URL(value2, hostDocument.baseURI).origin === realm.location.origin;
+          return new URL(value2, hostDocument.baseURI).origin === realm.origin;
         } catch {
           return false;
         }
@@ -1228,7 +1228,7 @@ var WasmWebBridge = class {
         let sameOrigin = false;
         if (options.allowNavigate === "self") {
           try {
-            sameOrigin = new URL(action, hostDocument.baseURI).origin === realm.location.origin;
+            sameOrigin = new URL(action, hostDocument.baseURI).origin === realm.origin;
           } catch {
           }
         }

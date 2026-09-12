@@ -42,6 +42,9 @@ test("DOM services belong to the granted document, not the controller realm", as
       await page.goto("http://realm.test/");
       const result = await page.evaluate(async ({ grant, font, navigate }) => {
         const { default: Machine } = await import("/machine.js");
+        // Distinct time origins make accidentally reading the controller's
+        // performance clock visible even on fast machines.
+        await new Promise(resolve => setTimeout(resolve, 200));
         const frame = document.createElement("iframe");
         frame.style.cssText = "position:absolute;left:0;top:50px;width:420px;height:260px;border:0";
         // A script-free document; the host module and Wasm stay in this realm.
@@ -71,7 +74,9 @@ test("DOM services belong to the granted document, not the controller realm", as
           await vm.onmsg(0); // Wait for approved font installation.
           await call({ scroll: true });
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          const before = child.performance.now();
           await call({});
+          const after = child.performance.now();
           selected.parentElement.dispatchEvent(new child.MouseEvent("mousedown", { bubbles: true }));
           const links = [];
           for (const href of ["/allowed", "https://outside.test/blocked"]) {
@@ -86,13 +91,16 @@ test("DOM services belong to the granted document, not the controller realm", as
           }
           let customError = null;
           try { await call({ custom: true }); } catch (error) { customError = String(error); }
-          return { reports, traces, customRuns, customError, links, forms,
+          return { reports, traces, customRuns, customError, links, forms, before, after,
             parentScroll: scrollY, childScroll: child.scrollY,
             parentFonts: [...document.fonts].map(face => face.family),
             childFonts: [...doc.fonts].map(face => face.family) };
         } finally { vm.destroy(); }
       }, { grant, font: font.toString("base64"), navigate });
       const snapshot = JSON.parse(result.reports.at(-2));
+      const now = snapshot.now; delete snapshot.now;
+      assert.ok(now >= Math.floor(result.before) && now <= Math.ceil(result.after),
+        `guest clock ${now} must use child time origin (${result.before}–${result.after})`);
       assert.deepEqual(snapshot, { width: 420, height: 260, scroll: 120,
         fontSize: "24px", selectionOffset: 3, privateVisible: false });
       assert.equal(result.reports.at(-1), "pointer");

@@ -29,6 +29,7 @@ function documentRealmProbe(json) {
   var selection = hostCall(document.reference, "getSelection", []);
   __wwcPostMessage(JSON.stringify({
     width: hostGet(document.reference, "innerWidth"),
+    now: hostCall(document.reference, "performanceNow", []),
     height: hostGet(document.reference, "innerHeight"),
     scroll: hostGet(document.reference, "pageYOffset"),
     fontSize: hostCall(computed[1], "getPropertyValue", ["font-size"]),

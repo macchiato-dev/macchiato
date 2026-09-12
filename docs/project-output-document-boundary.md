@@ -103,6 +103,12 @@ It also registers a custom element only in the child's registry and verifies
 that guest creation rejects it without running its constructor. Checking the
 controller's registry instead would accidentally permit that native code.
 
+The fixture deliberately creates the child later than the controller and
+bounds the guest's `performanceNow` result with readings from the child's
+native clock. Previously it used the controller's different time origin
+(409ms rather than 148ms in one run). It now uses the granted realm, matching
+native event timestamps without changing precision or synthesizing a clock.
+
 Navigation checks use the granted window's actual origin and document base
 URI. A `srcdoc` URL reports a null origin even though the document inherits its
 embedding origin. Both link assignment and form defaults are tested with no
