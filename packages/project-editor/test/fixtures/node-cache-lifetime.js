@@ -56,3 +56,35 @@ function checkNodeCache(operation) {
   flush();
   __wwcPostMessage(JSON.stringify({ checked: operation, cached: Object.keys(guestNodes).length }));
 }
+
+var reconciliationLeft, reconciliationRight, reconciliationNodes;
+function reconcileNodeCache(json) {
+  var request = JSON.parse(json);
+  if (request.action === "prime") {
+    reconciliationLeft = document.getElementById("reconcile-left");
+    reconciliationRight = document.getElementById("reconcile-right");
+    synchronizeGuestChildren(reconciliationLeft);
+    synchronizeGuestChildren(reconciliationRight);
+    reconciliationNodes = childrenOf(reconciliationLeft).slice();
+  } else if (request.action === "measure") {
+    var start = performance.now();
+    for (var repeat = 0; repeat < 5; repeat++) synchronizeGuestChildren(reconciliationLeft);
+    __wwcPostMessage(JSON.stringify({ reconciliation: request.count, milliseconds: performance.now() - start }));
+  } else if (request.action === "verify") {
+    synchronizeGuestChildren(reconciliationLeft);
+    synchronizeGuestChildren(reconciliationRight);
+    var children = childrenOf(reconciliationLeft);
+    if (children.length !== request.count - 2 || children[0] !== reconciliationNodes[request.count - 1])
+      throw new Error("reordered child mirror is wrong");
+    if (parentOf(reconciliationNodes[0]) !== reconciliationRight ||
+        parentOf(reconciliationNodes[1]) !== null)
+      throw new Error("moved or removed child parent is wrong");
+    if (childrenOf(reconciliationRight)[0] !== reconciliationNodes[0])
+      throw new Error("moving a node changed its wrapper identity");
+    __wwcPostMessage(JSON.stringify({ reconciliationVerified: request.count }));
+  } else if (request.action === "release") {
+    reconciliationLeft.remove(); reconciliationRight.remove();
+    reconciliationLeft = reconciliationRight = reconciliationNodes = null;
+  }
+  flush();
+}

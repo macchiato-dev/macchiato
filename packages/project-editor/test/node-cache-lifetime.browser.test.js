@@ -20,7 +20,7 @@ test("MicroQuickJS's node identity cache does not retain unreachable removed wra
     ["-m32", "-o", application, new URL("fixtures/node-cache-lifetime.js", import.meta.url).pathname]);
   execFileSync(process.execPath, [resolve(suite, "scripts/stamp-wasm.js"),
     resolve(generated, "project-editor-quickjs-runtime.wasm"), resolve(directory, "guest.wasm"),
-    `runtime.bin=${resolve(generated, "project-editor-runtime.bin")}`, `application.bin=${application}`]);
+    `runtime.bin=${process.env.MACCHIATO_TEST_ENVIRONMENT_FILE || resolve(generated, "project-editor-runtime.bin")}`, `application.bin=${application}`]);
   const wasm = await readFile(resolve(directory, "guest.wasm"));
   const host = await readFile(resolve(root, "dev/wasm-web-machine/dist/module/machine.js"));
   const browser = await chromium.launch();
@@ -61,7 +61,26 @@ test("MicroQuickJS's node identity cache does not retain unreachable removed wra
       for (let round = 0; round < 5; round++) { await call(true); await check("verify"); }
       const whileRetained = held.size - baseline;
       await check("release"); await check("released");
-      return { baseline, samples, whileRetained, afterRelease: held.size - baseline,
+      const afterRelease = held.size - baseline;
+      const reconcile = value => machine.onmsg(new TextEncoder().encode("\u0002reconcileNodeCache\0" + JSON.stringify(value)));
+      const membership = [];
+      for (const count of [100, 1000, 4000]) {
+        const left = document.createElement("div"), right = document.createElement("div");
+        left.id = "reconcile-left"; right.id = "reconcile-right";
+        const nodes = Array.from({ length: count }, () => document.createElement("span"));
+        left.append(...nodes); mount.append(left, right);
+        await reconcile({ action: "prime" });
+        await reconcile({ action: "measure", count });
+        membership.push(notices.at(-1));
+        right.append(nodes[0]); nodes[1].remove();
+        left.replaceChildren(...nodes.slice(2).reverse());
+        await reconcile({ action: "verify", count });
+        if (notices.at(-1).reconciliationVerified !== count) throw Error("missing reconciliation verification");
+        await reconcile({ action: "release" });
+        await call(false); await call(false);
+      }
+      return { baseline, samples, whileRetained, afterRelease, membership,
+        afterReconciliation: held.size - baseline,
         retainedSample: Array.from(leases).slice(-5),
         checked: notices.filter(notice => notice.checked).map(notice => notice.checked) };
     } finally { machine.destroy(); }
@@ -73,6 +92,7 @@ test("MicroQuickJS's node identity cache does not retain unreachable removed wra
     "empty cache cells must not accumulate as monotonically allocated host IDs increase");
   assert.ok(result.whileRetained > 0, "live detached wrappers still own host leases");
   assert.ok(result.afterRelease <= 2, "releasing the retained subtree releases its leases");
+  assert.ok(result.afterReconciliation <= 2, "reconciliation scratch data must not retain removed children");
   assert.deepEqual(result.checked, ["invalid", "hold", ...Array(5).fill("verify"), "release", "released"]);
   assert.deepEqual(errors, []);
 });
