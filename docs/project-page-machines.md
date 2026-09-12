@@ -4375,3 +4375,38 @@ Its predecessor is preserved at
 Nothing was deployed to Bunny. The pending rendering-document decision, four
 known native-document fidelity failures, and remaining parser/view latency
 still leave the broader goal open.
+
+### Bounded foreground parsing: 2026-09-12
+
+The guest build shortens CodeMirror's two foreground parsing allowances to
+5 ms; explicit parser requests and the ordinary idle worker are unchanged.
+The source diff in the generated editor is exactly two constants, and editor
+Wasm shrinks eight bytes to 1,579,016 bytes. No host, controller, runtime API,
+or permission changes. See the measured tradeoff in
+[the rebuilt parsing comparison](project-editor-typing-performance.md#rebuilt-foreground-allowance).
+Faster keys do not eliminate the remaining last-page highlighting delay.
+
+Visual verification first corrected the isolated test's missing palette and
+the container's missing monospace font. All 393 existing tests passed in that
+corrected environment before the adaptation; all 394 tests, including the new
+build guard, passed afterward. Full Resources editing passed in 72.3 seconds,
+including repeated invalid font edits/recovery without reload. Light/dark
+screenshots were inspected. The ten delayed-loading theme scenarios also pass.
+One initial theme process and one exported-project verification process ended
+with SIGTERM without a verdict; their unchanged reruns passed. The source of
+those external terminations was not established, and they are not counted as
+successful runs.
+
+The four saved projects pass read-only export and live checks: full-height
+Mahjong, Cat Memory's pairs/reset, 50 tour slides, and SQLite fragments. No
+owner files or tour notes were saved. Six principal live assets match the
+export after restart. Evidence is under `/root/macchiato-work/foreground-parsing-*`.
+
+The `site/resources-co-7f0b6b4` build and extracted archive pass all 152 manifest
+checks; the compressed backend runs in Deno. `/root/resources-bunny.tar.gz` has
+SHA-256 `c445477ab586b1339708e2220e828ae0b042116f6479124af9e808e05b0173b1`.
+The predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-99f8c03-before-foreground-parsing.tar.gz`.
+Nothing was deployed to Bunny. The rendering-document decision, its four
+known native-document fidelity failures, and remaining parsing/view latency
+keep the broader goal open.

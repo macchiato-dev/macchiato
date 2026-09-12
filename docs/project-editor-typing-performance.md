@@ -448,3 +448,35 @@ runs, but their absolute timings and wrapping are not interchangeable with
 this corrected setup. New baselines must use the corrected palette and font.
 Before correction, screenshots cannot establish visual syntax fidelity even
 where recorded spans and parser trees were correct.
+
+## Rebuilt foreground allowance
+
+The Resources editor build now changes just the two upstream `Work.Apply`
+constants from 20 ms to 5 ms. The adaptation checks both call sites and fails
+on an incompatible upgrade or duplicate application. It does not wrap runtime
+methods, alter explicit `ensureSyntaxTree` budgets, change idle-worker slices,
+or change tree publication. The generated editor source differs on exactly
+those two lines. Its Wasm shrinks by eight bytes to 1,579,016 bytes.
+
+Fresh comparisons use the corrected font/palette and a control extracted from
+commit `782eb23d`, with identical current runtime, language source, source text,
+input sequence, and viewport. Each condition runs native/guest/guest/native.
+First-page guest keys measured 16–43 ms in the candidate versus 27–91 ms in the
+control; last-page keys measured 16–32 ms versus 35–46 ms. Post-input viewport
+parse waits were 7–103 ms versus 2–102 ms on the first page, and 2,112–2,334 ms
+versus 1,830–1,863 ms on the last page. These observed ranges are not latency
+guarantees. Deferred highlighting remains a real cost, not a completed feature.
+
+Separate rebuilt visual runs sample an unchanged import line: it acquires its
+final spans after 128–129 ms and does not lose them during the remaining edits.
+Ending screenshots were inspected. This supports stable highlighting for that
+sample, not a claim that every editing pattern is flicker-free. Recordings and
+frame data are under `foreground-parsing-rebuilt-visual`; ordinary comparisons
+are `foreground-parsing-{candidate,control}-{first,last}` beneath
+`/root/macchiato-work`.
+
+All 394 editor/runtime tests pass. The full Resources workflow passes in 72.3
+seconds, including repeated invalid font edits, live-output interaction during
+rejection, recovery without reload, undo/redo, scrolling, themes, disposable
+save/reload, phone views, and large input. No host permission or runtime API is
+added by this change.
