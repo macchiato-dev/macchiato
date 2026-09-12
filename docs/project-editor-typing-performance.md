@@ -309,3 +309,28 @@ and eventual highlighting assertions pass in each comparison.
 The benchmark's optional `MACCHIATO_TEST_RUNTIME_FILE` selects an engine for
 same-ABI comparisons without overwriting generated runtime artifacts. It does
 not make arbitrary engine/bytecode combinations compatible.
+
+## Reconfiguring a language without rebuilding the view
+
+The editor previously destroyed its `EditorView` whenever the requested
+language changed. That replaced the native editing surface and discarded
+selection/history even when the text was identical. It now reconfigures the
+existing language compartment. Unchanged content is not submitted as a full
+document replacement; genuine content changes still use an ordinary CodeMirror
+transaction. This adds no history implementation, DOM cache, or host behavior.
+
+The stamped/downloaded language regression fails against the previous build:
+the first HTML-to-Markdown switch changes the editor element, and switching
+away while HTML downloads resets position 34 to zero. With the rebuilt editor,
+all covered language switches retain the same native content element. A late
+HTML download cannot activate its parser on the current plain-text document;
+returning to HTML preserves the edit/selection and normal undo restores the
+original text. Markdown fences still request their own language on demand.
+The download sequence remains the same twelve shared grammar bundles, with
+JS/JSX/TS/TSX sharing one bundle and no unrelated extra requests.
+
+This proves removal of a redundant view reconstruction, not an end-to-end
+latency improvement or a per-tab context/history implementation. The separate
+explicit construction benchmark still destroys its view intentionally and is
+not a language-switch measurement. Before/after evidence is in
+`/root/macchiato-work/language-reconfigure-{before,after}.log`.

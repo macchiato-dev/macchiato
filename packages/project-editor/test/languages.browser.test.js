@@ -280,7 +280,12 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
       await select(path, source, language);
       const samples = [];
       for (let iteration = 0; iteration < (process.env.MACCHIATO_EDITOR_MOUNT_TIMINGS ? 4 : 1); iteration++) {
-        samples.push(await page.evaluate(request => window.callGuest('measureMount', request), { path, content: source }));
+        samples.push(await page.evaluate(request => {
+          const result = window.callGuest('measureMount', request);
+          // This separate construction benchmark explicitly destroys the view.
+          window.editorContent = document.querySelector('.cm-content');
+          return result;
+        }, { path, content: source }));
         await page.waitForFunction(() => document.querySelectorAll('.cm-line span[class]').length > 0);
         await page.waitForFunction(() => window.callGuest('inspectParsing', {}).available);
         assert.equal((await page.evaluate(() => window.callGuest('inspectEditor', {}))).document, source);

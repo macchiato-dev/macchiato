@@ -26857,23 +26857,23 @@ globalThis.__codeEditorSetContent = (json) => {
   const readOnlyChanged = currentReadOnly !== (request.readOnly === true);
   currentLanguage = request.language;
   currentReadOnly = request.readOnly === true;
-  if (!globalThis.__codeEditorView || languageChanged) {
-    globalThis.__codeEditorView?.destroy();
-    parent.replaceChildren();
+  if (!globalThis.__codeEditorView) {
     const view2 = mountEditor(request.content);
     return JSON.stringify(documentUsage(view2.state.doc));
   }
   const view = globalThis.__codeEditorView;
   const effects = [];
+  if (languageChanged) effects.push(language2.reconfigure(languageExtension(currentLanguage)));
   if (readOnlyChanged) effects.push(editability.reconfigure([
     EditorState.readOnly.of(currentReadOnly),
     EditorView.contentAttributes.of({ "aria-readonly": currentReadOnly ? "true" : "false" })
   ]));
   applyingHostContent = true;
   try {
+    const contentChanged = request.content !== view.state.doc.toString();
     view.dispatch({
-      changes: { from: 0, to: view.state.doc.length, insert: request.content },
-      selection: { anchor: 0 },
+      changes: contentChanged ? { from: 0, to: view.state.doc.length, insert: request.content } : void 0,
+      selection: contentChanged ? { anchor: 0 } : void 0,
       effects
     });
   } finally {

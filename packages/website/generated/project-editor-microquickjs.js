@@ -27958,29 +27958,28 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     var readOnlyChanged = currentReadOnly !== (request.readOnly === true);
     currentLanguage = request.language;
     currentReadOnly = request.readOnly === true;
-    if (!globalThis.__codeEditorView || languageChanged) {
-      var _globalThis$__codeEdi;
-      (_globalThis$__codeEdi = globalThis.__codeEditorView) == null || _globalThis$__codeEdi.destroy();
-      parent.replaceChildren();
+    if (!globalThis.__codeEditorView) {
       var view2 = mountEditor(request.content);
       return JSON.stringify(documentUsage(view2.state.doc));
     }
     var view = globalThis.__codeEditorView;
     var effects = [];
+    if (languageChanged) effects.push(language2.reconfigure(languageExtension(currentLanguage)));
     if (readOnlyChanged) effects.push(editability.reconfigure([_EditorState2.readOnly.of(currentReadOnly), _EditorView2.contentAttributes.of({
       "aria-readonly": currentReadOnly ? "true" : "false"
     })]));
     applyingHostContent = true;
     try {
+      var contentChanged = request.content !== view.state.doc.toString();
       view.dispatch({
-        changes: {
+        changes: contentChanged ? {
           from: 0,
           to: view.state.doc.length,
           insert: request.content
-        },
-        selection: {
+        } : void 0,
+        selection: contentChanged ? {
           anchor: 0
-        },
+        } : void 0,
         effects: effects
       });
     } finally {
