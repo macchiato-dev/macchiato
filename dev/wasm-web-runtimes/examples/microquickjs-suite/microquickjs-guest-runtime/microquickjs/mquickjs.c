@@ -2418,7 +2418,7 @@ JSValue JS_NewObjectClassUser(JSContext *ctx, int class_id)
     return JS_VALUE_FROM_PTR(p);
 }
 
-// CUSTOMIZATION: 193 lines below added: implement native collection operations.
+// CUSTOMIZATION: 202 lines below added: implement native collection operations.
 static JSObject *js_get_collection(JSContext *ctx, JSValue value)
 {
     JSObject *object;
@@ -2451,6 +2451,15 @@ static int collection_table_find(JSContext *ctx, JSCollectionTable *table,
     uint32_t index;
     if (!table)
         return -1;
+    /* Objects and singleton values compare only by identity. Classify the
+       query once, not every entry of a large object-keyed collection. */
+    if (!JS_IsNumber(ctx, key) && !JS_IsString(ctx, key)) {
+        for (index = 0; index < table->count; index++) {
+            if (table->entries[index * 2] == key)
+                return (int)index;
+        }
+        return -1;
+    }
     for (index = 0; index < table->count; index++) {
         if (collection_key_equal(ctx, table->entries[index * 2], key))
             return (int)index;

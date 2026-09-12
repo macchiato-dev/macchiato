@@ -211,3 +211,42 @@ MicroQuickJS. A future collection index needs careful treatment of moving GC,
 weak entries, equality and insertion order; this change does not redesign it.
 Candidate/control logs and build-only source are under
 `/root/macchiato-work/child-membership-*`.
+## Identity-keyed native collections
+
+`MACCHIATO_COLLECTION_CHECKPOINTS=1` adds test-only method counts, strong-map
+sizes, key types, and one example stack for large collections. It requires the
+ordinary typing checkpoints. It does not retain collection keys or values;
+weak collection sizes are deliberately not inspected. Counts do not equal
+entries actually scanned. The wrappers add overhead, so disable them for
+candidate/control latency comparisons. Native stacks identify call sites more
+fully than the current MicroQuickJS stack representation.
+
+On the 106 KB JavaScript fixture, eight first-page edits make about 3,233 Map
+gets, 3,164 sets, and 2,645 has calls. Their keys are objects and the largest
+map has 1,301 entries. The matching native stacks locate these large maps in
+CodeMirror's tile-reuse cache and `destroyDropped`, not its syntax parser.
+
+The native collection lookup now classifies a non-number/non-string query
+once and compares raw identities. Numbers and strings retain SameValueZero
+handling, including NaN, signed zero, and separately constructed equal strings.
+This remains a linear lookup; it introduces no hash table, cache, heap field,
+or host operation. Moving GC still relocates the same key/value pairs.
+
+The independent mixed-key/compaction fixture checks 18 key kinds/values,
+primitive equality, distinct objects, weak object keys, clear/delete, and
+2,000 retained object keys with reverse lookups and alternating deletion.
+Its 12,000 timed object lookups fell from 40 ms to 6.5 ms. All 17 native-runtime
+callback fixtures passed. The bare runtime grew from 187,004 to 187,133 bytes.
+
+With collection counters disabled, the two candidate guest typing runs spent
+78–87 ms in DOM-tree updates versus 91–106 ms in the initial controls. View
+updates were 251–258 ms versus 264–275 ms. These are inclusive phase timings
+over eight keys, not a sixfold editor speedup. Adjacent control repetitions
+and retained native/guest/guest/native results are under
+`/root/macchiato-work/collection-identity-*`; count/type/stack evidence is under
+`/root/macchiato-work/typing-collection-*`. Exact input, correction, undo/redo,
+and eventual highlighting assertions pass in each comparison.
+
+The benchmark's optional `MACCHIATO_TEST_RUNTIME_FILE` selects an engine for
+same-ABI comparisons without overwriting generated runtime artifacts. It does
+not make arbitrary engine/bytecode combinations compatible.

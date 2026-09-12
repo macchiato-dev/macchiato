@@ -20,6 +20,7 @@ for (const [fixture, expected] of [
   ["wire-text-read", { cases: 8, malformed: 12, bounded: 9, types: 5, compacted: true }],
   ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
+  ["collection-identity", { keys: 18, compacted: true, lookups: 12000 }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],
   ["rom-string-keys", { before: true, after: true, same: true }],
   ["dom-removal", { before: 3, afterElement: [2, true, true, true],
@@ -42,7 +43,7 @@ for (const [fixture, expected] of [
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", environment,
     resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"),
+    process.env.MACCHIATO_TEST_RUNTIME_FILE || resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"),
     output, `runtime.bin=${environment}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);
@@ -82,6 +83,10 @@ for (const [fixture, expected] of [
     return result;
   });
   const parsed = messages.map((message) => JSON.parse(message));
+  if (fixture === "collection-identity") {
+    t.diagnostic(`12,000 object-map lookups: ${parsed[0].milliseconds} ms`);
+    delete parsed[0].milliseconds;
+  }
   if (fixture === "wire-bytes") {
     t.diagnostic(`32 independent 64 KiB payload copies: ${parsed[0].copyMilliseconds} ms`);
     t.diagnostic(`32 independent 64 KiB payload writes: ${parsed[0].writeMilliseconds} ms`);

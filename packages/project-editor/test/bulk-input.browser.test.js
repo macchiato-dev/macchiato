@@ -38,7 +38,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   assert.ok(!parseBeforeTyping || process.env.MACCHIATO_TYPING_CHECKPOINTS,
     "parse readiness experiment requires checkpoints");
   const checkpoints = process.env.MACCHIATO_TYPING_CHECKPOINTS
-    ? `globalThis.__bulkParseBudget = ${parseBudget};\nglobalThis.__bulkWireCheckpoints = ${process.env.MACCHIATO_WIRE_CHECKPOINTS === "1"};\n` + await readFile(
+    ? `globalThis.__bulkParseBudget = ${parseBudget};\nglobalThis.__bulkWireCheckpoints = ${process.env.MACCHIATO_WIRE_CHECKPOINTS === "1"};\nglobalThis.__bulkCollectionCheckpoints = ${process.env.MACCHIATO_COLLECTION_CHECKPOINTS === "1"};\n` + await readFile(
       new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
   const disableInputPending = process.env.MACCHIATO_TEST_DISABLE_INPUT_PENDING === "1";
   await writeFile(application, 'globalThis.__CODE_EDITOR_DEFER_START__=true;\n' +
@@ -50,7 +50,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const languageBytecode = join(directory, "language.bin");
   execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", languageBytecode, languageSource]);
   execFileSync(process.execPath, [join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/stamp-wasm.js"),
-    join(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
+    process.env.MACCHIATO_TEST_RUNTIME_FILE || join(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
     join(directory, "editor.wasm"), `runtime.bin=${environment}`,
     `application.bin=${join(directory, "application.bin")}`, `editor.bin=${coreBytecode}`,
     `language.bin=${languageBytecode}`]);
@@ -247,7 +247,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1);
       });
-      results.push({ run, mode, method: "typing-checkpoints", timings: timings.timings, wireReads: timings.wireReads,
+      results.push({ run, mode, method: "typing-checkpoints", collections: timings.collections, timings: timings.timings, wireReads: timings.wireReads,
         wireOperations: timings.wireOperations,
         viewportParsed: timings.viewportParsed, documentParsed: timings.documentParsed });
       t.diagnostic(JSON.stringify(results.at(-1)));

@@ -3,6 +3,32 @@ var bulkTimings = Object.create(null);
 var bulkStringify = JSON.stringify;
 var bulkWireReads = { strings: 0, bytes: 0, largest: 0 };
 var bulkWireOperations = Object.create(null);
+var bulkCollections = Object.create(null);
+if (globalThis.__bulkCollectionCheckpoints) {
+  // Count collection use without retaining keys/values or inspecting weak
+  // reachability. Size is available only for strong collections. These extra
+  // guest operations are diagnostic overhead, not benchmark production code.
+  ["Map", "Set", "WeakMap", "WeakSet"].forEach(function (name) {
+    ["get", "has", "set", "add", "delete"].forEach(function (method) {
+      var prototype = globalThis[name].prototype, original = prototype[method];
+      if (typeof original !== "function") return;
+      prototype[method] = function () {
+        var label = name + "." + method;
+        var row = bulkCollections[label] || (bulkCollections[label] = { calls: 0, sizeSum: 0, largest: 0, keys: {} });
+        row.calls++;
+        var keyType = typeof arguments[0];
+        row.keys[keyType] = (row.keys[keyType] || 0) + 1;
+        if (name === "Map" || name === "Set") {
+          var size = this.size;
+          row.sizeSum += size;
+          row.largest = Math.max(row.largest, size);
+          if (size > 512 && !row.exampleStack) row.exampleStack = String(new Error("Collection checkpoint").stack).slice(0, 2000);
+        }
+        return original.apply(this, arguments);
+      };
+    });
+  });
+}
 function bulkMeasure(object, name, label) {
   var original = object[name];
   if (typeof original !== "function") throw new Error("Missing checkpoint: " + label);
@@ -85,6 +111,7 @@ function resetTypingCheckpoints() {
   bulkTimings = Object.create(null);
   bulkWireReads = { strings: 0, bytes: 0, largest: 0 };
   bulkWireOperations = Object.create(null);
+  bulkCollections = Object.create(null);
 }
 function finishBulkParsing() {
   var language = globalThis.__codeMirrorRequire("@codemirror/language");
@@ -97,7 +124,7 @@ function finishBulkParsing() {
 function reportTypingCheckpoints() {
   var language = globalThis.__codeMirrorRequire("@codemirror/language");
   globalThis.__browserUseNotify(bulkStringify({ type: "typing-checkpoints", timings: bulkTimings, wireReads: bulkWireReads,
-    wireOperations: bulkWireOperations,
+    wireOperations: bulkWireOperations, collections: bulkCollections,
     viewportParsed: language.syntaxTreeAvailable(bulkView.state, bulkView.viewport.to),
     documentParsed: language.syntaxTreeAvailable(bulkView.state, bulkView.state.doc.length) }));
   if (typeof flush === "function") flush();
