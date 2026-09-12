@@ -17908,9 +17908,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     var idle = -1,
       timeout = setTimeout(function () {
         idle = requestIdleCallback(callback, {
-          timeout: 500 - 100
+          timeout: 500 - 25
         });
-      }, 100);
+      }, 25);
     return function () {
       return idle < 0 ? clearTimeout(timeout) : cancelIdleCallback(idle);
     };

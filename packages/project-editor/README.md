@@ -363,6 +363,10 @@ input handling, and the host are unchanged. The build fails if those two
 upstream call sites change. Faster typing can mean highlighting catches up
 later; visual recordings and parse-ready timings cover both sides of that
 tradeoff rather than treating an incomplete tree as a completed render.
+When native idle callbacks are available, their preliminary pause is 25 ms
+instead of 100 ms. The combined maximum pause stays 500 ms, as does the
+timer-only fallback. Idle slice sizes, cancellation, and input-pending checks
+are unchanged; queued-input tests run before waiting for parser catch-up.
 
 Multi-memory WebAssembly is worth testing for runtime builds: interpreter state,
 guest resources or bytecode, and shared device buffers need not compete in one
