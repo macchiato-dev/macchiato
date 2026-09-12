@@ -173,3 +173,41 @@ exact pasted text, first-page typo correction, undo/redo and highlighting.
 Evidence: `native-text-read-paste-{control,candidate}*`. This supports a large
 paste improvement, not a claim that all browser input or ordinary typing is
 five times faster.
+
+## Browser editing traces and child-list membership
+
+`MACCHIATO_BROWSER_TRACE_DIR` optionally records DevTools timeline traces around
+bulk input, using a CDP stream. It adds no instrumentation to the production
+host or guest. Trace durations are inclusive; nested categories must not be
+added together, and traced latency is not an uninstrumented speed comparison.
+
+For the 106,402-character JavaScript input, both native and guest runs receive
+3,868 native input events and perform approximately 5,830 layouts. In the first
+native run, layout accounts for 3.9 seconds within an 8.6-second task; browser
+JavaScript function calls total about 169ms. In the first guest run, layout
+accounts for 5.6 seconds within a 13.7-second task, and function calls total
+about 2.0 seconds. There is real guest overhead left to reduce, but most of this
+particular bulk-input path is not time spent in the interpreter. Exact text,
+undo/redo and first-page typo correction pass in native/guest/guest/native
+order. Evidence: `/root/macchiato-work/native-insertion-browser-trace*`.
+
+The guest's private child-lifetime mirror had a separate quadratic membership
+check: every old child searched the complete new child list. It now indexes
+the freshly read host IDs in a temporary null-prototype object. Public DOM
+reads remain live, child order remains in the original array, and the scratch
+index contains booleans rather than retaining wrappers. No host API changes.
+
+The identity-cache test now exercises 100, 1,000 and 4,000 children, reverses
+their order, moves one to a different parent, removes another, and checks
+wrapper identity and collection afterward. Five 4,000-child reconciliations
+take 128–144ms in adjacent controls and 23ms in the candidate. The corresponding
+1,000-child figures are 13–15ms and 5.6ms. These are isolated bookkeeping
+measurements, not a claim of an equivalent whole-editor speedup.
+
+A Set-based candidate was rejected: it took 320ms at 4,000 children. Our added
+C collection shim currently uses a linear search, so creating and querying
+that Set added another quadratic scan. This is not an intrinsic limitation of
+MicroQuickJS. A future collection index needs careful treatment of moving GC,
+weak entries, equality and insertion order; this change does not redesign it.
+Candidate/control logs and build-only source are under
+`/root/macchiato-work/child-membership-*`.

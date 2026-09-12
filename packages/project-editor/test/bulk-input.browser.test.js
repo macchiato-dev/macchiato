@@ -143,6 +143,14 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       await page.keyboard.press("Control+A");
       await page.evaluate(() => { messages.length = 0; events.beforeinput = events.input = 0; });
       const profileDirectory = process.env.MACCHIATO_CPU_PROFILE_DIR;
+      const traceDirectory = process.env.MACCHIATO_BROWSER_TRACE_DIR;
+      // Browser layout/editing is invisible in guest-only phase timers. Keep
+      // this opt-in and separate from uninstrumented latency comparisons.
+      const trace = traceDirectory ? await context.newCDPSession(page) : null;
+      if (trace) await trace.send("Tracing.start", {
+        categories: "devtools.timeline,disabled-by-default-devtools.timeline",
+        transferMode: "ReturnAsStream",
+      });
       const profiler = profileDirectory ? await context.newCDPSession(page) : null;
       if (profiler) {
         await profiler.send("Profiler.enable");
@@ -153,6 +161,22 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       if (method === "paste") await paste(text);
       else await page.keyboard.insertText(text);
       const elapsed = performance.now() - started;
+      if (trace) {
+        const completed = new Promise(resolve => trace.once("Tracing.tracingComplete", resolve));
+        await trace.send("Tracing.end");
+        const { stream } = await completed;
+        const chunks = [];
+        try {
+          for (;;) {
+            const chunk = await trace.send("IO.read", { handle: stream });
+            chunks.push(chunk.base64Encoded ? Buffer.from(chunk.data, "base64") : Buffer.from(chunk.data));
+            if (chunk.eof) break;
+          }
+        } finally { await trace.send("IO.close", { handle: stream }); }
+        await mkdir(traceDirectory, { recursive: true });
+        await writeFile(join(traceDirectory, `${run}-${mode}-${method}.trace.json`), Buffer.concat(chunks));
+        await trace.detach();
+      }
       if (profiler) {
         const { profile } = await profiler.send("Profiler.stop");
         await mkdir(profileDirectory, { recursive: true });
