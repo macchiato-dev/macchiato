@@ -526,3 +526,46 @@ not after its final key, and include recording/sampling overhead. They are not
 the ordinary post-input waits above. The visible delay is still substantial;
 matching final screenshots do not make the whole interaction native-speed.
 Recordings, frame data, and screenshots are in `parser-pause-rebuilt-visual`.
+
+## Retaining work between keys
+
+The optional `MACCHIATO_TYPING_PROFILE_CATCH_UP=1` capture continues through
+viewport parse readiness instead of stopping at the final key. It requires
+the typing-profile directory and checkpoints. The two guest captures account
+for about 63–65% of sampled elapsed time beneath idle-parser callbacks and
+4–5% beneath the Wasm/JavaScript bridge; these are inclusive samples, not
+additive categories. Most remaining work is guest execution, not host DOM
+dispatch. Evidence is in `parser-catch-up-profiles` under the work directory.
+
+`MACCHIATO_PARSE_PROGRESS=1` adds bounded numeric snapshots around parser work
+and edits: current progress, published tree length, and reusable fragment
+ranges. It does not retain contexts or trees. `MACCHIATO_TEST_KEY_INTERVAL=100`
+allows human-paced input without video/screenshot overhead; it is the delay
+after each acknowledged key, not an independently queued input cadence.
+
+This reveals lost work in installed CodeMirror language 6.12.4. Its `changes`
+method snapshots fragments before calling `takeTree()`. With last-page edits
+100 ms apart, the pending parse reaches roughly 13–16 KB and finalization
+publishes those fragments, but the next state receives the earlier roughly
+1.2 KB snapshot. The following key repeats much of that work. The test-only
+candidate moves finalization before the snapshot, leaving the existing
+change-range invalidation intact. Its successive states retain progress at
+about 16, 29, 37, 46, 56, 64, and 73 KB in one recorded diagnostic.
+
+Both conditions use the same 106,402-character JavaScript file, 585px viewport,
+eight-key sequence, and native/guest/guest/native order. Post-input waits were
+1,152–1,160 ms in the control and 400–411 ms in the candidate; inclusive parser
+work fell from about 1,623–1,628 ms to 1,042–1,060 ms. These are diagnostic
+ranges, not latency guarantees. Rapid typing without idle time between keys
+does not necessarily offer the same opportunity to preserve work.
+
+Twenty deterministic tests use the actual parsers and compare node names
+and ranges against fresh parses. They prove the installed version loses newly
+published fragments and the candidate retains them, then check append, interior
+edit, deletion, full replacement, and no-op transactions in JavaScript, JSON,
+and HTML, including malformed input, simultaneous changes, and Unicode. A
+no-op must retain the newly finalized partial tree before any further work.
+The guarded build adaptation reverses to
+the complete original source. Broader guest/build verification is still needed
+before updating the live server. Logs and data are in `parser-fragment-progress`,
+`parser-fragment-paced`, `parser-fragment-retained`, and `parser-fragments-unit.log`.

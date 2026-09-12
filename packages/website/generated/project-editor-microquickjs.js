@@ -17744,12 +17744,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       return fragments;
     };
     _proto125.changes = function changes(_changes, newState) {
+      this.takeTree();
       var fragments = this.fragments,
         tree = this.tree,
         treeLen = this.treeLen,
         viewport = this.viewport,
         skipped = this.skipped;
-      this.takeTree();
       if (!_changes.empty) {
         var ranges = [];
         _changes.iterChangedRanges(function (fromA, toA, fromB, toB) {

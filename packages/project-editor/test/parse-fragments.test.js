@@ -65,14 +65,15 @@ test("an edit retains fragments finalized from work between keystrokes", () => {
 });
 
 for (const [language, row] of [
-  ["javascript", "function item() { return 'value'; }\n"],
-  ["json", '["value", {"enabled":true}],\n'],
-  ["html", '<section><p class="text">value</p></section>\n'],
+  ["javascript", "function item() { return 'value 猫 🐈'; }\n"],
+  ["json", '["value 猫 🐈", {"enabled":true}],\n'],
+  ["html", '<section><p class="text">value 猫 🐈</p></section>\n'],
 ]) {
-  for (const edit of ["append", "inside", "delete", "replace", "none"]) {
+  for (const edit of ["append", "inside", "delete", "replace", "multiple", "none"]) {
     test(`${language}: retained partial fragments match a fresh parse after ${edit}`, () => {
       const parser = candidate[language + "Parser"];
-      const doc = row.repeat(500);
+      const repeated = row.repeat(500);
+      const doc = language === "json" ? "[\n" + repeated.slice(0, -2) + "\n]" : repeated;
       const { context, state } = partial(candidate, parser, doc);
       // Editing inside the completed prefix must invalidate it normally. Include
       // malformed input: reusing an obsolete prefix must not hide syntax errors.
@@ -80,12 +81,17 @@ for (const [language, row] of [
         : edit === "inside" ? { from: 15, to: 18, insert: "\"<" }
         : edit === "delete" ? { from: 0, to: row.length * 2 }
         : edit === "replace" ? { from: 0, to: doc.length, insert: row }
+        : edit === "multiple" ? [{ from: 0, insert: "\n" },
+          { from: 20, to: 22, insert: "🐈" }, { from: doc.length, insert: row }]
         : [];
       const transaction = state.update({ changes });
       const next = context.changes(transaction.changes, transaction.state);
+      if (edit === "none") {
+        assert.ok(next.treeLen > 0, "a no-op keeps the just-finalized partial tree");
+        assert.equal(next.tree, context.tree);
+      }
       assert.equal(next.work(() => false), true);
       assert.deepEqual(nodes(next.tree), nodes(parser.parse(transaction.state.doc.toString())));
-      if (edit === "none") assert.ok(next.treeLen > 0);
     });
   }
 }
