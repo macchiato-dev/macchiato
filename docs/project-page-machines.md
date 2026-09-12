@@ -4310,3 +4310,35 @@ The previous archive is preserved at
 `/root/archive/2026/09/12/resources-bunny-12b7fc7-before-highlight-cache.tar.gz`.
 Nothing was deployed to Bunny. Native-document fidelity and remaining parser
 and view-update latency leave the broader goal open.
+
+### In-place language changes: 2026-09-12
+
+The editor now changes its CodeMirror language compartment rather than
+destroying and rebuilding the view. If the source is unchanged it also avoids
+a full-document replacement transaction, preserving the caret and ordinary
+undo history. Late grammar downloads cannot reconfigure an unrelated current
+language. This remains guest-side CodeMirror behavior, not a host projection
+or a new per-tab state-management layer. See
+[the language regression](project-editor-typing-performance.md#reconfiguring-a-language-without-rebuilding-the-view).
+
+The matched build passes all 389 editor/runtime tests and the full Resources
+editing flow (50.6 seconds), including large input, repeated edits, undo/redo,
+scrolling, themes, disposable save/reload, and recovery from invalid output.
+Ten delayed-loading theme scenarios pass; light/dark screenshots were inspected.
+Both exported and live assets pass the four saved-project read-only checks:
+full-height Mahjong, Cat Memory's eight pairs/reset, 50 tour slides, and SQLite
+fragment navigation. No owner content or notes were saved.
+
+The `site/resources-co-84bee29` build and extracted archive pass all 152 manifest
+checks, and the compressed backend runs in Deno. The six principal live assets
+match the export after restart. Only editor artifacts change: its Wasm grows
+20 bytes to 1,579,364 bytes; host and controller remain unchanged. Evidence is
+under `/root/macchiato-work/language-reconfigure-*`.
+
+`/root/resources-bunny.tar.gz` has SHA-256
+`7277f5ac1c9cc142ba62ba8695ed1613dfc18658fa202fc02421a999821372c5`.
+The predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-7857226-before-language-reconfigure.tar.gz`.
+Nothing was deployed to Bunny. The separate rendering-document decision and
+remaining parser/view latency are still open; this checkpoint does not imply
+completion of the broader architecture or fidelity goal.
