@@ -355,6 +355,15 @@ sites and fails if they no longer match, requiring review when upgrading
 CodeMirror. The helper retains CodeMirror's MIT attribution. It is currently
 enabled for the Resources editor, not the independent demo builds.
 
+The Resources guest build also adapts CodeMirror language 6.12.4's two
+foreground parsing allowances from 20 ms to 5 ms. This bounds work during
+state creation and edits; CodeMirror's normal background worker finishes the
+same syntax tree. Explicit caller budgets, idle slices, tree publication,
+input handling, and the host are unchanged. The build fails if those two
+upstream call sites change. Faster typing can mean highlighting catches up
+later; visual recordings and parse-ready timings cover both sides of that
+tradeoff rather than treating an incomplete tree as a completed render.
+
 Multi-memory WebAssembly is worth testing for runtime builds: interpreter state,
 guest resources or bytecode, and shared device buffers need not compete in one
 linear memory. A post-link transformation tool such as Walrus may be useful for

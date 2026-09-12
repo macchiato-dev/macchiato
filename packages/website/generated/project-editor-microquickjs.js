@@ -17871,7 +17871,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       if (!tr.docChanged && this.tree == this.context.tree) return this;
       var newCx = this.context.changes(tr.changes, tr.state);
       var upto = this.context.treeLen == tr.startState.doc.length ? void 0 : Math.max(tr.changes.mapPos(this.context.treeLen), newCx.viewport.to);
-      if (!newCx.work(20, upto)) newCx.takeTree();
+      if (!newCx.work(5, upto)) newCx.takeTree();
       return new _LanguageState(newCx);
     };
     _LanguageState.init = function init(state) {
@@ -17880,7 +17880,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         from: 0,
         to: vpTo
       });
-      if (!parseState.work(20, vpTo)) parseState.takeTree();
+      if (!parseState.work(5, vpTo)) parseState.takeTree();
       return new _LanguageState(parseState);
     };
     return _LanguageState;
