@@ -214,7 +214,8 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1);
       });
-      results.push({ run, mode, method: "typing-checkpoints", timings: timings.timings,
+      results.push({ run, mode, method: "typing-checkpoints", timings: timings.timings, wireReads: timings.wireReads,
+        wireOperations: timings.wireOperations,
         viewportParsed: timings.viewportParsed, documentParsed: timings.documentParsed });
       t.diagnostic(JSON.stringify(results.at(-1)));
       await page.waitForFunction(() => {
