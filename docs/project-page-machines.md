@@ -4069,3 +4069,41 @@ Browser regressions cover successful, denied, and subsequent successful
 replacements through both stylesheet and script installation; a pending load
 destroyed before approval; and document/element grants into another realm.
 These are readiness/lifetime fixes, not a change to the output document layout.
+
+### Verification checkpoint: 2026-09-12
+
+The before test made a replacement visible with zero font faces installed while
+approval was still held. With the fix, both stylesheet and script paths keep
+the original output visible until approval and decoding finish. The failure
+case retains that original, and a later successful replacement still works.
+The separate realm test reproduced two retained faces after disposal and three
+after late approval; now only the one caller-owned face remains.
+
+Type checking and 103 browser regressions passed, including downloaded/stamped
+languages, references, callbacks, observers, and output lifetimes. The full
+project-editor stress test passed in 52.4 seconds: typing, undo/redo, scrolling,
+theme changes, save/reload in its disposable database, output recovery, phone
+views, a 106,432-character paste, and 106,458-character native insertion.
+Light/dark and Mahjong desktop/phone screenshots were inspected. These timings
+are one verification run, not a measured speedup from the font changes.
+
+The export at `/root/macchiato-work/resources-bunny-font-readiness` uses
+`site/resources-co-28543b8`. All 152 manifest checks and the compressed backend
+test in Deno passed. Read-only saved-project checks passed for Cat Memory
+(eight pairs, win, reset), Mahjong, the tour (50 consecutive slides), and SQLite
+(internal fragments), including themes and phone views. No owner project or
+tour notes were saved. Logs are `/root/macchiato-work/font-readiness-*`.
+
+After restarting the local server, its six principal frontend/output assets
+matched the export byte-for-byte; Cat Memory and Mahjong passed again using
+the live assets. The host module is 127,491 readable bytes. Runtime Wasm sizes
+are unchanged by this work.
+
+The extracted archive passes the same manifest verification.
+`/root/resources-bunny.tar.gz` now has SHA-256
+`052dd83df7050b005255a852e5807c5cb889da73e970ed3db518f175afa04c74`.
+The previous archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-60bf70f-before-font-readiness.tar.gz`.
+Nothing was deployed to Bunny. The broader goal remains open: in particular,
+the native-document fidelity TODOs and further editing-performance work are
+not resolved by this checkpoint.
