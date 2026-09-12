@@ -377,6 +377,7 @@ var ProjectOutput = class {
   }
   load = async (project) => {
     if (this.destroyed) throw new Error("Project output was destroyed");
+    if (this.root.nodeType === 9) return this.loadDocument(project);
     this.remove(this.preparing);
     const wrapper = this.root.ownerDocument.createElement("div");
     wrapper.className = "project-output-root";
@@ -430,14 +431,57 @@ var ProjectOutput = class {
       throw error;
     }
   };
+  // Editing can replace the application rather than keep two fully running
+  // pages. Retain the browser Document/history and the interpreter, but retire
+  // the old guest before granting the same document to its replacement.
+  loadDocument = async (project) => {
+    const options = this.optionsFor(project);
+    this.remove(this.preparing);
+    this.remove(this.active);
+    this.preparing = this.active = null;
+    const doc = this.root, surface = doc.createElement("html");
+    const head = doc.createElement("head"), body = doc.createElement("body");
+    body.tabIndex = -1;
+    surface.append(head, body);
+    doc.replaceChild(surface, doc.documentElement);
+    const pending = { wrapper: surface, session: null };
+    this.preparing = pending;
+    try {
+      const session = pending.session = new OutputSession(this.Machine, this.runtime, doc, options, this.onError);
+      await session.machine.onmsg(0);
+      if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
+      const result = session.call("__resourcesOutputLoad", {
+        tree: project.tree || [],
+        document: project.document,
+        stylesheets: project.stylesheets || []
+      });
+      await session.machine.onmsg(0);
+      await session.run(project.scripts || []);
+      await session.machine.onmsg(0);
+      if (session.error) throw session.error;
+      if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
+      this.active = pending;
+      this.preparing = null;
+      session.starting = false;
+      this.programs += (project.scripts || []).length;
+      return result;
+    } catch (error) {
+      if (this.preparing === pending) this.preparing = null;
+      this.remove(pending);
+      throw error;
+    }
+  };
   remove(entry) {
     if (!entry) return;
     try {
       entry.session?.destroy();
     } finally {
-      entry.wrapper.remove();
+      if (this.root.nodeType === 9) entry.wrapper.replaceChildren();
+      else entry.wrapper.remove();
     }
   }
+  // Keep the guest session, but matching is not a general DOM patch: a changed
+  // tree may replace nodes. Stateful live updates should use the guest's code.
   setContent = (tree, document2) => {
     const session = this.active?.session;
     if (!session) throw new Error("Project output is unavailable");
@@ -445,6 +489,8 @@ var ProjectOutput = class {
     session.machine.onmsg(0);
     return result;
   };
+  // Deliver code to the existing guest, including guest-defined live updates.
+  // Do not turn this into load(): that would discard the application's state.
   run = async (scripts) => {
     if (!this.active) throw new Error("Project output is unavailable");
     await this.active.session.run(scripts);
@@ -544,7 +590,7 @@ async function start(payload, port) {
   const module = await WebAssembly.compileStreaming(fetch("./project-quickjs-runtime.wasm"));
   if (destroyed) return;
   storage = new ProjectOutputStorage(window, payload.storageScope);
-  output = new ProjectOutput(WasmWebMachine, module, document.getElementById("project-output-a"), (project) => ({
+  output = new ProjectOutput(WasmWebMachine, module, document, (project) => ({
     environment: { ...payload.environment, ...project.environment },
     files: project.files || [],
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1e3 : 50,

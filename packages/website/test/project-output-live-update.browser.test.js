@@ -91,6 +91,23 @@ test("guest live updates retain state; replacement reloads start a fresh lifetim
       await page.locator("#counter").click();
       assert.equal(await page.locator("#counter").textContent(), "1");
       assert.equal(await page.evaluate(() => output.runtime === originalRuntime), true);
+
+      // An edit can arrive while a previous guest is awaiting module startup.
+      // Its eventual rejection must not clear the newer guest's document.
+      await page.evaluate(initial => {
+        window.pendingLoad = output.load({ ...initial, scripts: [{ module: true,
+          source: "waiting.js", code: `
+            __wwcPostMessage('waiting');
+            await new Promise(resolve => setTimeout(resolve, 60000));
+            __wwcPostMessage('retired startup continued');
+          ` }] }).then(() => "unexpected success", error => error.message);
+      }, initial);
+      await page.waitForFunction(() => messages.includes("waiting"));
+      await page.evaluate(initial => output.load(initial), initial);
+      assert.match(await page.evaluate(() => pendingLoad), /replaced or destroyed/);
+      await page.locator("#counter").click();
+      assert.equal(await page.locator("#counter").textContent(), "1");
+      assert.equal(await page.evaluate(() => messages.includes("retired startup continued")), false);
       assert.deepEqual(errors, []);
       assert.deepEqual(unexpected, []);
     } finally {
