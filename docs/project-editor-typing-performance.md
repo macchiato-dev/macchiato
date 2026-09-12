@@ -589,3 +589,53 @@ disposable save/reload, phone views, and large input. The recovered-output
 screenshot was inspected. The live server/archive are not updated by these
 checks alone; saved-project and final live-asset verification remain release
 gates. The production document-fidelity failures are unrelated and unresolved.
+
+## Shipped-runtime input comparison: 2026-09-12
+
+The comparison now defaults to re-stamping the shipped
+`generated/project-editor-quickjs-runtime.wasm`, rather than the mutable Cargo
+`target/` output that an unrelated demo build can replace. Explicit runtime
+overrides still support experiments. Both files' code sections match in this
+checkout (166,142 bytes; SHA-256
+`336ec25eb3954548d0ec247837c9c7cfa8df041d349ee2347fc49948733dd636`).
+Thus this corrects the baseline's provenance, not measured runtime performance.
+
+A fresh native/guest/guest/native run uses the retained 106,402-character real
+JavaScript source, the 585px pane, production core/language sources, and the
+existing lightweight phase checkpoints. It records:
+
+| Operation | Native | MicroQuickJS |
+| --- | --- | --- |
+| CodeMirror paste | 24–29 ms | 79–81 ms |
+| Chromium multiline `insertText` | 5,694–5,742 ms | 6,357–6,567 ms |
+| Individual first-page keys | 5–15 ms | 16–27 ms |
+| Viewport parse wait after typing | 4–5 ms | 101–114 ms |
+
+Both multiline insertion paths deliver 3,868 native input events and one
+application change notification, with exact text checked. Paste emits one
+application change notification as well. Undo/redo, eight ordinary keys including
+a typo/correction, and eventual highlighting pass. These are two samples per
+engine with checkpoint/Playwright overhead, not latency guarantees or an
+unprofiled before/after speedup comparison.
+
+The full Resources stress test's roughly 14-second native insertion should not
+be described as ordinary paste performance. That fixture also has the website
+layout, output rebuild, and an enormous HTML comment around its source. The
+isolated native control confirms a large browser-side cost even without those
+differences. No input interception, dropped events, or disabled highlighting
+is justified by this measurement. Guest catch-up and application-scale costs
+remain visible rather than being removed from the test.
+
+Evidence is in `/root/macchiato-work/shipped-runtime-input/` and its sibling log.
+Only the diagnostic default changes; the live site and Bunny archive are
+unchanged by this checkpoint.
+
+A separate recorded first-page run uses paste only and 100 ms between keys.
+Exact edits and eventual parsing pass. Its ending native/guest screenshots were
+inspected and agree in wrapping, gutters, visible highlighting, and completion
+placement. The unchanged second import line reaches its final spans after
+126–129 ms in the guest, versus the initial sampled frame natively; none of
+the remaining sampled frames loses those spans. This is one selected line,
+not a universal flicker assertion. Videos, frame samples, and screenshots are
+under `/root/macchiato-work/shipped-runtime-visual/`. Recording/sampling adds
+overhead, so its timings are not mixed with the preceding comparison.

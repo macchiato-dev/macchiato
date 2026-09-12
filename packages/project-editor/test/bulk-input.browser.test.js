@@ -58,7 +58,9 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
   const languageBytecode = join(directory, "language.bin");
   execFileSync(join(runtime, "microquickjs/mqjs"), ["-m32", "-o", languageBytecode, languageSource]);
   execFileSync(process.execPath, [join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/stamp-wasm.js"),
-    process.env.MACCHIATO_TEST_RUNTIME_FILE || join(runtime, "target/wasm32-unknown-unknown/release/wasm_web_container_example_runtime.wasm"),
+    // A later demo/Cargo build may replace target/. Re-stamp the actual shipped
+    // editor unless the caller explicitly selects an experimental runtime.
+    process.env.MACCHIATO_TEST_RUNTIME_FILE || join(generated, "project-editor-quickjs-runtime.wasm"),
     join(directory, "editor.wasm"), `runtime.bin=${environment}`,
     `application.bin=${join(directory, "application.bin")}`, `editor.bin=${coreBytecode}`,
     `language.bin=${languageBytecode}`]);
