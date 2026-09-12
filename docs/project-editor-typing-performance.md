@@ -419,3 +419,9 @@ roughly 1.8 seconds of post-input parser catch-up, which the old first-page-only
 diagnostic did not measure. Evidence is under `/root/macchiato-work/` in
 `first-page-budget{5,-control}` and `last-page-budget{5,-control}`. The live site,
 Bunny archive, runtime, and host permissions are unchanged by this experiment.
+
+The default three-input-path regression passes in 47.9 seconds, and the final
+last-page/checkpoint regression passes in 10.0 seconds. The result field is
+named `viewport-parse-wait` to distinguish readiness from actual painted syntax;
+the initial experiment artifacts used `viewport-highlight-wait` for that same
+readiness check. No visual-equivalence claim follows from those timings.

@@ -264,13 +264,13 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
         wireOperations: timings.wireOperations,
         viewportParsed: timings.viewportParsed, documentParsed: timings.documentParsed });
       t.diagnostic(JSON.stringify(results.at(-1)));
-      const highlightWaitStarted = performance.now();
+      const parseWaitStarted = performance.now();
       await page.waitForFunction(() => {
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1).viewportParsed;
       }, null, { timeout: 10000 });
-      results.push({ run, mode, method: "viewport-highlight-wait", position: typingPosition,
-        milliseconds: Math.round(performance.now() - highlightWaitStarted) });
+      results.push({ run, mode, method: "viewport-parse-wait", position: typingPosition,
+        milliseconds: Math.round(performance.now() - parseWaitStarted) });
       t.diagnostic(JSON.stringify(results.at(-1)));
     }
     results.push({ run, mode, method: typingPosition + "-page-typing", offset: typingOffset,
