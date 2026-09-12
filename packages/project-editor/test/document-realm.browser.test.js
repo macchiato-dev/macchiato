@@ -52,6 +52,7 @@ test("DOM services belong to the granted document, not the controller realm", as
         // performance clock visible even on fast machines.
         await new Promise(resolve => setTimeout(resolve, 200));
         const frame = document.createElement("iframe");
+        frame.setAttribute("sandbox", "allow-same-origin");
         frame.style.cssText = "position:absolute;left:0;top:50px;width:420px;height:260px;border:0";
         // A script-free document; the host module and Wasm stay in this realm.
         frame.srcdoc = '<!doctype html><html><head><style>html{font-size:24px}body{margin:0}#sample{font-size:1rem}#own{height:1600px}</style></head><body><div id="own"><p id="sample">Child document text</p></div></body></html>';
@@ -73,14 +74,29 @@ test("DOM services belong to the granted document, not the controller realm", as
         document.getSelection().removeAllRanges(); document.getSelection().addRange(parentRange);
         const module = await WebAssembly.compileStreaming(fetch("/realm.wasm"));
         const stamp = new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]);
-        const reports = [], traces = [];
+        const reports = [], traces = [], timerEvents = [];
+        let timersReady;
+        const timersDone = new Promise(resolve => { timersReady = resolve; });
         const vm = new Machine(module, grant === "document" ? doc : doc.getElementById("own"), {
-          stamp, onMessage: message => reports.push(message), allowFont: () => true, allowNavigate: navigate,
+          stamp, onMessage: message => {
+            if (message.startsWith("timer:")) {
+              timerEvents.push(message);
+              if (timerEvents.length === 3) timersReady();
+            } else reports.push(message);
+          }, allowFont: () => true, allowNavigate: navigate,
+          frameInterval: navigate ? 5 : 0,
           instrument: event => traces.push(event),
         });
         const call = value => vm.onmsg(new TextEncoder().encode("\u0002documentRealmProbe\0" + JSON.stringify(value)));
         try {
           await vm.onmsg(0);
+          await call({ timers: true });
+          let deadline;
+          try {
+            await Promise.race([timersDone, new Promise((_, reject) => {
+              deadline = setTimeout(() => reject(new Error('Timers did not reach the guest: ' + timerEvents)), 2000);
+            })]);
+          } finally { clearTimeout(deadline); }
           await call({ font });
           await vm.onmsg(0);
           await call({ scroll: true });
@@ -104,7 +120,7 @@ test("DOM services belong to the granted document, not the controller realm", as
           }
           let customError = null;
           try { await call({ custom: true }); } catch (error) { customError = String(error); }
-          return { reports, traces, customRuns, customError, links, forms, before, after, cleanup,
+          return { reports, traces, timerEvents, customRuns, customError, links, forms, before, after, cleanup,
             parentScroll: scrollY, childScroll: child.scrollY,
             parentFonts: [...document.fonts].map(face => face.family),
             childFonts: [...doc.fonts].map(face => face.family) };
@@ -145,6 +161,7 @@ test("DOM services belong to the granted document, not the controller realm", as
       }, { grant, font: font.toString("base64"), navigate });
       assert.deepEqual(JSON.parse(result.reports[1]).globals, [420, 260, 0, 120, 0, 120],
         "scroll aliases update in the scrolling callback, without waiting for an event");
+      assert.deepEqual(result.timerEvents.sort(), ['timer:frame', 'timer:interval', 'timer:timeout']);
       const snapshot = JSON.parse(result.reports.at(-2));
       const now = snapshot.now; delete snapshot.now;
       assert.ok(now >= Math.floor(result.before) && now <= Math.ceil(result.after),

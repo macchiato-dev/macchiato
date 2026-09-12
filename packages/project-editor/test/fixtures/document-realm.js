@@ -1,6 +1,17 @@
 // Use the normal guest facade, plus raw reads for the window values it exposes.
 function documentRealmProbe(json) {
   var request = JSON.parse(json);
+  if (request.timers) {
+    var cancelled = setTimeout(function () { __wwcPostMessage("timer:cancelled"); }, 0);
+    clearTimeout(cancelled);
+    var interval = setInterval(function () {
+      clearInterval(interval);
+      __wwcPostMessage("timer:interval");
+    }, 0);
+    setTimeout(function () { __wwcPostMessage("timer:timeout"); }, 0);
+    requestAnimationFrame(function () { __wwcPostMessage("timer:frame"); });
+    return;
+  }
   if (request.href) {
     var link = document.createElement("a");
     link.setAttribute("href", request.href);

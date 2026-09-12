@@ -69,6 +69,14 @@ test("independent rendering documents share an engine without sharing page state
   const errors = [], unexpected = [];
   const consoleErrors = [];
   browserPage.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+  if (process.env.MACCHIATO_TEST_BROWSER_LOG) {
+    const diagnostic = await browserPage.context().newCDPSession(browserPage);
+    await diagnostic.send('Log.enable');
+    diagnostic.on('Log.entryAdded', ({ entry }) => {
+      if (entry.level === 'error') t.diagnostic(JSON.stringify({ browserLog: entry }));
+    });
+    t.after(() => diagnostic.detach().catch(() => {}));
+  }
   browserPage.on("pageerror", error => errors.push(error.message));
   await browserPage.route("**/*", route => {
     const url = new URL(route.request().url());
@@ -488,9 +496,7 @@ test("independent rendering documents share an engine without sharing page state
     // The native event has completed. Removing the guest listener must not
     // require retiring its session or suppressing normal browser navigation.
     assert.deepEqual(await report(routing, 'routeEvents'), ['/', '/chapter.html#details', 'details', '/chapter.html#details']);
-    t.diagnostic(JSON.stringify({ navigationConsole: consoleErrors.slice(consoleBeforeNavigation) }));
-    assert.equal(consoleErrors.slice(consoleBeforeNavigation).some(message => /Blocked opening/.test(message)), false,
-      'fragment links must not attempt to open a popup');
+    assert.deepEqual(consoleErrors.slice(consoleBeforeNavigation), [], 'fragment navigation causes no browser policy errors');
     for (let index = 0; index < 10; index++) await reveal(await prepare(programs[index % 2]));
     assert.equal(await page.locator("#mount iframe").count(), 1);
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {
@@ -514,6 +520,7 @@ test("independent rendering documents share an engine without sharing page state
     assert.equal(retained.some(item => item.frame || item.document), false, "removed frames and documents are collectible");
     await client.detach();
     assert.deepEqual(errors, []);
+    assert.deepEqual(consoleErrors, []);
     assert.deepEqual(unexpected, []);
   } finally { await page.evaluate(() => experiment.destroy()); }
 });
