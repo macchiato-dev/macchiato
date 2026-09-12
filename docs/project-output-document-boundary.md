@@ -168,16 +168,18 @@ later event. This does not establish complete browser parity: the host's
 existing integer-valued offset protocol remains unchanged.
 
 MicroQuickJS's original global bindings were value slots, so installing an
-accessor for a prelinked name failed. The candidate engine now marks such a
+accessor for a prelinked name failed. The engine now marks such a
 reference with a bit from its existing header padding and stores the traced
 property key. Reads and writes use the ordinary getter/setter execution path;
 ordinary variables keep their direct-value path. Later-loaded bytecode can
 bind the same accessor. This is an engine binding change, not event-driven
 viewport caching, and does not implement every ECMAScript property descriptor.
 The shared guest environment therefore uses live viewport and scroll getters
-on both engines. Candidate tests cover binding before/after installation,
-getter/setter errors, GC, and iframe resize/scroll. Full editor and deployment
-verification must follow before treating this candidate as shipped.
+on both engines. Tests cover binding before/after installation, getter/setter
+errors, GC, and iframe resize/scroll. The matched Resources build passed all
+385 editor/runtime tests and the full editing stress test; it is served locally
+and included in the 2026-09-12 `12b7fc7` Bunny export. This does not resolve the
+separate production rendering-document decision described above.
 
 Likewise, this fixture does not yet establish real-project font swaps,
 full-screen focus behavior, first-paint handoff under delayed resources, or

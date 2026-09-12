@@ -4241,3 +4241,44 @@ Its predecessor is preserved at
 `/root/archive/2026/09/12/resources-bunny-1f85ea3-before-scroll-alias.tar.gz`.
 Nothing was deployed to Bunny or saved to owner content. The broader goal and
 the production rendering-document decision remain open.
+
+### MicroQuickJS live global bindings: 2026-09-12
+
+Viewport globals no longer retain their startup values. MicroQuickJS can now
+bind a global accessor both before and after its installation, using the
+ordinary property getter/setter execution path. One existing padding bit
+distinguishes these references; ordinary global/local value references keep
+their direct lookup. The guest environment uses live viewport/scroll getters
+on both engines, with no new host capability or event-driven cache.
+
+The initial browser probe read a native scroll offset of 120 but a guest
+global of 0. The regression now checks immediate same-callback scrolling and
+iframe resizing, with element/document grants and both navigation settings.
+Accessor tests cover later-loaded bytecode, GC inside getters/setters,
+receiver identity, throwing accessors, missing setters/getters, and ordinary
+captured variables. All 385 editor/runtime tests and five additional output
+lifecycle/rendering tests pass. The rendering-document test remains an
+experiment, not a change to production layout.
+
+The fixed 106,402-character JavaScript comparison runs native/guest/guest/native
+with identical editor and language sources. Guest paste was 104–115 ms before
+and 111–118 ms afterward; first-page keys were 26–84 ms before and 26–85 ms
+afterward. These limited runs show similar timing, not a speedup or proof of
+zero overhead. Full editing stress passed in 51.3 seconds. All ten delayed
+startup/reload theme cases passed; light/dark screenshots were inspected.
+Evidence is under `/root/macchiato-work/global-accessors-*`.
+
+The four saved examples passed read-only checks, including all Cat Memory
+pairs, the tour's 50-slide sequence, and SQLite fragments. Six principal live
+assets match the export byte-for-byte after restart. The host remains 127,967
+bytes; frontend/editor Wasm each grows by 570 bytes. No owner files or tour
+notes were saved. The `site/resources-co-12b7fc7` export passes all 152 manifest
+checks and the compressed Deno backend test.
+
+The extracted `/root/resources-bunny.tar.gz` passes the same manifest check.
+Its SHA-256 is
+`5b32150fe6c545f512df4313cac5c6f2c9ab669a3c1958944b6aa00e6ab8aad9`.
+The previous archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-f7a8bff-before-global-accessors.tar.gz`.
+No Bunny deployment occurred. Native-document fidelity and further editing
+performance work remain open.
