@@ -425,3 +425,26 @@ last-page/checkpoint regression passes in 10.0 seconds. The result field is
 named `viewport-parse-wait` to distinguish readiness from actual painted syntax;
 the initial experiment artifacts used `viewport-highlight-wait` for that same
 readiness check. No visual-equivalence claim follows from those timings.
+
+## Visual fixture fidelity
+
+`MACCHIATO_TEST_VISUAL_INPUT=1` records each native/guest run as a WebM, samples
+rendered line text and span classes on animation frames, and saves an ending
+screenshot. It requires `MACCHIATO_TEST_ARTIFACTS`. Keys are spaced by 100 ms in
+this mode. Frame sampling and recording add work; these runs must not be mixed
+with ordinary latency measurements.
+
+This exposed two deficiencies in the old isolated fixture. It supplied only
+foreground/background/caret variables, leaving syntax colors unresolved; it
+now reads the actual Resources light palette from the site source, failing if
+that declaration moves. Also, this Fedora container lacked a monospace font:
+`fc-match monospace` returned proportional Noto Sans. Installing Fedora's
+`dejavu-sans-mono-fonts` corrected the environment. The fixture now reports
+measured widths of `iiii` and `WWWW`, and visual mode requires equal widths.
+Neither change expands the machine's authority or changes production assets.
+
+Earlier timing comparisons used identical fonts in their native and guest
+runs, but their absolute timings and wrapping are not interchangeable with
+this corrected setup. New baselines must use the corrected palette and font.
+Before correction, screenshots cannot establish visual syntax fidelity even
+where recorded spans and parser trees were correct.
