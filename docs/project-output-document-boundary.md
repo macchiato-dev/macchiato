@@ -103,8 +103,15 @@ It also registers a custom element only in the child's registry and verifies
 that guest creation rejects it without running its constructor. Checking the
 controller's registry instead would accidentally permit that native code.
 
+Navigation checks use the granted window's actual origin and document base
+URI. A `srcdoc` URL reports a null origin even though the document inherits its
+embedding origin. Both link assignment and form defaults are tested with no
+navigation grant and with `allowNavigate: "self"`; outside origins remain
+blocked in either case. These tests check permission decisions without sending
+requests or navigating the fixture.
+
 The implementation uses the granted realm for these operations and for
-optional cleanup callbacks. Type checking and 76 browser checks passed across
+optional cleanup callbacks. Type checking and 78 browser checks passed across
 document-realm, reference/range scope, mutation, resize, and intersection
 observers. The before/after logs are in
 `/root/macchiato-work/document-realm-{before,after,regressions}.log`.

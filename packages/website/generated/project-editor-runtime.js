@@ -922,7 +922,7 @@ async function sha256(bytes) {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-async function installFont(font, bytes, allowFont) {
+async function installFont(font, bytes, allowFont, targetDocument) {
   if (!font || !(bytes instanceof Uint8Array) || !/^[a-z][a-z0-9 ]{0,63}$/i.test(font.family) || font.style !== "normal" || !/^\d{1,4}(?: \d{1,4})?$/.test(font.weight) || !["auto", "block", "fallback", "optional", "swap"].includes(font.display)) {
     fail("font record is not allowed");
   }
@@ -933,9 +933,9 @@ async function installFont(font, bytes, allowFont) {
   else if (typeof allowFont === "string") allowed = await sha256(bytes) === allowFont;
   else if (Array.isArray(allowFont)) allowed = allowFont.includes(await sha256(bytes));
   if (!allowed) fail("custom font was not allowed");
-  const face = new FontFace(font.family, bytes, font);
+  const face = new targetDocument.defaultView.FontFace(font.family, bytes, font);
   await face.load();
-  document.fonts.add(face);
+  targetDocument.fonts.add(face);
 }
 function isVirtualHref(value) {
   if (/^#[a-z0-9][a-z0-9_.:-]{0,127}$/i.test(value)) return true;
@@ -954,14 +954,14 @@ var WasmWebBridge = class {
   constructor(target, options) {
     const elementFromItsRealm = (value2) => Boolean(value2?.ownerDocument?.defaultView?.Element && value2 instanceof value2.ownerDocument.defaultView.Element);
     const messagesOnly = target == null;
-    const documentTarget = !messagesOnly && target === document;
+    const documentTarget = Boolean(target?.defaultView?.Document && target instanceof target.defaultView.Document);
     const targetRoots = documentTarget || messagesOnly ? [] : elementFromItsRealm(target) ? [target] : Array.from(target || []);
     const portalRoots = Array.from(options.portals || []);
     if (!documentTarget && !messagesOnly && (!targetRoots.length || [...targetRoots, ...portalRoots].some((root) => !elementFromItsRealm(root)))) {
       fail("target must be null, document, an element, or a non-empty element collection");
     }
     const roots = [.../* @__PURE__ */ new Set([...targetRoots, ...portalRoots])];
-    const hostDocument = documentTarget || messagesOnly ? document : targetRoots[0].ownerDocument;
+    const hostDocument = documentTarget ? target : messagesOnly ? document : targetRoots[0].ownerDocument;
     const realm = hostDocument.defaultView || globalThis;
     const {
       CanvasRenderingContext2D,
@@ -1074,7 +1074,7 @@ var WasmWebBridge = class {
       if (options.allowNavigate === "fragment") return isVirtualHref(value2);
       if (options.allowNavigate === "self") {
         try {
-          return new URL(value2, location.href).origin === location.origin;
+          return new URL(value2, hostDocument.baseURI).origin === realm.location.origin;
         } catch {
           return false;
         }
@@ -1191,7 +1191,7 @@ var WasmWebBridge = class {
         return SVG_ELEMENTS.has(element.localName);
       }
       if (element.namespaceURI !== "http://www.w3.org/1999/xhtml") return false;
-      return CONTENT_ELEMENTS.has(element.localName) || /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(element.localName) && !customElements.get(element.localName);
+      return CONTENT_ELEMENTS.has(element.localName) || /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(element.localName) && !realm.customElements.get(element.localName);
     }
     function requireContentTarget(node) {
       for (let element = node instanceof Element ? node : node.parentElement; element; element = element.parentElement) {
@@ -1277,7 +1277,7 @@ var WasmWebBridge = class {
       }
       if (object === hostDocument && name === "hidden") return hostDocument.hidden;
       if (object === hostDocument && ["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].includes(name)) {
-        return Math.round(globalThis[name]);
+        return Math.round(realm[name]);
       }
       if (object instanceof Node && ["parentNode", "parentElement", "firstChild", "lastChild", "nextSibling", "previousSibling"].includes(name)) {
         const node = object[name];
@@ -1877,7 +1877,7 @@ var WasmWebBridge = class {
         return selection ? reference(selection) : null;
       }
       if (object === hostDocument && name === "getComputedStyle" && args.length === 1 && args[0] instanceof Element && insideDocument(args[0])) {
-        return reference(getComputedStyle(args[0]));
+        return reference(realm.getComputedStyle(args[0]));
       }
       if (object === hostDocument && ["measureRect", "measureClientRects"].includes(name) && args.length === 1 && (args[0] instanceof Range || args[0] instanceof Element && (insideDocument(args[0]) || ownedNodes.has(args[0])))) {
         if (args[0] instanceof Range) requireRange(args[0]);
@@ -1900,7 +1900,7 @@ var WasmWebBridge = class {
         return hostDocument.hasFocus();
       }
       if (object === hostDocument && name === "scrollBy" && args.length === 2 && args.every(Number.isInteger)) {
-        window.scrollBy(args[0], args[1]);
+        realm.scrollBy(args[0], args[1]);
         return null;
       }
       if (object === hostDocument && name === "dateNow" && args.length === 0) {
@@ -1982,7 +1982,7 @@ var WasmWebBridge = class {
           cleanupCallbacks.delete(id);
           deliver(args[1]);
         };
-        const handle = typeof requestIdleCallback === "function" ? requestIdleCallback(run, { timeout: args[0] }) : setTimeout(run, Math.min(args[0], 50));
+        const handle = typeof realm.requestIdleCallback === "function" ? realm.requestIdleCallback(run, { timeout: args[0] }) : realm.setTimeout(run, Math.min(args[0], 50));
         cleanupCallbacks.set(id, handle);
         return id;
       }
@@ -2175,7 +2175,7 @@ var WasmWebBridge = class {
       }
       if (object === hostDocument && name === "createElement") {
         const tag = args[0];
-        const inertCustomElement = typeof tag === "string" && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(tag) && !customElements.get(tag);
+        const inertCustomElement = typeof tag === "string" && /^[a-z][a-z0-9]*(?:-[a-z0-9]+)+$/.test(tag) && !realm.customElements.get(tag);
         if (!ELEMENTS.has(tag) && !inertCustomElement) fail(`element ${tag} is not allowed`);
         return reference(ownNode(hostDocument.createElement(tag)));
       }
@@ -2582,8 +2582,8 @@ var WasmWebBridge = class {
       CSS_VALUE_FUNCTIONS,
       Reader,
       hostDocument,
-      installFont,
       installedStyles,
+      installFont: (font, bytes, allowFont) => installFont(font, bytes, allowFont, hostDocument),
       isAllowedProperty,
       logicalHead,
       options,
@@ -2703,7 +2703,7 @@ var WasmWebBridge = class {
       }
       const eventReference = event ? reference(event)[1] + 1 : 0;
       if (instrument) {
-        const selection = globalThis.getSelection?.();
+        const selection = messagesOnly ? null : hostDocument.getSelection();
         trace("event-deliver", {
           callback,
           eventReference: eventReference ? eventReference - 1 : null,
@@ -2832,8 +2832,8 @@ var WasmWebBridge = class {
       for (const handle of idleCallbacks.values()) realm.cancelIdleCallback(handle);
       idleCallbacks.clear();
       for (const handle of cleanupCallbacks.values()) {
-        if (typeof cancelIdleCallback === "function") cancelIdleCallback(handle);
-        else clearTimeout(handle);
+        if (typeof realm.cancelIdleCallback === "function") realm.cancelIdleCallback(handle);
+        else realm.clearTimeout(handle);
       }
       cleanupCallbacks.clear();
       installedStyles.forEach((style) => style.remove());

@@ -1,6 +1,13 @@
 // Use the normal guest facade, plus raw reads for the window values it exposes.
 function documentRealmProbe(json) {
   var request = JSON.parse(json);
+  if (request.href) {
+    var link = document.createElement("a");
+    link.setAttribute("href", request.href);
+    document.body.appendChild(link);
+    flush();
+    return;
+  }
   if (request.font) {
     var bytes = decodeBase64(request.font);
     var writer = new Writer(new Uint8Array(bytes.length + 128));

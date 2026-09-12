@@ -26,7 +26,8 @@ test("DOM services belong to the granted document, not the controller realm", as
     "microquickjs-suite/mahjong/assets/fonts/libre-baskerville-latin-wght-normal.woff2"));
   const browser = await chromium.launch();
   t.after(() => browser.close());
-  for (const grant of ["element", "document"]) await t.test(grant, async () => {
+  for (const grant of ["element", "document"]) for (const navigate of [false, "self"])
+    await t.test(`${grant}, navigation ${navigate}`, async () => {
     const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
     try {
       const errors = [], unexpected = [];
@@ -39,7 +40,7 @@ test("DOM services belong to the granted document, not the controller realm", as
         return route.fulfill({ contentType: "text/html", body: '<!doctype html><p id="controller-private">Private controller text</p><div style="height:2000px"></div>' });
       });
       await page.goto("http://realm.test/");
-      const result = await page.evaluate(async ({ grant, font }) => {
+      const result = await page.evaluate(async ({ grant, font, navigate }) => {
         const { default: Machine } = await import("/machine.js");
         const frame = document.createElement("iframe");
         frame.style.cssText = "position:absolute;left:0;top:50px;width:420px;height:260px;border:0";
@@ -60,7 +61,7 @@ test("DOM services belong to the granted document, not the controller realm", as
         const stamp = new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]);
         const reports = [], traces = [];
         const vm = new Machine(module, grant === "document" ? doc : doc.getElementById("own"), {
-          stamp, onMessage: message => reports.push(message), allowFont: () => true,
+          stamp, onMessage: message => reports.push(message), allowFont: () => true, allowNavigate: navigate,
           instrument: event => traces.push(event),
         });
         const call = value => vm.onmsg(new TextEncoder().encode("\u0002documentRealmProbe\0" + JSON.stringify(value)));
@@ -72,14 +73,25 @@ test("DOM services belong to the granted document, not the controller realm", as
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           await call({});
           selected.parentElement.dispatchEvent(new child.MouseEvent("mousedown", { bubbles: true }));
+          const links = [];
+          for (const href of ["/allowed", "https://outside.test/blocked"]) {
+            try { await call({ href }); links.push(true); } catch { links.push(false); }
+          }
+          const forms = [];
+          for (const action of ["/allowed", "https://outside.test/blocked"]) {
+            const form = doc.createElement("form"); form.action = action;
+            doc.getElementById("own").append(form);
+            const event = new child.Event("submit", { bubbles: true, cancelable: true });
+            form.dispatchEvent(event); forms.push(!event.defaultPrevented); form.remove();
+          }
           let customError = null;
           try { await call({ custom: true }); } catch (error) { customError = String(error); }
-          return { reports, traces, customRuns, customError,
+          return { reports, traces, customRuns, customError, links, forms,
             parentScroll: scrollY, childScroll: child.scrollY,
             parentFonts: [...document.fonts].map(face => face.family),
             childFonts: [...doc.fonts].map(face => face.family) };
         } finally { vm.destroy(); }
-      }, { grant, font: font.toString("base64") });
+      }, { grant, font: font.toString("base64"), navigate });
       const snapshot = JSON.parse(result.reports.at(-2));
       assert.deepEqual(snapshot, { width: 420, height: 260, scroll: 120,
         fontSize: "24px", selectionOffset: 3, privateVisible: false });
@@ -92,6 +104,8 @@ test("DOM services belong to the granted document, not the controller realm", as
       assert.deepEqual(result.childFonts, ["RealmFont"]);
       assert.equal(result.customRuns, 0, "the child custom-element registry must not bypass the allowlist");
       assert.match(result.customError, /not allowed/);
+      assert.deepEqual(result.links, [navigate === "self", false], "srcdoc inherits its origin, not its about: URL's origin");
+      assert.deepEqual(result.forms, [navigate === "self", false], "forms require the same explicit navigation grant");
       assert.deepEqual(errors, []);
       assert.deepEqual(unexpected, []);
     } finally { await page.close(); }
