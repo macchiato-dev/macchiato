@@ -39,8 +39,20 @@ test("independent rendering documents share an engine without sharing page state
       '<a id="anchor-link" href="#details">Details</a><div id="space"></div><h2 id="details">Details</h2>')
     .replace("globalThis.appOnly = true;", `globalThis.appOnly = true;
       globalThis.routeEvents = [location.pathname];
-      globalThis.recordRoute = function () { routeEvents.push(location.pathname); };
-      addEventListener('hashchange', recordRoute);`) }]);
+      // Test application routing through the existing controller service.
+      // This is deliberately not a fake native HashChangeEvent facade.
+      globalThis.recordRoute = function () {
+        if (routeEvents[routeEvents.length - 1] !== location.pathname) routeEvents.push(location.pathname);
+        var anchor = document.getElementById(location.pathname);
+        if (anchor) anchor.scrollIntoView();
+      };
+      document.addEventListener('click', function (event) {
+        var link = event.target.closest('a');
+        if (!link || event.defaultPrevented || event.button !== 0 ||
+            event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        __wwcServiceCall('route.push', link.getAttribute('href'));
+      });`) }]);
   const font = await readFile(new URL("../../../dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/assets/fonts/libre-baskerville-latin-wght-normal.woff2", import.meta.url));
   const fontSource = source(24)
     .replace("background:#e8f2ff", "background:#f6e3e8; font-family:ReaderFont")
@@ -110,6 +122,10 @@ test("independent rendering documents share an engine without sharing page state
     const engine = new QuickJSRuntime(module), mount = document.getElementById("mount");
     const entries = new Map(), released = [], fontDecisions = new Map(), frames = [];
     let next = 0, active = null;
+    const routeChanged = () => {
+      if (entries.get(active)?.routes) window.experiment.run(active, 'recordRoute();');
+    };
+    window.addEventListener('hashchange', routeChanged);
     // Deliberately keep the interpreter and machine in this controller realm.
     // Each grant is a whole, independently laid-out, script-free Document.
     window.experiment = {
@@ -127,31 +143,42 @@ test("independent rendering documents share an engine without sharing page state
         frame.style.pointerEvents = "none";
         frame.inert = true;
         frame.setAttribute("sandbox", "allow-same-origin");
-        // A srcdoc fragment resolves against the controller's inherited base.
-        // Give each script-free document its own URL, retired with the session.
-        const url = URL.createObjectURL(new Blob(['<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data:; font-src data:; base-uri \'none\'; form-action \'none\'"><title></title></head><body></body></html>'], { type: 'text/html' }));
-        const fragment = routes && active ? entries.get(active).doc.defaultView.location.hash : '';
-        await new Promise(resolve => {
-          frame.onload = () => { frame.onload = null; resolve(); };
-          // Replacing the document keeps the browsing context and does not
-          // add a history entry for each live update. Do not reparent it.
-          if (frame.isConnected) frame.contentWindow.location.replace(url + fragment);
-          else { frame.src = url + fragment; mount.append(frame); }
-        });
+        // Navigate only on first creation. Replacing child documents on live
+        // updates makes joint browser history able to resurrect retired apps.
+        if (!frame.isConnected) {
+          frame.shellURL = URL.createObjectURL(new Blob(['<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data:; font-src data:; base-uri \'none\'; form-action \'none\'"><title></title></head><body></body></html>'], { type: 'text/html' }));
+          await new Promise(resolve => {
+            frame.onload = () => { frame.onload = null; resolve(); };
+            frame.src = frame.shellURL;
+            mount.append(frame);
+          });
+        } else {
+          // Fixed host-created nodes only. No document.open(), navigation, or
+          // application HTML evaluation; the Document's CSP remains active.
+          const doc = frame.contentDocument, root = doc.createElement('html');
+          root.append(doc.createElement('head'), doc.createElement('body'));
+          doc.replaceChild(root, doc.documentElement);
+          doc.defaultView.scrollTo(0, 0);
+        }
         const reports = [], doc = frame.contentDocument;
         const machine = new Machine(engine.createSession(), doc, {
           onMessage: value => reports.push(value),
           allowFont: holdFont ? () => new Promise(resolve => fontDecisions.set(id, resolve)) : undefined,
           allowNavigate: routes ? 'fragment' : undefined,
           services: routes ? { route: {
-            get: () => doc.defaultView.location.hash.slice(1) || '/',
+            get: () => location.hash.slice(1) || '/',
             search: () => '',
-            // The full guest receives real window hashchange events. Its
-            // fallback route-listener service must not be needed here.
-            listen() { throw new Error('Expected native hashchange delivery'); },
+            listen() { throw new Error('This test app uses an explicit route callback'); },
+          }, call(name, fragment) {
+            if (name !== 'route.push' || active !== id || !fragment.startsWith('#') || fragment.length > 2048)
+              throw new Error('Route request denied');
+            // Assigning only hash cannot turn this service into navigation to
+            // an arbitrary path/origin. The guest still handles its anchors.
+            location.hash = fragment;
+            return '';
           } } : undefined,
         });
-        const entry = { frame, machine, reports, doc, url };
+        const entry = { frame, machine, reports, doc, routes };
         // Focusing a frame/window resets the focused control in Chromium.
         // Retain only its identity weakly, not a copied selection or DOM tree.
         entry.rememberFocus = event => {
@@ -197,27 +224,29 @@ test("independent rendering documents share an engine without sharing page state
         frame.inert = false;
         active = id;
         if (previous) this.remove(previous);
+        routeChanged();
       },
       remove(id) {
         const entry = entries.get(id);
         if (!entry) return;
         entry.doc.removeEventListener('focusin', entry.rememberFocus);
-        released.push({ frame: new WeakRef(entry.frame), document: new WeakRef(entry.doc) });
+        released.push({ frame: new WeakRef(entry.frame), document: new WeakRef(entry.doc), root: new WeakRef(entry.doc.documentElement) });
         try { entry.machine.destroy(); }
         finally {
           entry.frame.style.visibility = 'hidden';
           entry.frame.style.pointerEvents = 'none';
           entry.frame.inert = true;
           delete entry.frame.dataset.id;
-          URL.revokeObjectURL(entry.url); entries.delete(id); fontDecisions.delete(id);
+          entries.delete(id); fontDecisions.delete(id);
         }
       },
       state() { return { active, frames: mount.children.length, sessions: entries.size }; },
       retained() { return released.map((item, index) => ({ index,
-        frame: !!item.frame.deref(), document: !!item.document.deref() })); },
+        frame: !!item.frame.deref(), document: !!item.document.deref(), root: !!item.root.deref() })); },
       destroy() {
+        window.removeEventListener('hashchange', routeChanged);
         for (const id of entries.keys()) this.remove(id);
-        for (const frame of frames) frame.remove();
+        for (const frame of frames) { frame.remove(); URL.revokeObjectURL(frame.shellURL); }
         frames.length = 0;
         engine.destroy();
       },
@@ -486,8 +515,8 @@ test("independent rendering documents share an engine without sharing page state
         'view modes preserve the controller document and engine');
       t.diagnostic(JSON.stringify({ mode, viewport, draft, active }));
     }
-    // Use real anchor clicks in the nested document. No synthesized route events
-    // or guest-side location cache can hide a wrong navigation target here.
+    // Actual anchor clicks enter the guest, which explicitly delegates routes
+    // to the controller. The rendering documents never acquire route entries.
     const routing = await page.evaluate(program => experiment.prepare(program, { routes: true }), routeProgram);
     await reveal(routing);
     const controllerURL = page.url(), websiteURL = browserPage.url();
@@ -504,35 +533,46 @@ test("independent rendering documents share an engine without sharing page state
     t.diagnostic(JSON.stringify({ routeDocument }));
     assert.equal(routeDocument.hasApp, true, 'a fragment click must not replace the rendering document');
     await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', routing, { timeout: 5000 });
-    assert.equal(page.url(), controllerURL);
+    assert.equal(page.url(), controllerURL + '#/chapter.html#details');
     assert.equal(browserPage.url(), websiteURL);
     assert.equal(await report(routing, 'location.pathname'), '/chapter.html#details');
     await clickApp(routing, '#anchor-link');
     await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === 'details', routing);
-    assert.ok(await report(routing, 'scrollY') > 400, 'native anchor scrolls its rendering document');
-    await page.evaluate(selector => document.querySelector(selector).contentWindow.history.back(), view(routing));
+    assert.ok(await report(routing, 'scrollY') > 400, 'guest resolves the anchor and calls native scrolling');
+    await page.evaluate(() => history.back());
     await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', routing);
-    assert.equal(page.url(), controllerURL);
+    assert.equal(page.url(), controllerURL + '#/chapter.html#details');
     assert.equal(browserPage.url(), websiteURL);
     assert.equal(await page.evaluate(selector =>
       document.querySelector(selector).contentDocument === routingDocument.deref(), view(routing)), true,
       'fragment history retains the actual rendering document');
     assert.deepEqual(await report(routing, 'routeEvents'), ['/', '/chapter.html#details', 'details', '/chapter.html#details']);
-    await page.evaluate(id => experiment.run(id, "removeEventListener('hashchange', recordRoute);"), routing);
-    await page.evaluate(selector => new Promise(resolve => {
-      const win = document.querySelector(selector).contentWindow;
-      win.addEventListener('hashchange', resolve, { once: true });
-      win.history.forward();
-    }), view(routing));
+    await page.evaluate(() => new Promise(resolve => {
+      addEventListener('hashchange', resolve, { once: true });
+      history.forward();
+    }));
     await page.waitForFunction(id => experiment.report(id, 'location.pathname') === 'details', routing);
-    // The native event has completed. Removing the guest listener must not
-    // require retiring its session or suppressing normal browser navigation.
-    assert.deepEqual(await report(routing, 'routeEvents'), ['/', '/chapter.html#details', 'details', '/chapter.html#details']);
+    assert.deepEqual(await report(routing, 'routeEvents'), ['/', '/chapter.html#details', 'details', '/chapter.html#details', 'details']);
     assert.deepEqual(consoleErrors.slice(consoleBeforeNavigation), [], 'fragment navigation causes no browser policy errors');
     const reloadedRoute = await page.evaluate(program => experiment.prepare(program, { routes: true }), routeProgram);
     assert.equal(await report(reloadedRoute, 'location.pathname'), 'details',
       'a live-update candidate starts on the currently selected route');
     await reveal(reloadedRoute);
+    await page.evaluate(selector => {
+      window.reloadedRoot = new WeakRef(document.querySelector(selector).contentDocument.documentElement);
+    }, view(reloadedRoute));
+    await page.evaluate(() => history.back());
+    await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', reloadedRoute);
+    assert.equal(await page.evaluate(selector =>
+      document.querySelector(selector).contentDocument.documentElement === reloadedRoot.deref(), view(reloadedRoute)), true,
+      'Back after a live update retains the newly running guest DOM');
+    await page.evaluate(selector => document.querySelector(selector).contentDocument.querySelector('#counter').scrollIntoView(), view(reloadedRoute));
+    await clickApp(reloadedRoute);
+    assert.equal(await count(reloadedRoute), '1', 'the new guest still receives browser input after Back');
+    await page.evaluate(() => history.forward());
+    await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === 'details', reloadedRoute);
+    assert.equal(await count(reloadedRoute), '1', 'Forward does not restore the previous application session');
+    assert.equal(browserPage.url(), websiteURL);
     const historyBeforeSwaps = await page.evaluate(() => history.length);
     for (let index = 0; index < 10; index++) {
       await reveal(await prepare(programs[index % 2]));
@@ -553,8 +593,8 @@ test("independent rendering documents share an engine without sharing page state
     await client.send("HeapProfiler.collectGarbage");
     const whileRunning = await page.evaluate(() => experiment.retained());
     t.diagnostic(JSON.stringify({ whileRunning }));
-    assert.equal(whileRunning.filter(item => item.document).length, 1,
-      'only the idle frame current document survives among retired sessions');
+    assert.equal(whileRunning.filter(item => item.root).length, 1,
+      'only the idle frame current DOM survives among retired sessions');
     await page.evaluate(() => experiment.destroy());
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await client.send("HeapProfiler.collectGarbage");
@@ -566,7 +606,7 @@ test("independent rendering documents share an engine without sharing page state
       await client.send("HeapProfiler.takeHeapSnapshot");
       await writeFile(process.env.MACCHIATO_TEST_HEAP_SNAPSHOT, chunks.join(""));
     }
-    assert.equal(retained.some(item => item.frame || item.document), false, "removed frames and documents are collectible");
+    assert.equal(retained.some(item => item.frame || item.document || item.root), false, "removed frames, documents, and roots are collectible");
     await client.detach();
     assert.deepEqual(errors, []);
     assert.deepEqual(consoleErrors, []);
