@@ -161,6 +161,9 @@ export class ProjectOutput {
       });
       await session.machine.onmsg(0);
       await session.run(project.scripts || []);
+      // Scripts may install fonts too. Keep the prepared surface hidden until
+      // their policy checks and decoding finish, without delaying guest calls.
+      await session.machine.onmsg(0);
       if (session.error) throw session.error;
       if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
       const previous = this.active;

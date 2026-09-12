@@ -4049,3 +4049,22 @@ The preceding archive is retained at
 `/root/archive/2026/09/12/resources-bunny-6c51d01-before-child-membership.tar.gz`.
 No Bunny deployment occurred. The broader goal remains open, including the
 native-document layout decision and further editing-performance work.
+# Font readiness and ownership during output replacement
+
+Output preparation keeps the existing session visible while the replacement's
+font bytes are approved and decoded. The machine's null-message checkpoint
+remains synchronous for guest execution and returns an awaitable completion
+for font checks; normal byte-message calls and replies remain synchronous.
+The controller waits after both initial stylesheet installation and scripts,
+because either can request a font. Denial rejects preparation rather than
+replacing a working output with an incomplete one.
+
+Each machine removes its own FontFace objects on disposal, including when
+other machines or the controller use the same family name. Late approval,
+denial, or decoding results cannot affect a disposed session. Disposal also
+releases a waiting checkpoint even if its approval callback never resolves.
+
+Browser regressions cover successful, denied, and subsequent successful
+replacements through both stylesheet and script installation; a pending load
+destroyed before approval; and document/element grants into another realm.
+These are readiness/lifetime fixes, not a change to the output document layout.
