@@ -4125,3 +4125,35 @@ after readiness are in `/root/macchiato-work/theme-handoff-paints`; results are
 in the adjacent `.log`. This is sampled first-paint evidence, not proof that
 every possible frame or platform is flicker-free. No production change was
 needed for these cases.
+
+### Identity-lookup integration checkpoint: 2026-09-12
+
+The nine-line native collection optimization described in
+[typing performance](project-editor-typing-performance.md#identity-keyed-native-collections)
+is rebuilt into the frontend and editor. It adds 129 bytes to each of those
+Wasm artifacts, without changing the host, controller, wire ABI, or heap layout.
+
+The complete export at `/root/macchiato-work/resources-bunny-collection-identity`
+uses `site/resources-co-f2bce04`. All 152 manifest checks and the compressed
+backend test in Deno passed. The 104 browser regressions include GC/reference
+lifetimes, mixed collection keys, callbacks, lazy languages, and output/font
+lifetimes. The full project stress test passed in 51.6 seconds, including the
+80-edit burst, undo/redo, scrolling, themes, save/reload in its disposable
+database, output recovery, phone views, and both 106 KB input paths. Its timing
+is a verification result, not a controlled end-to-end speed comparison.
+
+The delayed frontend/editor paint test passed all ten startup/reload cases on
+the rebuilt runtime. Light/dark editor and delayed-startup screenshots were
+inspected. Read-only saved-project checks passed for Cat Memory, Mahjong, the
+tour's 50-slide keyboard sequence, and SQLite fragments. No owner content or
+tour notes were written. Evidence is under `/root/macchiato-work/collection-identity-*`.
+
+The local server was restarted, its six principal assets matched the export
+byte-for-byte, and Cat Memory and Mahjong passed again using live assets.
+The extracted `/root/resources-bunny.tar.gz` passes manifest verification and
+has SHA-256
+`d6e8525489f3316393517f5ec1d3bf398671429eea4d43e0973b2cce9f41f13f`.
+Its predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-28543b8-before-collection-identity.tar.gz`.
+No Bunny deployment occurred. Native-document fidelity and further performance
+work remain open; this checkpoint does not complete the overall goal.
