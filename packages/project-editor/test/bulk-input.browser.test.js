@@ -73,13 +73,22 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
   const typingOffset = typingPosition === "last" ? text.length : Math.min(4, text.length);
   const editorWidth = Number(process.env.MACCHIATO_TEST_EDITOR_WIDTH || 720);
   assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
+  const visualInput = process.env.MACCHIATO_TEST_VISUAL_INPUT === "1";
+  assert.ok(!visualInput || process.env.MACCHIATO_TEST_ARTIFACTS, "visual input requires an artifacts directory");
+  // This isolated editor has no site shell to supply its theme variables.
+  // Read the actual light palette, failing if it moves rather than silently
+  // recording uncolored text as evidence of correct syntax highlighting.
+  const siteSource = await readFile(join(root, "packages/website/seed.js"), "utf8");
+  const palette = siteSource.match(/html\[data-theme="light"\] \.project-editor__mount \{ (--resources-editor-[^}]+) \}/)?.[1];
+  assert.ok(palette, "the Resources editor light palette must be available");
   const methods = (process.env.MACCHIATO_TEST_INPUT_METHODS || "paste,insertText,replaceText").split(",");
   assert.ok(methods.length && methods.every(method => ["paste", "insertText", "replaceText"].includes(method)));
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const results = [];
   for (const [run, mode] of ["native", "microquickjs", "microquickjs", "native"].entries()) {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 },
+      ...(visualInput ? { recordVideo: { dir: join(directory, "videos"), size: { width: 1440, height: 900 } } } : {}) });
     const page = await context.newPage(), errors = [];
     page.on("pageerror", error => errors.push(error.message));
     const assets = { "/machine.js": machine, "/core.js": core, "/language.js": language, "/editor.wasm": wasm };
@@ -88,8 +97,7 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       return route.fulfill(assets[path]
         ? { body: assets[path], contentType: path.endsWith("wasm") ? "application/wasm" : "text/javascript" }
         : { contentType: "text/html", body: `<style>
-          body { margin: 0; --resources-editor-caret: #111; --resources-editor-fg: #111;
-            --resources-editor-bg: #eff5ff; }
+          body { margin: 0; ${palette} }
           #guest { position: absolute; top: 56px; left: 0; bottom: 0; width: ${editorWidth}px; contain: size; }
           #editor, .cm-editor { height: 100%; }
           .cm-scroller { overflow: auto; }
@@ -121,12 +129,18 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
     const geometry = await page.locator(".cm-scroller").evaluate(node => {
       const style = getComputedStyle(node), box = node.getBoundingClientRect();
       const content = node.querySelector(".cm-content");
+      const metrics = document.createElement("canvas").getContext("2d");
+      metrics.font = style.font;
       return { width: box.width, height: box.height, font: style.font, lineHeight: style.lineHeight,
+        keywordColor: style.getPropertyValue("--resources-editor-keyword").trim(),
+        narrowGlyphWidth: metrics.measureText("iiii").width, wideGlyphWidth: metrics.measureText("WWWW").width,
         contentEditable: content.contentEditable,
         userModify: getComputedStyle(content).getPropertyValue("-webkit-user-modify") };
     });
     results.push({ run, mode, method: "geometry", language: selectedLanguage, rawSource, ...geometry });
     t.diagnostic(JSON.stringify(results.at(-1)));
+    if (visualInput) assert.equal(geometry.narrowGlyphWidth, geometry.wideGlyphWidth,
+      "visual comparisons need an installed monospace font, not a proportional fallback");
     // Warm both the browser input path and editor before measuring bulk work.
     await content.fill("warmup");
     await page.keyboard.press("End"); await page.keyboard.type(" edit");
@@ -234,6 +248,20 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
     t.diagnostic(JSON.stringify(results.at(-1)));
     let inserted = "";
     const keyMilliseconds = [];
+    if (visualInput) await page.evaluate(() => {
+      window.visualFrames = [];
+      const started = performance.now();
+      window.recordVisualFrame = () => {
+        // Diagnostic-only DOM sampling. Do not mix these timings with the
+        // ordinary benchmark: reading every frame adds work to the host.
+        const lines = [...document.querySelectorAll(".cm-content .cm-line")];
+        visualFrames.push({ milliseconds: performance.now() - started,
+          lines: lines.map(line => ({ text: line.textContent,
+            spans: [...line.querySelectorAll("span")].map(span => [span.textContent, span.className]) })) });
+        window.visualFrameHandle = requestAnimationFrame(recordVisualFrame);
+      };
+      recordVisualFrame();
+    });
     if (checkpoints) await page.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
     const typingDirectory = process.env.MACCHIATO_TYPING_CPU_PROFILE_DIR;
     const typingProfiler = typingDirectory ? await context.newCDPSession(page) : null;
@@ -248,6 +276,7 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       inserted = key === "Backspace" ? inserted.slice(0, -1) : inserted + key;
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
         text.slice(0, typingOffset) + inserted + text.slice(typingOffset));
+      if (visualInput) await page.waitForTimeout(100);
     }
     if (typingProfiler) {
       const { profile } = await typingProfiler.send("Profiler.stop");
@@ -276,6 +305,16 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
     results.push({ run, mode, method: typingPosition + "-page-typing", offset: typingOffset,
       characters: text.length, keyMilliseconds });
     t.diagnostic(JSON.stringify(results.at(-1)));
+    if (visualInput) {
+      await page.waitForTimeout(300);
+      const frames = await page.evaluate(() => {
+        cancelAnimationFrame(visualFrameHandle);
+        return visualFrames;
+      });
+      await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
+      await writeFile(join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}-frames.json`), JSON.stringify(frames));
+      await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}-after.png`) });
+    }
     // Keep rendered text and class spans as evidence for styling experiments,
     // outside the timed input sequence. A parsed tree alone does not prove
     // that its visible highlights have the same styles or boundaries.
@@ -310,6 +349,7 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
     assert.deepEqual(errors, []);
     await page.evaluate(() => window.machine?.destroy());
     await context.close();
+    if (visualInput) await page.video().saveAs(join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}.webm`));
   }
   if (process.env.MACCHIATO_TEST_ARTIFACTS) {
     await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
