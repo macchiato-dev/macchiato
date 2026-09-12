@@ -15,7 +15,9 @@ test("output waits for approved fonts before replacing the visible session", { t
   const font = await readFile(new URL("../../../dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/assets/fonts/libre-baskerville-latin-wght-normal.woff2", import.meta.url));
   const initial = compileProjectFiles([{ path: "index.html", content: "<button>Original</button>" }]);
   const styled = compileProjectFiles([{ path: "index.html", content:
-    '<style>button { font-family: ReadyFont; }</style><button>Replacement</button>' }]);
+    `<style>button { font-family: ReadyFont; }</style><button>Replacement</button><script>
+      __wwcPostMessage('startup:' + document.querySelector('button').getBoundingClientRect().width);
+    </script>` }]);
   // The builder supplies font bytes through the stylesheet ABI, not host CSS
   // parsing. Encode one version-5 font record independently for this fixture.
   const operations = [5, 1, 2];
@@ -46,14 +48,16 @@ test("output waits for approved fonts before replacing the visible session", { t
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
     const mount = document.getElementById("mount");
     let approve, requested;
-    const reports = [], checks = [];
+    const reports = [], checks = [], startupWidths = [];
     const output = new ProjectOutput(Machine, module, mount, () => ({
       allowFont: () => new Promise(resolve => { approve = resolve; requested(); }),
+      onMessage: value => { if (value.startsWith('startup:')) startupWidths.push(Number(value.slice(8))); },
     }), error => reports.push(error.message));
     const visibleText = () => mount.querySelector('.project-output-root:not([inert]) button')?.textContent;
     try {
       for (const via of ["stylesheet", "script"]) for (const allowed of [true, false, true]) {
         await output.load(initial);
+        startupWidths.length = 0;
         const ready = new Promise(resolve => { requested = resolve; });
         let settled = false;
         const program = via === "stylesheet" ? styled : { ...styled,
@@ -67,10 +71,11 @@ test("output waits for approved fonts before replacing the visible session", { t
         await ready;
         // Cross a task boundary while approval is held by the controller.
         await new Promise(resolve => setTimeout(resolve, 0));
-        const before = { settled, visible: visibleText(), fonts: document.fonts.size };
+        const before = { settled, visible: visibleText(), fonts: document.fonts.size, startups: startupWidths.length };
         approve(allowed);
         const error = await loading;
-        checks.push({ via, allowed, before, error, visible: visibleText(),
+        checks.push({ via, allowed, before, error, visible: visibleText(), startupWidths: [...startupWidths],
+          finalWidth: mount.querySelector('.project-output-root:not([inert]) button').getBoundingClientRect().width,
           faces: [...document.fonts].map(face => [face.family, face.status]) });
       }
       // Disposal must release the waiting load even if approval never answers.
@@ -86,11 +91,16 @@ test("output waits for approved fonts before replacing the visible session", { t
   }, { initial, styled });
   for (const check of result.checks) {
     if (check.disposed) { assert.match(check.disposed, /destroyed/); continue; }
-    assert.deepEqual(check.before, { settled: false, visible: "Original", fonts: 0 });
+    assert.deepEqual(check.before, { settled: false, visible: "Original", fonts: 0, startups: 0 });
     assert.equal(check.visible, check.allowed ? "Replacement" : "Original");
     assert.deepEqual(check.faces, check.allowed ? [["ReadyFont", "loaded"]] : []);
     if (check.allowed) assert.equal(check.error, null);
     else assert.match(check.error, /custom font was not allowed/);
+    if (check.via === "stylesheet" && check.allowed) {
+      assert.equal(check.startupWidths.length, 1);
+      assert.ok(Math.abs(check.startupWidths[0] - check.finalWidth) <= 1,
+        "startup measures loaded stylesheet font metrics, within the rectangle ABI's integer precision");
+    } else assert.deepEqual(check.startupWidths, []);
   }
   assert.equal(result.fontsAfterDestroy, 0);
   assert.deepEqual(result.reports, [], "preparing failures belong to the load caller, not the active output");

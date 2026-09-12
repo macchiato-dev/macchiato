@@ -193,3 +193,38 @@ Logs and inspected screenshots are under
 native page on the left and the QuickJS page on the right. The existing local
 site and Bunny archive are unchanged. Approval of the production frame
 hierarchy is still outstanding.
+
+## Delayed font handoff: 2026-09-12
+
+The experiment now holds approval of the embedded Libre Baskerville font used
+by the Mahjong example. While that decision is pending, six sampled animation
+frames each show only the original interactive document. Actual pointer and
+keyboard input still increments its counter. A screenshot pixel inside the
+body margin stays blue; neither the replacement's pink canvas nor the
+controller's white background appears in that capture.
+
+The initial regression failed: the experiment ran application scripts before
+waiting for stylesheet fonts, so startup could measure fallback glyphs. It now
+uses the same pre-script `onmsg(0)` checkpoint already present in production
+`ProjectOutput`. This fixes the experimental controller, not a newly discovered
+production font-loading regression. The production lifecycle test now also
+asserts that startup does not run before approval and that its text measurement
+agrees with the final loaded-font layout.
+
+After approval, the replacement's startup measurement and the ordinary native
+page both report 238px for “Widening horizons.” The assertion allows one pixel
+because the existing rectangle ABI rounds coordinates; this is not a claim of
+fractional-metric fidelity. The face belongs only to the preparing document,
+not the active one or the controller. It remains hidden until explicitly
+revealed, then paints its own background and receives mouse/keyboard input.
+A rejected font discards only the replacement, leaving the old state intact.
+All 15 removed frames/documents remain collectible after subsequent swaps.
+
+The combined rendering, production lifecycle, and native-document comparisons
+report six passes and the same four known production TODO failures. The
+before/after logs and inspected native/guest screenshots are under
+`/root/macchiato-work/rendering-fonts-{before,after,regressions}` (logs use the
+same names with `.log`). No live assets, owner projects, server process, or
+Bunny archive changed. Real-project swaps, the full frame hierarchy,
+full-screen focus, and overhead measurements remain integration work; this
+bounded font experiment does not establish those properties.

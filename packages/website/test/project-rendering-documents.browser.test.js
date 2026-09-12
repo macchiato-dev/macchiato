@@ -108,6 +108,9 @@ test("independent rendering documents share an engine without sharing page state
           this.run(id, '__resourcesOutputLoad(' + JSON.stringify(JSON.stringify({
             tree: program.tree, document: program.document, stylesheets: program.stylesheets,
           })) + ');');
+          // Match ProjectOutput's checkpoint before application initialization:
+          // layout-dependent scripts must see approved, loaded stylesheet fonts.
+          await machine.onmsg(0);
           for (const script of program.scripts) this.run(id, script.code);
           await machine.onmsg(0);
           return id;
