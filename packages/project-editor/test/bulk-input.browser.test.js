@@ -37,11 +37,15 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const parseBeforeTyping = process.env.MACCHIATO_TEST_PARSE_BEFORE_TYPING === "1";
   assert.ok(!parseBeforeTyping || process.env.MACCHIATO_TYPING_CHECKPOINTS,
     "parse readiness experiment requires checkpoints");
+  const profileCatchUp = process.env.MACCHIATO_TYPING_PROFILE_CATCH_UP === "1";
+  assert.ok(!profileCatchUp || (process.env.MACCHIATO_TYPING_CPU_PROFILE_DIR &&
+    process.env.MACCHIATO_TYPING_CHECKPOINTS), "catch-up profiling requires a profile directory and checkpoints");
   const checkpoints = process.env.MACCHIATO_TYPING_CHECKPOINTS
     ? `globalThis.__bulkParseBudget = ${parseBudget};
 globalThis.__bulkWireCheckpoints = ${process.env.MACCHIATO_WIRE_CHECKPOINTS === "1"};
 globalThis.__bulkCollectionCheckpoints = ${process.env.MACCHIATO_COLLECTION_CHECKPOINTS === "1"};
 globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKPOINTS === "1"};
+globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"};
 ` + await readFile(
       new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
   const disableInputPending = process.env.MACCHIATO_TEST_DISABLE_INPUT_PENDING === "1";
@@ -75,6 +79,8 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
   assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
   const visualInput = process.env.MACCHIATO_TEST_VISUAL_INPUT === "1";
   assert.ok(!visualInput || process.env.MACCHIATO_TEST_ARTIFACTS, "visual input requires an artifacts directory");
+  const keyInterval = Number(process.env.MACCHIATO_TEST_KEY_INTERVAL ?? (visualInput ? 100 : 0));
+  assert.ok(Number.isFinite(keyInterval) && keyInterval >= 0 && keyInterval <= 1000);
   // This isolated editor has no site shell to supply its theme variables.
   // Read the actual light palette, failing if it moves rather than silently
   // recording uncolored text as evidence of correct syntax highlighting.
@@ -276,14 +282,16 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       inserted = key === "Backspace" ? inserted.slice(0, -1) : inserted + key;
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
         text.slice(0, typingOffset) + inserted + text.slice(typingOffset));
-      if (visualInput) await page.waitForTimeout(100);
+      if (keyInterval) await page.waitForTimeout(keyInterval);
     }
-    if (typingProfiler) {
+    async function stopTypingProfiler() {
       const { profile } = await typingProfiler.send("Profiler.stop");
       await mkdir(typingDirectory, { recursive: true });
-      await writeFile(join(typingDirectory, `${run}-${mode}-typing.cpuprofile`), JSON.stringify(profile));
+      const phase = profileCatchUp ? "typing-and-catch-up" : "typing";
+      await writeFile(join(typingDirectory, `${run}-${mode}-${phase}.cpuprofile`), JSON.stringify(profile));
       await typingProfiler.detach();
     }
+    if (typingProfiler && !profileCatchUp) await stopTypingProfiler();
     // Exercise queued input before waiting for parser catch-up. Waiting first
     // would hide contention between background work and newly arriving keys.
     if (process.env.MACCHIATO_TEST_INPUT_BURST === "1") await typeQueuedBurst();
@@ -304,11 +312,15 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       const completed = await page.evaluate(() =>
         messages.filter(message => message.type === "typing-checkpoints").at(-1));
       results.push({ run, mode, method: "viewport-parse-wait", position: typingPosition,
-        milliseconds: Math.round(performance.now() - parseWaitStarted), timings: completed.timings });
+        milliseconds: Math.round(performance.now() - parseWaitStarted), timings: completed.timings,
+        parseProgress: completed.parseProgress });
       t.diagnostic(JSON.stringify(results.at(-1)));
     }
+    // Idle parser slices can run after the final key. Keep this optional capture
+    // open through readiness so profiling does not omit the delay under study.
+    if (typingProfiler && profileCatchUp) await stopTypingProfiler();
     results.push({ run, mode, method: typingPosition + "-page-typing", offset: typingOffset,
-      characters: text.length, keyMilliseconds });
+      characters: text.length, keyInterval, keyMilliseconds });
     t.diagnostic(JSON.stringify(results.at(-1)));
     if (visualInput) {
       await page.waitForTimeout(300);

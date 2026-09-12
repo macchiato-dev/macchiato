@@ -4,6 +4,7 @@ var bulkStringify = JSON.stringify;
 var bulkWireReads = { strings: 0, bytes: 0, largest: 0 };
 var bulkWireOperations = Object.create(null);
 var bulkCollections = Object.create(null);
+var bulkParseProgress = [];
 if (globalThis.__bulkCollectionCheckpoints) {
   // Count collection use without retaining keys/values or inspecting weak
   // reachability. Size is available only for strong collections. These extra
@@ -85,6 +86,30 @@ if (globalThis.__bulkHighlightCheckpoints) {
 bulkMeasure(bulkView.viewState, "update", "viewport update");
 bulkMeasure(globalThis, "__browserUseNotify", "notify");
 var bulkParse = globalThis.__codeMirrorRequire("@codemirror/language").ParseContext.prototype;
+if (globalThis.__bulkParseProgress) {
+  // Snapshot positions, not parser/tree references. This exposes whether edits
+  // retain completed fragments or discard ongoing work, without timing every
+  // token or holding old editor states alive. Keep diagnostic output bounded.
+  var parsePosition = function (context) {
+    return { length: context.state.doc.length, tree: context.treeLen,
+      position: context.parse ? context.parse.parsedPos : null,
+      fragments: context.fragments.map(function (fragment) {
+        return [fragment.from, fragment.to];
+      }) };
+  };
+  ["work", "changes"].forEach(function (method) {
+    var original = bulkParse[method];
+    bulkParse[method] = function () {
+      if (bulkParseProgress.length >= 256) return original.apply(this, arguments);
+      var row = { method: method, before: parsePosition(this) };
+      var result = original.apply(this, arguments);
+      row.after = parsePosition(this);
+      if (method === "changes") row.next = parsePosition(result);
+      bulkParseProgress.push(row);
+      return result;
+    };
+  });
+}
 if (globalThis.__bulkParseBudget) {
   var bulkOriginalWork = bulkParse.work;
   bulkParse.work = function (until, upto) {
@@ -134,6 +159,7 @@ function resetTypingCheckpoints() {
   bulkWireReads = { strings: 0, bytes: 0, largest: 0 };
   bulkWireOperations = Object.create(null);
   bulkCollections = Object.create(null);
+  bulkParseProgress = [];
 }
 function finishBulkParsing() {
   var language = globalThis.__codeMirrorRequire("@codemirror/language");
@@ -146,7 +172,7 @@ function finishBulkParsing() {
 function reportTypingCheckpoints() {
   var language = globalThis.__codeMirrorRequire("@codemirror/language");
   globalThis.__browserUseNotify(bulkStringify({ type: "typing-checkpoints", timings: bulkTimings, wireReads: bulkWireReads,
-    wireOperations: bulkWireOperations, collections: bulkCollections,
+    wireOperations: bulkWireOperations, collections: bulkCollections, parseProgress: bulkParseProgress,
     viewportParsed: language.syntaxTreeAvailable(bulkView.state, bulkView.viewport.to),
     documentParsed: language.syntaxTreeAvailable(bulkView.state, bulkView.state.doc.length) }));
   if (typeof flush === "function") flush();
