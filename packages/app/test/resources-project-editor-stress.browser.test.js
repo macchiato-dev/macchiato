@@ -428,6 +428,45 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
   assert.match(await content.innerText(), /Recovered output/);
 
+  // Quoting a font family is valid CSS. An unfinished quote while editing is
+  // not: keep the working iframe interactive, then recover without a reload.
+  const fontFrame = await page.locator("iframe.project-editor__output-frame").elementHandle();
+  const fontEditorId = await editor.getAttribute("data-editor-machine-id");
+  const fontSource = (family, revision) => `<style>h1 { font-family: ${family}; }</style>
+    <h1>Font revision ${revision}</h1><button>0</button><script>
+      var count = 0;
+      document.querySelector('button').addEventListener('click', function () {
+        this.textContent = String(++count);
+      });
+    </script>`;
+  for (const [revision, family] of ["monospace", '"monospace"', "serif"].entries()) {
+    await content.fill(fontSource(family, revision));
+    const heading = output.getByRole("heading", { name: `Font revision ${revision}`, exact: true });
+    await heading.waitFor();
+    assert.equal(await heading.evaluate(node => getComputedStyle(node).fontFamily), family,
+      "font-family changes reach the rendered output, including a quoted family");
+    const workingHeading = await heading.elementHandle();
+    await content.fill(fontSource('"monospace', revision + 1));
+    const warning = page.getByText(/Output stopped:.*CSS declaration is incomplete/);
+    await warning.waitFor();
+    assert.ok(await warning.evaluate(node => Boolean(node.closest(".project-editor__preview"))));
+    if (revision === 0) await page.screenshot({ path: join(artifacts, "font-edit-incomplete.png") });
+    assert.ok(await workingHeading.evaluate(node => node.isConnected), "invalid CSS preserves the live document");
+    assert.equal(await workingHeading.evaluate(node => getComputedStyle(node).fontFamily), family,
+      "a rejected replacement also preserves the working stylesheet");
+    await output.getByRole("button", { name: "0", exact: true }).click();
+    await output.getByRole("button", { name: "1", exact: true }).waitFor();
+    await workingHeading.dispose();
+  }
+  await content.fill(fontSource("system-ui", "recovered"));
+  await output.getByRole("heading", { name: "Font revision recovered", exact: true }).waitFor();
+  await page.getByText(/Output stopped:.*CSS declaration is incomplete/).waitFor({ state: "hidden" });
+  assert.equal(await editor.getAttribute("data-editor-machine-id"), fontEditorId);
+  assert.ok(await fontFrame.evaluate(node => node === document.querySelector("iframe.project-editor__output-frame")));
+  await fontFrame.dispose();
+  await page.screenshot({ path: join(artifacts, "font-edit-recovered.png") });
+  checkpoint("repeated font-edit recovery without reload");
+
   await page.evaluate(() => {
     const root = document.querySelector('[data-project-editor]');
     const snapshot = JSON.parse(root.querySelector('[data-project-snapshot]').value);

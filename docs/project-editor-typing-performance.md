@@ -362,3 +362,21 @@ it does not make parsing, highlighting, or document serialization free, and
 no proportional end-to-end speedup is claimed. No tree cache, host primitive,
 or permission was added. Evidence is under
 `/root/macchiato-work/editor-validation-{before,after}.log`.
+
+## Repeated font-edit recovery in the full workspace
+
+The disposable Resources browser workflow now alternates valid `monospace`,
+`"monospace"`, and `serif` declarations with an unfinished quoted family.
+Both quoted and unquoted complete values are valid; the compiler correctly
+rejects the unfinished quote. Tests inspect computed font families before and
+after rejection, not just the presence of a replacement heading. The working
+document remains connected and its button still responds while the warning is
+visible. A final valid edit clears the warning without replacing the output
+iframe or editor machine. Screenshots cover the rejected and recovered states.
+
+The first run incorrectly expected the warning prefix `Blocked:`; the actual
+workspace displays `Output stopped:` for this build error. The corrected test
+passes without a production-code change. The final strengthened run, including
+the rest of the full editing workflow, passed in approximately 77 seconds.
+Evidence is under `/root/macchiato-work/font-edit-preservation*`. These are
+disposable fixture edits, not changes to the owner's Mahjong or saved projects.
