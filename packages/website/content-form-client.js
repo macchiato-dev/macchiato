@@ -484,6 +484,12 @@ async function mountProjectRoot(root) {
   }
   let currentSnapshot = state;
   let viewingHistorical = false;
+  let selectedStoredSequence = null;
+  let latestStoredSequence = null;
+  const selectedVersionField = document.createElement("input");
+  selectedVersionField.type = "hidden";
+  selectedVersionField.name = "selectedVersion";
+  root.append(selectedVersionField);
   let selected = state.files.some((file) => file.path === state.config?.entry) ? state.config.entry : state.files[0]?.path || "config";
   const tabSessionKey = `resources_project_tabs_v1:${projectId || persistence}`;
   let openTabs = [];
@@ -520,7 +526,8 @@ async function mountProjectRoot(root) {
     button.textContent = button.dataset.defaultLabel;
     const disabled = unsavedChangeCount === 0
       && workspacePayload?.hasUnpublishedChanges !== true
-      && !recoveredPendingSnapshot;
+      && !recoveredPendingSnapshot
+      && !(viewingHistorical && selectedStoredSequence !== latestStoredSequence);
     button.disabled = disabled;
     const menuTrigger = root.closest("form")?.querySelector("[data-save-menu-trigger]");
     if (disabled) menuTrigger?.setAttribute("disabled", "");
@@ -939,12 +946,14 @@ async function mountProjectRoot(root) {
     const normalized = normalizeProjectSnapshot(next);
     if (projectSnapshotsEqual(state, normalized)) return false;
     const branchedFromHistory = viewingHistorical;
-    showCurrentVersion();
     viewingHistorical = false;
+    selectedStoredSequence = null;
+    selectedVersionField.value = "";
     state = normalized;
     recoveryFailure = "";
     editorController?.setSnapshot(state);
     currentUpdatedAt = Date.now();
+    showCurrentVersion();
     currentSnapshot = state;
     // Form submission and crash recovery need the same immutable snapshot.
     const serialized = JSON.stringify(state);
@@ -1068,7 +1077,7 @@ async function mountProjectRoot(root) {
 
   function renderDraftVersions() {
     versionList.replaceChildren();
-    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: !viewingHistorical });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
@@ -1114,14 +1123,18 @@ async function mountProjectRoot(root) {
     const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/versions`);
     if (!response.ok) { versionList.textContent = "Version history unavailable."; return; }
     const { versions } = await response.json();
+    latestStoredSequence = versions.find(version => version.latest)?.sequence ?? null;
     versionList.replaceChildren();
-    showCurrentVersion();
-    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
+    if (!viewingHistorical) showCurrentVersion();
+    const hasCurrentDraft = workspacePayload?.hasUnpublishedChanges === true || unsavedChangeCount > 0 || recoveredPendingSnapshot;
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: !viewingHistorical });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
       state = currentSnapshot;
       viewingHistorical = false;
+      selectedStoredSequence = null;
+      selectedVersionField.value = "";
       snapshotField.value = JSON.stringify(state);
       historyPanel.hidden = true;
       versionButton.setAttribute("aria-expanded", "false");
@@ -1129,12 +1142,16 @@ async function mountProjectRoot(root) {
       sendContent();
       renderPreview();
       showCurrentVersion();
+      refreshSubmitLabel();
       setStatus("Current version");
     });
-    versionList.append(current);
+    if (hasCurrentDraft && latestStoredSequence === null) versionList.append(current);
     for (const version of versions) {
-      const timestamp = version.savedAt || version.createdAt;
-      const button = versionChoice(relativeVersionTime(timestamp), timestamp, { sequence: version.sequence, title: version.title, latest: version.latest });
+      const timestamp = version.latest ? version.savedAt || version.createdAt : version.createdAt;
+      const button = versionChoice(relativeVersionTime(timestamp), timestamp, {
+        sequence: version.sequence, title: version.title, latest: version.latest,
+        current: viewingHistorical ? selectedStoredSequence === version.sequence : !hasCurrentDraft && version.latest,
+      });
       button.addEventListener("click", async () => {
         clearNotice();
         await save();
@@ -1144,6 +1161,8 @@ async function mountProjectRoot(root) {
         const result = await response.json();
         state = normalizeProjectSnapshot(result.snapshot);
         viewingHistorical = true;
+        selectedStoredSequence = version.sequence;
+        selectedVersionField.value = String(version.sequence);
         snapshotField.value = JSON.stringify(state);
         historyPanel.hidden = true;
         versionButton.setAttribute("aria-expanded", "false");
@@ -1151,9 +1170,11 @@ async function mountProjectRoot(root) {
         sendContent();
         renderPreview();
         showSelectedVersion(relativeVersionTime(timestamp), timestamp);
+        refreshSubmitLabel();
         setStatus(`Viewing ${button.textContent}`);
       });
       versionList.append(button);
+      if (hasCurrentDraft && version.latest) versionList.append(current);
     }
   }
 

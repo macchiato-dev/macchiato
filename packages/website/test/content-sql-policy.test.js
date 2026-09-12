@@ -43,6 +43,25 @@ test("project reads, writes, versions, and batches stay inside the content sql-u
   assert.equal((await store.listProjectVersions(project.id, account.id)).length, 2);
   assert.deepEqual(await store.getProjectVersion(project.id, 1, account.id), first);
   assert.equal(await store.publishProject(account.id, project.id, { title: "Release" }), true);
+  const originalTimes = (await store.listProjectVersions(project.id, account.id)).map(version => version.createdAt);
+  assert.equal(await store.publishProject(account.id, project.id, { sequence: 1 }), true);
+  let versions = await store.listProjectVersions(project.id, account.id);
+  assert.deepEqual(versions.map(version => [version.sequence, version.latest]), [[1, true], [2, false]]);
+  assert.deepEqual(versions.map(version => version.createdAt), originalTimes.toReversed());
+  assert.deepEqual((await store.getProjectWorkspace("coffee", "example", account.id)).snapshot, first);
+  assert.deepEqual((await store.getPublicProjectWorkspace("coffee", "example")).snapshot, first);
+  assert.deepEqual(await store.getProjectVersion(project.id, 2, account.id), second);
+  assert.equal(await store.publishProject(account.id, project.id, { sequence: 1 }), true);
+  assert.equal((await store.listProjectVersions(project.id, account.id)).length, 2,
+    "saving the same historical selection must not append a duplicate version");
+  const third = { files: [{ path: "index.html", content: "<h1>Three</h1>" }], config: {} };
+  await store.saveProjectSnapshot(account.id, project.id, third, { reason: "manual" });
+  assert.deepEqual(await store.getProjectVersion(project.id, 3, account.id), third);
+  assert.deepEqual(await store.getProjectVersion(project.id, 2, account.id), second);
+  versions = await store.listProjectVersions(project.id, account.id);
+  assert.deepEqual(versions.map(version => version.sequence), [1, 3, 2]);
+  assert.equal(await store.publishProject("someone-else", project.id, { sequence: 2 }), false);
+  assert.equal(await store.publishProject(account.id, project.id, { sequence: 99 }), false);
   await store.revertProjectToPublished(account.id, project.id);
   assert.equal(await store.deleteProject(account.id, project.id), true);
 });

@@ -324,6 +324,24 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
   assert.equal((await content.listProjectVersions(formProject.id, account.id))[0].title,
     "First publication");
 
+  const selectVersionFields = {
+    name: "Renamed project", slug: "renamed-project", description: "Updated",
+    namespace: "user", template: "blank", visibility: "public", selectedVersion: "1",
+    snapshot: JSON.stringify(await content.getProjectVersion(formProject.id, 1, account.id)),
+  };
+  const selectedSave = await projectFormPost(`/projects/${formProject.id}`, selectVersionFields,
+    formProjectCsrf, "/latte/renamed-project");
+  assert.equal(selectedSave.status, 303);
+  assert.deepEqual((await content.listProjectVersions(formProject.id, account.id))
+    .map(version => [version.sequence, version.latest]), [[1, true], [2, false]]);
+  assert.deepEqual((await content.getProjectWorkspace("latte", "renamed-project", account.id)).snapshot,
+    JSON.parse(selectVersionFields.snapshot));
+  const changedSelection = await projectFormPost(`/projects/${formProject.id}`, {
+    ...selectVersionFields, snapshot: JSON.stringify(updatedSnapshot),
+  }, formProjectCsrf, "/latte/renamed-project");
+  assert.match(changedSelection.headers.get("location"), /error=version/);
+  assert.equal((await content.listProjectVersions(formProject.id, account.id)).length, 2);
+
   await content.saveProjectSnapshot(account.id, formProject.id, first, { reason: "periodic" });
   const revertedFormResponse = await projectFormPost(`/projects/${formProject.id}`, {
     intent: "revert",

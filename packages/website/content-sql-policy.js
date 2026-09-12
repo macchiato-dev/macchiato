@@ -30,6 +30,7 @@ const definitions = [
   ["content.touch-project", "touchProject", "write", 4],
   ["content.publish", "publish", "write", 6],
   ["content.label-version", "labelVersion", "write", 4],
+  ["content.label-selected-version", "labelSelectedVersion", "write", 5],
   ["content.delete-project", "deleteProject", "write", 2],
   ["content.published-snapshot", "publishedSnapshot", "read", 2],
 ];

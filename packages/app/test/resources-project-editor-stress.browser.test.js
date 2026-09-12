@@ -423,15 +423,39 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.locator('[data-project-history] [data-version-sequence="1"]').click();
   await output.getByRole('heading', { name: 'Editing Marathon', exact: true }).waitFor();
   assert.match(await page.locator('[data-project-snapshot]').inputValue(), /Editable row 100/);
+  const selectedVersionTime = await page.locator('[data-current-version]').getAttribute('data-version-time');
   await historyButton.click();
   const storedChoices = page.locator('[data-project-history] [data-version-sequence]');
   await storedChoices.first().waitFor();
   assert.ok(await storedChoices.count() >= 2, 'there are multiple saved versions to browse');
-  await storedChoices.first().click();
+  assert.equal(await page.locator('[data-current-version]').getAttribute('data-version-time'), selectedVersionTime);
+  assert.equal(await page.locator('[data-project-history] [aria-current="true"]').getAttribute('data-version-sequence'), '1');
+  await page.locator('[data-project-history] [data-version-sequence="2"]').click();
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
   await historyButton.click();
   await page.locator('[data-project-history] [aria-current="true"]').click();
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
+
+  async function publishSelection() {
+    await page.locator('[data-project-submit]').click();
+    await page.waitForFunction(() => document.querySelector('[data-project-editor]')?.dataset.editorMachineState === 'ready' &&
+      document.querySelector('[data-project-editor]')?.dataset.outputMachineState === 'ready');
+    await content.waitFor();
+  }
+  await publishSelection();
+  await historyButton.click();
+  await page.locator('[data-project-history] [data-version-sequence="1"]').click();
+  await output.getByRole('heading', { name: 'Editing Marathon', exact: true }).waitFor();
+  await publishSelection();
+  await historyButton.click();
+  await storedChoices.first().waitFor();
+  assert.equal(await storedChoices.first().getAttribute('data-version-sequence'), '1');
+  assert.equal(await storedChoices.first().locator('.project-editor__latest').count(), 1);
+  assert.equal(await page.locator('[data-project-history] .project-editor__latest').count(), 1);
+  assert.equal(await storedChoices.count(), 2, 'saving an older selection promotes it without duplicating it');
+  await page.locator('[data-project-history] [data-version-sequence="2"]').click();
+  await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
+  checkpoint('history selection and republishing an older version');
   assert.match(await content.innerText(), /Recovered output/);
 
   // Quoting a font family is valid CSS. An unfinished quote while editing is

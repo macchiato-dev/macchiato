@@ -1,4 +1,5 @@
 import { ContentConflictError, ContentValidationError } from "@macchiato-dev/hub/content";
+import { projectSnapshotsEqual } from "@macchiato-dev/hub/project-history";
 import { readSession, refreshedSessionCookie, signOut } from "./auth/github.js";
 import { unseal } from "./auth/session.js";
 import { ServerMachineController } from "../server-use/src/machine-controller.js";
@@ -62,6 +63,7 @@ async function readProjectForm(resource) {
   }
   return {
     snapshot,
+    selectedVersion: form.get("selectedVersion") || "",
     values: ["intent", "csrf", "name", "slug", "description", "namespace", "template",
       "visibility", "versionTitle"].map(name => String(form.get(name) || "")),
   };
@@ -303,11 +305,18 @@ export function createResourcesServerMachine(module, {
               if (projectForm.snapshot === undefined) {
                 throw new ContentValidationError("snapshot", "project snapshot is invalid");
               }
-              result = await contentStore.saveProjectSnapshot(userId, projectId,
-                projectForm.snapshot, { reason: "manual" });
+              if (projectForm.selectedVersion) {
+                if (!/^[1-9][0-9]*$/.test(projectForm.selectedVersion))
+                  throw new ContentValidationError("version", "version is invalid");
+                const selected = await contentStore.getProjectVersion(projectId, Number(projectForm.selectedVersion), userId);
+                if (!selected || !projectSnapshotsEqual(selected, projectForm.snapshot))
+                  throw new ContentValidationError("version", "selected version does not match the submitted content");
+                result = true;
+              } else result = await contentStore.saveProjectSnapshot(userId, projectId,
+                  projectForm.snapshot, { reason: "manual" });
             } else if (operation === "publish" && input.length === 2) {
               result = await contentStore.publishProject(userId, projectId,
-                { title: values[8] });
+                { title: values[8], sequence: projectForm.selectedVersion ? Number(projectForm.selectedVersion) : null });
             } else if (operation === "delete" && input.length === 2) {
               result = await contentStore.deleteProject(userId, projectId);
             } else if (operation === "revert" && input.length === 2) {
