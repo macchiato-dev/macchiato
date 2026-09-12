@@ -4011,3 +4011,41 @@ The prior archive is preserved at
 Nothing was deployed to Bunny. Native-document sizing/painting and large-input
 latency remain open; the proposed separate rendering documents await a design
 decision rather than being introduced implicitly.
+
+### Indexed guest child reconciliation (2026-09-12)
+
+The `60bf70f` export replaces a quadratic membership scan in the guest's private
+child-lifetime mirror with a temporary lookup of live host-reference IDs. It
+does not cache public DOM reads, change event timing, or add a host operation.
+The host and controller JavaScript are unchanged. Both runtime environments
+and their matching bytecode/Wasm artifacts were rebuilt.
+
+All 97 browser regressions pass, including native/guest mutation behavior,
+live children, selection/reference scopes, callbacks and output modules.
+The expanded identity-cache fixture checks 100, 1,000 and 4,000 children,
+reordering, reparenting, removal, identity and release back to baseline. Five
+4,000-child reconciliations improve from 128–144ms to 23ms in the isolated
+comparison; see [typing performance](project-editor-typing-performance.md).
+
+The full project stress test passes in 73.5 seconds. Its 80-edit checkpoint is
+21.8 seconds, 106 KB paste is 174ms, and native insertion remains slow at 26.6
+seconds. These full-run observations are not a controlled timing comparison.
+Light/dark screenshots were inspected; editing, undo/redo, scrolling, output
+recovery, saved reload and phone views pass. Test-only browser tracing also
+identifies thousands of native layout passes during the large insertion,
+including in native CodeMirror; no tracing code is installed in production.
+
+Read-only saved-project checks pass for the cat game, Mahjong, 50 presentation
+slides and SQLite fragment navigation, including theme/phone checks. Both
+games pass again on the restarted local server, whose six host/controller/
+runtime/frame files match the export. No owner project or notes were saved.
+All 152 export and extracted-archive files verify; the compressed backend runs
+in Deno. Logs, captures and candidates are under
+`/root/macchiato-work/child-membership-*`.
+
+`/root/resources-bunny.tar.gz` has SHA-256
+`1464721e1ad42b020baa0edf37d3e2f946741e75113357d5de4103fdf7912fc8`.
+The preceding archive is retained at
+`/root/archive/2026/09/12/resources-bunny-6c51d01-before-child-membership.tar.gz`.
+No Bunny deployment occurred. The broader goal remains open, including the
+native-document layout decision and further editing-performance work.
