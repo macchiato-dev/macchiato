@@ -211,6 +211,7 @@ MicroQuickJS. A future collection index needs careful treatment of moving GC,
 weak entries, equality and insertion order; this change does not redesign it.
 Candidate/control logs and build-only source are under
 `/root/macchiato-work/child-membership-*`.
+
 ## Identity-keyed native collections
 
 `MACCHIATO_COLLECTION_CHECKPOINTS=1` adds test-only method counts, strong-map
@@ -241,8 +242,9 @@ callback fixtures passed. The bare runtime grew from 187,004 to 187,133 bytes.
 With collection counters disabled, the two candidate guest typing runs spent
 78–87 ms in DOM-tree updates versus 91–106 ms in the initial controls. View
 updates were 251–258 ms versus 264–275 ms. These are inclusive phase timings
-over eight keys, not a sixfold editor speedup. Adjacent control repetitions
-and retained native/guest/guest/native results are under
+over eight keys, not a sixfold editor speedup. Repeating the unchanged control
+afterward gave 40.7 ms for isolated lookups, 104–105 ms for DOM-tree updates,
+and 276–281 ms for view updates. Retained native/guest/guest/native results are under
 `/root/macchiato-work/collection-identity-*`; count/type/stack evidence is under
 `/root/macchiato-work/typing-collection-*`. Exact input, correction, undo/redo,
 and eventual highlighting assertions pass in each comparison.
