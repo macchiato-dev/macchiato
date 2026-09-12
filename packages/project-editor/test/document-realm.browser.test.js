@@ -51,6 +51,11 @@ test("DOM services belong to the granted document, not the controller realm", as
         frame.srcdoc = '<!doctype html><html><head><style>html{font-size:24px}body{margin:0}#sample{font-size:1rem}#own{height:1600px}</style></head><body><div id="own"><p id="sample">Child document text</p></div></body></html>';
         await new Promise(resolve => { frame.onload = resolve; document.body.append(frame); });
         const child = frame.contentWindow, doc = child.document;
+        // Cleanup must use face identity, not a family name shared by callers.
+        const fontBytes = Uint8Array.from(atob(font), character => character.charCodeAt(0));
+        const callerFont = await new child.FontFace("RealmFont", fontBytes).load();
+        doc.fonts.add(callerFont);
+        const cleanup = {};
         let customRuns = 0;
         child.customElements.define("realm-widget", class extends child.HTMLElement {
           constructor() { super(); customRuns++; }
@@ -71,7 +76,7 @@ test("DOM services belong to the granted document, not the controller realm", as
         try {
           await vm.onmsg(0);
           await call({ font });
-          await vm.onmsg(0); // Wait for approved font installation.
+          await vm.onmsg(0);
           await call({ scroll: true });
           await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
           const before = child.performance.now();
@@ -91,11 +96,44 @@ test("DOM services belong to the granted document, not the controller realm", as
           }
           let customError = null;
           try { await call({ custom: true }); } catch (error) { customError = String(error); }
-          return { reports, traces, customRuns, customError, links, forms, before, after,
+          return { reports, traces, customRuns, customError, links, forms, before, after, cleanup,
             parentScroll: scrollY, childScroll: child.scrollY,
             parentFonts: [...document.fonts].map(face => face.family),
             childFonts: [...doc.fonts].map(face => face.family) };
-        } finally { vm.destroy(); }
+        } finally {
+          vm.destroy();
+          cleanup.afterDestroy = doc.fonts.size;
+          cleanup.callerRetained = doc.fonts.has(callerFont);
+          // Let approval finish after its owner is gone. Observe real font
+          // load promises instead of sleeping for an assumed font-load time.
+          const nativeFontFace = child.FontFace, loading = [];
+          child.FontFace = new Proxy(nativeFontFace, { construct(target, args) {
+            const face = Reflect.construct(target, args);
+            loading.push(face.loaded);
+            return face;
+          } });
+          try {
+            for (const outcome of ["approved", "denied", "rejected"]) {
+              let approve, reject;
+              const pending = new Machine(module, grant === "document" ? doc : doc.getElementById("own"), {
+                stamp, allowFont: () => new Promise((resolve, fail) => { approve = resolve; reject = fail; }),
+              });
+              try {
+                await pending.onmsg(0);
+                pending.onmsg(new TextEncoder().encode("\u0002documentRealmProbe\0" + JSON.stringify({ font })));
+                if (!approve) throw Error("font approval was not requested");
+                pending.destroy();
+                if (outcome === "rejected") reject(new Error("approval unavailable"));
+                else approve(outcome === "approved");
+                await Promise.resolve();
+                await Promise.all(loading);
+                // Drain the continuation that installs a completed FontFace.
+                await new Promise(resolve => setTimeout(resolve, 0));
+                cleanup[outcome] = doc.fonts.size;
+              } finally { pending.destroy(); }
+            }
+          } finally { child.FontFace = nativeFontFace; }
+        }
       }, { grant, font: font.toString("base64"), navigate });
       const snapshot = JSON.parse(result.reports.at(-2));
       const now = snapshot.now; delete snapshot.now;
@@ -109,7 +147,9 @@ test("DOM services belong to the granted document, not the controller realm", as
       assert.equal(result.parentScroll, 0);
       assert.equal(result.childScroll, 120);
       assert.deepEqual(result.parentFonts, []);
-      assert.deepEqual(result.childFonts, ["RealmFont"]);
+      assert.deepEqual(result.childFonts, ["RealmFont", "RealmFont"]);
+      assert.deepEqual(result.cleanup, { afterDestroy: 1, callerRetained: true, approved: 1, denied: 1, rejected: 1 },
+        "only this machine's fonts are removed, and late approval cannot reinstall them");
       assert.equal(result.customRuns, 0, "the child custom-element registry must not bypass the allowlist");
       assert.match(result.customError, /not allowed/);
       assert.deepEqual(result.links, [navigate === "self", false], "srcdoc inherits its origin, not its about: URL's origin");
