@@ -93,13 +93,22 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
       const { Machine, QuickJSRuntime } = await import("/module.js");
       const module = await WebAssembly.compileStreaming(fetch("/guest.wasm"));
       const runtime = engine === "quickjs" ? new QuickJSRuntime(module) : null;
+      const heldObservers = new Set();
       const machine = new Machine(runtime ? runtime.createSession() : module, document.getElementById("mount"), {
         stamp: runtime ? undefined : new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]),
         onMessage: message => { if (!message.startsWith("__wwcResponse:")) notices.push(JSON.parse(message)); },
+        onReferenceLease(id, count, object) {
+          if (object instanceof IntersectionObserver) {
+            if (count) heldObservers.add(id); else heldObservers.delete(id);
+          }
+        },
       });
       await machine.onmsg(0);
       if (runtime) machine.onmsg(new TextEncoder().encode("\u0001" + source));
       window.command = value => machine.onmsg(new TextEncoder().encode("\u0002intersectionCommand\0" + JSON.stringify(value)));
+      window.collect = value => machine.onmsg(new TextEncoder().encode("\u0002collectIntersectionObservers\0" + JSON.stringify(value)));
+      window.orphan = () => machine.onmsg(new TextEncoder().encode("\u0002orphanIntersectionObserver\0"));
+      window.observerLeases = () => heldObservers.size;
       window.dispose = () => { machine.destroy(); runtime?.destroy(); };
     }, { engine, source });
     async function expect(count, visible, ratio) {
@@ -107,6 +116,7 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
       assert.deepEqual(await target.evaluate(() => notices.at(-1)), {
         entries: [{ target: "observed", visible, ratio, size: [100, 40] }],
         observerIdentity: true, receiver: true,
+        root: true, margin: "0px 0px 0px 0px", thresholds: [0, 0.5, 1],
       });
     }
     try {
@@ -124,6 +134,34 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
         await expect(1, false, 0);
         await target.locator("#scroller").evaluate(node => { node.scrollTop = 200; });
         await expect(2, true, 1);
+      }
+      await target.evaluate(() => {
+        command("disconnect");
+        document.getElementById("observed").style.height = "80px";
+        command("retained");
+      });
+      assert.deepEqual(await target.evaluate(() => notices.at(-1)), { retained: { ratio: 1, target: "observed", size: [100, 40] } });
+      await target.evaluate(() => command("configuration"));
+      assert.deepEqual(await target.evaluate(() => notices.at(-1)), { config: { root: true,
+        margin: "1px 2% 1px 2%", thresholds: [0, 0.5, 0.5, 1], empty: 0 } });
+      if (engine === "microquickjs") {
+        const lifetime = await target.evaluate(() => {
+          collect(false);
+          const baseline = observerLeases(), samples = [];
+          for (let round = 0; round < 12; round++) {
+            collect(true); collect(false);
+            samples.push({ ...notices.at(-1).lifetime, held: observerLeases() - baseline });
+          }
+          return { baseline, samples };
+        });
+        t.diagnostic(JSON.stringify(lifetime));
+        assert.ok(lifetime.samples.every(sample => sample.held === 0 && sample.active === 0 && sample.slots <= 26 && sample.cells <= 27),
+          "unobserved unreachable observers release leases and their callback slots stay bounded");
+        await target.evaluate(() => orphan());
+        await target.waitForFunction(() => notices.some(notice => notice.orphanCallback), null, { timeout: 2000 });
+        assert.deepEqual(await target.evaluate(() => notices.find(notice => notice.orphanCallback)), { orphanCallback: true, callbackOwner: true });
+        await target.evaluate(() => collect(false));
+        assert.equal(await target.evaluate(() => observerLeases()), lifetime.baseline);
       }
       assert.deepEqual(errors, []);
       assert.deepEqual(unexpected, []);

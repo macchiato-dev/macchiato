@@ -1306,9 +1306,11 @@ Object.defineProperty(GuestIntersectionObserver.prototype, "thresholds", { get: 
     var length = hostGet(reference, "length");
     for (var index = 0; index < length; index++) values.push(hostCall(reference, "item", [index]));
     releaseHostReferenceLease(reference);
-    this._thresholds = Object.freeze(values);
+    this._thresholds = values;
   }
-  return this._thresholds;
+  // MicroQuickJS's minimal platform has no Object.freeze implementation. Never
+  // expose our stored configuration there; a changed copy cannot change it.
+  return Object.freeze(this._thresholds.slice());
 } });
 GuestIntersectionObserver.prototype.observe = function (target) {
   if (!(target instanceof GuestElement) || target.nodeType !== 1) throw new TypeError("element required");

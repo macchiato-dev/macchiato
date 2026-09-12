@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { chromium } from "playwright";
 
-test("CodeMirror remeasures wrapping and gutters when only its pane changes size", { timeout: 60_000 }, async t => {
+test("CodeMirror follows native pane resizing and visibility without input", { timeout: 60_000 }, async t => {
   const root = new URL("../../../", import.meta.url).pathname;
   const work = resolve(root, "../macchiato-work");
   await mkdir(work, { recursive: true });
@@ -114,6 +114,20 @@ test("CodeMirror remeasures wrapping and gutters when only its pane changes size
           await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
           await page.screenshot({ path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, `${mode}-${width}.png`) });
         }
+      }
+      // Moving the pane changes intersection without resizing it or sending
+      // scroll/input events. The observer must wake CodeMirror when it returns.
+      for (const visible of [false, true, false, true]) {
+        await page.locator("#pane").evaluate((node, visible) => {
+          node.style.transform = visible ? "none" : "translateY(1200px)";
+        }, visible);
+        await page.waitForFunction(visible => {
+          const state = inspectPane();
+          // Native CodeMirror can leave its last measured inView value cached
+          // while offscreen; its observer flag changes immediately instead.
+          return state.intersecting === visible && (!visible || state.inView);
+        }, visible, { timeout: 3000 });
+        assert.equal(await page.evaluate(() => inspectPane().document), original);
       }
       await page.locator(".cm-content").click();
       await page.keyboard.press("Control+Home");
