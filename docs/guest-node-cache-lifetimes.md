@@ -38,6 +38,20 @@ separate from collection of the targets. The regression checks bounded index
 growth, retained subtrees, guest properties, reinsertion, cyclic targets, invalid
 primitive arguments, and releasing a previously retained subtree.
 
+Correct collection exposed another lifetime dependency: queued DOM calls held
+only numeric receiver/argument IDs. An intervening collection could release a
+node before the queued operation used it. Queued receivers now retain their
+wrapper, and encoded reference arguments carry a guest-only wrapper entry. The
+wire writer still sends exactly the same numeric IDs. No extra host permission,
+round trip, or wire-format change is involved.
+
+The focused browser regression now passes 20 rounds of 100 removals, followed by
+five more rounds while retaining a detached subtree. Every unretained round
+returns to the baseline lease count; the retained subtree adds two leases, both
+released when its guest reference is dropped. The rotating cache remains at 102
+entries rather than growing with all 2,500 temporary nodes. Whole-editor and
+deployment validation are still needed before publishing this candidate.
+
 ## Separate observer discrepancy
 
 `packages/project-editor/test/intersection-observer.browser.test.js` records a

@@ -51,7 +51,9 @@ function stringIndex(text) {
 }
 
 function encode(value) {
-  if (value instanceof GuestObject) return ["r", value.reference];
+  // Keep the wrapper alive while a queued call still needs its reference.
+  // The third entry is guest-only; writeValue sends only the numeric ID.
+  if (value instanceof GuestObject) return ["r", value.reference, value];
   // Only operation names are interned. DOM text, input values and method
   // arguments must not keep every old edit alive for the lifetime of the VM.
   return value;
@@ -240,7 +242,9 @@ function exchange(operations) {
     var operation = operations[index];
     writer.byte(operation[0]);
     if (operation[0] === 0) continue;
-    writer.uint(operation[1]);
+    // Queued receivers own their wrapper until exchange completes. Immediate
+    // calls and document-level operations may still supply a numeric ID.
+    writer.uint(typeof operation[1] === "number" ? operation[1] : operation[1].reference);
     writer.uint(operation[2]);
     if (operation[0] === 2) writeValue(writer, operation[3]);
     if (operation[0] === 3) {
@@ -362,7 +366,7 @@ GuestElement.prototype = Object.create(GuestObject.prototype);
       if (name === "className" && globalThis.__wwcProjectClassName) {
         projected = globalThis.__wwcProjectClassName(projected);
       }
-      pendingOperations.push([2, this.reference, stringIndex(name), encode(projected)]);
+      pendingOperations.push([2, this, stringIndex(name), encode(projected)]);
     }
   });
 });
@@ -386,17 +390,17 @@ Object.defineProperty(GuestElement.prototype, "style", {
 GuestElement.prototype.append = function () {
   var args = [];
   for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
-  pendingOperations.push([3, this.reference, stringIndex("append"), args]);
+  pendingOperations.push([3, this, stringIndex("append"), args]);
 };
 
 GuestElement.prototype.replaceChildren = function () {
   var args = [];
   for (var index = 0; index < arguments.length; index++) args.push(encode(arguments[index]));
-  pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
+  pendingOperations.push([3, this, stringIndex("replaceChildren"), args]);
 };
 
 GuestElement.prototype.setAttribute = function (name, value) {
-  pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [
+  pendingOperations.push([3, this, stringIndex("setAttribute"), [
     encode(name), encode(value)
   ]]);
 };
@@ -420,12 +424,12 @@ GuestElement.prototype.select = function () {
 };
 
 GuestElement.prototype.remove = function () {
-  pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
+  pendingOperations.push([3, this, stringIndex("remove"), []]);
 };
 
 GuestElement.prototype.addEventListener = function (type, callback) {
   var index = allocateCallback(callback, false);
-  pendingOperations.push([4, this.reference, stringIndex(type), index]);
+  pendingOperations.push([4, this, stringIndex(type), index]);
 };
 
 function GuestEvent(reference) {
@@ -493,7 +497,7 @@ GuestDocument.prototype.getElementById = function (id) {
 
 GuestDocument.prototype.addEventListener = function (type, callback) {
   var index = allocateCallback(callback, false);
-  pendingOperations.push([4, this.reference, stringIndex(type), index]);
+  pendingOperations.push([4, this, stringIndex(type), index]);
 };
 
 function decodeBase64(source) {

@@ -389,7 +389,7 @@ GuestElement.prototype.matches = function (selector) {
       // data uses LegacyNullToEmptyString; the nullable Node properties also
       // turn undefined into empty text, while data stringifies undefined.
       value = (name === "data" ? value === null : value == null) ? "" : String(value);
-      pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
+      pendingOperations.push([2, this, stringIndex(name), encode(value)]);
     }
   });
 });
@@ -504,7 +504,7 @@ Object.defineProperty(GuestElement.prototype, "className", {
 });
 Object.defineProperty(GuestElement.prototype, "innerHTML", {
   set: function (value) {
-    pendingOperations.push([2, this.reference, stringIndex("innerHTML"), encode(String(value))]);
+    pendingOperations.push([2, this, stringIndex("innerHTML"), encode(String(value))]);
   }
 });
 
@@ -587,13 +587,13 @@ GuestElement.prototype.getContext = function (type, options) {
 ["fillStyle", "strokeStyle"].forEach(function (name) {
   Object.defineProperty(GuestCanvasContext.prototype, name, {
     set: function (value) {
-      pendingOperations.push([2, this.reference, stringIndex(name), encode(value)]);
+      pendingOperations.push([2, this, stringIndex(name), encode(value)]);
     }
   });
 });
 Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
   set: function (value) {
-    pendingOperations.push([2, this.reference, stringIndex("lineWidth"),
+    pendingOperations.push([2, this, stringIndex("lineWidth"),
       encode(Math.round(Number(value) * 1024))]);
   }
 });
@@ -605,7 +605,7 @@ Object.defineProperty(GuestCanvasContext.prototype, "lineWidth", {
     for (var index = 0; index < values.length; index++) {
       args.push(encode(Math.round(Number(values[index]) * 1024)));
     }
-    pendingOperations.push([3, this.reference, stringIndex(name), args]);
+    pendingOperations.push([3, this, stringIndex(name), args]);
   };
 });
 var webGLConstants = {
@@ -939,7 +939,7 @@ function inlineCssBytes(source) {
 }
 GuestStyle.prototype.installDeclarationOperations = function (bytes) {
   if (!(bytes instanceof Uint8Array)) throw new TypeError("inline style operations must be bytes");
-  pendingOperations.push([3, this.reference, stringIndex("replaceDeclarations"), [encode(bytes)]]);
+  pendingOperations.push([3, this, stringIndex("replaceDeclarations"), [encode(bytes)]]);
 };
 Object.defineProperty(GuestStyle.prototype, "cssText", {
   get: function () {
@@ -947,19 +947,19 @@ Object.defineProperty(GuestStyle.prototype, "cssText", {
   },
   set: function (value) {
     this._cssText = String(value);
-    pendingOperations.push([3, this.reference, stringIndex("replaceDeclarations"), [
+    pendingOperations.push([3, this, stringIndex("replaceDeclarations"), [
       encode(inlineCssBytes(this._cssText))
     ]]);
   }
 });
 GuestStyle.prototype.setProperty = function (name, value, priority) {
   var suffix = priority ? " !" + priority : "";
-  pendingOperations.push([3, this.reference, stringIndex("applyDeclarations"), [
+  pendingOperations.push([3, this, stringIndex("applyDeclarations"), [
     encode(inlineCssBytes(String(name) + ": " + String(value) + suffix + ";"))
   ]]);
 };
 GuestStyle.prototype.removeProperty = function (name) {
-  pendingOperations.push([3, this.reference, stringIndex("removeProperty"), [encode(String(name))]]);
+  pendingOperations.push([3, this, stringIndex("removeProperty"), [encode(String(name))]]);
   return "";
 };
 
@@ -1514,7 +1514,7 @@ GuestElement.prototype.addEventListener = function (type, callback, options) {
   var index = local ? -1 : allocateElementCallback(callback, this);
   var capture = options === true || Boolean(options && options.capture);
   records.push({ type: type, callback: callback, index: index, capture: capture, local: local });
-  if (!local) pendingOperations.push([4, this.reference, stringIndex(type), index, capture]);
+  if (!local) pendingOperations.push([4, this, stringIndex(type), index, capture]);
 };
 GuestElement.prototype.removeEventListener = function (type, callback) {
   var records = this._eventListeners || [];
@@ -1551,7 +1551,7 @@ GuestDocument.prototype.addEventListener = function (type, callback, options) {
 
 Object.defineProperty(GuestElement.prototype, "tabIndex", {
   set: function (value) {
-    pendingOperations.push([2, this.reference, stringIndex("tabIndex"), encode(value)]);
+    pendingOperations.push([2, this, stringIndex("tabIndex"), encode(value)]);
   }
 });
 Object.defineProperty(GuestElement.prototype, "hidden", {
@@ -1609,14 +1609,14 @@ GuestElement.prototype.appendChild = function (child) {
       setParent(fragmentChild, this);
       if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
     }
-    pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
+    pendingOperations.push([3, this, stringIndex("appendChild"), [encode(child)]]);
     return child;
   }
   detachGuestNode(child);
   childrenOf(this).push(child);
   setParent(child, this);
   if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
-  pendingOperations.push([3, this.reference, stringIndex("appendChild"), [encode(child)]]);
+  pendingOperations.push([3, this, stringIndex("appendChild"), [encode(child)]]);
   return child;
 };
 GuestElement.prototype.insertBefore = function (child, next) {
@@ -1637,7 +1637,7 @@ GuestElement.prototype.insertBefore = function (child, next) {
       setParent(fragmentChild, this);
       if (guestNodeIsConnected(fragmentChild)) notifyGuestConnection(fragmentChild, true);
     }
-    pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [
+    pendingOperations.push([3, this, stringIndex("insertBefore"), [
       encode(child), encode(next)
     ]]);
     return child;
@@ -1649,7 +1649,7 @@ GuestElement.prototype.insertBefore = function (child, next) {
   children.splice(index, 0, child);
   setParent(child, this);
   if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
-  pendingOperations.push([3, this.reference, stringIndex("insertBefore"), [
+  pendingOperations.push([3, this, stringIndex("insertBefore"), [
     encode(child), encode(next)
   ]]);
   return child;
@@ -1657,14 +1657,14 @@ GuestElement.prototype.insertBefore = function (child, next) {
 GuestElement.prototype.removeChild = function (child) {
   if (parentOf(child) !== this) throw new TypeError("node is not a child");
   detachGuestNode(child);
-  pendingOperations.push([3, this.reference, stringIndex("removeChild"), [encode(child)]]);
+  pendingOperations.push([3, this, stringIndex("removeChild"), [encode(child)]]);
   return child;
 };
 // The base element facade has its own remove(). Override it too, otherwise
 // elements bypass this tree-cache update while text nodes use it correctly.
 GuestElement.prototype.remove = GuestObject.prototype.remove = function () {
   detachGuestNode(this);
-  pendingOperations.push([3, this.reference, stringIndex("remove"), []]);
+  pendingOperations.push([3, this, stringIndex("remove"), []]);
 };
 GuestObject.prototype.before = function (node) {
   var parent = parentOf(this);
@@ -1701,7 +1701,7 @@ GuestElement.prototype.replaceChildren = function (...values) {
     if (guestNodeIsConnected(child)) notifyGuestConnection(child, true);
     args.push(encode(child));
   }
-  pendingOperations.push([3, this.reference, stringIndex("replaceChildren"), args]);
+  pendingOperations.push([3, this, stringIndex("replaceChildren"), args]);
 };
 
 // Keep known attributes for enumeration; individual reads must observe the
@@ -1735,14 +1735,14 @@ GuestElement.prototype.setAttribute = function (name, value) {
     this.style.cssText = text;
     return;
   }
-  pendingOperations.push([3, this.reference, stringIndex("setAttribute"), [
+  pendingOperations.push([3, this, stringIndex("setAttribute"), [
     encode(String(name)), encode(text)
   ]]);
 };
 GuestElement.prototype.removeAttribute = function (name) {
   var values = this._attributeValues || (this._attributeValues = Object.create(null));
   delete values[name];
-  pendingOperations.push([3, this.reference, stringIndex("removeAttribute"), [
+  pendingOperations.push([3, this, stringIndex("removeAttribute"), [
     encode(String(name))
   ]]);
 };
