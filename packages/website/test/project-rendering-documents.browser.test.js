@@ -21,7 +21,7 @@ test("independent rendering documents share an engine without sharing page state
     #sample { width:10rem; height:2rem; background:#b8c8ef; }
     #space { width:1000px; height:1000px; }
   </style></head><body><div id="sample"></div><button id="counter">0</button>
-  <div id="space"></div><script>
+  <input id="draft" value="Unsaved note"><div id="space"></div><script>
     globalThis.appOnly = true;
     var count = 0;
     document.getElementById('counter').addEventListener('click', function () {
@@ -57,11 +57,11 @@ test("independent rendering documents share an engine without sharing page state
       font-display:swap; src:url(data:font/woff2;base64,${font.toString("base64")}); }`);
   const browser = await chromium.launch();
   t.after(() => browser.close());
-  const page = await browser.newPage({ viewport: { width: 1240, height: 600 } });
-  await page.emulateMedia({ colorScheme: "light" });
+  const browserPage = await browser.newPage({ viewport: { width: 1240, height: 600 } });
+  await browserPage.emulateMedia({ colorScheme: "light" });
   const errors = [], unexpected = [];
-  page.on("pageerror", error => errors.push(error.message));
-  await page.route("**/*", route => {
+  browserPage.on("pageerror", error => errors.push(error.message));
+  await browserPage.route("**/*", route => {
     const url = new URL(route.request().url());
     if (url.origin !== "http://rendering.test") { unexpected.push(url.href); return route.abort(); }
     if (url.pathname === "/module.js") return route.fulfill({ body: code, contentType: "text/javascript" });
@@ -69,14 +69,22 @@ test("independent rendering documents share an engine without sharing page state
     if (url.pathname === "/native") return route.fulfill({ body: source(20), contentType: "text/html" });
     if (url.pathname === "/native-font") return route.fulfill({ body: nativeFontSource, contentType: "text/html" });
     if (url.pathname === "/") return route.fulfill({ contentType: "text/html", body: `<!doctype html>
+      <style>html,body{margin:0;height:100%}#output{display:block;width:100%;height:100%;border:0}</style>
+      <iframe id="output" src="/controller" allow="fullscreen"></iframe>` });
+    if (url.pathname === "/controller") return route.fulfill({ contentType: "text/html", body: `<!doctype html>
       <style>body{margin:0}#comparison{display:flex;gap:20px}
       #mount{position:relative;width:600px;height:400px}iframe{width:600px;height:400px;border:0;flex:none}
-      #mount iframe{position:absolute;inset:0;width:100%;height:100%}</style>
+      #mount iframe{position:absolute;inset:0;width:100%;height:100%}
+      #mount.expanded,#mount:fullscreen{position:fixed;inset:0;width:100vw!important;height:100vh!important;z-index:2}
+      #controls{position:fixed;right:8px;top:8px;z-index:3}</style>
       <div id="comparison"><iframe id="native" src="/native"></iframe><div id="mount"></div></div>
+      <div id="controls"><button id="expanded">Toggle expanded</button><button id="fullscreen">Fullscreen</button></div>
       <p id="controller-private">Controller only</p>` });
     unexpected.push(url.href); return route.abort();
   });
-  await page.goto("http://rendering.test/");
+  await browserPage.goto("http://rendering.test/");
+  const page = browserPage.frames().find(frame => new URL(frame.url()).pathname === '/controller');
+  assert.ok(page, "the controller belongs to the persistent output iframe");
   await page.evaluate(async () => {
     const { Machine, QuickJSRuntime } = await import("/module.js");
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
@@ -149,6 +157,10 @@ test("independent rendering documents share an engine without sharing page state
         frame: !!item.frame.deref(), document: !!item.document.deref() })); },
       destroy() { for (const id of entries.keys()) this.remove(id); engine.destroy(); },
     };
+    document.querySelector('#expanded').onclick = () => {
+      mount.classList.toggle('expanded');
+    };
+    document.querySelector('#fullscreen').onclick = () => mount.requestFullscreen();
   });
   const prepare = program => page.evaluate(program => experiment.prepare(program), program);
   const reveal = id => page.evaluate(id => experiment.reveal(id), id);
@@ -164,20 +176,26 @@ test("independent rendering documents share an engine without sharing page state
   }, selector);
   const count = id => page.evaluate(selector =>
     document.querySelector(selector).contentDocument.querySelector('#counter').textContent, view(id));
-  async function clickCounter(id) {
+  // Inspect the native caret rather than broadening guest permissions for a
+  // test probe. The app still reads its value through the existing bridge.
+  const draftState = id => page.evaluate(selector => {
+    const input = document.querySelector(selector).contentDocument.querySelector('#draft');
+    return [input.value, input.selectionStart];
+  }, view(id));
+  async function clickApp(id, selector = '#counter') {
     // FrameLocator creates DevTools frame-element handles that outlive the
     // action in this Chromium build. Coordinate input avoids that test-owned
     // retention while still delivering actual browser pointer/focus events.
-    const point = await page.evaluate(selector => {
-      const frame = document.querySelector(selector), outer = frame.getBoundingClientRect();
-      const rect = frame.contentDocument.querySelector('#counter').getBoundingClientRect();
+    const point = await page.evaluate(({ frameSelector, selector }) => {
+      const frame = document.querySelector(frameSelector), outer = frame.getBoundingClientRect();
+      const rect = frame.contentDocument.querySelector(selector).getBoundingClientRect();
       return { x: outer.x + rect.x + rect.width / 2, y: outer.y + rect.y + rect.height / 2 };
-    }, view(id));
-    await page.mouse.click(point.x, point.y);
+    }, { frameSelector: view(id), selector });
+    await browserPage.mouse.click(point.x, point.y);
   }
   async function pixel(selector) {
     const box = await page.locator(selector).boundingBox();
-    const png = await page.screenshot({ clip: { x: box.x + 8, y: box.y + 8, width: 1, height: 1 } });
+    const png = await browserPage.screenshot({ clip: { x: box.x + 8, y: box.y + 8, width: 1, height: 1 } });
     return page.evaluate(async bytes => {
       const bitmap = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
       const canvas = document.createElement("canvas"); canvas.width = canvas.height = 1;
@@ -187,6 +205,8 @@ test("independent rendering documents share an engine without sharing page state
   }
   try {
     const first = await prepare(programs[0]);
+    assert.equal(await browserPage.evaluate(() => typeof experiment), 'undefined',
+      "no interpreter/controller is installed in the website's realm");
     await reveal(first);
     assert.deepEqual(await measure(view(first)), await measure(native));
     t.diagnostic(JSON.stringify({ root: 20, native: await measure(native), actual: await measure(view(first)) }));
@@ -194,8 +214,8 @@ test("independent rendering documents share an engine without sharing page state
     assert.deepEqual(await pixel("#mount"), await pixel("#native"));
     const second = await prepare(programs[1]);
     assert.equal((await measure(view(second))).box[2], 240, "hidden replacement has native rem layout");
-    await clickCounter(first);
-    await page.keyboard.press("ArrowRight");
+    await clickApp(first);
+    await browserPage.keyboard.press("ArrowRight");
     assert.equal(await count(first), "2", "active app keeps handling input");
     assert.equal(await count(second), "0", "session globals and events are independent");
     for (const id of [first, second]) {
@@ -220,9 +240,9 @@ test("independent rendering documents share an engine without sharing page state
     t.diagnostic(JSON.stringify({ root: 24, native: await measure(native), actual: await measure(view(second)) }));
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {
       await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
-      await page.screenshot({ path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, "equal-documents.png") });
+      await browserPage.screenshot({ path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, "equal-documents.png") });
     }
-    await clickCounter(second);
+    await clickApp(second);
     assert.equal(await count(second), "1");
     // A failed replacement must leave the existing app and its state intact.
     const broken = { ...programs[0], scripts: [{ code: "throw new Error('Replacement failed')" }] };
@@ -247,7 +267,7 @@ test("independent rendering documents share an engine without sharing page state
       matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { themeEvents++; });
     `), second);
     for (const [colorScheme, count] of [["dark", 1], ["light", 2], ["dark", 3]]) {
-      await page.emulateMedia({ colorScheme });
+      await browserPage.emulateMedia({ colorScheme });
       await page.waitForFunction(({ id, count }) => experiment.report(id, 'themeEvents') === count, { id: second, count });
       assert.equal(await report(second, "matchMedia('(prefers-color-scheme: dark)').matches"), colorScheme === 'dark');
     }
@@ -276,8 +296,8 @@ test("independent rendering documents share an engine without sharing page state
       assert.equal(await report(pending, "typeof startupWidth"), "undefined",
         "application startup must wait for its stylesheet font, not measure fallback glyphs");
       const before = Number(await count(second));
-      await clickCounter(second);
-      await page.keyboard.press("ArrowRight");
+      await clickApp(second);
+      await browserPage.keyboard.press("ArrowRight");
       assert.equal(Number(await count(second)), before + 2, "old output stays interactive while font approval waits");
       const paints = await page.evaluate(async () => {
         const samples = [];
@@ -314,23 +334,67 @@ test("independent rendering documents share an engine without sharing page state
       await reveal(pending);
       assert.deepEqual(await pixel('#mount'), [246, 227, 232, 255]);
       assert.deepEqual(await pixel('#mount'), await pixel('#native'));
-      await clickCounter(pending);
-      await page.keyboard.press('ArrowRight');
+      await clickApp(pending);
+      await browserPage.keyboard.press('ArrowRight');
       assert.equal(await count(pending), '2', "new document receives input after the handoff");
       t.diagnostic(JSON.stringify({ nativeFontWidth, startupWidth, heldFrames: paints.length, allowed }));
-      if (process.env.MACCHIATO_TEST_ARTIFACTS) await page.screenshot({
+      if (process.env.MACCHIATO_TEST_ARTIFACTS) await browserPage.screenshot({
         path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, 'font-handoff.png'),
       });
+    }
+    const active = await page.evaluate(() => experiment.state().active);
+    await clickApp(active, '#draft');
+    await browserPage.keyboard.press('End');
+    await browserPage.keyboard.type(' in progress');
+    let draft = 'Unsaved note in progress';
+    const counterBeforeModes = await count(active);
+    const controllerDocument = await browserPage.evaluate(() => {
+      window.outputDocument = document.querySelector('#output').contentDocument;
+      return window.outputDocument.location.pathname;
+    });
+    assert.equal(controllerDocument, '/controller');
+    for (const mode of ['expanded', 'fullscreen', 'expanded', 'fullscreen']) {
+      const before = await draftState(active);
+      assert.deepEqual(before, [draft, draft.length]);
+      await page.locator('#' + mode).click();
+      if (mode === 'fullscreen') await page.waitForFunction(() => document.fullscreenElement?.id === 'mount');
+      await browserPage.keyboard.type('!');
+      draft += '!';
+      assert.deepEqual(await draftState(active),
+        [draft, draft.length], mode + ' restores input focus and the existing caret without an extra click');
+      const viewport = await page.evaluate(() => {
+        const mount = document.querySelector('#mount');
+        return [mount.clientWidth, mount.clientHeight];
+      });
+      assert.deepEqual(await report(active, '[innerWidth, innerHeight]'), viewport);
+      assert.deepEqual(await pixel('#mount'), [246, 227, 232, 255]);
+      assert.equal(await count(active), counterBeforeModes);
+      assert.deepEqual(await page.evaluate(() => experiment.state()), { active, frames: 1, sessions: 1 });
+      if (process.env.MACCHIATO_TEST_ARTIFACTS) await browserPage.screenshot({
+        path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, mode + '-document.png'),
+      });
+      if (mode === 'fullscreen') {
+        await page.evaluate(() => document.exitFullscreen());
+        await page.waitForFunction(() => !document.fullscreenElement);
+      } else await page.locator('#expanded').click();
+      await browserPage.keyboard.type('?');
+      draft += '?';
+      assert.equal(await report(active, 'document.getElementById("draft").value'), draft,
+        mode + ' exit also restores the input focus');
+      assert.deepEqual(await report(active, '[innerWidth, innerHeight]'), [600, 400]);
+      assert.equal(await browserPage.evaluate(() => window.outputDocument === document.querySelector('#output').contentDocument), true,
+        'view modes preserve the controller document and engine');
+      t.diagnostic(JSON.stringify({ mode, viewport, draft, active }));
     }
     for (let index = 0; index < 10; index++) await reveal(await prepare(programs[index % 2]));
     assert.equal(await page.locator("#mount iframe").count(), 1);
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {
       await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
-      await page.screenshot({ path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, "rendering-documents.png") });
+      await browserPage.screenshot({ path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, "rendering-documents.png") });
     }
     await page.evaluate(() => experiment.destroy());
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const client = await page.context().newCDPSession(page);
+    const client = await browserPage.context().newCDPSession(browserPage);
     await client.send("Log.clear");
     await client.send("Runtime.discardConsoleEntries");
     await client.send("HeapProfiler.collectGarbage");
