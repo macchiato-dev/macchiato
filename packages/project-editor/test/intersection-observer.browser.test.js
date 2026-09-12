@@ -82,7 +82,7 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
       if (engine === "native") {
         window.__wwcPostMessage = message => notices.push(JSON.parse(message));
         (0, eval)(source);
-        window.command = value => intersectionCommand(value);
+        window.command = value => intersectionCommand(JSON.stringify(value));
         window.dispose = () => intersectionObserver.disconnect();
         return;
       }

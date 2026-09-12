@@ -3825,3 +3825,37 @@ Its predecessor is preserved as
 `/root/archive/2026/09/11/resources-bunny-42457b9-before-output-lifecycle.tar.gz`.
 No Bunny deployment was performed. Native-document sizing/painting and parser
 latency remain unresolved; this checkpoint does not complete the broader goal.
+
+### Weak node identity and finalizer checkpoint (2026-09-12)
+
+The `f2e3355` export removes the strong MicroQuickJS WeakRef fallback, gives the
+node identity cache collector-aware cells, and finalizes every object when the
+C collector coalesces dead blocks. Queued DOM calls retain their receivers and
+reference arguments until exchange; the wire format and host permissions are
+unchanged. See [guest node-cache lifetimes](guest-node-cache-lifetimes.md).
+
+The new lifetime test returns to its original host-lease count after 2,500
+temporary nodes, and preserves a retained subtree's identity, properties and
+reinsertion. Runtime regressions report 32 passes and two existing, executing
+IntersectionObserver TODO failures. The full editor stress test passes in 62
+seconds, versus 84 at the previous checkpoint. Its 106 KB native insertion takes
+19.9 seconds versus 30.9; the paste takes 0.86 seconds versus 1.12. These are
+checkpoint observations, not a controlled claim that all typing is faster.
+The separate native/MicroQuickJS comparison still shows substantial per-key
+view-update overhead. Light and dark screenshots were inspected.
+
+Read-only saved-project checks pass for the cat game (all eight pairs and reset),
+Mahjong (144 tiles and full-height surface), 50 successive tour slides, and SQLite
+fragment navigation, with theme/phone checks. Cat and Mahjong pass again against
+the restarted live server. Six live host/controller/runtime/frame files match
+the export exactly. No owner project was saved. Evidence is under
+`/root/macchiato-work/weak-node-cache-*`.
+
+The export and extracted archive pass all 152 manifest checks; the compressed
+backend artifact executes its routing/document guests in Deno.
+`/root/resources-bunny.tar.gz` now has SHA-256
+`8e576fce5acf2a8adef886c6cf6724b0cdab657e9bc1b661a360c0204bd35489`.
+The previous archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-80adaab-before-weak-node-cache.tar.gz`.
+No Bunny deployment was performed. The native-document and observer gaps and
+remaining parser/view-update latency still leave the broader goal incomplete.

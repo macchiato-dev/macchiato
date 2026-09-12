@@ -10,6 +10,7 @@ var intersectionObserver = new IntersectionObserver(function (entries, observer)
 }, { root: intersectionRoot, threshold: [0, 0.5, 1] });
 intersectionObserver.observe(intersectionTarget);
 function intersectionCommand(value) {
+  value = JSON.parse(value);
   if (value === "disconnect") intersectionObserver.disconnect();
   else if (value === "unobserve") intersectionObserver.unobserve(intersectionTarget);
   else if (value === "observe") intersectionObserver.observe(intersectionTarget);

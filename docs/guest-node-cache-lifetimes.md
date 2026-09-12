@@ -49,8 +49,25 @@ The focused browser regression now passes 20 rounds of 100 removals, followed by
 five more rounds while retaining a detached subtree. Every unretained round
 returns to the baseline lease count; the retained subtree adds two leases, both
 released when its guest reference is dropped. The rotating cache remains at 102
-entries rather than growing with all 2,500 temporary nodes. Whole-editor and
-deployment validation are still needed before publishing this candidate.
+entries rather than growing with all 2,500 temporary nodes.
+
+## Integration checks
+
+The rebuilt `f2e3355` export passes the runtime regression group (32 passes,
+with the two known IntersectionObserver parity TODOs still failing), the full
+project-editor stress test, all 152 deployment-manifest checks, and compressed
+backend execution in Deno. The stress run includes 80 edits, undo/redo, scrolling,
+save/reload, output-error recovery, phone views, and large paste/native input.
+The light and dark screenshots were inspected. Local evidence is in
+`/root/macchiato-work/weak-node-cache-*`.
+
+The isolated 106 KB JavaScript comparison also passes native/MicroQuickJS/
+MicroQuickJS/native runs with identical editor sources and per-key text checks.
+With the initial parse completed before typing, the two guest runs spend
+284–285 ms in view updates over eight keys and 95–96 ms in DOM-tree updates.
+Those are inclusive diagnostic timings, not independent costs to add together.
+This remains much slower than native and does not resolve the parser/view-update
+performance work. No forced full parse was added to production.
 
 ## Separate observer discrepancy
 
