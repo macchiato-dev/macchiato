@@ -1078,6 +1078,7 @@ var WasmWebBridge = class {
     const intersectionObservers = /* @__PURE__ */ new Map();
     const intersectionCallbacks = /* @__PURE__ */ new WeakMap();
     const serviceSubscriptions = /* @__PURE__ */ new Set();
+    const scheduler = globalThis;
     const timers = /* @__PURE__ */ new Map();
     const frames = /* @__PURE__ */ new Map();
     let nextFrame = 1;
@@ -1585,7 +1586,7 @@ var WasmWebBridge = class {
     }
     function scheduleTimeout(callback, delay) {
       const id = nextTimer++;
-      const handle = realm.setTimeout(() => {
+      const handle = scheduler.setTimeout(() => {
         timers.delete(id);
         deliver(callback);
       }, delay);
@@ -1595,7 +1596,7 @@ var WasmWebBridge = class {
     function cancelFrame(id) {
       const frame = frames.get(id);
       if (!frame) return;
-      if (frame.timeout) realm.clearTimeout(frame.handle);
+      if (frame.timeout) scheduler.clearTimeout(frame.handle);
       else realm.cancelAnimationFrame(frame.handle);
       frames.delete(id);
     }
@@ -1989,13 +1990,13 @@ var WasmWebBridge = class {
       if (object === hostDocument && name === "timer") {
         if (!Number.isInteger(args[0]) || args[0] < 0 || args[0] > 2147483647 || !Number.isInteger(args[1]) || timers.size >= 1024) fail("timer is not allowed");
         const id = nextTimer++;
-        timers.set(id, realm.setInterval(() => deliver(args[1]), args[0]));
+        timers.set(id, scheduler.setInterval(() => deliver(args[1]), args[0]));
         return id;
       }
       if (object === hostDocument && name === "timerCancel" && args.length === 1 && Number.isInteger(args[0])) {
         const timer = timers.get(args[0]);
         if (timer !== void 0) {
-          realm.clearTimeout(timer);
+          scheduler.clearTimeout(timer);
           timers.delete(args[0]);
         }
         return null;
@@ -2013,7 +2014,7 @@ var WasmWebBridge = class {
           cleanupCallbacks.delete(id);
           deliver(args[1]);
         };
-        const handle = typeof realm.requestIdleCallback === "function" ? realm.requestIdleCallback(run, { timeout: args[0] }) : realm.setTimeout(run, Math.min(args[0], 50));
+        const handle = typeof realm.requestIdleCallback === "function" ? realm.requestIdleCallback(run, { timeout: args[0] }) : scheduler.setTimeout(run, Math.min(args[0], 50));
         cleanupCallbacks.set(id, handle);
         return id;
       }
@@ -2025,7 +2026,7 @@ var WasmWebBridge = class {
           frames.delete(id);
           deliver(args[0]);
         };
-        const handle = delay > 0 ? realm.setTimeout(run, Math.max(1, delay)) : realm.requestAnimationFrame(run);
+        const handle = delay > 0 ? scheduler.setTimeout(run, Math.max(1, delay)) : realm.requestAnimationFrame(run);
         frames.set(id, { timeout: delay > 0, handle });
         return id;
       }
@@ -2883,14 +2884,14 @@ var WasmWebBridge = class {
         }
       }
       serviceSubscriptions.clear();
-      for (const timer of timers.values()) realm.clearTimeout(timer);
+      for (const timer of timers.values()) scheduler.clearTimeout(timer);
       timers.clear();
       for (const id of frames.keys()) cancelFrame(id);
       for (const handle of idleCallbacks.values()) realm.cancelIdleCallback(handle);
       idleCallbacks.clear();
       for (const handle of cleanupCallbacks.values()) {
         if (typeof realm.cancelIdleCallback === "function") realm.cancelIdleCallback(handle);
-        else realm.clearTimeout(handle);
+        else scheduler.clearTimeout(handle);
       }
       cleanupCallbacks.clear();
       installedStyles.forEach((style) => style.remove());
