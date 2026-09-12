@@ -4437,3 +4437,42 @@ The preceding archive is preserved at
 Nothing was deployed to Bunny. The proposed native rendering-document
 arrangement remains unadopted; its four known production fidelity failures
 and remaining performance work still leave the goal open.
+
+### Retained parser fragments: 2026-09-12
+
+The editor now snapshots reusable fragments after finalizing the pending
+parse, rather than before. The installed CodeMirror language 6.12.4 order
+discarded progress made between keystrokes. In the human-paced last-page
+comparison, retaining that progress reduced inclusive parser work from about
+1.63 seconds to 1.05 seconds and post-input catch-up from about 1.15 seconds
+to 0.4 seconds. The upstream invalidation algorithm is unchanged. See
+[the fragment comparison](project-editor-typing-performance.md#retaining-work-between-keys)
+for the exact fixture, diagnostics, and limitations.
+
+The rebuilt candidate passes all 415 editor/runtime tests, including 20 new
+fragment/adaptation tests with fresh-tree comparisons. The full Resources
+editing workflow passes in 73.9 seconds. Repeated invalid-font recovery keeps
+the former output interactive and recovers without reload. The last-page
+recording passes exact input, queued typing, and eventual parsing checks;
+its ending screenshot and the recovered-output screenshot were inspected.
+These checks do not imply that all highlighting is as immediate as native.
+
+All ten delayed-loading theme scenarios pass, with light-waiting and dark-ready
+screenshots inspected. Those screenshots still expose the known body/canvas
+fidelity mismatch; passing loading-background checks does not resolve it.
+Read-only exported and live checks pass for full-height Mahjong, Cat Memory's
+eight pairs/reset, 50 successive tour slides, and SQLite fragment navigation.
+No owner project or notes were saved. After restart, the six principal live
+assets match the export byte-for-byte. No host/controller permission or API
+changes accompany this parser fix; bytecode/Wasm sizes remain unchanged.
+
+The `site/resources-co-73c1068` build and extracted archive pass all 152 manifest
+checks, and the compressed backend runs in Deno. `/root/resources-bunny.tar.gz`
+now has SHA-256
+`98579c69f1a90dfffeb2901b9df5e87ec6e287d3abb3abd36a76efd297636c5e`.
+The preceding archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-7966d8d-before-retained-fragments.tar.gz`.
+Logs and screenshots are under `/root/macchiato-work/retained-fragments-*`.
+Nothing was deployed to Bunny. The native rendering-document arrangement
+remains unadopted, and its four known production fidelity failures keep the
+broader goal open along with remaining performance work.
