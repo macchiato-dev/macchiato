@@ -161,11 +161,13 @@ opening, closing, or reordering file tabs remains session UI state. The explicit
 **Save tab configuration** command is the direct action that copies that state
 into project configuration and therefore marks the project as changed.
 
-Version history distinguishes the working **Current Version** from saved
-checkpoints. Relative timestamps belong to checkpoint rows, and `LATEST` marks
-the checkpoint produced by the most recent explicit project save; the current
-working row does not duplicate that timestamp as though it were another saved
-version.
+Version history keeps the selected checkpoint active until an actual content
+change. Reopening the dropdown does not select the working draft again.
+**Save project** can publish that exact historical checkpoint without appending
+a duplicate. The one `LATEST` saved version appears first; all remaining
+checkpoints retain reverse chronological creation order. An unpublished
+working draft has its own row, below the pinned saved version. Publishing an
+old selection preserves unpublished work and the chronological patch chain.
 
 The starter gallery mirrors the Resources design reference: Hello HTML,
 Digital clock, Logo mark, Bar chart, Bouncing ball, and Starfield, alongside

@@ -471,6 +471,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     </script>`;
   for (const [revision, family] of ["monospace", '"monospace"', "serif"].entries()) {
     await content.fill(fontSource(family, revision));
+    assert.equal(await page.locator('input[name="selectedVersion"]').inputValue(), '',
+      'the first actual content edit leaves the selected historical version');
     const heading = output.getByRole("heading", { name: `Font revision ${revision}`, exact: true });
     await heading.waitFor();
     assert.equal(await heading.evaluate(node => getComputedStyle(node).fontFamily), family,

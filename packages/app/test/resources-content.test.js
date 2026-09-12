@@ -195,6 +195,30 @@ test("content store versions multi-file project state periodically and around de
   assert.deepEqual(await content.getProjectVersion(created.id, 4, account.id), workspace.snapshot);
 });
 
+test("saving historical versions pins only the saved selection and preserves unpublished work", async () => {
+  const { account, content } = await stores({ now: () => 1000 });
+  const snapshot = text => ({ files: [{ path: "index.html", content: `<p>${text}</p>` }], config: {} });
+  const first = snapshot("One"), second = snapshot("Two"), draft = snapshot("Unsaved draft");
+  const created = await content.createProject(account.id, {
+    namespace: "user", userSlug: account.login, slug: "selection", name: "Selection",
+    description: "", visibility: "public", template: "html", snapshot: first,
+  });
+  await content.saveProjectSnapshot(account.id, created.id, second, { reason: "manual" });
+  await content.publishProject(account.id, created.id, { title: "Second" });
+  await content.saveProjectSnapshot(account.id, created.id, draft);
+  await content.publishProject(account.id, created.id, { sequence: 1 });
+  let versions = await content.listProjectVersions(created.id, account.id);
+  assert.deepEqual(versions.map(version => [version.sequence, version.latest]), [[1, true], [3, false], [2, false]]);
+  assert.deepEqual(await content.getProjectVersion(created.id, 3, account.id), draft);
+  assert.deepEqual((await content.getProjectWorkspace("latte", "selection", account.id)).snapshot, first);
+  assert.equal((await content.getProjectWorkspace("latte", "selection", account.id)).hasUnpublishedChanges, false);
+  await content.publishProject(account.id, created.id, { sequence: 2 });
+  versions = await content.listProjectVersions(created.id, account.id);
+  assert.deepEqual(versions.map(version => [version.sequence, version.latest]), [[2, true], [3, false], [1, false]]);
+  assert.equal(versions[0].title, "Second", "plain Save preserves an existing version title");
+  assert.deepEqual(await content.getProjectVersion(created.id, 3, account.id), draft);
+});
+
 test("template replacement and undo keep project metadata aligned with the snapshot", async () => {
   let clock = 10_000;
   const { account, content } = await stores({ now: () => ++clock });

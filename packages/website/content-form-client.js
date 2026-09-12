@@ -979,6 +979,7 @@ async function mountProjectRoot(root) {
   }
 
   function checkpointDraft({ destructive = false } = {}) {
+    if (viewingHistorical) return true;
     if (recoveryFailure) return false;
     const now = Date.now();
     if (editorController && historyInEditorMachine) {
@@ -1083,6 +1084,7 @@ async function mountProjectRoot(root) {
       if (!viewingHistorical) return;
       state = currentSnapshot;
       viewingHistorical = false;
+      selectedStoredSequence = null;
       snapshotField.value = JSON.stringify(state);
       historyPanel.hidden = true;
       versionButton.setAttribute("aria-expanded", "false");
@@ -1095,7 +1097,9 @@ async function mountProjectRoot(root) {
     versionList.append(current);
     [...localHistory.patches].reverse().forEach((_, reverseIndex) => {
       const sequence = localHistory.patches.length - reverseIndex;
-      const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], { sequence });
+      const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], {
+        sequence, current: viewingHistorical && selectedStoredSequence === sequence,
+      });
       button.addEventListener("click", () => {
         clearNotice();
         if (pending) checkpointDraft({ destructive: pendingDestructive });
@@ -1105,6 +1109,7 @@ async function mountProjectRoot(root) {
         const target = normalizeProjectSnapshot(localHistory.snapshots[sequence - 1] || rebuildDraft(localHistory.patches, sequence));
         state = target;
         viewingHistorical = true;
+        selectedStoredSequence = sequence;
         snapshotField.value = JSON.stringify(state);
         renderTabs();
         historyPanel.hidden = true;
@@ -1127,6 +1132,10 @@ async function mountProjectRoot(root) {
     versionList.replaceChildren();
     if (!viewingHistorical) showCurrentVersion();
     const hasCurrentDraft = workspacePayload?.hasUnpublishedChanges === true || unsavedChangeCount > 0 || recoveredPendingSnapshot;
+    if (!viewingHistorical && !hasCurrentDraft && latestStoredSequence !== null) {
+      selectedStoredSequence = latestStoredSequence;
+      selectedVersionField.value = String(latestStoredSequence);
+    }
     const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: !viewingHistorical });
     current.addEventListener("click", () => {
       clearNotice();

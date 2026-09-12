@@ -209,7 +209,7 @@ test("MicroQuickJS owns the authenticated project versions route", async () => {
   assert.equal(response.status, 200, `${await response.clone().text()} ${sqlError}`);
   const listing = await response.json();
   assert.equal(listing.versions.length, 2);
-  assert.equal(listing.versions[0].sequence, 2);
+  assert.deepEqual(listing.versions.map(version => [version.sequence, version.latest]), [[1, true], [2, false]]);
 
   for (const [sequence, snapshot] of [[1, first], [2, second]]) {
     const selected = await machine.handle(new Request(`${url}/${sequence}`, {

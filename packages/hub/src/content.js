@@ -734,7 +734,13 @@ export function createContentStore(client, {
         // working snapshot and saved-version marker move to the selection.
         queries.push({ sql: CONTENT_QUERIES.updateState,
           args: [snapshotJson(target), String(row.checkpoint_snapshot_json), Number(row.last_version_sequence),
-            Number(row.last_version_at), timestamp, String(projectId)] });
+            Number(row.last_version_at), timestamp, String(projectId)] }, {
+          sql: CONTENT_QUERIES.touchProject,
+          args: [timestamp,
+            TEMPLATES.has(String(target.config?.template || "")) ? String(target.config.template) : "",
+            TEMPLATES.has(String(target.config?.template || "")) ? String(target.config.template) : "",
+            String(projectId)],
+        });
       }
       const result = await client.batch([...queries, {
         sql: CONTENT_QUERIES.publish,
