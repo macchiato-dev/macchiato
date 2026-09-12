@@ -3968,3 +3968,46 @@ its predecessor is preserved at
 `/root/archive/2026/09/12/resources-bunny-f915c1d-before-native-text-read.tar.gz`.
 No Bunny deployment was performed. Large native-input latency and native-document
 sizing/painting still leave the broader goal incomplete.
+
+### Granted-document realm services (2026-09-12)
+
+The `6c51d01` export corrects host services when the controller executes outside
+the explicitly granted document's realm. Viewport reads, scrolling, computed
+styles, approved fonts, custom-element checks, optional cleanup callbacks, and
+the performance clock now use that realm. Full live-document grants are
+recognized across same-origin browsing contexts. Self navigation checks the
+document's actual origin, including inherited `srcdoc` origins; it remains
+disabled without an explicit grant. This does not change Resources Edge's
+frame hierarchy or live-update contract.
+
+The foreign-document fixture runs MicroQuickJS outside a script-free rendering
+frame and verifies native dimensions, selection/events, fonts, scrolling,
+navigation denials and registered-custom-element denials. A separate native
+time-bound check catches differing performance time origins. Type checking,
+78 scope/observer/realm checks and eight forms/idle/QuickJS-output checks pass;
+the clock-enhanced five-test fixture passes after the final clock correction.
+See [document boundary](project-output-document-boundary.md).
+
+The full project stress run on the preceding `5e5c56a` export passes in 93.5
+seconds, including edits, undo/redo, theme changes, saved reload, output recovery
+and phone views. Light/dark screenshots were inspected. The 106 KB paste takes
+195ms; native insertion takes 34 seconds. These are diagnostic observations,
+not a controlled performance comparison or a claim that large input is fixed.
+The final export additionally corrects the clock's realm; runtime bytecode and
+Wasm artifacts are unchanged.
+
+Read-only checks on the final export pass for eight cat pairs/reset, Mahjong's
+144-tile full-height surface, 50 tour slides and SQLite fragments, including
+theme/phone checks. Cat and Mahjong pass again on the restarted local server;
+six live machine/controller/runtime/frame files match the export byte-for-byte.
+No owner project or notes were saved. The export and extracted archive pass all
+152 manifest checks, and the compressed backend runs in Deno. Evidence is under
+`/root/macchiato-work/document-realm-*`.
+
+`/root/resources-bunny.tar.gz` has SHA-256
+`873c925181b25096211352bbe9f27ca9e118c3f79661ead5a9dbeae7bbbddfba`.
+The prior archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-feb8614-before-document-realm.tar.gz`.
+Nothing was deployed to Bunny. Native-document sizing/painting and large-input
+latency remain open; the proposed separate rendering documents await a design
+decision rather than being introduced implicitly.

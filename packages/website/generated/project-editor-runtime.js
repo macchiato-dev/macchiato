@@ -1921,7 +1921,7 @@ var WasmWebBridge = class {
         ][args[1]];
       }
       if (object === hostDocument && name === "performanceNow" && args.length === 0) {
-        return Math.round(performance.now());
+        return Math.round(realm.performance.now());
       }
       if (object === hostDocument && name === "mediaMatches" && args.length === 1 && typeof args[0] === "string" && args[0].length <= 256) {
         return hostDocument.defaultView.matchMedia(args[0]).matches;
