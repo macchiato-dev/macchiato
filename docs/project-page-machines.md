@@ -4511,3 +4511,39 @@ The preceding archive is preserved at
 Nothing was deployed to Bunny. Four production native-layout TODO failures,
 the rendering-document decision, and remaining performance work keep the
 broader goal open.
+
+### Timers belong to the execution host: 2026-09-12
+
+The machine now schedules ordinary timers on its own global rather than on
+the granted rendering window. A script-free iframe cannot schedule these in
+Chromium, even when its callback belongs to the trusted parent. This caused
+real missed callbacks and the security diagnostics in the separate native
+rendering-document experiment. See [the timer investigation](project-output-document-boundary.md#host-timers-with-script-free-rendering-frames-2026-09-12).
+
+The fix includes task callbacks, intervals, throttled animation frames,
+cleanup's timer fallback, and their cancellation/destruction paths. Native
+animation frames, idle deadlines, DOM operations, and viewport/time-origin
+reads still use the granted document. No guest capability or iframe permission
+was added, and the production output hierarchy is unchanged. The host gitlink
+is `dc9a69a`; the readable browser host grew 66 bytes to 128,033 bytes.
+
+All 418 editor/runtime checks pass, including the updated realm tests and
+the now clean-console rendering experiment. The full Resources editing stress
+test passes in 72.4 seconds; the recovered-output screenshot was inspected.
+Read-only exported and live checks pass for full-height Mahjong, Cat Memory's
+eight pairs/reset, 50 tour slides, and SQLite fragments. Seven principal live
+assets match the export after restart. The first live attempt arrived before
+the server listened and failed with connection refused; after a successful
+readiness check, its unchanged rerun passed without restarting again. No owner
+files or tour notes were saved. Evidence is under
+`/root/macchiato-work/host-timers-*`.
+
+The `site/resources-co-0f410bc` build and extracted archive pass all 152 manifest
+checks, and its compressed backend runs in Deno. `/root/resources-bunny.tar.gz`
+has SHA-256
+`6aa2ba5783b43ffd335f9738cd6d79eedd58c0a65b7e77bd5f870766905606c7`.
+Its predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-1516558-before-host-timers.tar.gz`.
+Nothing was deployed to Bunny. The four known production native-layout TODOs,
+the rendering-document decision, and remaining performance work keep the
+broader goal open.
