@@ -4282,3 +4282,31 @@ The previous archive is preserved at
 `/root/archive/2026/09/12/resources-bunny-f7a8bff-before-global-accessors.tar.gz`.
 No Bunny deployment occurred. Native-document fidelity and further editing
 performance work remain open.
+
+### Cached static highlight choices: 2026-09-12
+
+The editor caches its fixed palette's tag-to-class choices using weak keys,
+validating ancestry lists so changes do not leave stale styles. It does not
+cache document ranges, DOM state, or event data. Stylesheets and theme selection
+remain CodeMirror's; palettes with an `all` style keep the original path. See
+[the typing comparison](project-editor-typing-performance.md#rebuilt-palette-cache).
+
+All 389 editor/runtime tests pass. Full editing stress passed in 50.2 seconds,
+including typo correction, undo/redo, scrolling, themes, disposable save/reload,
+output recovery, phone views, and large input. Ten delayed-loading theme cases
+pass, and light/dark screenshots were inspected. The same four saved projects
+pass read-only export and live checks, including Cat Memory's pairs/reset,
+50 tour slides, and SQLite fragment links. No owner content or notes were saved.
+
+The `site/resources-co-7857226` export and extracted archive pass all 152 manifest
+checks; its compressed backend runs in Deno. Six principal live assets match
+the export. Only editor code/artifacts change: editor Wasm is 1,579,344 bytes,
+648 bytes larger. Host and controller remain 127,967 and 74,050 bytes.
+Evidence is under `/root/macchiato-work/highlight-cache-*`.
+
+`/root/resources-bunny.tar.gz` has SHA-256
+`5d480643a5ad3632cb0fb526e1266e80b501d7ce68d3948dfb04f438575c5366`.
+The previous archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-12b7fc7-before-highlight-cache.tar.gz`.
+Nothing was deployed to Bunny. Native-document fidelity and remaining parser
+and view-update latency leave the broader goal open.

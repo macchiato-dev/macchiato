@@ -260,10 +260,41 @@ spends about 34 ms in both guest runs. Total view-update time remains noisy
 (240–279 ms in the candidate); do not infer a proportional editor speedup.
 Rendered text, class names, and span boundaries on 62 lines match the control
 in each native/guest/guest/native run of the initial weak-key candidate.
-The production implementation still needs rebuilt-Wasm and broader editor
-verification. No live artifact has changed at this checkpoint.
+This initial measurement preceded rebuilt-Wasm and broader editor checks.
 
 Evidence: `/root/macchiato-work/highlight-phases*`, `highlight-memo-*`.
+
+### Rebuilt palette cache
+
+The editor now uses `cacheHighlightStyle` for its own fixed palette. Unit tests
+compare native palette results across the built-in tag vocabulary, derived and
+modified tags, duplicates, unknown tags, reordered/mutated input groups, ancestry
+changes, and repeated theme switches. It preserves the original stylesheet
+module and does not affect other highlighters or cache mutable DOM information.
+The temporary fixture implementation was removed after integration; optional
+phase measurements remain test-only.
+
+The rebuilt candidate and adjacent unchanged-core control use the same runtime,
+grammar, 106 KB source, and native/guest/guest/native sequence. With the tree
+already parsed, the highlighter takes 33.4 ms across eight keys versus 53–54 ms
+in the control. View updates take 236–240 ms versus 266–271 ms. Individual keys
+take 23–81 ms versus 26–85 ms; native CodeMirror remains faster. These are limited
+local observations, not fixed performance guarantees or equivalent speedups
+for the whole app.
+
+Rendered text, class names, and span boundaries match the unchanged-core
+control across 62 rendered lines in each run. These are within-runtime
+comparisons: the guest intentionally uses scoped class names unlike native
+CodeMirror. The same benchmark also checks exact source edits and undo/redo.
+Without pre-finishing the tree, both configurations pass, but parser work
+varies and dominates some early keys. The cache does not solve that delay.
+
+All 389 editor/runtime tests pass, along with the full Resources editing flow
+and ten delayed startup/reload theme cases. Screenshots were inspected. The
+matched editor Wasm grows by 648 bytes; the host and controller do not change.
+The four saved examples pass read-only checks with both exported and live
+assets. The local server and `7857226` Bunny archive now include this change.
+See `/root/macchiato-work/highlight-cache-*` for tests, comparisons, and images.
 
 With collection counters disabled, the two candidate guest typing runs spent
 78–87 ms in DOM-tree updates versus 91–106 ms in the initial controls. View
