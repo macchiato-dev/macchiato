@@ -4157,3 +4157,59 @@ Its predecessor is preserved at
 `/root/archive/2026/09/12/resources-bunny-28543b8-before-collection-identity.tar.gz`.
 No Bunny deployment occurred. Native-document fidelity and further performance
 work remain open; this checkpoint does not complete the overall goal.
+
+### Machine disposal ownership: 2026-09-12
+
+The full editor-package audit passed all 383 tests before this change. An
+additional browser-GC test then exposed a gap outside ordinary caller lifetimes:
+keeping an already-destroyed machine handle retained its granted DOM root and
+one-megabyte resource stamp, though its Wasm memory was collectible. The public
+handle now drops its bridge after runtime finalizers and bridge cleanup.
+DevTools GC verifies that the retained handle no longer keeps those resources
+alive, including when the runtime adapter's cleanup throws. Active handles
+still retain their resources. Repeated destruction is harmless and later
+messages report that the machine was destroyed.
+
+A throwing service unsubscribe exposed another cleanup gap: three timers and
+a later subscription survived. Delivery is now revoked before unsubscribe
+hooks run, all subscriptions are attempted, and remaining native cleanup
+finishes before failures propagate. Tests cover callbacks during and after
+cleanup, single and multiple failures, and preserved error details. This does
+not release references retained independently by the calling integration.
+
+All 11 focused browser checks passed across disposal, granted-document realms,
+and output/font lifetimes. Type checking passed. Logs are
+`/root/macchiato-work/disposed-machine-retention-{before,after}.log`,
+`/root/macchiato-work/disposal-throwing-service-{before,after}.log`, and
+`/root/macchiato-work/disposal-ownership-regressions.log`. The GC probe is test
+code only, not instrumentation in the live editor or a change to guest GC
+scheduling. The native-document layout TODOs remain unresolved.
+
+The rebuilt export at `/root/macchiato-work/resources-bunny-disposal-ownership`
+uses `site/resources-co-1f85ea3`. Its 152 manifest checks and compressed backend
+test passed. The host grows from 127,491 to 127,967 readable bytes; the
+controller, frontend/editor/output Wasm, and output frame are byte-identical
+to the preceding export. There is no new runtime or capability surface.
+
+The full editing stress test passed in 52.2 seconds: repeated edits, correction,
+undo/redo, scrolling, themes, disposable-database save/reload, output recovery,
+phone views, and both 106 KB input paths. This is a verification timing, not
+a performance comparison. All ten delayed frontend/editor startup and reload
+cases passed with matching before/after backing pixels. Light/dark editor and
+loading screenshots were inspected. Evidence is under
+`/root/macchiato-work/disposal-ownership-{stress,theme-paints}*`.
+
+Read-only saved-project verification passed for Cat Memory (all eight pairs,
+win, reset), Mahjong, the tour's 50-slide keyboard sequence, and SQLite internal
+fragments, with themes and phone views. After restarting the local server,
+its six principal assets matched the export byte-for-byte; Cat Memory and
+Mahjong passed again with those live assets. No owner content or tour notes
+were saved. Logs are `/root/macchiato-work/disposal-ownership-*`.
+
+The extracted archive passes all 152 manifest checks.
+`/root/resources-bunny.tar.gz` now has SHA-256
+`b377c6f0c4dec25757b11fc18bc71c458f9cd38faca172757a6f81689cc9c878`.
+The previous archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-f2bce04-before-disposal-ownership.tar.gz`.
+No Bunny deployment occurred. The overall goal remains open, including the
+native-document layout discrepancies and further performance work.
