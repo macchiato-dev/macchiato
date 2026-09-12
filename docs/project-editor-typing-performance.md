@@ -128,3 +128,38 @@ In the isolated MicroQuickJS test, 32 writes of 64 KiB took approximately 620 ms
 before and less than 1 ms afterward. That is a binary-encoding microbenchmark,
 not an application startup or typing-speedup claim. Evidence:
 `/root/macchiato-work/wire-bytes-write-{baseline,copy}.log`.
+
+## Native-input cost and large returned strings
+
+The checkpoint fixture also records phases around each bulk input operation,
+before undo/redo and ordinary first-page typing. In the `insertText` control,
+Chromium's input path itself is expensive: the same 106 KB JavaScript document
+takes 6–7 seconds in the native editor and roughly 9 seconds in MicroQuickJS.
+CodeMirror's measured native observer flush is only about 52 ms of that elapsed
+time. Do not attribute the entire browser input duration to the guest interpreter.
+
+Unlike the eight-key sequence, this insertion returns a 106 KB string and about
+434 KB across all wire string reads. The interpreted decoder consumes about
+660 ms. The candidate native reader copies validated UTF-8 into MicroQuickJS's
+own string storage. It roots the input view across allocation and reacquires its
+storage after possible arena compaction. It adds no host call or permission.
+Malformed UTF-8 is rejected; this internal wire operation is not a complete
+TextDecoder implementation (in particular it preserves an initial BOM).
+
+The new fixture checks independent Unicode bytes, embedded NULs, view offsets,
+invalid sequences/ranges/types, and returned-string independence. It allocates
+64 MiB of strings in the 32 MiB arena with only a small retained window, leaving
+a dead buffer before the source to exercise relocation during automatic GC.
+Comparisons use the old JS decoding path rebuilt against the same native-slot
+ABI, not an old bytecode file with the new Wasm. The external control script is
+`/root/macchiato-work/disable-native-text-read.js`.
+
+The same-ABI comparison passes exact text, typo correction, undo/redo and
+viewport highlighting checks in both native and guest editors. Returned-string
+decoding falls from 666–684 ms to 14–53 ms in the two guest runs. Total insertion
+does not establish an improvement: controls take 9.3–10.6 seconds and candidates
+9.2–10.8 seconds, while the native controls themselves vary from 6.5–7.0 to
+8.3–8.6 seconds. Keep the narrower decoding result separate from end-to-end
+responsiveness. The compaction/Unicode fixture and all 26 runtime/output
+regressions pass. Evidence: `native-text-read-{control,candidate,relocation,
+regressions}*` beneath `/root/macchiato-work`.

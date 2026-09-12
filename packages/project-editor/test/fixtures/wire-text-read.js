@@ -45,8 +45,12 @@ catch (shortWire) { truncated = shortWire instanceof RangeError; }
 if (!truncated) throw Error("Wire length was not enforced");
 
 // Allocate more string data than the 32 MiB arena, retaining only a rotating
-// window. Automatic compaction must preserve both the view and copied strings.
+// window. Leave a dead buffer before the source so compaction has a hole to
+// close; preserving an unchanged pointer by accident is not a useful test.
+var ballast = new Uint8Array(1024 * 1024);
+if (ballast.length !== 1024 * 1024) throw Error("Compaction ballast failed");
 var bytes = new Uint8Array(32768), retained = [];
+ballast = null;
 for (index = 0; index < bytes.length; index++) bytes[index] = 97;
 var started = performance.now();
 for (var round = 0; round < 2048; round++) {
