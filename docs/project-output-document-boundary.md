@@ -352,3 +352,61 @@ DevTools traces use `/root/macchiato-work/rendering-browser-*.log`.
 
 This corrects timer execution for cross-document grants, not the production
 output hierarchy. The native-layout TODOs and integration decision remain.
+
+## Reusing rendering frames: 2026-09-12
+
+The experiment now keeps at most two rendering iframe elements and their
+browsing contexts for its lifetime. An idle frame receives a fresh fixed Blob
+document through `location.replace`; it is not detached and appended again.
+Retiring a session destroys its machine, revokes its Blob URL, and makes the
+frame invisible and inert for reuse. The interpreter still lives in the one
+persistent outer controller frame. This does not add another Wasm instance.
+
+The first reuse assertion failed against the previous experiment, which
+removed the former frame. With reuse implemented, ten further swaps preserve
+both original frame identities and both WindowProxy identities. Those swaps
+do not increase `history.length`. Root-relative lengths, body canvas painting,
+delayed-font handoff, pointer/keyboard input, expanded/fullscreen focus, timers,
+and ordinary fragment navigation still pass. A candidate initially lost the
+active route and started at `/`; the experiment now carries the active
+fragment into the new document URL before guest startup.
+
+Collection is checked while the controller is alive, not only after teardown.
+Among retired sessions, only the idle frame's current document remains alive;
+the other retired documents have been collected. Destroying the experiment
+then releases both frames and all 17 documents. The idle frame intentionally
+retains its last rendered DOM until reused. This is a bounded extra document,
+not a measurement of its byte cost for large projects.
+
+### History remains an integration blocker
+
+Preserving the current fragment is not sufficient. Browser Back after a live
+update can restore an earlier joint-frame history entry containing a revoked
+Blob URL. In the full experiment this detached the active document and later
+cleanup encountered a cross-origin WindowProxy. This was not a Wasm parsing or
+guest routing error.
+
+`packages/website/test/project-rendering-history.browser.test.js` reproduces
+the problem without a machine or guest runtime. Two script-free frames make
+fragment entries, replace the idle frame's document, and then traverse Back.
+The active document is lost rather than retained at the preceding fragment.
+Its assertion executes as a **known failing TODO**, not a passing history
+check. Keeping it separate prevents that destructive navigation from
+invalidating unrelated lifetime/layout assertions in the main experiment.
+
+Before adopting this arrangement, routing/history must have a stable owner
+across replacements. A possible direction is the persistent output controller
+owning the fragment history, with the guest runtime using its existing route
+service. That needs an explicit design for native anchors, event semantics,
+and Back/Forward; it is not implemented here. Retaining every old Blob URL or
+silently disabling Back would not satisfy the intended behavior.
+
+Evidence is under `/root/macchiato-work/rendering-reuse-*`, including the
+before/after route checks, frame-identity and collection results, and the
+isolated failing history test. No production frame arrangement, local server,
+owner project, or deploy archive was changed by this experiment.
+
+The final combined run reports 13 passes and five known failing TODOs: the
+four existing production layout comparisons and this experimental history
+comparison. The delayed-font screenshot was inspected. The history failure
+is not counted as a successful integration gate.
