@@ -9,6 +9,8 @@ function documentRealmProbe(json) {
       __wwcPostMessage("timer:interval");
     }, 0);
     setTimeout(function () { __wwcPostMessage("timer:timeout"); }, 0);
+    var cancelledFrame = requestAnimationFrame(function () { __wwcPostMessage("timer:cancelled-frame"); });
+    cancelAnimationFrame(cancelledFrame);
     requestAnimationFrame(function () { __wwcPostMessage("timer:frame"); });
     return;
   }

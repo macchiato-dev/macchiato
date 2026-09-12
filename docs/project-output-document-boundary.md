@@ -315,3 +315,40 @@ Only the compiler fix is production code. The rendering frames, Blob shell,
 and focus coordination remain a feasibility experiment, not an approved
 production hierarchy. Real-project integration and overhead measurements
 remain open; this does not resolve the four native-layout TODOs.
+
+## Host timers with script-free rendering frames: 2026-09-12
+
+The previously unexplained script-blocked diagnostic was an actual timer
+failure, not harmless logging. A minimal browser-only reproduction schedules
+callbacks created by the parent on a script-free child's window. Chromium
+delivers animation-frame and idle callbacks but blocks its ordinary timeout.
+The callback's parent origin does not make the child's timer runnable.
+DevTools reports the security error without a JavaScript stack.
+
+The document-realm test now sets `sandbox="allow-same-origin"` explicitly.
+Previously its empty page was described as script-free but had no sandbox
+flag preventing scripts. New guest probes schedule/cancel timeouts, schedule
+and cancel an interval from its callback, and request both native and
+controller-throttled animation frames. Before the fix, all four combinations
+of document/element grant and navigation policy time out: only the native
+animation callback reaches the MicroQuickJS guest.
+
+Ordinary timers now use the machine host's global scheduler, including task
+callbacks, throttled frames, and cleanup's timeout fallback. Cancellation and
+destruction use that same scheduler. DOM constructors, viewport/time-origin
+reads, scrolling, selection, native animation frames, and idle deadlines still
+belong to the granted document. The shared Wasm interpreter remains in the
+controller's execution realm; no additional guest capability or script
+permission is granted to its rendering document.
+
+All four probes pass after the fix, with the canceled timeout absent. The
+QuickJS rendering experiment also passes and now asserts that the entire
+browser console is error-free, including navigation. All 16 retired documents
+remain collectible. The optional `MACCHIATO_TEST_BROWSER_LOG` flag records
+DevTools security entries in this fixture only; no diagnostics enter the
+production host. Before/after evidence is in
+`/root/macchiato-work/script-free-timers-{before,after}.log`; exploratory
+DevTools traces use `/root/macchiato-work/rendering-browser-*.log`.
+
+This corrects timer execution for cross-document grants, not the production
+output hierarchy. The native-layout TODOs and integration decision remain.

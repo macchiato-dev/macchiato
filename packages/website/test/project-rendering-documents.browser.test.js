@@ -23,6 +23,8 @@ test("independent rendering documents share an engine without sharing page state
   </style></head><body><div id="sample"></div><button id="counter">0</button>
   <input id="draft" value="Unsaved note"><div id="space"></div><script>
     globalThis.appOnly = true;
+    globalThis.appTimer = 0;
+    setTimeout(function () { appTimer++; }, 0);
     var count = 0;
     document.getElementById('counter').addEventListener('click', function () {
       document.getElementById('counter').textContent = String(++count);
@@ -254,6 +256,7 @@ test("independent rendering documents share an engine without sharing page state
     assert.equal(await browserPage.evaluate(() => typeof experiment), 'undefined',
       "no interpreter/controller is installed in the website's realm");
     await reveal(first);
+    await page.waitForFunction(id => experiment.report(id, 'appTimer') === 1, first);
     assert.deepEqual(await measure(view(first)), await measure(native));
     t.diagnostic(JSON.stringify({ root: 20, native: await measure(native), actual: await measure(view(first)) }));
     assert.deepEqual(await pixel("#mount"), [232, 242, 255, 255]);
