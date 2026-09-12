@@ -68,6 +68,9 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
   // distinguishes ordinary editing from repeatedly parsing one huge comment.
   const rawSource = process.env.MACCHIATO_TEST_RAW_SOURCE === "1";
   const text = rawSource ? moduleSource : `<!--\n${moduleSource.replaceAll("-->", "-- >")}\n-->\n<h1>Large input</h1>`;
+  const typingPosition = process.env.MACCHIATO_TEST_TYPING_POSITION || "first";
+  assert.ok(["first", "last"].includes(typingPosition));
+  const typingOffset = typingPosition === "last" ? text.length : Math.min(4, text.length);
   const editorWidth = Number(process.env.MACCHIATO_TEST_EDITOR_WIDTH || 720);
   assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
   const methods = (process.env.MACCHIATO_TEST_INPUT_METHODS || "paste,insertText,replaceText").split(",");
@@ -221,8 +224,14 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       results.push({ run, mode, method: "parse-before-typing", ...parsing });
       t.diagnostic(JSON.stringify(results.at(-1)));
     }
-    await page.keyboard.press("Control+Home");
-    for (let index = 0; index < 4; index++) await page.keyboard.press("ArrowRight");
+    const navigationStarted = performance.now();
+    await page.keyboard.press(typingPosition === "last" ? "Control+End" : "Control+Home");
+    if (typingPosition === "first") {
+      for (let index = 0; index < typingOffset; index++) await page.keyboard.press("ArrowRight");
+    }
+    results.push({ run, mode, method: "navigate-before-typing", position: typingPosition,
+      offset: typingOffset, milliseconds: Math.round(performance.now() - navigationStarted) });
+    t.diagnostic(JSON.stringify(results.at(-1)));
     let inserted = "";
     const keyMilliseconds = [];
     if (checkpoints) await page.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
@@ -238,7 +247,7 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       keyMilliseconds.push(Math.round(performance.now() - started));
       inserted = key === "Backspace" ? inserted.slice(0, -1) : inserted + key;
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
-        text.slice(0, 4) + inserted + text.slice(4));
+        text.slice(0, typingOffset) + inserted + text.slice(typingOffset));
     }
     if (typingProfiler) {
       const { profile } = await typingProfiler.send("Profiler.stop");
@@ -255,12 +264,17 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
         wireOperations: timings.wireOperations,
         viewportParsed: timings.viewportParsed, documentParsed: timings.documentParsed });
       t.diagnostic(JSON.stringify(results.at(-1)));
+      const highlightWaitStarted = performance.now();
       await page.waitForFunction(() => {
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1).viewportParsed;
       }, null, { timeout: 10000 });
+      results.push({ run, mode, method: "viewport-highlight-wait", position: typingPosition,
+        milliseconds: Math.round(performance.now() - highlightWaitStarted) });
+      t.diagnostic(JSON.stringify(results.at(-1)));
     }
-    results.push({ run, mode, method: "first-page-typing", characters: text.length, keyMilliseconds });
+    results.push({ run, mode, method: typingPosition + "-page-typing", offset: typingOffset,
+      characters: text.length, keyMilliseconds });
     t.diagnostic(JSON.stringify(results.at(-1)));
     // Keep rendered text and class spans as evidence for styling experiments,
     // outside the timed input sequence. A parsed tree alone does not prove
@@ -288,7 +302,7 @@ globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKP
       })));
       await session.detach();
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
-        text.slice(0, 4) + inserted + letters + text.slice(4));
+        text.slice(0, typingOffset) + inserted + letters + text.slice(typingOffset));
       results.push({ run, mode, method: "queued-typing", disableInputPending,
         interval: 30, acknowledgements });
       t.diagnostic(JSON.stringify(results.at(-1)));

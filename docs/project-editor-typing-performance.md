@@ -18,6 +18,9 @@ For a large JavaScript file, set these environment variables before running
 - `MACCHIATO_TEST_INPUT_METHODS=paste`.
 - `MACCHIATO_TYPING_CHECKPOINTS=1`: test-only inclusive phase timings.
 - `MACCHIATO_TEST_ARTIFACTS`: a distinct directory for the JSON results.
+- `MACCHIATO_TEST_TYPING_POSITION=last`: optionally type at the end of the
+  document instead of the first-page offset. Navigation time and the subsequent
+  wait for a parsed viewport are reported separately from individual keys.
 
 The normal case starts typing after paste, undo, and redo. The optional
 `MACCHIATO_TEST_PARSE_BEFORE_TYPING=1` control explicitly finishes the syntax
@@ -380,3 +383,39 @@ passes without a production-code change. The final strengthened run, including
 the rest of the full editing workflow, passed in approximately 77 seconds.
 Evidence is under `/root/macchiato-work/font-edit-preservation*`. These are
 disposable fixture edits, not changes to the owner's Mahjong or saved projects.
+
+## Last-page typing and foreground parser budget
+
+The comparison now checks both first-page and last-page typing. It navigates
+with actual keyboard commands and checks the exact insertion offset after
+every key, including the correction. The last-page case does not force a full
+parse first. A separate result records the post-typing wait for viewport parse
+readiness, so quicker keys cannot hide postponed highlighting work. That wait
+includes Playwright polling and does not measure the exact frame of first paint.
+
+With the current build, the same 106,402-character JavaScript source, and ordinary
+phase checkpoints, adjacent native/guest/guest/native runs showed:
+
+| Guest location | Default foreground budget | Test-only 5 ms budget |
+| --- | --- | --- |
+| First-page keys | 28–104 ms | 18–29 ms |
+| First-page parse-ready wait after typing | 2–4 ms | 143–144 ms |
+| Last-page keys | 34–48 ms | 18–28 ms |
+| Last-page parse-ready wait after typing | 1,835–1,872 ms | 2,039–2,090 ms |
+
+These are individual observed ranges, not a performance guarantee. Native keys
+remain faster; the native first-page control took 5–10 ms. Both configurations
+pass the same text and eventual viewport-parse assertions. The experiment uses
+the existing test-only wrapper around `ParseContext.work` for numeric 20 ms
+calls; it does not change idle-worker predicates, event delivery, or production
+artifacts. Upstream's two `Work.Apply` call sites are transaction application
+and initial language state creation. Explicit parser requests must retain their
+own budgets in any proposed build adaptation.
+
+The shorter budget is not shipped. It exchanges blocking time for temporarily
+incomplete highlighting; visual checks during typing, not merely eventual tree
+readiness, are needed before adopting it. The last-page control already exposes
+roughly 1.8 seconds of post-input parser catch-up, which the old first-page-only
+diagnostic did not measure. Evidence is under `/root/macchiato-work/` in
+`first-page-budget{5,-control}` and `last-page-budget{5,-control}`. The live site,
+Bunny archive, runtime, and host permissions are unchanged by this experiment.
