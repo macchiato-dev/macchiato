@@ -17,7 +17,7 @@ for (const [fixture, expected] of [
   ["wire-uint", { cases: 8, bounded: 23 }],
   ["wire-bytes", { bounded: 5, isolated: true, byteCalls: 1, writeBounded: 5, writeCalls: 1 }],
   ["wire-text", { cases: 8, denied: 5, subarray: true }],
-  ["wire-text-read", { cases: 7, malformed: 12, bounded: 9, types: 5, compacted: true }],
+  ["wire-text-read", { cases: 8, malformed: 12, bounded: 9, types: 5, compacted: true }],
   ["collection-callbacks", { entries: [[10, "one", true], [20, "two", true], [30, "three", true]],
     values: [["a", "a", true, true], ["b", "b", true, true]], copied: 2, count: 3 }],
   ["nested-callbacks", { normal: true, overflow: true, recovered: true, deep: true, semantics: true }],

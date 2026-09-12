@@ -2,12 +2,17 @@
 var cases = [
   [[], ""], [[65, 0, 66], "A\0B"], [[195, 169], "é"],
   [[206, 169, 228, 184, 173], "Ω中"], [[240, 159, 152, 128], "😀"],
-  [[239, 187, 191, 65], "\ufeffA"], [[101, 204, 129], "e\u0301"]
+  [[239, 187, 191, 65], "\ufeffA"], [[101, 204, 129], "e\u0301"],
+  [[65, 240, 159, 152, 128, 66], "A😀B"]
 ];
 for (var index = 0; index < cases.length; index++) {
   var source = new Uint8Array([99].concat(cases[index][0], [99]));
   var view = source.subarray(1, source.length - 1);
-  if (__wwcReadText(view, 0, view.length) !== cases[index][1]) throw Error("UTF-8 case failed");
+  var actual = __wwcReadText(view, 0, view.length), expected = cases[index][1];
+  if (actual !== expected || actual.length !== expected.length) throw Error("UTF-8 case failed");
+  for (var unit = 0; unit < actual.length; unit++) {
+    if (actual.charCodeAt(unit) !== expected.charCodeAt(unit)) throw Error("UTF-16 indexing failed");
+  }
   if (__wwcReadText(source, 1, view.length) !== cases[index][1]) throw Error("UTF-8 offset failed");
 }
 var malformed = [[128], [192, 128], [224, 128, 128], [240, 128, 128, 128],

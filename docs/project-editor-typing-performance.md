@@ -163,3 +163,13 @@ does not establish an improvement: controls take 9.3–10.6 seconds and candidat
 responsiveness. The compaction/Unicode fixture and all 26 runtime/output
 regressions pass. Evidence: `native-text-read-{control,candidate,relocation,
 regressions}*` beneath `/root/macchiato-work`.
+
+A follow-up paste comparison without phase or wire instrumentation shows a
+clearer end-to-end benefit. The identical 106 KB HTML-comment input takes
+730–798 ms in the old-decoder guest and 134–151 ms with native decoding. Native
+browser controls remain 26–40 ms. Each configuration uses native/guest/guest/
+native order, matching bytecode ABI, source and editor builds. Both preserve
+exact pasted text, first-page typo correction, undo/redo and highlighting.
+Evidence: `native-text-read-paste-{control,candidate}*`. This supports a large
+paste improvement, not a claim that all browser input or ordinary typing is
+five times faster.
