@@ -237,6 +237,8 @@ export class ProjectOutput {
     }
   }
 
+  // Keep the guest session, but matching is not a general DOM patch: a changed
+  // tree may replace nodes. Stateful live updates should use the guest's code.
   setContent = (tree, document) => {
     const session = this.active?.session;
     if (!session) throw new Error("Project output is unavailable");
@@ -245,6 +247,8 @@ export class ProjectOutput {
     return result;
   };
 
+  // Deliver code to the existing guest, including guest-defined live updates.
+  // Do not turn this into load(): that would discard the application's state.
   run = async scripts => {
     if (!this.active) throw new Error("Project output is unavailable");
     await this.active.session.run(scripts);

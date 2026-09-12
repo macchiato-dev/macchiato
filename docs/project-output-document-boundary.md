@@ -1,6 +1,46 @@
 # Project output's rendering document
 
-## Verified mismatch
+## Current direction: direct document refresh and guest-directed live updates
+
+The additional two-rendering-frame design below was **not adopted**. Output
+must also work without an iframe. The implementation now accepts a real
+Document grant for whole-page output, or an element grant for embedded output.
+The website may use its existing configurable outer iframe; this change adds
+no frames and does not require one in `ProjectOutput`.
+
+There are two distinct update paths:
+
+- A replacement `load` creates a fresh guest session. For a Document grant it
+  retires the old guest before replacing the document element. The browser
+  Document, history, and interpreter remain; application state restarts.
+  Failed startup can be recovered by another load, but does not restore the
+  retired guest. Element grants retain their isolated staging-subtree path.
+- A guest-directed live update uses the current session and its own update
+  code. `run` does not dispose the session or rerun startup automatically.
+  The guest decides how to update its DOM and preserve application state.
+  `setContent` also keeps the session, but only retains matching DOM trees;
+  it is not a general state-preserving DOM patcher.
+
+Neither path adds a debounce to a ready update's handoff. The editor's existing
+typing/build debounce is separate. A guest capable of genuine in-place updates
+should not be forced through the replacement-load fallback.
+
+The document viewport comparison now passes its root-unit and canvas-color
+assertions. The following sections preserve the earlier investigation and
+experimental requirements; their claims about pending production assertions
+and retaining the old guest after every failed startup describe that earlier
+design, not the current Document replacement contract. Production rebuild and
+live-site verification of this new path remain pending.
+
+The focused Chromium run passes 14 tests, including real QuickJS stateful
+updates in both grant modes without frames, fresh-state replacement, retired
+callback disposal, recovery after a throwing edit, fragment Back/Forward,
+root/canvas fidelity, and the existing element-staging lifecycle checks.
+`project-output-live-update.browser.test.js` exercises the guest-directed path
+by changing code and content while retaining the counter, node, and session;
+it separately verifies that replacement reload resets that counter.
+
+## Original verified mismatch
 
 `ProjectOutput` grants each session an HTML subtree inside an ungranted staging
 wrapper. This keeps replacements from touching the current app while their code
