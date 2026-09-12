@@ -19,7 +19,7 @@ test("independent rendering documents share an engine without sharing page state
     html { font-size:${size}px; }
     body { margin:2rem; background:#e8f2ff; color:#17243a; }
     #sample { width:10rem; height:2rem; background:#b8c8ef; }
-    #space { height:1000px; }
+    #space { width:1000px; height:1000px; }
   </style></head><body><div id="sample"></div><button id="counter">0</button>
   <div id="space"></div><script>
     globalThis.appOnly = true;
@@ -198,6 +198,13 @@ test("independent rendering documents share an engine without sharing page state
     assert.deepEqual(await report(second, "[innerWidth, innerHeight]"), [420, 260]);
     await page.evaluate(selector => document.querySelector(selector).contentWindow.scrollTo(0, 120), view(second));
     assert.equal(await report(second, "pageYOffset"), 120);
+    assert.deepEqual(await report(second, "[scrollX, scrollY, pageXOffset, pageYOffset]"), [0, 120, 0, 120]);
+    await page.evaluate(id => experiment.run(id, `
+      scrollBy(25, -20);
+      globalThis.afterScroll = [scrollX, scrollY, window.scrollX, window.scrollY];
+    `), second);
+    assert.deepEqual(await report(second, "afterScroll"), [25, 100, 25, 100],
+      "reads within the scrolling callback see the native position, not an event snapshot");
     assert.equal(await page.evaluate(() => scrollY), 0);
     await page.evaluate(id => experiment.run(id, `
       globalThis.themeEvents = 0;

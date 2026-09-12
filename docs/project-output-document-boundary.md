@@ -160,10 +160,22 @@ inspection removed that test-owned retention without changing the runtime.
 The optional `MACCHIATO_TEST_HEAP_SNAPSHOT` flag records a fixture-only snapshot
 when investigating such failures; no profiler is added to production.
 
-The guest currently exposes `pageYOffset` but not its standard `scrollY`
-alias; the experiment uses the former. That missing alias is a separate guest
-compatibility gap, not a reason to report the experiment as complete browser
-parity. Likewise, this fixture does not yet establish real-project font swaps,
+The experiment exposed missing `scrollX`/`scrollY` aliases in the full QuickJS
+guest. Its shared environment now forwards these through the existing
+`pageXOffset`/`pageYOffset` host reads. The regression also checks scrolling
+and reading the position within one guest callback, without waiting for a
+later event. This does not establish complete browser parity: the host's
+existing integer-valued offset protocol remains unchanged.
+
+MicroQuickJS still has a separate global-binding limitation. Its bytecode
+loader binds bare global names to value slots; installing an accessor for
+such a name produces `cannot modify getter/setter/value kind`. The existing
+viewport globals on that engine are initialization snapshots, not live
+getters. Do not extend that workaround with more cached aliases or claim
+resize/scroll fidelity for those globals. Resolving it needs an explicit
+binding strategy rather than a QuickJS-only accessor copied into that engine.
+
+Likewise, this fixture does not yet establish real-project font swaps,
 full-screen focus behavior, first-paint handoff under delayed resources, or
 frame memory/latency overhead. Those remain integration gates if this design
 is adopted.
