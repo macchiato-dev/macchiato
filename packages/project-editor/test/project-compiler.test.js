@@ -5,6 +5,20 @@ import { compileProjectFiles, compileSingleFileProject, PROJECT_SOURCE_LIMITS } 
 const compile = (source) => compileProjectFiles([{ path: "index.html", content: source }], {},
   { limits: PROJECT_SOURCE_LIMITS });
 
+test("fragment links stay in their document while other links retain new-window defaults", () => {
+  for (const href of ["#details", "#/", "#/chapter.html#details"]) {
+    const [node] = compile(`<a href="${href}">Read</a>`).tree;
+    assert.deepEqual(node[3], [["href", href]]);
+  }
+  for (const href of ["https://example.test/", "https://example.test/#details", "/chapter.html"]) {
+    const [node] = compile(`<a href="${href}">Read</a>`).tree;
+    assert.deepEqual(node[3], [["href", href], ["target", "_blank"], ["rel", "noopener noreferrer"]]);
+    const [configured] = compileProjectFiles([{ path: "index.html", content: `<a href="${href}">Read</a>` }],
+      { containerOptions: { links: { addTargetBlank: false } } }).tree;
+    assert.deepEqual(configured[3], [["href", href]]);
+  }
+});
+
 test("module scripts retain their source and distinct identities for native evaluation", () => {
   const files = [
     { path: "index.html", content: '<script>var classic = 1;</script><script type="module" src="./app.js"></script><script type="module">let x = 1;</script><script type="module">let x = 2;</script>' },

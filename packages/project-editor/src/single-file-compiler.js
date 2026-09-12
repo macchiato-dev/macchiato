@@ -180,7 +180,10 @@ export class SingleFileProjectCompiler {
       if (value.localName === "a" && href) {
         if (href.length > 2_048) throw new Error("Link URL is too long");
         attributes.push(["href", href]);
-        if (config.containerOptions?.links?.addTargetBlank !== false) {
+        // Fragment navigation belongs to this document. Opening it in a new
+        // window loses app state and is blocked by script-free render frames.
+        // The machine still validates the actual destination independently.
+        if (!href.startsWith("#") && config.containerOptions?.links?.addTargetBlank !== false) {
           attributes.push(["target", "_blank"], ["rel", "noopener noreferrer"]);
         }
       }
