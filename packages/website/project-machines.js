@@ -22,6 +22,11 @@ async function moduleFor(url) {
   if (!runtimeModules.has(url)) runtimeModules.set(url, fetch(url, { credentials: "same-origin" }).then((response) => {
     if (!response.ok) throw new Error(`Project runtime response ${response.status}`);
     return WebAssembly.compileStreaming(response);
+  }).catch(error => {
+    // Share downloads/compilation, but let the next user action recover from
+    // a transient network or compilation failure without reloading the page.
+    runtimeModules.delete(url);
+    throw error;
   }));
   return runtimeModules.get(url);
 }
