@@ -4530,8 +4530,30 @@ The initial Node-only probe could not exercise browser machine construction,
 so the final regression runs in Chromium rather than mocking its Document.
 
 Before/after evidence is in `/root/macchiato-work/runtime-retry-browser-*.log`.
-Packaged, live, and full-workflow verification must follow before claiming this
-fix is available on the local site or in the deployment archive.
+The rebuilt `site/resources-co-7dd7649` export passes all 152 manifest checks;
+its compressed backend runs in Deno. All 419 editor/runtime tests pass in
+172.3 seconds. The full packaged Resources editing workflow passes in 72.9
+seconds, including repeated invalid-font recovery, undo/redo, scrolling, theme
+switches, disposable save/reload, and large input. Light-theme and recovered
+output screenshots were inspected. Large native insertion still takes about
+13.8 seconds in that fixture; this cache fix is not a parsing/input speedup.
+
+Read-only exported and live checks pass for full-height Mahjong, Cat Memory's
+eight pairs/reset, 50 tour slides, and SQLite fragment navigation. No owner
+files or notes were saved. After a local restart and successful readiness
+check, seven principal served assets match the export byte-for-byte. Only
+`controller.js` changes among those assets, growing 73 bytes to 74,123 bytes;
+the runtimes, machine, and output frame shell are unchanged. Logs are under
+`/root/macchiato-work/runtime-retry-*`.
+
+The extracted deployment archive also passes all 152 manifest checks.
+`/root/resources-bunny.tar.gz` has SHA-256
+`4066a934c0e9de11baa454d8ab396281a90bf3909a99b47e6216f699dec6e27c`.
+Its predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-0f410bc-before-runtime-retry.tar.gz`.
+Nothing was deployed to Bunny. The rendering-frame decision, its four current
+production fidelity failures, and remaining performance work keep the goal
+open; the stable-document experiment remains test-only.
 
 ### Timers belong to the execution host: 2026-09-12
 
