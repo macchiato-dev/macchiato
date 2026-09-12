@@ -30,10 +30,8 @@ test("native disconnect clears queued intersection records in Chromium", async t
 });
 
 for (const engine of ["native", "microquickjs", "quickjs"]) {
-  test(`${engine}: intersections follow scrolling, unobserve, and reconnect`, {
+  for (const framed of [false, true]) test(`${engine}: intersections follow scrolling, unobserve, and reconnect (${framed ? "iframe" : "direct"})`, {
     timeout: 30_000,
-    // Executing expected failures, not passing evidence for the guest API.
-    todo: engine !== "native" && "replace the always-visible guest observer with native observations",
   }, async t => {
     const root = new URL("../../../", import.meta.url).pathname;
     const work = resolve(root, "../macchiato-work");
@@ -77,7 +75,13 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
         <div id="observed"></div><div id="tail"></div></div></main>`, contentType: "text/html" });
     });
     await page.goto("http://intersections.test/");
-    await page.evaluate(async ({ engine, source }) => {
+    if (framed) await page.evaluate(async () => {
+      const frame = document.createElement("iframe"); frame.src = "/frame";
+      const ready = new Promise(resolve => frame.onload = resolve);
+      document.body.append(frame); await ready;
+    });
+    const target = framed ? page.frames().find(frame => new URL(frame.url()).pathname === "/frame") : page;
+    await target.evaluate(async ({ engine, source }) => {
       window.notices = [];
       if (engine === "native") {
         window.__wwcPostMessage = message => notices.push(JSON.parse(message));
@@ -91,7 +95,7 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
       const runtime = engine === "quickjs" ? new QuickJSRuntime(module) : null;
       const machine = new Machine(runtime ? runtime.createSession() : module, document.getElementById("mount"), {
         stamp: runtime ? undefined : new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]),
-        onMessage: message => notices.push(JSON.parse(message)),
+        onMessage: message => { if (!message.startsWith("__wwcResponse:")) notices.push(JSON.parse(message)); },
       });
       await machine.onmsg(0);
       if (runtime) machine.onmsg(new TextEncoder().encode("\u0001" + source));
@@ -99,30 +103,30 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
       window.dispose = () => { machine.destroy(); runtime?.destroy(); };
     }, { engine, source });
     async function expect(count, visible, ratio) {
-      await page.waitForFunction(count => notices.length >= count, count, { timeout: 2000 });
-      assert.deepEqual(await page.evaluate(() => notices.at(-1)), {
+      await target.waitForFunction(count => notices.length >= count, count, { timeout: 2000 });
+      assert.deepEqual(await target.evaluate(() => notices.at(-1)), {
         entries: [{ target: "observed", visible, ratio, size: [100, 40] }],
         observerIdentity: true, receiver: true,
       });
     }
     try {
       await expect(1, false, 0);
-      await page.locator("#scroller").evaluate(node => { node.scrollTop = 120; });
+      await target.locator("#scroller").evaluate(node => { node.scrollTop = 120; });
       await expect(2, true, 0.5);
-      await page.locator("#scroller").evaluate(node => { node.scrollTop = 200; });
+      await target.locator("#scroller").evaluate(node => { node.scrollTop = 200; });
       await expect(3, true, 1);
       for (const operation of ["unobserve", "disconnect"]) {
-        await page.evaluate(operation => { command(operation); notices.length = 0; }, operation);
-        await page.locator("#scroller").evaluate(node => { node.scrollTop = 0; });
-        await page.waitForTimeout(100);
-        assert.deepEqual(await page.evaluate(() => notices), []);
-        await page.evaluate(() => command("observe"));
+        await target.evaluate(operation => { command(operation); notices.length = 0; }, operation);
+        await target.locator("#scroller").evaluate(node => { node.scrollTop = 0; });
+        await target.waitForTimeout(100);
+        assert.deepEqual(await target.evaluate(() => notices), []);
+        await target.evaluate(() => command("observe"));
         await expect(1, false, 0);
-        await page.locator("#scroller").evaluate(node => { node.scrollTop = 200; });
+        await target.locator("#scroller").evaluate(node => { node.scrollTop = 200; });
         await expect(2, true, 1);
       }
       assert.deepEqual(errors, []);
       assert.deepEqual(unexpected, []);
-    } finally { await page.evaluate(() => dispose()); }
+    } finally { await target.evaluate(() => dispose()); }
   });
 }
