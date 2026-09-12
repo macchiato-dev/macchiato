@@ -430,6 +430,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.ok(await storedChoices.count() >= 2, 'there are multiple saved versions to browse');
   assert.equal(await page.locator('[data-current-version]').getAttribute('data-version-time'), selectedVersionTime);
   assert.equal(await page.locator('[data-project-history] [aria-current="true"]').getAttribute('data-version-sequence'), '1');
+  await page.screenshot({ path: join(artifacts, 'history-selected.png') });
   await page.locator('[data-project-history] [data-version-sequence="2"]').click();
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
   await historyButton.click();
@@ -437,6 +438,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
 
   async function publishSelection() {
+    const submittedSequence = await page.locator('input[name="selectedVersion"]').inputValue();
+    assert.match(submittedSequence, /^[1-9][0-9]*$/);
     await page.locator('[data-project-submit]').click();
     await page.waitForFunction(() => document.querySelector('[data-project-editor]')?.dataset.editorMachineState === 'ready' &&
       document.querySelector('[data-project-editor]')?.dataset.outputMachineState === 'ready');
@@ -453,6 +456,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await storedChoices.first().locator('.project-editor__latest').count(), 1);
   assert.equal(await page.locator('[data-project-history] .project-editor__latest').count(), 1);
   assert.equal(await storedChoices.count(), 2, 'saving an older selection promotes it without duplicating it');
+  await page.screenshot({ path: join(artifacts, 'history-promoted.png') });
   await page.locator('[data-project-history] [data-version-sequence="2"]').click();
   await output.getByRole('heading', { name: 'Recovered output', exact: true }).waitFor();
   checkpoint('history selection and republishing an older version');
