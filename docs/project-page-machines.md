@@ -4213,3 +4213,31 @@ The previous archive is preserved at
 `/root/archive/2026/09/12/resources-bunny-f2bce04-before-disposal-ownership.tar.gz`.
 No Bunny deployment occurred. The overall goal remains open, including the
 native-document layout discrepancies and further performance work.
+
+### Live QuickJS scroll aliases: 2026-09-12
+
+QuickJS output now exposes `scrollX`/`scrollY` through the existing live host
+offset reads. The document experiment checks both aliases after native scroll
+and immediately after guest `scrollBy()` in the same callback. Its before-run
+failed with an undefined alias. All 27 focused callback, realm, lifetime, and
+rendering checks pass after rebuilding. MicroQuickJS's value-slot global
+binding limitation remains documented in
+[the document-boundary investigation](project-output-document-boundary.md);
+this change does not add snapshot aliases there or change the live layout.
+
+The export at `/root/macchiato-work/resources-bunny-scroll-alias`, prefix
+`site/resources-co-f7a8bff`, passes 152 manifest checks and the Deno backend
+test. Full editing stress passed in 51.3 seconds and all ten delayed-startup
+theme cases passed; editor screenshots were inspected. The four saved-example
+checks passed read-only, including the tour's 50 slides and SQLite fragments.
+After restart, six live assets matched the export and both games passed again.
+Logs are `/root/macchiato-work/scroll-alias-*`. The host remains 127,967 bytes;
+output Wasm grows by 400 bytes to 816,994 bytes. This is not a speedup claim.
+
+The extracted `/root/resources-bunny.tar.gz` passes manifest verification and
+has SHA-256
+`838f6785589390db113575f24f8e5dc57c88c774214564e60968065bc971b188`.
+Its predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-1f85ea3-before-scroll-alias.tar.gz`.
+Nothing was deployed to Bunny or saved to owner content. The broader goal and
+the production rendering-document decision remain open.
