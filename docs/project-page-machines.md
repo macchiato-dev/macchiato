@@ -4049,7 +4049,8 @@ The preceding archive is retained at
 `/root/archive/2026/09/12/resources-bunny-6c51d01-before-child-membership.tar.gz`.
 No Bunny deployment occurred. The broader goal remains open, including the
 native-document layout decision and further editing-performance work.
-# Font readiness and ownership during output replacement
+
+## Font readiness and ownership during output replacement
 
 Output preparation keeps the existing session visible while the replacement's
 font bytes are approved and decoded. The machine's null-message checkpoint

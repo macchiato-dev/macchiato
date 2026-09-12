@@ -369,12 +369,12 @@ function createCssRenderer(dependencies) {
     CSS_VALUE_FUNCTIONS: CSS_VALUE_FUNCTIONS2,
     Reader,
     hostDocument,
-    installFont: installFont2,
+    installFont,
     installedStyles,
     isAllowedProperty: isAllowedProperty2,
     logicalHead,
     options,
-    pendingChecks,
+    trackCheck,
     reject: fail2,
     scopeId,
     readSelector: readSelector2,
@@ -594,7 +594,7 @@ ${nested.join("\n\n")}
           }
           const bytes2 = reader.bytes.slice(reader.at, reader.at + length);
           reader.at += length;
-          pendingChecks.push(installFont2(font, bytes2, options.allowFont));
+          trackCheck(installFont(font, bytes2, options.allowFont));
           continue;
         }
         if (itemKind === 4) {
@@ -922,7 +922,7 @@ async function sha256(bytes) {
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
   return Array.from(digest, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
-async function installFont(font, bytes, allowFont, targetDocument) {
+async function loadFont(font, bytes, allowFont, targetDocument) {
   if (!font || !(bytes instanceof Uint8Array) || !/^[a-z][a-z0-9 ]{0,63}$/i.test(font.family) || font.style !== "normal" || !/^\d{1,4}(?: \d{1,4})?$/.test(font.weight) || !["auto", "block", "fallback", "optional", "swap"].includes(font.display)) {
     fail("font record is not allowed");
   }
@@ -935,7 +935,7 @@ async function installFont(font, bytes, allowFont, targetDocument) {
   if (!allowed) fail("custom font was not allowed");
   const face = new targetDocument.defaultView.FontFace(font.family, bytes, font);
   await face.load();
-  targetDocument.fonts.add(face);
+  return face;
 }
 function isVirtualHref(value) {
   if (/^#[a-z0-9][a-z0-9_.:-]{0,127}$/i.test(value)) return true;
@@ -947,6 +947,7 @@ function isVirtualHref(value) {
   return !path.split("/").some((part) => part === "." || part === "..");
 }
 var WasmWebBridge = class {
+  wake;
   imports;
   connect;
   destroy;
@@ -1026,17 +1027,47 @@ var WasmWebBridge = class {
       roots.forEach((root) => markRoot(root, scopeId, true));
     }
     const installedStyles = /* @__PURE__ */ new Set();
+    const installedFonts = /* @__PURE__ */ new Set();
     const messageRoot = Object.freeze({});
     const rootCapability = messagesOnly ? messageRoot : hostDocument;
     const chunks = [];
     const leases = [];
     const reverse = /* @__PURE__ */ new WeakMap();
-    const pendingChecks = [];
+    const pendingChecks = /* @__PURE__ */ new Map();
+    let checkFailure;
     const strings = [];
     const instrument = typeof options.instrument === "function" ? options.instrument : null;
     let instrumentSequence = 0;
     let nextReference = 0;
     let instance;
+    let disposed = false;
+    function trackCheck(check) {
+      let done;
+      const pending = new Promise((resolve) => {
+        done = resolve;
+      });
+      pendingChecks.set(pending, done);
+      const finish = () => {
+        pendingChecks.delete(pending);
+        done();
+      };
+      check.then(finish, (error) => {
+        if (!disposed) {
+          checkFailure ??= error;
+          queueMicrotask(() => {
+            if (!disposed) options.onError?.(error);
+          });
+        }
+        finish();
+      });
+    }
+    async function settleChecks() {
+      while (pendingChecks.size) await Promise.all(pendingChecks.keys());
+      if (disposed) fail("machine was destroyed");
+      const failure = checkFailure;
+      checkFailure = void 0;
+      if (failure !== void 0) throw failure;
+    }
     const stamp = options.stamp;
     let delivery;
     let checkpointQueued = false;
@@ -2583,11 +2614,20 @@ var WasmWebBridge = class {
       Reader,
       hostDocument,
       installedStyles,
-      installFont: (font, bytes, allowFont) => installFont(font, bytes, allowFont, hostDocument),
+      installFont: async (font, bytes, allowFont) => {
+        try {
+          const face = await loadFont(font, bytes, allowFont, hostDocument);
+          if (disposed) return;
+          hostDocument.fonts.add(face);
+          installedFonts.add(face);
+        } catch (error) {
+          if (!disposed) throw error;
+        }
+      },
       isAllowedProperty,
       logicalHead,
       options,
-      pendingChecks,
+      trackCheck,
       reject: fail,
       scopeId,
       readSelector,
@@ -2791,8 +2831,12 @@ var WasmWebBridge = class {
       }
       if (typeof instance.exports._initialize === "function") instance.exports._initialize();
       instance.exports.onmsg(0);
-      await Promise.all(pendingChecks);
-      if (instrument) trace("connected", { pendingChecks: pendingChecks.length });
+      await settleChecks();
+      if (instrument) trace("connected", { pendingChecks: pendingChecks.size });
+    };
+    this.wake = () => {
+      instance.exports.onmsg(0);
+      return settleChecks();
     };
     this.send = (bytes) => {
       if (!(bytes instanceof Uint8Array) || bytes.length === 0) {
@@ -2808,6 +2852,10 @@ var WasmWebBridge = class {
       }
     };
     this.destroy = () => {
+      disposed = true;
+      for (const done of pendingChecks.values()) done();
+      pendingChecks.clear();
+      checkFailure = void 0;
       if (!messagesOnly) realm.removeEventListener("submit", guardSubmit);
       for (const object of listenedObjects) {
         for (const record of eventListeners.get(object) || []) {
@@ -2838,6 +2886,8 @@ var WasmWebBridge = class {
       cleanupCallbacks.clear();
       installedStyles.forEach((style) => style.remove());
       installedStyles.clear();
+      installedFonts.forEach((face) => hostDocument.fonts.delete(face));
+      installedFonts.clear();
       if (scopeId) {
         roots.forEach((root) => markRoot(root, scopeId, false));
         activeScopes.delete(scopeId);
@@ -2873,7 +2923,7 @@ var WasmWebMachine = class {
       this.#connected = true;
       return this.#bridge.connect(this.#instance);
     }
-    if (message2 === 0) return this.#instance.exports.onmsg(0);
+    if (message2 === 0) return this.#bridge.wake();
     return this.#bridge.send(message2);
   };
   destroy = () => {
@@ -3201,6 +3251,7 @@ var ProjectOutput = class {
       });
       await session.machine.onmsg(0);
       await session.run(project.scripts || []);
+      await session.machine.onmsg(0);
       if (session.error) throw session.error;
       if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
       const previous = this.active;

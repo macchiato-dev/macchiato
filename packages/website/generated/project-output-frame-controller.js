@@ -409,6 +409,7 @@ var ProjectOutput = class {
       });
       await session.machine.onmsg(0);
       await session.run(project.scripts || []);
+      await session.machine.onmsg(0);
       if (session.error) throw session.error;
       if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
       const previous = this.active;
