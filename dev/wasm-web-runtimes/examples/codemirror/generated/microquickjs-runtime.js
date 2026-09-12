@@ -1491,7 +1491,9 @@ function writeValue(writer, value) {
   if (value instanceof Uint8Array) {
     writer.byte(6);
     writer.uint(value.length);
-    for (var index = 0; index < value.length; index++) writer.byte(value[index]);
+    if (value.length > writer.bytes.length - writer.at) throw new RangeError("wire message too large");
+    writer.bytes.set(value, writer.at);
+    writer.at += value.length;
     return;
   }
   throw new TypeError("unsupported wire value: " + typeof value + " " + Object.prototype.toString.call(value));

@@ -642,7 +642,12 @@ function writeValue(writer, value) {
   if (value[0] === "s") { writer.byte(5); return writer.uint(value[1]); }
   if (value instanceof Uint8Array) {
     writer.byte(6); writer.uint(value.length);
-    for (var index = 0; index < value.length; index++) writer.byte(value[index]);
+    if (value.length > writer.bytes.length - writer.at)
+      throw new RangeError("wire message too large");
+    // The runtime can copy bytes directly. Keep both views' offsets and avoid
+    // interpreting a property access and function call for every payload byte.
+    writer.bytes.set(value, writer.at);
+    writer.at += value.length;
     return;
   }
   throw new TypeError("unsupported wire value: " + typeof value + " " +

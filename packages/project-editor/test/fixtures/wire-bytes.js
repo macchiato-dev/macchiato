@@ -30,6 +30,40 @@ var result = readValue(counted);
 if (result[1234] !== large[1242] || result[65535] !== large[65543]) throw Error("Large binary payload failed");
 var start = performance.now();
 for (var repeat = 0; repeat < 32; repeat++) readValue(new Reader(large, large.length));
+var copyMilliseconds = performance.now() - start;
+
+// Encoding is checked against explicit bytes, including offset views. A copy
+// must neither include the backing buffer's padding nor retain its source.
+var backing = new Uint8Array([99, 1, 127, 255, 99]);
+var destination = new Uint8Array(12), encoded = new Writer(destination.subarray(2, 11));
+writeValue(encoded, backing.subarray(1, 4));
+if (encoded.at !== 9 || destination[6] !== 6 || destination[7] !== 3 ||
+    destination[8] !== 1 || destination[9] !== 127 || destination[10] !== 255 ||
+    destination[11] !== 0) throw Error("Wrong encoded binary payload");
+backing[1] = 88;
+if (destination[8] !== 1) throw Error("Encoded bytes retain their input");
+var writeBounded = 0;
+for (var capacity = 4; capacity < 9; capacity++) {
+  var shortWriter = new Writer(new Uint8Array(capacity)), denied = false;
+  try { writeValue(shortWriter, new Uint8Array([1, 127, 255])); }
+  catch (writeError) { denied = writeError instanceof RangeError; }
+  if (!denied || shortWriter.at > capacity) throw Error("Binary write was not bounded");
+  writeBounded++;
+}
+var emptyWriter = new Writer(new Uint8Array(6));
+writeValue(emptyWriter, new Uint8Array(0));
+if (emptyWriter.at !== 6 || emptyWriter.bytes[4] !== 6 || emptyWriter.bytes[5] !== 0)
+  throw Error("Empty binary write failed");
+var payload = large.subarray(8), output = new Uint8Array(large.length), writeCalls = 0;
+var countedWriter = new Writer(output);
+countedWriter.byte = function (value) { writeCalls++; Writer.prototype.byte.call(this, value); };
+writeValue(countedWriter, payload);
+for (var byte = 4; byte < output.length; byte++) {
+  if (output[byte] !== large[byte]) throw Error("Large binary write failed");
+}
+start = performance.now();
+for (repeat = 0; repeat < 32; repeat++) writeValue(new Writer(output), payload);
 __wwcPostMessage(JSON.stringify({ bounded: bounded, isolated: true, byteCalls: byteCalls,
-  copyMilliseconds: performance.now() - start }));
+  copyMilliseconds: copyMilliseconds, writeMilliseconds: performance.now() - start,
+  writeBounded: writeBounded, writeCalls: writeCalls }));
 flush();
