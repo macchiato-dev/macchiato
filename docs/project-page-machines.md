@@ -3929,3 +3929,42 @@ The preceding archive is retained at
 `/root/archive/2026/09/12/resources-bunny-4631446-before-binary-write-copy.tar.gz`.
 The broader goal remains open: native-document sizing/painting and large-input
 editing latency still require work.
+
+### Rooted native UTF-8 reads (2026-09-12)
+
+The `feb8614` export adds a MicroQuickJS guest-native reader for bounded UTF-8
+wire strings. It validates the complete byte range before string allocation,
+keeps the source view rooted across possible arena compaction, and reacquires
+its address before copying. No host surface, permission or scheduling rule is
+changed. Compiler, bytecode and Wasm artifacts were rebuilt together for the
+new native slot. QuickJS retains its existing reader fallback.
+
+The Unicode/range test also allocates 64 MiB of string data in the 32 MiB arena,
+with a dead buffer before the source and a rotating retained window. Eight
+Unicode cases include UTF-16 indexing of mixed supplementary characters; twelve
+malformed sequences, nine invalid ranges and five wrong input types are denied.
+All 26 runtime/output regressions pass. The full editor stress test passes in
+58 seconds, including editing, undo/redo, theme changes, output-error recovery,
+saved reload and phone layouts; light/dark screenshots were inspected.
+
+A matched, unprofiled 106 KB paste comparison improves from 730–798 ms with the
+JS reader to 134–151 ms with the native reader. Native controls remain 26–40 ms.
+The full project stress run pastes in 147 ms. Its native insertion still takes
+18.7 seconds; the separate raw-JavaScript input comparison did not establish a
+total-insertion speedup. See [typing diagnostics](project-editor-typing-performance.md)
+for controls and distinctions between browser input, decoding and editor work.
+
+Read-only saved-project checks pass for all eight cat pairs and reset, Mahjong's
+144 tiles/full-height layout, 50 tour slides and SQLite fragments, including
+theme/phone checks. No owner project was saved. All 152 export and extracted
+archive entries verify, and the compressed backend executes in Deno. Evidence
+is under `/root/macchiato-work/native-text-read-*`.
+
+Cat and Mahjong also pass on the restarted live server. Six live host,
+controller, runtime and frame artifacts match the export byte-for-byte.
+`/root/resources-bunny.tar.gz` has SHA-256
+`e4dbf0d41b30f5791aa5b4ed3bc0576dcb63442444aabe49156f9abb6ea165e6`;
+its predecessor is preserved at
+`/root/archive/2026/09/12/resources-bunny-f915c1d-before-native-text-read.tar.gz`.
+No Bunny deployment was performed. Large native-input latency and native-document
+sizing/painting still leave the broader goal incomplete.
