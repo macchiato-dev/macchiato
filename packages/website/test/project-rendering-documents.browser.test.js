@@ -32,6 +32,12 @@ test("independent rendering documents share an engine without sharing page state
     });
   </script></body></html>`;
   const programs = [20, 24].map(size => compileProjectFiles([{ path: "index.html", content: source(size) }]));
+  const routeProgram = compileProjectFiles([{ path: "index.html", content: source(24)
+    .replace('<div id="space"></div>', '<a id="chapter-link" href="#/chapter.html#details">Chapter</a> ' +
+      '<a id="anchor-link" href="#details">Details</a><div id="space"></div><h2 id="details">Details</h2>')
+    .replace("globalThis.appOnly = true;", `globalThis.appOnly = true;
+      globalThis.routeEvents = [location.pathname];
+      addEventListener('hashchange', function () { routeEvents.push(location.pathname); });`) }]);
   const font = await readFile(new URL("../../../dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/assets/fonts/libre-baskerville-latin-wght-normal.woff2", import.meta.url));
   const fontSource = source(24)
     .replace("background:#e8f2ff", "background:#f6e3e8; font-family:ReaderFont")
@@ -94,7 +100,7 @@ test("independent rendering documents share an engine without sharing page state
     // Deliberately keep the interpreter and machine in this controller realm.
     // Each grant is a whole, independently laid-out, script-free Document.
     window.experiment = {
-      async prepare(program, { holdFont = false } = {}) {
+      async prepare(program, { holdFont = false, routes = false } = {}) {
         const frame = document.createElement("iframe"), id = String(++next);
         frame.dataset.id = id;
         frame.experimentId = id;
@@ -108,6 +114,14 @@ test("independent rendering documents share an engine without sharing page state
         const machine = new Machine(engine.createSession(), doc, {
           onMessage: value => reports.push(value),
           allowFont: holdFont ? () => new Promise(resolve => fontDecisions.set(id, resolve)) : undefined,
+          allowNavigate: routes ? 'fragment' : undefined,
+          services: routes ? { route: {
+            get: () => doc.defaultView.location.hash.slice(1) || '/',
+            search: () => '',
+            // The full guest receives real window hashchange events. Its
+            // fallback route-listener service must not be needed here.
+            listen() { throw new Error('Expected native hashchange delivery'); },
+          } } : undefined,
         });
         const entry = { frame, machine, reports, doc };
         // Focusing a frame/window resets the focused control in Chromium.
@@ -418,6 +432,30 @@ test("independent rendering documents share an engine without sharing page state
         'view modes preserve the controller document and engine');
       t.diagnostic(JSON.stringify({ mode, viewport, draft, active }));
     }
+    // Use real anchor clicks in the nested document. No synthesized route events
+    // or guest-side location cache can hide a wrong navigation target here.
+    const routing = await page.evaluate(program => experiment.prepare(program, { routes: true }), routeProgram);
+    await reveal(routing);
+    const controllerURL = page.url(), websiteURL = browserPage.url();
+    assert.deepEqual(await report(routing, 'routeEvents'), ['/']);
+    await clickApp(routing, '#chapter-link');
+    const routeDocument = await page.evaluate(selector => {
+      const doc = document.querySelector(selector).contentDocument;
+      return { url: doc.URL, base: doc.baseURI, hasApp: !!doc.querySelector('#chapter-link') };
+    }, view(routing));
+    t.diagnostic(JSON.stringify({ routeDocument }));
+    assert.equal(routeDocument.hasApp, true, 'a fragment click must not replace the rendering document');
+    await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', routing);
+    assert.equal(page.url(), controllerURL);
+    assert.equal(browserPage.url(), websiteURL);
+    assert.equal(await report(routing, 'location.pathname'), '/chapter.html#details');
+    await clickApp(routing, '#anchor-link');
+    await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === 'details', routing);
+    assert.ok(await report(routing, 'scrollY') > 400, 'native anchor scrolls its rendering document');
+    await page.evaluate(selector => document.querySelector(selector).contentWindow.history.back(), view(routing));
+    await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', routing);
+    assert.equal(page.url(), controllerURL);
+    assert.equal(browserPage.url(), websiteURL);
     for (let index = 0; index < 10; index++) await reveal(await prepare(programs[index % 2]));
     assert.equal(await page.locator("#mount iframe").count(), 1);
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {
