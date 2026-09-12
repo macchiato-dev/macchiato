@@ -30,6 +30,11 @@ function probeReference(json) {
   } else if (request.operation === "mutationObserve") {
     var mutation = hostCall(document.reference, "mutationObserver", [allocateCallback(function () {}, false)]);
     result = hostCall(mutation[1], "observe", [capturedTarget, 1]);
+  } else if (request.operation === "intersectionRoot") {
+    result = hostCall(document.reference, "intersectionObserver", [capturedTarget, "0px", 0]);
+  } else if (request.operation === "intersectionObserve") {
+    var intersection = hostCall(document.reference, "intersectionObserver", [null, "0px", 0]);
+    result = hostCall(intersection[1], "observe", [capturedTarget, allocateCallback(function () {}, false)]);
   } else if (request.operation === "selectionText" || request.operation === "selectionGeometry") {
     var selection = hostCall(document.reference, "getSelection", []);
     var range = hostCall(selection[1], "getRangeAt", [0]);

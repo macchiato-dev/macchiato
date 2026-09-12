@@ -25,6 +25,7 @@ test("raw node references retain identity without granting unrelated host conten
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const probes = ["value", "setValue", "attribute", "style", "append", "resizeObserve", "mutationObserve",
+    "intersectionRoot", "intersectionObserve",
     "documentChildren", "selectionText", "selectionGeometry", "removeDocumentRoot",
     "parent", "firstChild", "lastChild", "closest", "type", "documentIdentity"].map(operation => ({ operation }));
   probes.push({ operation: "value", grant: "retained" },

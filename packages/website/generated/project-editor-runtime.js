@@ -987,6 +987,8 @@ var WasmWebBridge = class {
       HTMLTitleElement,
       IdleDeadline,
       InputEvent,
+      IntersectionObserver,
+      IntersectionObserverEntry,
       KeyboardEvent,
       MediaQueryList,
       MediaQueryListEvent,
@@ -1042,6 +1044,8 @@ var WasmWebBridge = class {
     const listenedObjects = /* @__PURE__ */ new Set();
     const mutationObservers = /* @__PURE__ */ new Set();
     const resizeObservers = /* @__PURE__ */ new Map();
+    const intersectionObservers = /* @__PURE__ */ new Map();
+    const intersectionCallbacks = /* @__PURE__ */ new WeakMap();
     const serviceSubscriptions = /* @__PURE__ */ new Set();
     const timers = /* @__PURE__ */ new Map();
     const frames = /* @__PURE__ */ new Map();
@@ -1233,6 +1237,11 @@ var WasmWebBridge = class {
     };
     if (!messagesOnly) realm.addEventListener("submit", guardSubmit);
     function get(object, name) {
+      if (object === hostDocument && name === "supportsIntersectionObserver") return typeof IntersectionObserver === "function";
+      if (typeof IntersectionObserverEntry === "function" && object instanceof IntersectionObserverEntry && ["target", "rootBounds", "boundingClientRect", "intersectionRect", "time", "isIntersecting", "intersectionRatio"].includes(name)) {
+        return reference(object[name]);
+      }
+      if (typeof IntersectionObserver === "function" && object instanceof IntersectionObserver && ["root", "rootMargin", "thresholds"].includes(name)) return reference(object[name]);
       if (object === hostDocument && name === "supportsResizeObserver") return typeof ResizeObserver === "function";
       if (typeof ResizeObserverEntry === "function" && object instanceof ResizeObserverEntry && ["target", "contentRect", "contentBoxSize", "borderBoxSize", "devicePixelContentBoxSize"].includes(name)) {
         return reference(object[name]);
@@ -1560,6 +1569,44 @@ var WasmWebBridge = class {
       frames.delete(id);
     }
     function call(object, name, args) {
+      if (object === hostDocument && name === "intersectionObserver" && typeof IntersectionObserver === "function" && args.length >= 2 && args.length <= 1026 && (args[0] === null || args[0] instanceof Element) && typeof args[1] === "string" && args[1].length <= 128 && args.slice(2).every((value2) => typeof value2 === "number" && Number.isFinite(value2))) {
+        if (args[0] !== null) requireNode(args[0]);
+        const callback = { index: null };
+        const observer = new IntersectionObserver((entries) => {
+          if (callback.index !== null && reverse.has(observer)) deliver(callback.index, entries);
+        }, { root: args[0], rootMargin: args[1], threshold: args.slice(2) });
+        intersectionCallbacks.set(observer, callback);
+        return reference(observer);
+      }
+      if (typeof IntersectionObserver === "function" && object instanceof IntersectionObserver) {
+        const callback = intersectionCallbacks.get(object);
+        if (!callback) fail("intersection observer is not owned");
+        if (name === "observe" && args.length === 2 && args[0] instanceof Element && Number.isInteger(args[1]) && args[1] >= 0 && args[1] <= 4095) {
+          requireNode(args[0]);
+          if (!intersectionObservers.has(object) && intersectionObservers.size >= 1024) fail("too many intersection observers");
+          object.observe(args[0]);
+          callback.index = args[1];
+          ownedNodes.add(args[0]);
+          if (!intersectionObservers.has(object)) intersectionObservers.set(object, /* @__PURE__ */ new Set());
+          intersectionObservers.get(object).add(args[0]);
+          return null;
+        }
+        if (name === "unobserve" && args.length === 1 && args[0] instanceof Element) {
+          requireNode(args[0]);
+          object.unobserve(args[0]);
+          const targets = intersectionObservers.get(object);
+          targets?.delete(args[0]);
+          if (!targets?.size) intersectionObservers.delete(object);
+          return null;
+        }
+        if (name === "takeRecords" && args.length === 0) return reference(object.takeRecords());
+        if (name === "disconnect" && args.length === 0) {
+          object.disconnect();
+          callback.index = null;
+          intersectionObservers.delete(object);
+          return null;
+        }
+      }
       if (hostScheduling && object === hostScheduling && name === "isInputPending" && args.length === 1 && typeof args[0] === "boolean") {
         return hostScheduling.isInputPending({ includeContinuous: args[0] });
       }
@@ -2772,6 +2819,11 @@ var WasmWebBridge = class {
       mutationObservers.clear();
       for (const observer of resizeObservers.keys()) observer.disconnect();
       resizeObservers.clear();
+      for (const observer of intersectionObservers.keys()) {
+        observer.disconnect();
+        intersectionCallbacks.get(observer).index = null;
+      }
+      intersectionObservers.clear();
       for (const stop of serviceSubscriptions) stop();
       serviceSubscriptions.clear();
       for (const timer of timers.values()) realm.clearTimeout(timer);

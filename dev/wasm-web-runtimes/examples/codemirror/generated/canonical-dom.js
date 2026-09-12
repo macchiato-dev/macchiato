@@ -1652,9 +1652,9 @@ var guestNodes = Object.create(null);
 var guestNodeKeys = [], guestNodeSweep = 0;
 // MicroQuickJS supplies internal weak cells, not an imitation WeakRef that
 // retains its target forever. QuickJS uses its native WeakRef implementation.
-var makeNodeReference = typeof __wwcWeakCell === "function"
+var makeWeakReference = typeof __wwcWeakCell === "function"
   ? __wwcWeakCell : function (node) { return new WeakRef(node); };
-var readNodeReference = typeof __wwcWeakDeref === "function"
+var readWeakReference = typeof __wwcWeakDeref === "function"
   ? __wwcWeakDeref : function (entry) { return entry.deref(); };
 function rememberNode(node) {
   // Host IDs are monotonic. Drop dead cells incrementally as new nodes arrive,
@@ -1663,7 +1663,7 @@ function rememberNode(node) {
   for (var scan = 0; scan < 4 && guestNodeKeys.length; scan++) {
     if (guestNodeSweep >= guestNodeKeys.length) guestNodeSweep = 0;
     var key = guestNodeKeys[guestNodeSweep], entry = guestNodes[key];
-    if (entry && readNodeReference(entry)) guestNodeSweep++;
+    if (entry && readWeakReference(entry)) guestNodeSweep++;
     else {
       delete guestNodes[key];
       var last = guestNodeKeys.pop();
@@ -1671,12 +1671,12 @@ function rememberNode(node) {
     }
   }
   if (!guestNodes[node.reference]) guestNodeKeys.push(node.reference);
-  guestNodes[node.reference] = makeNodeReference(node);
+  guestNodes[node.reference] = makeWeakReference(node);
   return node;
 }
 function nodeForReference(reference) {
   var entry = guestNodes[reference];
-  var known = entry && readNodeReference(entry);
+  var known = entry && readWeakReference(entry);
   if (known) {
     // Each returned host reference carries a lease. Reusing the existing
     // identity means no new finalizer token will be created for this one.
@@ -1820,7 +1820,7 @@ globalThis.reconcileGuestConnectivity = function () {
   for (var at = 0; at + 3 < bytes.length; at += 4) {
     var reference = bytes[at] | bytes[at + 1] << 8 |
       bytes[at + 2] << 16 | bytes[at + 3] << 24;
-    var entry = guestNodes[reference], node = entry && readNodeReference(entry);
+    var entry = guestNodes[reference], node = entry && readWeakReference(entry);
     if (!node || !parentOf(node)) continue;
     var root = node, guard = 0;
     while (parentOf(root) && guard++ < 4096) root = parentOf(root);
@@ -2597,26 +2597,135 @@ GuestResizeObserver.prototype.disconnect = function () {
   this.reference = this._hostReference = this.callbackIndex = null;
   this.targets = [];
 };
-function GuestIntersectionObserver(callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  this.callback = callback;
-  this.active = true;
+function GuestIntersectionEntry(reference) { GuestObject.call(this, reference); }
+GuestIntersectionEntry.prototype = Object.create(GuestObject.prototype);
+Object.defineProperty(GuestIntersectionEntry.prototype, "target", { get: function () {
+  return nodeForReference(hostGet(this.reference, "target")[1]);
+} });
+["time", "isIntersecting", "intersectionRatio"].forEach(function (name) {
+  Object.defineProperty(GuestIntersectionEntry.prototype, name, { get: function () {
+    return hostGet(this.reference, name);
+  } });
+});
+["rootBounds", "boundingClientRect", "intersectionRect"].forEach(function (name) {
+  Object.defineProperty(GuestIntersectionEntry.prototype, name, { get: function () {
+    var key = "_" + name;
+    if (this[key] === undefined) {
+      var result = hostGet(this.reference, name);
+      if (result === null) this[key] = null;
+      else {
+        var reference = result[1];
+        this[key] = new DOMRect(hostGet(reference, "x") / 64, hostGet(reference, "y") / 64,
+          hostGet(reference, "width") / 64, hostGet(reference, "height") / 64);
+        releaseHostReferenceLease(reference);
+      }
+    }
+    return this[key];
+  } });
+});
+function intersectionEntries(reference, token) {
+  return resizeArray(reference, function (entry) { return new GuestIntersectionEntry(entry); }, token);
 }
+// Observing keeps the callback owner alive. After the last unobserve(), a live
+// guest reference can still receive pending entries; an unreachable observer
+// must not be retained just by the callback registry. Reclaim dead slots with
+// bounded work when new subscriptions arrive, without a timer or DOM polling.
+var activeIntersections = Object.create(null), weakIntersectionCallbacks = [], intersectionSweep = 0;
+function intersectionCallback(record) {
+  return function (batch) {
+    var observer = readWeakReference(record.owner);
+    if (observer && !record.closed) observer.callback(intersectionEntries(batch.reference, batch._hostReference), observer);
+  };
+}
+function intersectionSubscription(observer) {
+  for (var scan = 0; scan < 4 && weakIntersectionCallbacks.length; scan++) {
+    if (intersectionSweep >= weakIntersectionCallbacks.length) intersectionSweep = 0;
+    var entry = weakIntersectionCallbacks[intersectionSweep];
+    if (!entry.closed && readWeakReference(entry.owner)) intersectionSweep++;
+    else {
+      if (!entry.closed) releaseCallback(entry.index);
+      var last = weakIntersectionCallbacks.pop();
+      if (intersectionSweep < weakIntersectionCallbacks.length) weakIntersectionCallbacks[intersectionSweep] = last;
+    }
+  }
+  var record = { owner: makeWeakReference(observer), closed: false, index: null };
+  record.index = allocateCallback(intersectionCallback(record), false);
+  weakIntersectionCallbacks.push(record);
+  return record;
+}
+function GuestIntersectionObserver(callback, options) {
+  if (!(this instanceof GuestIntersectionObserver) || typeof callback !== "function") throw new TypeError("callback required");
+  if (options != null && typeof options !== "object" && typeof options !== "function") throw new TypeError("options required");
+  options = options == null ? {} : options;
+  var root = options.root, margin = options.rootMargin, threshold = options.threshold;
+  root = root == null ? null : root;
+  if (root !== null && !(root instanceof GuestElement)) throw new TypeError("element root required");
+  margin = margin === undefined ? "0px" : String(margin);
+  var thresholds = threshold === undefined ? [0] : Array.isArray(threshold) ? threshold.map(Number) : [Number(threshold)];
+  if (thresholds.some(function (value) { return !isFinite(value) || value < 0 || value > 1; }))
+    throw new RangeError("threshold must be between 0 and 1");
+  GuestObject.call(this, hostCall(document.reference, "intersectionObserver", [root, margin].concat(thresholds))[1]);
+  this.callback = callback;
+  this.callbackIndex = null;
+  this.targets = [];
+  this._root = root;
+}
+GuestIntersectionObserver.prototype = Object.create(GuestObject.prototype);
+Object.defineProperty(GuestIntersectionObserver.prototype, "root", { get: function () { return this._root; } });
+Object.defineProperty(GuestIntersectionObserver.prototype, "rootMargin", { get: function () {
+  return hostGet(this.reference, "rootMargin");
+} });
+Object.defineProperty(GuestIntersectionObserver.prototype, "thresholds", { get: function () {
+  if (!this._thresholds) {
+    var reference = hostGet(this.reference, "thresholds")[1], values = [];
+    var length = hostGet(reference, "length");
+    for (var index = 0; index < length; index++) values.push(hostCall(reference, "item", [index]));
+    releaseHostReferenceLease(reference);
+    this._thresholds = values;
+  }
+  // MicroQuickJS's minimal platform has no Object.freeze implementation. Never
+  // expose our stored configuration there; a changed copy cannot change it.
+  return Object.freeze(this._thresholds.slice());
+} });
 GuestIntersectionObserver.prototype.observe = function (target) {
-  var observer = this;
-  setTimeout(function () {
-    if (observer.active) observer.callback([{ target: target, isIntersecting: true, intersectionRatio: 1 }], observer);
-  }, 0);
+  if (!(target instanceof GuestElement) || target.nodeType !== 1) throw new TypeError("element required");
+  if (this.callbackIndex === null) {
+    var record = intersectionSubscription(this);
+    try { hostCall(this.reference, "observe", [target, record.index]); }
+    catch (error) { record.closed = true; releaseCallback(record.index); throw error; }
+    this.callbackIndex = record.index;
+    this._callbackRecord = record;
+  } else hostCall(this.reference, "observe", [target, this.callbackIndex]);
+  if (this.targets.indexOf(target) < 0) this.targets.push(target);
+  activeIntersections[this.callbackIndex] = this;
 };
-GuestIntersectionObserver.prototype.unobserve = function () {};
-GuestIntersectionObserver.prototype.disconnect = function () { this.active = false; };
-GuestIntersectionObserver.prototype.takeRecords = function () { return []; };
+GuestIntersectionObserver.prototype.unobserve = function (target) {
+  if (!(target instanceof GuestElement) || target.nodeType !== 1) throw new TypeError("element required");
+  hostCall(this.reference, "unobserve", [target]);
+  var index = this.targets.indexOf(target);
+  if (index >= 0) this.targets.splice(index, 1);
+  if (!this.targets.length && this.callbackIndex !== null) delete activeIntersections[this.callbackIndex];
+};
+GuestIntersectionObserver.prototype.disconnect = function () {
+  hostCall(this.reference, "disconnect", []);
+  if (this.callbackIndex !== null) {
+    delete activeIntersections[this.callbackIndex];
+    this._callbackRecord.closed = true;
+    releaseCallback(this.callbackIndex);
+  }
+  this.callbackIndex = null;
+  this._callbackRecord = null;
+  this.targets = [];
+};
+GuestIntersectionObserver.prototype.takeRecords = function () {
+  return intersectionEntries(hostCall(this.reference, "takeRecords", [])[1]);
+};
 // Native contenteditable behavior mutates the host tree after the guest event
 // handler returns. Mirror those browser-owned edits on the normal microtask so
 // the guest tree has the same ownership and detached nodes become collectible.
 globalThis.MutationObserver = GuestMutationObserver;
 if (hostGet(document.reference, "supportsResizeObserver")) globalThis.ResizeObserver = GuestResizeObserver;
-globalThis.IntersectionObserver = GuestIntersectionObserver;
+if (hostGet(document.reference, "supportsIntersectionObserver")) globalThis.IntersectionObserver = GuestIntersectionObserver;
 function GuestComputedStyle(reference) { GuestObject.call(this, reference); }
 GuestComputedStyle.prototype = Object.create(GuestObject.prototype);
 ["direction", "height", "overflow", "paddingBottom", "paddingLeft", "paddingRight",

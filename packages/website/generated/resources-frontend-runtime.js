@@ -2424,10 +2424,10 @@ globalThis.__wwcProjectClassName = projectClassName;
 var guestNodes = Object.create(null);
 var guestNodeKeys = [],
   guestNodeSweep = 0;
-var makeNodeReference = typeof __wwcWeakCell === "function" ? __wwcWeakCell : function (node) {
+var makeWeakReference = typeof __wwcWeakCell === "function" ? __wwcWeakCell : function (node) {
   return new WeakRef(node);
 };
-var readNodeReference = typeof __wwcWeakDeref === "function" ? __wwcWeakDeref : function (entry) {
+var readWeakReference = typeof __wwcWeakDeref === "function" ? __wwcWeakDeref : function (entry) {
   return entry.deref();
 };
 function rememberNode(node) {
@@ -2435,19 +2435,19 @@ function rememberNode(node) {
     if (guestNodeSweep >= guestNodeKeys.length) guestNodeSweep = 0;
     var key = guestNodeKeys[guestNodeSweep],
       entry = guestNodes[key];
-    if (entry && readNodeReference(entry)) guestNodeSweep++;else {
+    if (entry && readWeakReference(entry)) guestNodeSweep++;else {
       delete guestNodes[key];
       var last = guestNodeKeys.pop();
       if (guestNodeSweep < guestNodeKeys.length) guestNodeKeys[guestNodeSweep] = last;
     }
   }
   if (!guestNodes[node.reference]) guestNodeKeys.push(node.reference);
-  guestNodes[node.reference] = makeNodeReference(node);
+  guestNodes[node.reference] = makeWeakReference(node);
   return node;
 }
 function nodeForReference(reference) {
   var entry = guestNodes[reference];
-  var known = entry && readNodeReference(entry);
+  var known = entry && readWeakReference(entry);
   if (known) {
     releaseHostReferenceLease(reference);
     return known;
@@ -2588,7 +2588,7 @@ globalThis.reconcileGuestConnectivity = function () {
   for (var at = 0; at + 3 < bytes.length; at += 4) {
     var reference = bytes[at] | bytes[at + 1] << 8 | bytes[at + 2] << 16 | bytes[at + 3] << 24;
     var entry = guestNodes[reference],
-      node = entry && readNodeReference(entry);
+      node = entry && readWeakReference(entry);
     if (!node || !parentOf(node)) continue;
     var root = node,
       guard = 0;
@@ -3406,31 +3406,156 @@ GuestResizeObserver.prototype.disconnect = function () {
   this.reference = this._hostReference = this.callbackIndex = null;
   this.targets = [];
 };
-function GuestIntersectionObserver(callback) {
-  if (typeof callback !== "function") throw new TypeError("callback required");
-  this.callback = callback;
-  this.active = true;
+function GuestIntersectionEntry(reference) {
+  GuestObject.call(this, reference);
 }
+GuestIntersectionEntry.prototype = Object.create(GuestObject.prototype);
+Object.defineProperty(GuestIntersectionEntry.prototype, "target", {
+  get: function get() {
+    return nodeForReference(hostGet(this.reference, "target")[1]);
+  }
+});
+["time", "isIntersecting", "intersectionRatio"].forEach(function (name) {
+  Object.defineProperty(GuestIntersectionEntry.prototype, name, {
+    get: function get() {
+      return hostGet(this.reference, name);
+    }
+  });
+});
+["rootBounds", "boundingClientRect", "intersectionRect"].forEach(function (name) {
+  Object.defineProperty(GuestIntersectionEntry.prototype, name, {
+    get: function get() {
+      var key = "_" + name;
+      if (this[key] === undefined) {
+        var result = hostGet(this.reference, name);
+        if (result === null) this[key] = null;else {
+          var reference = result[1];
+          this[key] = new DOMRect(hostGet(reference, "x") / 64, hostGet(reference, "y") / 64, hostGet(reference, "width") / 64, hostGet(reference, "height") / 64);
+          releaseHostReferenceLease(reference);
+        }
+      }
+      return this[key];
+    }
+  });
+});
+function intersectionEntries(reference, token) {
+  return resizeArray(reference, function (entry) {
+    return new GuestIntersectionEntry(entry);
+  }, token);
+}
+var activeIntersections = Object.create(null),
+  weakIntersectionCallbacks = [],
+  intersectionSweep = 0;
+function intersectionCallback(record) {
+  return function (batch) {
+    var observer = readWeakReference(record.owner);
+    if (observer && !record.closed) observer.callback(intersectionEntries(batch.reference, batch._hostReference), observer);
+  };
+}
+function intersectionSubscription(observer) {
+  for (var scan = 0; scan < 4 && weakIntersectionCallbacks.length; scan++) {
+    if (intersectionSweep >= weakIntersectionCallbacks.length) intersectionSweep = 0;
+    var entry = weakIntersectionCallbacks[intersectionSweep];
+    if (!entry.closed && readWeakReference(entry.owner)) intersectionSweep++;else {
+      if (!entry.closed) releaseCallback(entry.index);
+      var last = weakIntersectionCallbacks.pop();
+      if (intersectionSweep < weakIntersectionCallbacks.length) weakIntersectionCallbacks[intersectionSweep] = last;
+    }
+  }
+  var record = {
+    owner: makeWeakReference(observer),
+    closed: false,
+    index: null
+  };
+  record.index = allocateCallback(intersectionCallback(record), false);
+  weakIntersectionCallbacks.push(record);
+  return record;
+}
+function GuestIntersectionObserver(callback, options) {
+  if (!(this instanceof GuestIntersectionObserver) || typeof callback !== "function") throw new TypeError("callback required");
+  if (options != null && typeof options !== "object" && typeof options !== "function") throw new TypeError("options required");
+  options = options == null ? {} : options;
+  var root = options.root,
+    margin = options.rootMargin,
+    threshold = options.threshold;
+  root = root == null ? null : root;
+  if (root !== null && !(root instanceof GuestElement)) throw new TypeError("element root required");
+  margin = margin === undefined ? "0px" : String(margin);
+  var thresholds = threshold === undefined ? [0] : Array.isArray(threshold) ? threshold.map(Number) : [Number(threshold)];
+  if (thresholds.some(function (value) {
+    return !isFinite(value) || value < 0 || value > 1;
+  })) throw new RangeError("threshold must be between 0 and 1");
+  GuestObject.call(this, hostCall(document.reference, "intersectionObserver", [root, margin].concat(thresholds))[1]);
+  this.callback = callback;
+  this.callbackIndex = null;
+  this.targets = [];
+  this._root = root;
+}
+GuestIntersectionObserver.prototype = Object.create(GuestObject.prototype);
+Object.defineProperty(GuestIntersectionObserver.prototype, "root", {
+  get: function get() {
+    return this._root;
+  }
+});
+Object.defineProperty(GuestIntersectionObserver.prototype, "rootMargin", {
+  get: function get() {
+    return hostGet(this.reference, "rootMargin");
+  }
+});
+Object.defineProperty(GuestIntersectionObserver.prototype, "thresholds", {
+  get: function get() {
+    if (!this._thresholds) {
+      var reference = hostGet(this.reference, "thresholds")[1],
+        values = [];
+      var length = hostGet(reference, "length");
+      for (var index = 0; index < length; index++) values.push(hostCall(reference, "item", [index]));
+      releaseHostReferenceLease(reference);
+      this._thresholds = values;
+    }
+    return Object.freeze(this._thresholds.slice());
+  }
+});
 GuestIntersectionObserver.prototype.observe = function (target) {
-  var observer = this;
-  setTimeout(function () {
-    if (observer.active) observer.callback([{
-      target: target,
-      isIntersecting: true,
-      intersectionRatio: 1
-    }], observer);
-  }, 0);
+  if (!(target instanceof GuestElement) || target.nodeType !== 1) throw new TypeError("element required");
+  if (this.callbackIndex === null) {
+    var record = intersectionSubscription(this);
+    try {
+      hostCall(this.reference, "observe", [target, record.index]);
+    } catch (_error7) {
+      record.closed = true;
+      releaseCallback(record.index);
+      throw _error7;
+    }
+    this.callbackIndex = record.index;
+    this._callbackRecord = record;
+  } else hostCall(this.reference, "observe", [target, this.callbackIndex]);
+  if (this.targets.indexOf(target) < 0) this.targets.push(target);
+  activeIntersections[this.callbackIndex] = this;
 };
-GuestIntersectionObserver.prototype.unobserve = function () {};
+GuestIntersectionObserver.prototype.unobserve = function (target) {
+  if (!(target instanceof GuestElement) || target.nodeType !== 1) throw new TypeError("element required");
+  hostCall(this.reference, "unobserve", [target]);
+  var index = this.targets.indexOf(target);
+  if (index >= 0) this.targets.splice(index, 1);
+  if (!this.targets.length && this.callbackIndex !== null) delete activeIntersections[this.callbackIndex];
+};
 GuestIntersectionObserver.prototype.disconnect = function () {
-  this.active = false;
+  hostCall(this.reference, "disconnect", []);
+  if (this.callbackIndex !== null) {
+    delete activeIntersections[this.callbackIndex];
+    this._callbackRecord.closed = true;
+    releaseCallback(this.callbackIndex);
+  }
+  this.callbackIndex = null;
+  this._callbackRecord = null;
+  this.targets = [];
 };
 GuestIntersectionObserver.prototype.takeRecords = function () {
-  return [];
+  return intersectionEntries(hostCall(this.reference, "takeRecords", [])[1]);
 };
 globalThis.MutationObserver = GuestMutationObserver;
 if (hostGet(document.reference, "supportsResizeObserver")) globalThis.ResizeObserver = GuestResizeObserver;
-globalThis.IntersectionObserver = GuestIntersectionObserver;
+if (hostGet(document.reference, "supportsIntersectionObserver")) globalThis.IntersectionObserver = GuestIntersectionObserver;
 function GuestComputedStyle(reference) {
   GuestObject.call(this, reference);
 }
@@ -3554,9 +3679,9 @@ if (hostGet(document.reference, "supportsIdleCallback")) {
     }, true);
     try {
       handle = hostCall(document.reference, "idleCallback", [timeout, index]);
-    } catch (_error7) {
+    } catch (_error8) {
       releaseCallback(index);
-      throw _error7;
+      throw _error8;
     }
     idleCallbacks[handle] = index;
     return handle;
@@ -3690,11 +3815,11 @@ function allocateElementCallback(callback, target) {
     if (!state.active || !current) return releaseCallback(index);
     try {
       current.call(target, event);
-    } catch (_error8) {
-      var message = String(_error8),
-        stack = _error8 && _error8.stack;
+    } catch (_error9) {
+      var message = String(_error9),
+        stack = _error9 && _error9.stack;
       globalThis.__wwcReportError(stack && stack.indexOf(message) < 0 ? message + "\n" + stack : stack || message);
-      throw _error8;
+      throw _error9;
     }
   };
   return index;
