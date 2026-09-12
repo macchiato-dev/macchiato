@@ -4512,6 +4512,27 @@ Nothing was deployed to Bunny. Four production native-layout TODO failures,
 the rendering-document decision, and remaining performance work keep the
 broader goal open.
 
+### Recovering failed runtime loads: 2026-09-12
+
+The project runtime module cache now evicts rejected downloads and compilations.
+Previously a temporary 503 left a rejected promise in the cache: subsequent
+editor/build requests reused the failure until the whole page reloaded.
+Successful modules and in-flight requests remain shared; this does not introduce
+automatic retries, additional fetching authority, or a new machine API.
+
+`project-runtime-retry.browser.test.js` uses the actual factory, Wasm build
+runtime, and compiler. Two simultaneous callers share a deliberately delayed
+503, the next attempt gets invalid Wasm, and a third download recovers. Two
+independent instances then compile real HTML successfully; another instance
+reuses the successful module without a fourth request. Before the fix, the
+second attempt still returned the first 503 instead of reaching compilation.
+The initial Node-only probe could not exercise browser machine construction,
+so the final regression runs in Chromium rather than mocking its Document.
+
+Before/after evidence is in `/root/macchiato-work/runtime-retry-browser-*.log`.
+Packaged, live, and full-workflow verification must follow before claiming this
+fix is available on the local site or in the deployment archive.
+
 ### Timers belong to the execution host: 2026-09-12
 
 The machine now schedules ordinary timers on its own global rather than on
