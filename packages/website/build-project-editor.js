@@ -11,6 +11,7 @@ import lowerDatasetAccess from "./babel-resources-dataset.js";
 import { editorLanguages } from "../project-editor/src/languages.js";
 import { atomCatalogSource } from "../../dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/bytecode-atoms.js";
 import { optimizeMutationScans } from "../project-editor/codemirror-mutation-scan.js";
+import { shortenForegroundParsing } from "../project-editor/codemirror-parse-budget.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const outputDirectory = join(directory, "generated");
@@ -210,6 +211,11 @@ const editorCoreSource = await build({
     setup(builder) {
       builder.onLoad({ filter: /[/\\]@codemirror[/\\]view[/\\]dist[/\\]index\.js$/ }, async ({ path }) => ({
         contents: optimizeMutationScans(await readFile(path, "utf8")),
+        loader: "js",
+        resolveDir: dirname(path),
+      }));
+      builder.onLoad({ filter: /[/\\]@codemirror[/\\]language[/\\]dist[/\\]index\.js$/ }, async ({ path }) => ({
+        contents: shortenForegroundParsing(await readFile(path, "utf8")),
         loader: "js",
         resolveDir: dirname(path),
       }));
