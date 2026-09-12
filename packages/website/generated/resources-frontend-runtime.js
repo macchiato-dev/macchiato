@@ -3166,8 +3166,10 @@ function readGuestChildren(target) {
 function synchronizeGuestChildren(target) {
   var next = readGuestChildren(target);
   var previous = childrenOf(target).slice();
+  var current = Object.create(null);
+  for (var member = 0; member < next.length; member++) current[next[member].reference] = true;
   for (var old = 0; old < previous.length; old++) {
-    if (next.indexOf(previous[old]) < 0 && parentOf(previous[old]) === target) {
+    if (!current[previous[old].reference] && parentOf(previous[old]) === target) {
       setParent(previous[old], null);
     }
   }
