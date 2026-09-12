@@ -2853,6 +2853,8 @@ var WasmWebBridge = class {
     };
     this.destroy = () => {
       disposed = true;
+      instance = void 0;
+      delivery = void 0;
       for (const done of pendingChecks.values()) done();
       pendingChecks.clear();
       checkFailure = void 0;
@@ -2872,7 +2874,14 @@ var WasmWebBridge = class {
         intersectionCallbacks.get(observer).index = null;
       }
       intersectionObservers.clear();
-      for (const stop of serviceSubscriptions) stop();
+      const failures = [];
+      for (const stop of serviceSubscriptions) {
+        try {
+          stop();
+        } catch (error) {
+          failures.push(error);
+        }
+      }
       serviceSubscriptions.clear();
       for (const timer of timers.values()) realm.clearTimeout(timer);
       timers.clear();
@@ -2893,8 +2902,8 @@ var WasmWebBridge = class {
         activeScopes.delete(scopeId);
         scopeId = null;
       }
-      instance = void 0;
-      delivery = void 0;
+      if (failures.length === 1) throw failures[0];
+      if (failures.length > 1) throw new AggregateError(failures, "Service cleanup failed");
     };
   }
 };
@@ -2914,8 +2923,12 @@ var WasmWebMachine = class {
       throw error;
     }
   }
-  msg = (offset, length) => this.#bridge.imports.host.msg(offset, length);
+  msg = (offset, length) => {
+    if (!this.#bridge) fail("machine was destroyed");
+    return this.#bridge.imports.host.msg(offset, length);
+  };
   onmsg = (message2 = 0) => {
+    if (!this.#bridge) fail("machine was destroyed");
     if (!this.#connected) {
       if (message2 !== 0) {
         throw new Error("wasm-web-machine: first message must be the null message");
@@ -2930,9 +2943,13 @@ var WasmWebMachine = class {
     try {
       this.#instance?.destroy?.();
     } finally {
-      this.#bridge.destroy();
-      this.#instance = void 0;
-      this.#connected = false;
+      try {
+        this.#bridge?.destroy();
+      } finally {
+        this.#bridge = void 0;
+        this.#instance = void 0;
+        this.#connected = false;
+      }
     }
   };
 };

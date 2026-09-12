@@ -139,8 +139,8 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
         frameInterval: index % 2 ? 30 : 0,
         onMessage: message => messages.push(message),
         services: {
-          route: { get: () => '/', listen: subscribe },
-          storage: { listen: (_kind, _key, callback) => subscribe(callback, index % 2 === 1) },
+          route: { get: () => '/', listen: callback => subscribe(callback, index % 3 === 2) },
+          storage: { listen: (_kind, _key, callback) => subscribe(callback, index % 3 > 0) },
         },
       });
       await machine.onmsg(0);
@@ -171,8 +171,13 @@ test("disposing a machine cancels pending work and ambient listeners", async t =
       // being released, and the original error must still reach the caller.
       const lateCallbacks = [...subscriptions];
       let cleanupFailure;
-      try { machine.destroy(); } catch (error) { cleanupFailure = error.message; }
-      if (cleanupFailure !== (index % 2 ? 'Fixture unsubscribe failed' : undefined))
+      try { machine.destroy(); } catch (error) {
+        cleanupFailure = error.message;
+        if (index % 3 === 2 && (!(error instanceof AggregateError) ||
+            error.errors.length !== 2 || error.errors.some(item => item.message !== 'Fixture unsubscribe failed')))
+          throw Error('Unsubscribe failures were not preserved');
+      }
+      if (cleanupFailure !== [undefined, 'Fixture unsubscribe failed', 'Service cleanup failed'][index % 3])
         throw Error('Unexpected unsubscribe result: ' + cleanupFailure);
       machine.destroy();
       if (pendingTimers.size || pendingFrames.size || listeners.size || subscriptions.size) {
