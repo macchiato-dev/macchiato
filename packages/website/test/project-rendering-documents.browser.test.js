@@ -37,7 +37,8 @@ test("independent rendering documents share an engine without sharing page state
       '<a id="anchor-link" href="#details">Details</a><div id="space"></div><h2 id="details">Details</h2>')
     .replace("globalThis.appOnly = true;", `globalThis.appOnly = true;
       globalThis.routeEvents = [location.pathname];
-      addEventListener('hashchange', function () { routeEvents.push(location.pathname); });`) }]);
+      globalThis.recordRoute = function () { routeEvents.push(location.pathname); };
+      addEventListener('hashchange', recordRoute);`) }]);
   const font = await readFile(new URL("../../../dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/assets/fonts/libre-baskerville-latin-wght-normal.woff2", import.meta.url));
   const fontSource = source(24)
     .replace("background:#e8f2ff", "background:#f6e3e8; font-family:ReaderFont")
@@ -66,6 +67,8 @@ test("independent rendering documents share an engine without sharing page state
   const browserPage = await browser.newPage({ viewport: { width: 1240, height: 600 } });
   await browserPage.emulateMedia({ colorScheme: "light" });
   const errors = [], unexpected = [];
+  const consoleErrors = [];
+  browserPage.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   browserPage.on("pageerror", error => errors.push(error.message));
   await browserPage.route("**/*", route => {
     const url = new URL(route.request().url());
@@ -108,7 +111,10 @@ test("independent rendering documents share an engine without sharing page state
         frame.style.pointerEvents = "none";
         frame.inert = true;
         frame.setAttribute("sandbox", "allow-same-origin");
-        frame.srcdoc = '<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data:; font-src data:; base-uri \'none\'; form-action \'none\'"><title></title></head><body></body></html>';
+        // A srcdoc fragment resolves against the controller's inherited base.
+        // Give each script-free document its own URL, retired with the session.
+        const url = URL.createObjectURL(new Blob(['<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data:; font-src data:; base-uri \'none\'; form-action \'none\'"><title></title></head><body></body></html>'], { type: 'text/html' }));
+        frame.src = url;
         await new Promise(resolve => { frame.onload = resolve; mount.append(frame); });
         const reports = [], doc = frame.contentDocument;
         const machine = new Machine(engine.createSession(), doc, {
@@ -123,7 +129,7 @@ test("independent rendering documents share an engine without sharing page state
             listen() { throw new Error('Expected native hashchange delivery'); },
           } } : undefined,
         });
-        const entry = { frame, machine, reports, doc };
+        const entry = { frame, machine, reports, doc, url };
         // Focusing a frame/window resets the focused control in Chromium.
         // Retain only its identity weakly, not a copied selection or DOM tree.
         entry.rememberFocus = event => {
@@ -176,7 +182,7 @@ test("independent rendering documents share an engine without sharing page state
         entry.doc.removeEventListener('focusin', entry.rememberFocus);
         released.push({ frame: new WeakRef(entry.frame), document: new WeakRef(entry.doc) });
         try { entry.machine.destroy(); }
-        finally { entry.frame.remove(); entries.delete(id); fontDecisions.delete(id); }
+        finally { entry.frame.remove(); URL.revokeObjectURL(entry.url); entries.delete(id); fontDecisions.delete(id); }
       },
       state() { return { active, frames: mount.children.length, sessions: entries.size }; },
       retained() { return released.map((item, index) => ({ index,
@@ -188,7 +194,11 @@ test("independent rendering documents share an engine without sharing page state
       experiment.focus();
     };
     document.querySelector('#fullscreen').onclick = () => mount.requestFullscreen();
-    document.addEventListener('fullscreenchange', () => experiment.focus());
+    window.fullscreenChanges = 0;
+    document.addEventListener('fullscreenchange', () => {
+      experiment.focus();
+      fullscreenChanges++;
+    });
   });
   const prepare = program => page.evaluate(program => experiment.prepare(program), program);
   const reveal = id => page.evaluate(id => experiment.reveal(id), id);
@@ -216,7 +226,7 @@ test("independent rendering documents share an engine without sharing page state
     // retention while still delivering actual browser pointer/focus events.
     const point = await page.evaluate(({ frameSelector, selector }) => {
       const frame = document.querySelector(frameSelector), outer = frame.getBoundingClientRect();
-      const rect = frame.contentDocument.querySelector(selector).getBoundingClientRect();
+      const element = frame.contentDocument.querySelector(selector), rect = element.getBoundingClientRect();
       return { x: outer.x + rect.x + rect.width / 2, y: outer.y + rect.y + rect.height / 2 };
     }, { frameSelector: view(id), selector });
     await browserPage.mouse.click(point.x, point.y);
@@ -386,13 +396,17 @@ test("independent rendering documents share an engine without sharing page state
     assert.equal(controllerDocument, '/controller');
     for (const [index, mode] of ['expanded', 'fullscreen', 'expanded', 'fullscreen'].entries()) {
       const before = await draftState(active);
+      const changes = await page.evaluate(() => fullscreenChanges);
       assert.deepEqual(before, [draft, caret]);
       if (index < 2) await page.locator('#' + mode).click();
       else {
         await page.locator('#' + mode).focus();
         await browserPage.keyboard.press('Enter');
       }
-      if (mode === 'fullscreen') await page.waitForFunction(() => document.fullscreenElement?.id === 'mount');
+      // fullscreenElement changes before fullscreenchange is dispatched. Wait
+      // for that native event, not an arbitrary delay or a repaired caret.
+      if (mode === 'fullscreen') await page.waitForFunction(changes =>
+        fullscreenChanges === changes + 1 && document.fullscreenElement?.id === 'mount', changes);
       if (mode === 'fullscreen') assert.equal(await browserPage.evaluate(() =>
         document.fullscreenElement === document.querySelector('#output')), true,
         'native fullscreen includes the persistent outer iframe, not merely a CSS overlay');
@@ -419,7 +433,7 @@ test("independent rendering documents share an engine without sharing page state
       });
       if (mode === 'fullscreen') {
         await page.evaluate(() => document.exitFullscreen());
-        await page.waitForFunction(() => !document.fullscreenElement);
+        await page.waitForFunction(changes => fullscreenChanges === changes + 2 && !document.fullscreenElement, changes);
       } else await page.locator('#expanded').click();
       await browserPage.keyboard.type('?');
       draft = draft.slice(0, caret) + '?' + draft.slice(caret);
@@ -437,6 +451,10 @@ test("independent rendering documents share an engine without sharing page state
     const routing = await page.evaluate(program => experiment.prepare(program, { routes: true }), routeProgram);
     await reveal(routing);
     const controllerURL = page.url(), websiteURL = browserPage.url();
+    const consoleBeforeNavigation = consoleErrors.length;
+    await page.evaluate(selector => {
+      window.routingDocument = new WeakRef(document.querySelector(selector).contentDocument);
+    }, view(routing));
     assert.deepEqual(await report(routing, 'routeEvents'), ['/']);
     await clickApp(routing, '#chapter-link');
     const routeDocument = await page.evaluate(selector => {
@@ -445,7 +463,7 @@ test("independent rendering documents share an engine without sharing page state
     }, view(routing));
     t.diagnostic(JSON.stringify({ routeDocument }));
     assert.equal(routeDocument.hasApp, true, 'a fragment click must not replace the rendering document');
-    await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', routing);
+    await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', routing, { timeout: 5000 });
     assert.equal(page.url(), controllerURL);
     assert.equal(browserPage.url(), websiteURL);
     assert.equal(await report(routing, 'location.pathname'), '/chapter.html#details');
@@ -456,6 +474,23 @@ test("independent rendering documents share an engine without sharing page state
     await page.waitForFunction(id => experiment.report(id, 'routeEvents').at(-1) === '/chapter.html#details', routing);
     assert.equal(page.url(), controllerURL);
     assert.equal(browserPage.url(), websiteURL);
+    assert.equal(await page.evaluate(selector =>
+      document.querySelector(selector).contentDocument === routingDocument.deref(), view(routing)), true,
+      'fragment history retains the actual rendering document');
+    assert.deepEqual(await report(routing, 'routeEvents'), ['/', '/chapter.html#details', 'details', '/chapter.html#details']);
+    await page.evaluate(id => experiment.run(id, "removeEventListener('hashchange', recordRoute);"), routing);
+    await page.evaluate(selector => new Promise(resolve => {
+      const win = document.querySelector(selector).contentWindow;
+      win.addEventListener('hashchange', resolve, { once: true });
+      win.history.forward();
+    }), view(routing));
+    await page.waitForFunction(id => experiment.report(id, 'location.pathname') === 'details', routing);
+    // The native event has completed. Removing the guest listener must not
+    // require retiring its session or suppressing normal browser navigation.
+    assert.deepEqual(await report(routing, 'routeEvents'), ['/', '/chapter.html#details', 'details', '/chapter.html#details']);
+    t.diagnostic(JSON.stringify({ navigationConsole: consoleErrors.slice(consoleBeforeNavigation) }));
+    assert.equal(consoleErrors.slice(consoleBeforeNavigation).some(message => /Blocked opening/.test(message)), false,
+      'fragment links must not attempt to open a popup');
     for (let index = 0; index < 10; index++) await reveal(await prepare(programs[index % 2]));
     assert.equal(await page.locator("#mount iframe").count(), 1);
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {

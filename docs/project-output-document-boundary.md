@@ -271,3 +271,47 @@ controller, not Resources Edge integration or approval of the proposed frame
 hierarchy. Real-project focus during hot reload, fragment services through the
 full hierarchy, browser diversity, and overhead measurements remain open.
 Live assets and the Bunny archive are unchanged by this experiment.
+
+## Fragment navigation through rendering documents: 2026-09-12
+
+The same nested-frame experiment now clicks both a virtual chapter link
+(`#/chapter.html#details`) and an ordinary anchor (`#details`), then traverses
+Back and Forward. The guest receives native `hashchange` events from its own
+window and reads the route from that document. No synthetic route event or
+cached guest location stands in for browser behavior. Neither the persistent
+controller URL nor the website URL changes; the actual rendering document
+survives navigation. The ordinary anchor scrolls that document.
+
+This uncovered two independent problems:
+
+- The project compiler added `target="_blank"` to every link, including fragment
+  links. The sandbox rejected the attempted popup. Fragment links now omit
+  that automatic target; other links keep the existing configurable new-window
+  default. Machine destination validation remains unchanged. The compiler
+  regression failed before this fix and passes afterward.
+- Even with that fix, the experiment's `srcdoc` frame resolved fragments
+  against the controller's inherited base URL and failed the route test.
+  Giving the fixed, script-free shell its own Blob document URL passes it.
+  The experimental controller revokes that URL when retiring the session.
+  It grants neither scripts nor popups, and does not create a guest Blob API.
+
+Removing the guest's hash listener stops callbacks while native Forward
+navigation still works. All 16 retired frame elements and documents remain
+collectible. An intermittent fullscreen check was also waiting only for
+`fullscreenElement`, which becomes visible before `fullscreenchange` dispatch.
+The test now waits for that native event before checking the existing focus
+restoration handler, rather than adding a delay or repairing the caret.
+
+The combined compiler, lifecycle, native-layout, and rendering-document run
+reports 13 passes and the four existing production layout TODOs. Logs and
+inspected screenshots are under
+`/root/macchiato-work/rendering-fragments-verified` (with a matching `.log`).
+Chromium also reports a script-blocked console diagnostic during history
+navigation in this script-free fixture. Its source has not been attributed;
+the test records it rather than claiming a clean console. No popup attempt,
+unexpected network request, or page exception occurred in the passing run.
+
+Only the compiler fix is production code. The rendering frames, Blob shell,
+and focus coordination remain a feasibility experiment, not an approved
+production hierarchy. Real-project integration and overhead measurements
+remain open; this does not resolve the four native-layout TODOs.
