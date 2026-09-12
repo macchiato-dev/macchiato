@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 import { build } from "esbuild";
@@ -35,6 +35,7 @@ test("independent rendering documents share an engine without sharing page state
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1240, height: 600 } });
+  await page.emulateMedia({ colorScheme: "light" });
   const errors = [], unexpected = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/*", route => {
@@ -64,6 +65,7 @@ test("independent rendering documents share an engine without sharing page state
       async prepare(program) {
         const frame = document.createElement("iframe"), id = String(++next);
         frame.dataset.id = id;
+        frame.experimentId = id;
         frame.style.visibility = "hidden";
         frame.style.pointerEvents = "none";
         frame.inert = true;
@@ -115,14 +117,28 @@ test("independent rendering documents share an engine without sharing page state
   const prepare = program => page.evaluate(program => experiment.prepare(program), program);
   const reveal = id => page.evaluate(id => experiment.reveal(id), id);
   const report = (id, expression) => page.evaluate(({ id, expression }) => experiment.report(id, expression), { id, expression });
-  const view = id => page.frameLocator(`#mount iframe[data-id="${id}"]`);
-  const native = page.frameLocator("#native");
-  const measure = locator => locator.locator("#sample").evaluate(sample => {
+  const view = id => `#mount iframe[data-id="${id}"]`;
+  const native = "#native";
+  const measure = selector => page.evaluate(selector => {
+    const sample = document.querySelector(selector).contentDocument.querySelector('#sample');
     const { defaultView: win, documentElement: root, body } = sample.ownerDocument;
     const rect = sample.getBoundingClientRect();
     return { root: win.getComputedStyle(root).fontSize, margin: win.getComputedStyle(body).margin,
       box: [rect.x, rect.y, rect.width, rect.height], viewport: [win.innerWidth, win.innerHeight] };
-  });
+  }, selector);
+  const count = id => page.evaluate(selector =>
+    document.querySelector(selector).contentDocument.querySelector('#counter').textContent, view(id));
+  async function clickCounter(id) {
+    // FrameLocator creates DevTools frame-element handles that outlive the
+    // action in this Chromium build. Coordinate input avoids that test-owned
+    // retention while still delivering actual browser pointer/focus events.
+    const point = await page.evaluate(selector => {
+      const frame = document.querySelector(selector), outer = frame.getBoundingClientRect();
+      const rect = frame.contentDocument.querySelector('#counter').getBoundingClientRect();
+      return { x: outer.x + rect.x + rect.width / 2, y: outer.y + rect.y + rect.height / 2 };
+    }, view(id));
+    await page.mouse.click(point.x, point.y);
+  }
   async function pixel(selector) {
     const box = await page.locator(selector).boundingBox();
     const png = await page.screenshot({ clip: { x: box.x + 8, y: box.y + 8, width: 1, height: 1 } });
@@ -137,35 +153,61 @@ test("independent rendering documents share an engine without sharing page state
     const first = await prepare(programs[0]);
     await reveal(first);
     assert.deepEqual(await measure(view(first)), await measure(native));
+    t.diagnostic(JSON.stringify({ root: 20, native: await measure(native), actual: await measure(view(first)) }));
     assert.deepEqual(await pixel("#mount"), [232, 242, 255, 255]);
     assert.deepEqual(await pixel("#mount"), await pixel("#native"));
     const second = await prepare(programs[1]);
     assert.equal((await measure(view(second))).box[2], 240, "hidden replacement has native rem layout");
-    await view(first).locator("#counter").click();
+    await clickCounter(first);
     await page.keyboard.press("ArrowRight");
-    assert.equal(await view(first).locator("#counter").textContent(), "2", "active app keeps handling input");
-    assert.equal(await view(second).locator("#counter").textContent(), "0", "session globals and events are independent");
+    assert.equal(await count(first), "2", "active app keeps handling input");
+    assert.equal(await count(second), "0", "session globals and events are independent");
     for (const id of [first, second]) {
       assert.equal(await report(id, "document.querySelector('#controller-private') === null"), true);
-      assert.equal(await view(id).locator("body").evaluate(body => body.ownerDocument.defaultView.appOnly), undefined,
+      assert.equal(await page.evaluate(selector => document.querySelector(selector).contentWindow.appOnly, view(id)), undefined,
         "application JS did not run in the browser realm");
     }
+    for (const source of [
+      "document.createElement('iframe')",
+      "document.body.setAttribute('onclick', 'alert(1)')",
+      "document.createElement('img').setAttribute('src', 'https://blocked.test/pixel')",
+      "document.createElement('a').setAttribute('href', 'https://blocked.test/page')",
+    ]) await assert.rejects(page.evaluate(({ id, source }) => experiment.run(id, source), { id: second, source }),
+      /not allowed|data/i);
     await reveal(second);
-    await native.locator("style").evaluate(style => style.textContent = style.textContent.replace("20px", "24px"));
+    await page.evaluate(() => {
+      const style = document.querySelector('#native').contentDocument.querySelector('style');
+      style.textContent = style.textContent.replace('20px', '24px');
+    });
     assert.deepEqual(await measure(view(second)), await measure(native));
     assert.deepEqual(await pixel("#mount"), await pixel("#native"));
-    await view(second).locator("#counter").click();
-    assert.equal(await view(second).locator("#counter").textContent(), "1");
+    t.diagnostic(JSON.stringify({ root: 24, native: await measure(native), actual: await measure(view(second)) }));
+    if (process.env.MACCHIATO_TEST_ARTIFACTS) {
+      await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
+      await page.screenshot({ path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, "equal-documents.png") });
+    }
+    await clickCounter(second);
+    assert.equal(await count(second), "1");
     // A failed replacement must leave the existing app and its state intact.
     const broken = { ...programs[0], scripts: [{ code: "throw new Error('Replacement failed')" }] };
     await assert.rejects(prepare(broken), /Replacement failed/);
     assert.deepEqual(await page.evaluate(() => experiment.state()), { active: second, frames: 1, sessions: 1 });
-    assert.equal(await view(second).locator("#counter").textContent(), "1");
+    assert.equal(await count(second), "1");
     await page.locator("#mount").evaluate(node => { node.style.width = '420px'; node.style.height = '260px'; });
     assert.deepEqual((await measure(view(second))).viewport, [420, 260]);
-    await view(second).locator("body").evaluate(body => body.ownerDocument.defaultView.scrollTo(0, 120));
+    assert.deepEqual(await report(second, "[innerWidth, innerHeight]"), [420, 260]);
+    await page.evaluate(selector => document.querySelector(selector).contentWindow.scrollTo(0, 120), view(second));
     assert.equal(await report(second, "pageYOffset"), 120);
     assert.equal(await page.evaluate(() => scrollY), 0);
+    await page.evaluate(id => experiment.run(id, `
+      globalThis.themeEvents = 0;
+      matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { themeEvents++; });
+    `), second);
+    for (const [colorScheme, count] of [["dark", 1], ["light", 2], ["dark", 3]]) {
+      await page.emulateMedia({ colorScheme });
+      await page.waitForFunction(({ id, count }) => experiment.report(id, 'themeEvents') === count, { id: second, count });
+      assert.equal(await report(second, "matchMedia('(prefers-color-scheme: dark)').matches"), colorScheme === 'dark');
+    }
     for (let index = 0; index < 10; index++) await reveal(await prepare(programs[index % 2]));
     assert.equal(await page.locator("#mount iframe").count(), 1);
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {
@@ -175,10 +217,17 @@ test("independent rendering documents share an engine without sharing page state
     await page.evaluate(() => experiment.destroy());
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const client = await page.context().newCDPSession(page);
+    await client.send("Log.clear");
     await client.send("Runtime.discardConsoleEntries");
     await client.send("HeapProfiler.collectGarbage");
     const retained = await page.evaluate(() => experiment.retained());
     t.diagnostic(JSON.stringify(retained));
+    if (process.env.MACCHIATO_TEST_HEAP_SNAPSHOT) {
+      const chunks = [];
+      client.on("HeapProfiler.addHeapSnapshotChunk", ({ chunk }) => chunks.push(chunk));
+      await client.send("HeapProfiler.takeHeapSnapshot");
+      await writeFile(process.env.MACCHIATO_TEST_HEAP_SNAPSHOT, chunks.join(""));
+    }
     assert.equal(retained.some(item => item.frame || item.document), false, "removed frames and documents are collectible");
     await client.detach();
     assert.deepEqual(errors, []);

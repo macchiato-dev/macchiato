@@ -48,7 +48,7 @@ separate from letting the guest body's background paint its canvas afterward.
 - Native body/root sizing and painting work from source CSS, without
   app-specific copying of computed colors or font sizes.
 
-## Proposed experiment, not implemented
+## Proposed production arrangement, not adopted
 
 One option is two script-free rendering frames inside the existing persistent
 output iframe. The outer controller keeps the existing QuickJS engine; its
@@ -124,3 +124,54 @@ observers. The before/after logs are in
 
 This is a capability-correctness fix, not adoption of the two-frame proposal.
 The four native-document layout TODOs above remain unresolved.
+
+## Two-document feasibility experiment: 2026-09-12
+
+`packages/website/test/project-rendering-documents.browser.test.js` now
+implements a test-only controller for the proposed arrangement. It uses the
+actual output QuickJS Wasm, guest bootstrap, compiler, and machine. A single
+engine creates independent sessions, each granted a whole document in a
+script-free iframe. Rendering frames use `sandbox="allow-same-origin"` without
+`allow-scripts`, with a restrictive CSP. Only the controller realm imports
+JavaScript and instantiates Wasm. This is not a change to `ProjectOutput`.
+
+At equal 600×400 viewports, the experiment matches the native page exactly:
+
+- With a 20px root, the `10rem` box is 200px wide and `2rem` margins are 40px.
+- With a 24px root, the box is 240px wide and the margins are 48px.
+- The guest body's background paints the canvas, including inside the margin.
+- A hidden replacement has its real layout before it becomes visible.
+
+Browser input reaches the active session while its replacement is hidden;
+the sessions do not share counters or event handling. A replacement that
+throws leaves the previous page and its state intact. Resizing to 420×260
+updates both native and guest viewport readings. Child scrolling does not
+scroll the controller. Three dark/light media changes reach guest listeners.
+Guest-created iframes, string event-handler attributes, external image URLs,
+and external link URLs remain rejected. No unexpected requests occurred.
+
+Ten additional swaps leave only one live frame/session. After destruction,
+DevTools GC collects all 13 removed frame elements and documents. The first
+test attempt used Playwright frame locators; those retained frame-element
+handles through DevTools, even though the documents were collectible. A heap
+snapshot showed strong paths from `(Global handles)` through `DevTools console`,
+not through the machine. Using coordinate clicks and controller-side DOM
+inspection removed that test-owned retention without changing the runtime.
+The optional `MACCHIATO_TEST_HEAP_SNAPSHOT` flag records a fixture-only snapshot
+when investigating such failures; no profiler is added to production.
+
+The guest currently exposes `pageYOffset` but not its standard `scrollY`
+alias; the experiment uses the former. That missing alias is a separate guest
+compatibility gap, not a reason to report the experiment as complete browser
+parity. Likewise, this fixture does not yet establish real-project font swaps,
+full-screen focus behavior, first-paint handoff under delayed resources, or
+frame memory/latency overhead. Those remain integration gates if this design
+is adopted.
+
+The combined comparison/lifecycle run reports six passes and the four existing
+production TODOs. A final rerun including the external-link rejection passes.
+Logs and inspected screenshots are under
+`/root/macchiato-work/rendering-documents*`; `equal-documents.png` places the
+native page on the left and the QuickJS page on the right. The existing local
+site and Bunny archive are unchanged. Approval of the production frame
+hierarchy is still outstanding.
