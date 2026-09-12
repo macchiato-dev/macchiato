@@ -177,7 +177,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     await page.waitForFunction(() => {
       const frame = document.querySelector('iframe.project-editor__output-frame');
       return document.activeElement === frame &&
-        !!frame.contentDocument.activeElement?.closest('.project-output-root');
+        frame.contentDocument.activeElement === frame.contentDocument.body;
     }, null, { timeout: 5000 });
     const bounds = await earlyOutput.boundingBox();
     assert.ok(bounds.width > 1435 && bounds.height > 895, "output expands without waiting for CodeMirror");
@@ -289,6 +289,12 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     })) }), { cause });
   }
   assert.equal(await output.locator("p", { hasText: /Editable row/ }).count(), 100);
+  assert.equal(await output.locator("html").getAttribute("lang"), "en",
+    "compiled document attributes survive the editor/controller handoff");
+  assert.equal(await output.locator("html").count(), 1,
+    "whole-page output uses its real document root, not a nested HTML subtree");
+  assert.equal(await output.locator("iframe").count(), 0,
+    "replacement rendering must not add another frame");
   await page.waitForTimeout(1_200);
   assert.equal(await page.evaluate(() => outputBuilds), 1,
     'one editing burst must cause one output build, not competing debounce timers');

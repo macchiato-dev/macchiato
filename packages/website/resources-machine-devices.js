@@ -422,7 +422,7 @@ export class ResourcesEditorDevice {
       this.outputIds.add(outputId);
       root.dataset.outputMachineStage = "load";
       await this.outputDevice.load({ id: outputId, project: {
-        tree: compiled.tree, stylesheets: compiled.stylesheets,
+        tree: compiled.tree, document: compiled.document, stylesheets: compiled.stylesheets,
         scripts: compiled.scripts, files: project.files,
         allowedFetchOrigins: options.allowedFetchOrigins || [],
         allowedLinkPatterns: options.allowedLinkPatterns || [],
@@ -595,6 +595,7 @@ export class ResourcesOutputDevice {
     this.validateTree(project.tree);
     await output.load({
       tree: project.tree,
+      document: project.document,
       stylesheets: Array.isArray(project.stylesheets) ? project.stylesheets : [],
       scripts: Array.isArray(project.scripts) ? project.scripts : [],
       files: this.projectResources.hydrateFiles(project.files),

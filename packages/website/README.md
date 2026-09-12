@@ -110,21 +110,24 @@ The trusted website and editor receive the broad `allowNavigate: "self"` grant
 for same-origin native forms such as Create project. The output's link-pattern
 callback does not grant native form submission or access to website storage.
 
-Output mounts in one static iframe from the beginning, so initial rendering,
-ordinary refreshes, and future hot reload use the same surface semantics. A
-source edit starts a configurable 900 ms trailing debounce and prepares the
-next generation in the iframe's hidden root. It swaps only after its output
-machine has mounted successfully. Later generations reuse that iframe and
-alternate between its two roots; they do not reload the frame.
+Output mounts in one static iframe from the beginning. A source edit starts a
+configurable 900 ms trailing build debounce. Once the compiled update is ready,
+a replacement load retires the old guest and replaces the document element;
+there is no additional handoff debounce. The frame, browser Document, history,
+and QuickJS interpreter survive; the application gets a fresh session.
+Guests supporting in-place live updates can instead run their update code in
+the existing session, preserving state without going through replacement load.
 Set `config.output.debounceMs` between 250 and 5000, or set
-`config.output.iframe` to `false` for the direct development surface. The
-current implementation still creates a WebAssembly/QuickJS runtime for each
-generation. Reusing one runtime across multiple disposable contexts is the next
-runtime boundary, not a behavior this UI silently assumes today.
+`config.output.iframe` to `false` for the direct development surface. That
+element-granted path stages replacements in separate subtrees; it does not
+create a frame. Whole-document root units and canvas painting require a
+Document grant, not a nested HTML element. See
+[the rendering document investigation](../../docs/project-output-document-boundary.md).
 
-The iframe is deliberately not given the HTML `sandbox` attribute. It is a
-layout and lifecycle boundary; QuickJS plus the constrained DOM bridge remains
-the code boundary. The static frame evaluates CSS media queries such as
+The iframe has `allow-scripts allow-same-origin allow-forms` sandbox permissions
+and fullscreen permission. This is not the untrusted-code security boundary:
+QuickJS plus the constrained DOM bridge remains that boundary. The static
+frame evaluates CSS media queries such as
 `prefers-color-scheme` in the normal browser realm without exposing
 unrestricted browser globals to the project guest. Guest `matchMedia` returns
 a constrained live MediaQueryList reference; change events cross the machine
@@ -139,8 +142,7 @@ iframe or its QuickJS machine.
 
 The focused project view follows the same resolved appearance for its app bar,
 project toolbar, controls, details pane, and surrounding surfaces. The code
-editing surface remains deliberately dark in either appearance; that is an
-editor presentation choice rather than a failure to propagate the site theme.
+editing surface also follows the resolved appearance.
 
 The selected site language is passed separately to the project machine and is
 available to browser-shaped guests as `navigator.language`. It is environment

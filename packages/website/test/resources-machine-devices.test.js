@@ -25,6 +25,19 @@ test("output trees accept bounded inline operation bytes, not coercible values",
   }
 });
 
+test("output loads forward compiled document attributes as well as body content", async () => {
+  const resources = new ResourcesProjectResourceDevice();
+  const device = new ResourcesOutputDevice(null, () => {}, resources);
+  const files = [{ path: "index.html", content:
+    '<html lang="es" class="game"><body class="board" style="margin:0"><h1>Juego</h1></body></html>' }];
+  const compiled = compileProjectFiles(files);
+  let loaded;
+  device.outputs.set(1, { load(project) { loaded = project; } });
+  await device.load({ id: 1, project: { ...compiled, files } });
+  assert.deepEqual(loaded.document, compiled.document);
+  assert.deepEqual(loaded.tree, compiled.tree);
+});
+
 test("resource reads are bounded chunks with catchable errors and unchanged bytes", () => {
   const device = new ResourcesProjectResourceDevice();
   const source = "\0\n\"\\😀".repeat(400000);
