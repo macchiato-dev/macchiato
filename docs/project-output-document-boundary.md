@@ -68,8 +68,9 @@ Before choosing the two-frame option, test rather than assume:
 
 - Sharing the engine across session bridges preserves isolation and lifetime.
 - Document capabilities and all DOM operations use the target's realm. The
-  host currently recognizes only its own global `document` as a full-document
-  target; some viewport/scroll/selection and font operations also use globals.
+  host now accepts an explicitly granted live document from another realm;
+  the initial regression coverage is described below. Output-specific behavior
+  still needs testing if its document arrangement changes.
 - Font installation, navigation permission, and form defaults belong to the
   correct document and cannot reach the controller or another app.
 - Renderer frames do not add network/navigation permission. Empty frame
@@ -84,3 +85,29 @@ mutation-observer checkpoint updated those artifacts without changing this
 document-boundary design; see [project-page verification](project-page-machines.md).
 Diagnostic output and the inspected side-by-side screenshot are under
 `/root/macchiato-work/native-document-viewport*`.
+
+## Granted-document realm correction
+
+`packages/project-editor/test/document-realm.browser.test.js` executes the host
+and MicroQuickJS in the outer realm, with either an element grant inside a
+script-free iframe or a grant of that iframe's entire document. Previously the
+document grant was rejected. For the element grant, computed style returned
+an object from the controller's realm that failed the child's constructor
+check; viewport and scrolling also used the wrong window.
+
+The test now verifies a 420×260 child viewport independently of the 1000×700
+controller, native 24px root font, 120px child-only scrolling, child selection
+and pointer delivery (including instrumented selection), font installation
+only in the child, and inability to query the controller's private content.
+It also registers a custom element only in the child's registry and verifies
+that guest creation rejects it without running its constructor. Checking the
+controller's registry instead would accidentally permit that native code.
+
+The implementation uses the granted realm for these operations and for
+optional cleanup callbacks. Type checking and 76 browser checks passed across
+document-realm, reference/range scope, mutation, resize, and intersection
+observers. The before/after logs are in
+`/root/macchiato-work/document-realm-{before,after,regressions}.log`.
+
+This is a capability-correctness fix, not adoption of the two-frame proposal.
+The four native-document layout TODOs above remain unresolved.
