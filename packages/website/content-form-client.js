@@ -487,7 +487,7 @@ async function mountProjectRoot(root) {
   let selectedStoredSequence = null;
   let latestStoredSequence = null;
   const selectedVersionField = document.createElement("input");
-  selectedVersionField.type = "hidden";
+  selectedVersionField.setAttribute("type", "hidden");
   selectedVersionField.setAttribute("name", "selectedVersion");
   root.append(selectedVersionField);
   let selected = state.files.some((file) => file.path === state.config?.entry) ? state.config.entry : state.files[0]?.path || "config";
