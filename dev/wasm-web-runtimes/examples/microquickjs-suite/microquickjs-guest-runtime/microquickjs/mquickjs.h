@@ -308,6 +308,9 @@ JSValue JS_NewArray(JSContext *ctx, int initial_len);
 // CUSTOMIZATION: 2 lines below added: declare direct Uint8Array storage access.
 int JS_GetUint8Array(JSContext *ctx, JSValue value, uint8_t **data,
                      size_t *length);
+// CUSTOMIZATION: 2 lines below added: bounded UTF-8 decoding that survives arena compaction.
+JSValue JS_ReadUTF8Array(JSContext *ctx, JSValue value, size_t offset, size_t length);
+
 /* create a C function with an object parameter (closure) */
 JSValue JS_NewCFunctionParams(JSContext *ctx, int func_idx, JSValue params);
 JSValue JS_NewDate(JSContext *ctx, double epoch_ms);

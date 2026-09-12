@@ -15662,6 +15662,42 @@ int JS_GetUint8Array(JSContext *ctx, JSValue value, uint8_t **data,
     return 0;
 }
 
+// CUSTOMIZATION: 35 lines below added: copy validated UTF-8 into a GC-safe arena string.
+JSValue JS_ReadUTF8Array(JSContext *ctx, JSValue value, size_t offset, size_t length)
+{
+    uint8_t *data;
+    size_t capacity, at = 0, width;
+    BOOL ascii = TRUE;
+    JSString *string;
+    JSGCRef value_ref;
+    if (JS_GetUint8Array(ctx, value, &data, &capacity))
+        return JS_ThrowTypeError(ctx, "readText requires a Uint8Array");
+    if (offset > capacity || length > capacity - offset)
+        return JS_ThrowRangeError(ctx, "text range exceeds the byte array");
+    /* JS strings require valid WTF-8 internally. Wire strings are the stricter
+       UTF-8 subset; reject malformed bytes before they enter the arena. */
+    while (at < length) {
+        int code = unicode_from_utf8(data + offset + at, length - at, &width);
+        if (code < 0 || (code >= 0xd800 && code <= 0xdfff))
+            return JS_ThrowTypeError(ctx, "invalid UTF-8 text");
+        if (code > 0x7f) ascii = FALSE;
+        at += width;
+    }
+    if (length == 0 || utf8_char_len(data[offset]) == length)
+        return JS_NewStringLen(ctx, (const char *)data + offset, length);
+    /* Allocation may compact the arena. Root the view, then reacquire its
+       storage; a C pointer borrowed before allocation is no longer valid. */
+    JS_PUSH_VALUE(ctx, value);
+    string = js_alloc_string(ctx, length);
+    JS_POP_VALUE(ctx, value);
+    if (!string) return JS_EXCEPTION;
+    JS_GetUint8Array(ctx, value, &data, &capacity);
+    /* No allocating calls between reacquiring storage and copying it. */
+    string->is_ascii = ascii;
+    memcpy(string->buf, data + offset, length);
+    return JS_VALUE_FROM_PTR(string);
+}
+
 JSValue js_typed_array_get_length(JSContext *ctx, JSValue *this_val,
                                   int argc, JSValue *argv, int magic)
 {

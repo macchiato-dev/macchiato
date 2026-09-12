@@ -148,6 +148,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
         await profiler.send("Profiler.enable");
         await profiler.send("Profiler.start");
       }
+      if (checkpoints) await page.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
       const started = performance.now();
       if (method === "paste") await paste(text);
       else await page.keyboard.insertText(text);
@@ -166,6 +167,14 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
       results.push({ run, mode, method, characters: text.length, milliseconds: Math.round(elapsed),
         events: state.events, changes: state.changes });
       t.diagnostic(JSON.stringify(results.at(-1)));
+      if (checkpoints) {
+        const measured = await page.evaluate(() => {
+          typingCheckpoint("reportTypingCheckpoints");
+          return messages.filter(message => message.type === "typing-checkpoints").at(-1);
+        });
+        results.push({ run, mode, method: method + "-checkpoints", ...measured });
+        t.diagnostic(JSON.stringify(results.at(-1)));
+      }
       await page.keyboard.press("Control+z");
       assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), before);
       await page.keyboard.press("Control+y");

@@ -31,6 +31,8 @@ static JSValue js_bridge(JSContext *ctx, JSValue *this_value,
                          int argc, JSValue *argv);
 static JSValue js_write_text(JSContext *ctx, JSValue *this_value,
                              int argc, JSValue *argv);
+static JSValue js_read_text(JSContext *ctx, JSValue *this_value,
+                            int argc, JSValue *argv);
 static JSValue js_weak_cell(JSContext *ctx, JSValue *this_value,
                             int argc, JSValue *argv);
 static JSValue js_weak_deref(JSContext *ctx, JSValue *this_value,
@@ -304,6 +306,22 @@ static JSValue js_clearTimeout(JSContext *ctx, JSValue *this_value,
                                int argc, JSValue *argv)
 {
     return unavailable(ctx, this_value, argc, argv);
+}
+
+/* The engine copies from the typed array after any collecting allocation.
+   This does not expose an arena pointer or call the host. */
+static JSValue js_read_text(JSContext *ctx, JSValue *this_value,
+                            int argc, JSValue *argv)
+{
+    double offset, length;
+    UNUSED(this_value);
+    if (argc != 3 || !JS_IsNumber(ctx, argv[1]) || !JS_IsNumber(ctx, argv[2]) ||
+        JS_ToNumber(ctx, &offset, argv[1]) || JS_ToNumber(ctx, &length, argv[2]))
+        return JS_ThrowTypeError(ctx, "readText expects bytes, offset and length");
+    if (!(offset >= 0 && offset <= UINT32_MAX && length >= 0 && length <= UINT32_MAX) ||
+        offset != (uint32_t)offset || length != (uint32_t)length)
+        return JS_ThrowRangeError(ctx, "invalid text range");
+    return JS_ReadUTF8Array(ctx, argv[0], (size_t)offset, (size_t)length);
 }
 
 /* Strings already live in MicroQuickJS's arena as UTF-8. Write the wire length

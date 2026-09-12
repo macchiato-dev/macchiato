@@ -303,6 +303,9 @@ static JSValue js_close_guest(JSContext *ctx, JSValue *this_value,
 // CUSTOMIZATION: 2 lines below added: the compiler records this runtime-only native slot.
 #define js_write_text js_collection_stub
 
+// CUSTOMIZATION: 2 lines below added: record the runtime-only UTF-8 reader slot.
+#define js_read_text js_collection_stub
+
 // CUSTOMIZATION: 3 lines below added: record the runtime-only weak cell slots.
 #define js_weak_cell js_collection_stub
 #define js_weak_deref js_collection_stub
