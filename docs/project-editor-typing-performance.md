@@ -566,6 +566,26 @@ edit, deletion, full replacement, and no-op transactions in JavaScript, JSON,
 and HTML, including malformed input, simultaneous changes, and Unicode. A
 no-op must retain the newly finalized partial tree before any further work.
 The guarded build adaptation reverses to
-the complete original source. Broader guest/build verification is still needed
-before updating the live server. Logs and data are in `parser-fragment-progress`,
+the complete original source. Logs and data are in `parser-fragment-progress`,
 `parser-fragment-paced`, `parser-fragment-retained`, and `parser-fragments-unit.log`.
+
+The rebuilt editor exactly matches the experimental candidate (SHA-256
+`39cd87e032a8d9dacc539df408d5c98d3ae5fcb96d165249ddc959375d311356`).
+Its only generated-source difference is the moved `takeTree()` call. Core
+bytecode and Wasm sizes remain 979,732 and 1,579,016 bytes. All 415 editor/runtime
+tests pass in 166.2 seconds; the matched export verifies 152 files and runs its
+compressed backend in Deno.
+
+The rebuilt last-page recording includes human-paced keys and the queued burst.
+Input and eventual parsing pass. The unchanged sample line reaches its final
+spans 1,734–1,757 ms after recording starts, versus 2,688–2,782 ms in the prior
+recording; neither guest run subsequently loses those spans. Native runs remain
+much quicker, at 96–99 ms. The ending guest screenshot was inspected. These are
+recorded-sequence times with diagnostic overhead, not post-input latencies or
+proof of native-speed editing. Evidence is in `retained-fragments-visual`.
+The full Resources workflow also passes in 73.9 seconds, including repeated
+invalid font edits, recovery without reload, undo/redo, scrolling, themes,
+disposable save/reload, phone views, and large input. The recovered-output
+screenshot was inspected. The live server/archive are not updated by these
+checks alone; saved-project and final live-asset verification remain release
+gates. The production document-fidelity failures are unrelated and unresolved.
