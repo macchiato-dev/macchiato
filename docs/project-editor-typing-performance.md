@@ -97,3 +97,34 @@ Evidence under `/root/macchiato-work`: `parsed-sync-phases*`,
 `reused-iterator-both-phases*`, and `parsed-sync-control-repeat*`.
 `experiment-iterator-result.js` and the two `reused-iterator-*.js` outputs retain
 the rejected candidate outside the repository. No production speedup is claimed.
+
+## Live-property traffic and binary transfers
+
+`MACCHIATO_WIRE_CHECKPOINTS=1`, together with the ordinary typing checkpoints,
+counts operation kinds and returned string sizes, and times host wire calls.
+It is opt-in: thousands of counter/timer calls add measurable overhead. Use
+the ordinary checkpoints for the adjacent candidate/control latency comparison.
+
+With the native-intersection build and the complete syntax tree available, the
+eight-key sequence reads about 3,340 parents, 3,250 next siblings and 1,110 first
+children. It decodes only 498 strings / 3,968 wire bytes, taking approximately
+1–2 ms. Returned-string decoding is therefore not a useful explanation of this
+typing latency. These remain live DOM reads; no stale tree cache was introduced.
+
+An external candidate bypassed batch/result array allocation for a single
+property get. With detailed wire counters off it reduced root DOM sync from
+about 38 ms to 32–33 ms over eight keys, less than a millisecond per key.
+View-update totals were noisy, including an extra asynchronous update in one
+control. The additional wire-format branch is not shipped. Evidence and its
+build-only script remain under `/root/macchiato-work/single-property-*` and
+`experiment-single-property.js`.
+
+A separate binary-write test exposed a much clearer avoidable cost: outbound
+Uint8Array payloads called the interpreted byte writer once per byte. The guest
+now checks capacity once and uses TypedArray.set, matching the existing inbound
+copy strategy. The independent golden-byte fixture checks offset source and
+destination views, empty payloads, capacity failures and source independence.
+In the isolated MicroQuickJS test, 32 writes of 64 KiB took approximately 620 ms
+before and less than 1 ms afterward. That is a binary-encoding microbenchmark,
+not an application startup or typing-speedup claim. Evidence:
+`/root/macchiato-work/wire-bytes-write-{baseline,copy}.log`.
