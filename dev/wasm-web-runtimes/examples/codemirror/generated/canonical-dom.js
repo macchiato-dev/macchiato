@@ -681,6 +681,11 @@ Reader.prototype.uint = function () {
 Reader.prototype.text = function () {
   var length = this.uint(), end = this.at + length, text = "";
   if (end > this.length) throw new RangeError("truncated wire text");
+  if (typeof __wwcReadText === "function") {
+    text = __wwcReadText(this.bytes, this.at, length);
+    this.at = end;
+    return text;
+  }
   while (this.at < end) {
     var first = this.byte(), scalar;
     if (first < 0x80) scalar = first;
