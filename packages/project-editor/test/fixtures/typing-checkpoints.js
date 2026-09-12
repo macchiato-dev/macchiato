@@ -20,6 +20,14 @@ bulkMeasure(bulkView, "dispatch", "dispatch");
 bulkMeasure(bulkView, "update", "view update");
 bulkMeasure(bulkView, "measure", "view measure");
 bulkMeasure(bulkView.observer, "flush", "observer flush");
+bulkMeasure(bulkView.observer, "processRecords", "observer records");
+bulkMeasure(bulkView.docView, "update", "DOM view update");
+bulkMeasure(bulkView.docView, "updateInner", "DOM tree update");
+bulkMeasure(bulkView.docView, "updateDeco", "decorations update");
+bulkMeasure(bulkView.docView, "updateSelection", "selection update");
+bulkMeasure(bulkView, "updatePlugins", "plugin updates");
+bulkMeasure(bulkView.viewState, "update", "viewport update");
+bulkMeasure(globalThis, "__browserUseNotify", "notify");
 var bulkParse = globalThis.__codeMirrorRequire("@codemirror/language").ParseContext.prototype;
 if (globalThis.__bulkParseBudget) {
   var bulkOriginalWork = bulkParse.work;
@@ -36,9 +44,18 @@ bulkMeasure(JSON, "stringify", "JSON stringify");
 function resetTypingCheckpoints() {
   bulkTimings = Object.create(null);
 }
+function finishBulkParsing() {
+  var language = globalThis.__codeMirrorRequire("@codemirror/language");
+  var started = performance.now();
+  var parsed = language.forceParsing(bulkView, bulkView.state.doc.length, 20000);
+  globalThis.__browserUseNotify(bulkStringify({ type: "parse-before-typing", parsed: parsed,
+    milliseconds: performance.now() - started }));
+  if (typeof flush === "function") flush();
+}
 function reportTypingCheckpoints() {
   var language = globalThis.__codeMirrorRequire("@codemirror/language");
   globalThis.__browserUseNotify(bulkStringify({ type: "typing-checkpoints", timings: bulkTimings,
-    viewportParsed: language.syntaxTreeAvailable(bulkView.state, bulkView.viewport.to) }));
+    viewportParsed: language.syntaxTreeAvailable(bulkView.state, bulkView.viewport.to),
+    documentParsed: language.syntaxTreeAvailable(bulkView.state, bulkView.state.doc.length) }));
   if (typeof flush === "function") flush();
 }

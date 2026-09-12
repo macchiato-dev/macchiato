@@ -31,6 +31,9 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const parseBudget = Number(process.env.MACCHIATO_TEST_PARSE_BUDGET || 0);
   assert.ok(Number.isInteger(parseBudget) && parseBudget >= 0 && parseBudget <= 20);
   assert.ok(!parseBudget || process.env.MACCHIATO_TYPING_CHECKPOINTS, "budget experiment requires checkpoints");
+  const parseBeforeTyping = process.env.MACCHIATO_TEST_PARSE_BEFORE_TYPING === "1";
+  assert.ok(!parseBeforeTyping || process.env.MACCHIATO_TYPING_CHECKPOINTS,
+    "parse readiness experiment requires checkpoints");
   const checkpoints = process.env.MACCHIATO_TYPING_CHECKPOINTS
     ? `globalThis.__bulkParseBudget = ${parseBudget};\n` + await readFile(
       new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
@@ -163,6 +166,17 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     }
     // A large document must also remain useful for ordinary first-page edits.
     // Type a short phrase, make a typo, and correct it using real key events.
+    if (parseBeforeTyping) {
+      // Diagnostic control: separate catching up after bulk replacement from
+      // incremental edits to an already parsed document. Never used by the app.
+      const parsing = await page.evaluate(() => {
+        typingCheckpoint("finishBulkParsing");
+        return messages.filter(message => message.type === "parse-before-typing").at(-1);
+      });
+      assert.equal(parsing.parsed, true, "the control requires the complete syntax tree");
+      results.push({ run, mode, method: "parse-before-typing", ...parsing });
+      t.diagnostic(JSON.stringify(results.at(-1)));
+    }
     await page.keyboard.press("Control+Home");
     for (let index = 0; index < 4; index++) await page.keyboard.press("ArrowRight");
     let inserted = "";
@@ -191,9 +205,10 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     if (checkpoints) {
       const timings = await page.evaluate(() => {
         typingCheckpoint("reportTypingCheckpoints");
-        return messages.filter(message => message.type === "typing-checkpoints").at(-1).timings;
+        return messages.filter(message => message.type === "typing-checkpoints").at(-1);
       });
-      results.push({ run, mode, method: "typing-checkpoints", timings });
+      results.push({ run, mode, method: "typing-checkpoints", timings: timings.timings,
+        viewportParsed: timings.viewportParsed, documentParsed: timings.documentParsed });
       t.diagnostic(JSON.stringify(results.at(-1)));
       await page.waitForFunction(() => {
         typingCheckpoint("reportTypingCheckpoints");
