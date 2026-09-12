@@ -46,7 +46,7 @@ test("compiled fragment links navigate the existing production output without op
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
     window.routes = [];
     window.originalDocument = document;
-    window.output = new ProjectOutput(Machine, module, document.querySelector("#project-output-a"), () => ({
+    window.output = new ProjectOutput(Machine, module, document, () => ({
       allowNavigate: "fragment",
       services: { route: { get: () => location.hash.slice(1) || "/", search: () => "" } },
       onMessage: route => routes.push(route),
@@ -68,6 +68,14 @@ test("compiled fragment links navigate the existing production output without op
     assert.equal(page.url(), "http://fragments.test/");
     assert.equal(page.context().pages().length, 1);
     assert.deepEqual(await frame.evaluate(() => routes), ["/chapter.html", "details", "/chapter.html"]);
+    // A replacement guest uses the same Document and history. There are no
+    // retired Blob documents for Back/Forward to accidentally resurrect.
+    await frame.evaluate(program => output.load(program), program);
+    await frame.evaluate(() => history.forward());
+    await frame.waitForFunction(() => routes.at(-1) === 'details');
+    await frame.locator('#counter').click();
+    assert.equal(await frame.locator('#counter').textContent(), '1');
+    assert.equal(await frame.evaluate(() => document === originalDocument), true);
     assert.deepEqual(errors, []);
     assert.deepEqual(unexpected, []);
   } finally { await frame.evaluate(() => output.destroy()); }

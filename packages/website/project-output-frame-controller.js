@@ -68,7 +68,7 @@ async function start(payload, port) {
   const module = await WebAssembly.compileStreaming(fetch("./project-quickjs-runtime.wasm"));
   if (destroyed) return;
   storage = new ProjectOutputStorage(window, payload.storageScope);
-  output = new ProjectOutput(WasmWebMachine, module, document.getElementById("project-output-a"), project => ({
+  output = new ProjectOutput(WasmWebMachine, module, document, project => ({
     environment: { ...payload.environment, ...project.environment },
     files: project.files || [],
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,

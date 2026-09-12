@@ -114,9 +114,8 @@ class OutputSession {
   }
 }
 
-// The controller owns the engine and the two roots. The hidden replacement
-// has real layout dimensions, but cannot receive input. No app source runs
-// here: scripts and modules are evaluated only by its QuickJS session.
+// A document grant refreshes in place; an embedded element owns only its
+// subtree. Neither requires another iframe. App scripts run only in QuickJS.
 export class ProjectOutput {
   constructor(Machine, module, root, optionsFor, onError) {
     this.Machine = Machine;
@@ -132,6 +131,7 @@ export class ProjectOutput {
 
   load = async project => {
     if (this.destroyed) throw new Error("Project output was destroyed");
+    if (this.root.nodeType === 9) return this.loadDocument(project);
     this.remove(this.preparing);
     const wrapper = this.root.ownerDocument.createElement("div");
     wrapper.className = "project-output-root";
@@ -185,10 +185,56 @@ export class ProjectOutput {
     }
   };
 
+  // Editing can replace the application rather than keep two fully running
+  // pages. Retain the browser Document/history and the interpreter, but retire
+  // the old guest before granting the same document to its replacement.
+  loadDocument = async project => {
+    const options = this.optionsFor(project);
+    this.remove(this.preparing);
+    this.remove(this.active);
+    this.preparing = this.active = null;
+    const doc = this.root, surface = doc.createElement('html');
+    const head = doc.createElement('head'), body = doc.createElement('body');
+    body.tabIndex = -1;
+    surface.append(head, body);
+    // Do not navigate or use document.open(): both can disturb the controller
+    // and joint history. Removing the CSP meta does not revoke document policy.
+    doc.replaceChild(surface, doc.documentElement);
+    const pending = { wrapper: surface, session: null };
+    this.preparing = pending;
+    try {
+      const session = pending.session = new OutputSession(this.Machine, this.runtime, doc, options, this.onError);
+      await session.machine.onmsg(0);
+      if (this.preparing !== pending) throw new Error('Project output was replaced or destroyed');
+      const result = session.call('__resourcesOutputLoad', {
+        tree: project.tree || [], document: project.document, stylesheets: project.stylesheets || [],
+      });
+      await session.machine.onmsg(0);
+      await session.run(project.scripts || []);
+      await session.machine.onmsg(0);
+      if (session.error) throw session.error;
+      if (this.preparing !== pending) throw new Error('Project output was replaced or destroyed');
+      this.active = pending;
+      this.preparing = null;
+      session.starting = false;
+      this.programs += (project.scripts || []).length;
+      return result;
+    } catch (error) {
+      if (this.preparing === pending) this.preparing = null;
+      this.remove(pending);
+      throw error;
+    }
+  };
+
   remove(entry) {
     if (!entry) return;
     try { entry.session?.destroy(); }
-    finally { entry.wrapper.remove(); }
+    finally {
+      // A document always keeps its root, including after startup errors, so
+      // a later edit can recover without reloading the controller.
+      if (this.root.nodeType === 9) entry.wrapper.replaceChildren();
+      else entry.wrapper.remove();
+    }
   }
 
   setContent = (tree, document) => {

@@ -6,8 +6,7 @@ import { build } from "esbuild";
 import { chromium } from "playwright";
 import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
 
-// These TODO comparisons intentionally execute and fail until output owns a
-// real rendering document. Matching ordinary element styles is insufficient:
+// Whole-page output owns its real rendering document. Matching ordinary element styles is insufficient:
 // rem and the painted canvas are properties of the browsing document itself.
 test("project document viewport agrees with a standalone page", async t => {
   const root = new URL("../../..", import.meta.url).pathname;
@@ -48,7 +47,7 @@ test("project document viewport agrees with a standalone page", async t => {
   await actual.evaluate(async program => {
     const { Machine, ProjectOutput } = await import("/module.js");
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
-    window.output = new ProjectOutput(Machine, module, document.querySelector("#project-output-a"),
+    window.output = new ProjectOutput(Machine, module, document,
       () => ({}), error => { throw error; });
     await output.load(program);
   }, program);
@@ -91,10 +90,10 @@ test("project document viewport agrees with a standalone page", async t => {
     t.diagnostic(JSON.stringify(measurements));
     for (const result of measurements) {
       assert.equal(result.actual.fontSize, result.native.fontSize, "root font declaration is already preserved");
-      await t.test(`rem lengths at ${result.size}px root size`, { todo: "nested HTML is not the rem root" }, () => {
+      await t.test(`rem lengths at ${result.size}px root size`, () => {
         assert.deepEqual(result.actual, result.native);
       });
-      await t.test(`body background at ${result.size}px root size`, { todo: "nested body does not paint the canvas" }, () => {
+      await t.test(`body background at ${result.size}px root size`, () => {
         assert.deepEqual(result.nativePixel, [232, 242, 255, 255]);
         assert.deepEqual(result.actualPixel, result.nativePixel);
       });
