@@ -4476,3 +4476,38 @@ Logs and screenshots are under `/root/macchiato-work/retained-fragments-*`.
 Nothing was deployed to Bunny. The native rendering-document arrangement
 remains unadopted, and its four known production fidelity failures keep the
 broader goal open along with remaining performance work.
+
+### Fragment-link target correction: 2026-09-12
+
+Compiled HTML fragment links no longer receive the external-link default
+`target="_blank"`. They navigate inside the existing output document; other
+links retain their configurable new-window behavior. The destination is still
+checked by the machine's navigation policy. No host, controller, runtime API,
+or permission changed. This fixes a compiler error found while testing the
+separate [native rendering-document proposal](project-output-document-boundary.md).
+That proposed frame arrangement has not been adopted in production.
+
+A new test uses the current production output class and frame shell, rather
+than the experimental renderer. Actual chapter/anchor clicks and Back retain
+the document and counter, scroll the anchor, deliver guest route events, and
+open no additional page. The compiler regression fails before the fix. The
+rebuilt output passes all 417 editor/runtime tests and the full Resources
+editing workflow in 72.3 seconds, including repeated invalid-font recovery.
+The light editor and recovered-output screenshots were inspected. The known
+native body/canvas mismatch remains; these are not claims of complete fidelity.
+
+Read-only export and live checks pass for full-height Mahjong, Cat Memory's
+eight pairs/reset, 50 tour slides, and SQLite fragment navigation. No owner
+files or notes were saved. Seven principal live assets, including the changed
+builder Wasm, match the export byte-for-byte after restarting the local server.
+Evidence is under `/root/macchiato-work/fragment-links-*`.
+
+The `site/resources-co-1516558` build and extracted archive pass all 152 manifest
+checks, and the compressed backend runs in Deno. `/root/resources-bunny.tar.gz`
+has SHA-256
+`c65fbe2a2cbbe8f70d9f329acdc26a4829759e84b83d4179ef812a15b5f145e1`.
+The preceding archive is preserved at
+`/root/archive/2026/09/12/resources-bunny-73c1068-before-fragment-links.tar.gz`.
+Nothing was deployed to Bunny. Four production native-layout TODO failures,
+the rendering-document decision, and remaining performance work keep the
+broader goal open.
