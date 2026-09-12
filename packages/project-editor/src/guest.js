@@ -15,6 +15,7 @@ import { closeSearchPanel, openSearchPanel } from "@codemirror/search";
 import { closeCompletion, startCompletion } from "@codemirror/autocomplete";
 import { hasSyntaxErrors } from "./syntax.js";
 import { editorLanguages, editorLanguageForPath, createEditorLanguageLoader } from "./languages.js";
+import { cacheHighlightStyle } from "./highlight-cache.js";
 
 globalThis.__codeEditorLanguages = editorLanguages;
 globalThis.__codeEditorLanguageForPath = editorLanguageForPath;
@@ -57,7 +58,7 @@ const editorTheme = EditorView.theme({
   ".cm-panels, .cm-tooltip": { color: "var(--resources-editor-fg)",
     backgroundColor: "var(--resources-editor-panel)" },
 });
-const editorHighlightStyle = HighlightStyle.define([
+const editorHighlightStyle = cacheHighlightStyle(HighlightStyle.define([
   { tag: tags.keyword, color: "var(--resources-editor-keyword)" },
   { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: "var(--resources-editor-name)" },
   { tag: [tags.function(tags.variableName), tags.labelName], color: "var(--resources-editor-function)" },
@@ -68,7 +69,7 @@ const editorHighlightStyle = HighlightStyle.define([
   { tag: [tags.meta, tags.comment], color: "var(--resources-editor-comment)", fontStyle: "italic" },
   { tag: tags.string, color: "var(--resources-editor-string)" },
   { tag: tags.invalid, color: "var(--resources-editor-invalid)" },
-]);
+]));
 let currentTheme = "dark";
 let applyingHostContent = false;
 let currentLanguage = "javascript";

@@ -239,6 +239,32 @@ primitive equality, distinct objects, weak object keys, clear/delete, and
 Its 12,000 timed object lookups fell from 40 ms to 6.5 ms. All 17 native-runtime
 callback fixtures passed. The bare runtime grew from 187,004 to 187,133 bytes.
 
+## Static palette lookup experiment
+
+`MACCHIATO_HIGHLIGHT_CHECKPOINTS=1` adds optional timings for the active
+highlighter's style resolution, decoration building, and range-builder calls.
+The fixture obtains the highlighter facet from an uninstalled extension; it
+does not replace the editor's extensions. Fine-grained timing overhead is
+significant, so turn it off for candidate/control latency measurements.
+
+The fully parsed 106 KB JavaScript control makes 7,744 style calls across eight
+keys. These are repeated tag-to-class choices, not unique syntax ranges.
+The test-only palette-cache experiment leaves tree traversal and decoration
+building intact. Weak tag keys avoid retaining discarded language metadata;
+comparing ancestry lists also invalidates choices after in-place tag changes.
+Palettes with an `all` style stay on the original path.
+
+With only the ordinary phase checkpoints, an adjacent control spends 52–60 ms
+in the highlighter across the eight keys. The ancestry-validating candidate
+spends about 34 ms in both guest runs. Total view-update time remains noisy
+(240–279 ms in the candidate); do not infer a proportional editor speedup.
+Rendered text, class names, and span boundaries on 62 lines match the control
+in each native/guest/guest/native run of the initial weak-key candidate.
+The production implementation still needs rebuilt-Wasm and broader editor
+verification. No live artifact has changed at this checkpoint.
+
+Evidence: `/root/macchiato-work/highlight-phases*`, `highlight-memo-*`.
+
 With collection counters disabled, the two candidate guest typing runs spent
 78–87 ms in DOM-tree updates versus 91–106 ms in the initial controls. View
 updates were 251–258 ms versus 264–275 ms. These are inclusive phase timings

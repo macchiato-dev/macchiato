@@ -38,7 +38,12 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   assert.ok(!parseBeforeTyping || process.env.MACCHIATO_TYPING_CHECKPOINTS,
     "parse readiness experiment requires checkpoints");
   const checkpoints = process.env.MACCHIATO_TYPING_CHECKPOINTS
-    ? `globalThis.__bulkParseBudget = ${parseBudget};\nglobalThis.__bulkWireCheckpoints = ${process.env.MACCHIATO_WIRE_CHECKPOINTS === "1"};\nglobalThis.__bulkCollectionCheckpoints = ${process.env.MACCHIATO_COLLECTION_CHECKPOINTS === "1"};\n` + await readFile(
+    ? `globalThis.__bulkParseBudget = ${parseBudget};
+globalThis.__bulkWireCheckpoints = ${process.env.MACCHIATO_WIRE_CHECKPOINTS === "1"};
+globalThis.__bulkCollectionCheckpoints = ${process.env.MACCHIATO_COLLECTION_CHECKPOINTS === "1"};
+globalThis.__bulkHighlightCheckpoints = ${process.env.MACCHIATO_HIGHLIGHT_CHECKPOINTS === "1"};
+globalThis.__bulkMemoizedHighlight = ${process.env.MACCHIATO_TEST_MEMOIZED_HIGHLIGHT === "1"};
+` + await readFile(
       new URL("fixtures/typing-checkpoints.js", import.meta.url), "utf8") : "";
   const disableInputPending = process.env.MACCHIATO_TEST_DISABLE_INPUT_PENDING === "1";
   await writeFile(application, 'globalThis.__CODE_EDITOR_DEFER_START__=true;\n' +
@@ -258,6 +263,12 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
     }
     results.push({ run, mode, method: "first-page-typing", characters: text.length, keyMilliseconds });
     t.diagnostic(JSON.stringify(results.at(-1)));
+    // Keep rendered text and class spans as evidence for styling experiments,
+    // outside the timed input sequence. A parsed tree alone does not prove
+    // that its visible highlights have the same styles or boundaries.
+    results.push({ run, mode, method: "first-page-highlighting", lines: await content.evaluate(node =>
+      Array.from(node.querySelectorAll(".cm-line"), line => ({ text: line.textContent,
+        spans: Array.from(line.querySelectorAll("span"), span => ({ text: span.textContent, class: span.className })) }))) });
     if (process.env.MACCHIATO_TEST_INPUT_BURST === "1") {
       // Queue keys at a fixed cadence without waiting for each acknowledgement.
       // Serial Playwright key presses cannot expose yielding to already queued
