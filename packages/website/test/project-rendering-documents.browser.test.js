@@ -108,13 +108,19 @@ test("independent rendering documents share an engine without sharing page state
     const { Machine, QuickJSRuntime } = await import("/module.js");
     const module = await WebAssembly.compileStreaming(fetch("/runtime.wasm"));
     const engine = new QuickJSRuntime(module), mount = document.getElementById("mount");
-    const entries = new Map(), released = [], fontDecisions = new Map();
+    const entries = new Map(), released = [], fontDecisions = new Map(), frames = [];
     let next = 0, active = null;
     // Deliberately keep the interpreter and machine in this controller realm.
     // Each grant is a whole, independently laid-out, script-free Document.
     window.experiment = {
       async prepare(program, { holdFont = false, routes = false } = {}) {
-        const frame = document.createElement("iframe"), id = String(++next);
+        let frame = frames.find(frame => !frame.dataset.id);
+        if (!frame) {
+          if (frames.length === 2) throw new Error('Both rendering frames are occupied');
+          frame = document.createElement('iframe');
+          frames.push(frame);
+        }
+        const id = String(++next);
         frame.dataset.id = id;
         frame.experimentId = id;
         frame.style.visibility = "hidden";
@@ -124,8 +130,14 @@ test("independent rendering documents share an engine without sharing page state
         // A srcdoc fragment resolves against the controller's inherited base.
         // Give each script-free document its own URL, retired with the session.
         const url = URL.createObjectURL(new Blob(['<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'none\'; style-src \'unsafe-inline\'; img-src data:; font-src data:; base-uri \'none\'; form-action \'none\'"><title></title></head><body></body></html>'], { type: 'text/html' }));
-        frame.src = url;
-        await new Promise(resolve => { frame.onload = resolve; mount.append(frame); });
+        const fragment = routes && active ? entries.get(active).doc.defaultView.location.hash : '';
+        await new Promise(resolve => {
+          frame.onload = () => { frame.onload = null; resolve(); };
+          // Replacing the document keeps the browsing context and does not
+          // add a history entry for each live update. Do not reparent it.
+          if (frame.isConnected) frame.contentWindow.location.replace(url + fragment);
+          else { frame.src = url + fragment; mount.append(frame); }
+        });
         const reports = [], doc = frame.contentDocument;
         const machine = new Machine(engine.createSession(), doc, {
           onMessage: value => reports.push(value),
@@ -192,12 +204,23 @@ test("independent rendering documents share an engine without sharing page state
         entry.doc.removeEventListener('focusin', entry.rememberFocus);
         released.push({ frame: new WeakRef(entry.frame), document: new WeakRef(entry.doc) });
         try { entry.machine.destroy(); }
-        finally { entry.frame.remove(); URL.revokeObjectURL(entry.url); entries.delete(id); fontDecisions.delete(id); }
+        finally {
+          entry.frame.style.visibility = 'hidden';
+          entry.frame.style.pointerEvents = 'none';
+          entry.frame.inert = true;
+          delete entry.frame.dataset.id;
+          URL.revokeObjectURL(entry.url); entries.delete(id); fontDecisions.delete(id);
+        }
       },
       state() { return { active, frames: mount.children.length, sessions: entries.size }; },
       retained() { return released.map((item, index) => ({ index,
         frame: !!item.frame.deref(), document: !!item.document.deref() })); },
-      destroy() { for (const id of entries.keys()) this.remove(id); engine.destroy(); },
+      destroy() {
+        for (const id of entries.keys()) this.remove(id);
+        for (const frame of frames) frame.remove();
+        frames.length = 0;
+        engine.destroy();
+      },
     };
     document.querySelector('#expanded').onclick = () => {
       mount.classList.toggle('expanded');
@@ -262,6 +285,10 @@ test("independent rendering documents share an engine without sharing page state
     assert.deepEqual(await pixel("#mount"), [232, 242, 255, 255]);
     assert.deepEqual(await pixel("#mount"), await pixel("#native"));
     const second = await prepare(programs[1]);
+    await page.evaluate(() => {
+      window.renderingFrames = [...document.querySelectorAll('#mount iframe')].map(frame => new WeakRef(frame));
+      window.renderingWindows = renderingFrames.map(frame => new WeakRef(frame.deref().contentWindow));
+    });
     assert.equal((await measure(view(second))).box[2], 240, "hidden replacement has native rem layout");
     await clickApp(first);
     await browserPage.keyboard.press("ArrowRight");
@@ -280,6 +307,8 @@ test("independent rendering documents share an engine without sharing page state
     ]) await assert.rejects(page.evaluate(({ id, source }) => experiment.run(id, source), { id: second, source }),
       /not allowed|data/i);
     await reveal(second);
+    assert.equal(await page.locator('#mount iframe').count(), 2,
+      'the previous rendering frame stays mounted for reuse');
     await page.evaluate(() => {
       const style = document.querySelector('#native').contentDocument.querySelector('style');
       style.textContent = style.textContent.replace('20px', '24px');
@@ -296,7 +325,7 @@ test("independent rendering documents share an engine without sharing page state
     // A failed replacement must leave the existing app and its state intact.
     const broken = { ...programs[0], scripts: [{ code: "throw new Error('Replacement failed')" }] };
     await assert.rejects(prepare(broken), /Replacement failed/);
-    assert.deepEqual(await page.evaluate(() => experiment.state()), { active: second, frames: 1, sessions: 1 });
+    assert.deepEqual(await page.evaluate(() => experiment.state()), { active: second, frames: 2, sessions: 1 });
     assert.equal(await count(second), "1");
     await page.locator("#mount").evaluate(node => { node.style.width = '420px'; node.style.height = '260px'; });
     assert.deepEqual((await measure(view(second))).viewport, [420, 260]);
@@ -364,7 +393,7 @@ test("independent rendering documents share an engine without sharing page state
       const result = await page.evaluate(() => window.preparingResult);
       if (!allowed) {
         assert.match(result.error, /custom font was not allowed/);
-        assert.deepEqual(await page.evaluate(() => experiment.state()), { active: second, frames: 1, sessions: 1 });
+        assert.deepEqual(await page.evaluate(() => experiment.state()), { active: second, frames: 2, sessions: 1 });
         assert.equal(Number(await count(second)), before + 2);
         continue;
       }
@@ -438,7 +467,7 @@ test("independent rendering documents share an engine without sharing page state
       assert.deepEqual(await report(active, '[innerWidth, innerHeight]'), viewport);
       assert.deepEqual(await pixel('#mount'), [246, 227, 232, 255]);
       assert.equal(await count(active), counterBeforeModes);
-      assert.deepEqual(await page.evaluate(() => experiment.state()), { active, frames: 1, sessions: 1 });
+      assert.deepEqual(await page.evaluate(() => experiment.state()), { active, frames: 2, sessions: 1 });
       if (process.env.MACCHIATO_TEST_ARTIFACTS) await browserPage.screenshot({
         path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, mode + '-document.png'),
       });
@@ -500,17 +529,34 @@ test("independent rendering documents share an engine without sharing page state
     // require retiring its session or suppressing normal browser navigation.
     assert.deepEqual(await report(routing, 'routeEvents'), ['/', '/chapter.html#details', 'details', '/chapter.html#details']);
     assert.deepEqual(consoleErrors.slice(consoleBeforeNavigation), [], 'fragment navigation causes no browser policy errors');
-    for (let index = 0; index < 10; index++) await reveal(await prepare(programs[index % 2]));
-    assert.equal(await page.locator("#mount iframe").count(), 1);
+    const reloadedRoute = await page.evaluate(program => experiment.prepare(program, { routes: true }), routeProgram);
+    assert.equal(await report(reloadedRoute, 'location.pathname'), 'details',
+      'a live-update candidate starts on the currently selected route');
+    await reveal(reloadedRoute);
+    const historyBeforeSwaps = await page.evaluate(() => history.length);
+    for (let index = 0; index < 10; index++) {
+      await reveal(await prepare(programs[index % 2]));
+      assert.equal(await page.evaluate(() => [...document.querySelectorAll('#mount iframe')].every((frame, index) =>
+        frame === renderingFrames[index].deref() && frame.contentWindow === renderingWindows[index].deref())), true,
+        'live updates keep both native iframe elements and browsing contexts');
+    }
+    assert.equal(await page.locator("#mount iframe").count(), 2);
+    assert.equal(await page.evaluate(() => history.length), historyBeforeSwaps,
+      'preparing replacement documents does not append browser history');
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {
       await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
       await browserPage.screenshot({ path: resolve(process.env.MACCHIATO_TEST_ARTIFACTS, "rendering-documents.png") });
     }
-    await page.evaluate(() => experiment.destroy());
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const client = await browserPage.context().newCDPSession(browserPage);
     await client.send("Log.clear");
     await client.send("Runtime.discardConsoleEntries");
+    await client.send("HeapProfiler.collectGarbage");
+    const whileRunning = await page.evaluate(() => experiment.retained());
+    t.diagnostic(JSON.stringify({ whileRunning }));
+    assert.equal(whileRunning.filter(item => item.document).length, 1,
+      'only the idle frame current document survives among retired sessions');
+    await page.evaluate(() => experiment.destroy());
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await client.send("HeapProfiler.collectGarbage");
     const retained = await page.evaluate(() => experiment.retained());
     t.diagnostic(JSON.stringify(retained));
