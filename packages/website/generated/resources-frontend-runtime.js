@@ -2306,13 +2306,14 @@ Object.defineProperty(GuestDocument.prototype, "documentElement", {
     return this._documentElement;
   }
 });
-["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].forEach(function (name) {
+["devicePixelRatio", "innerHeight", "innerWidth", "pageXOffset", "pageYOffset"].concat(globalThis.__microQuickJS ? [] : ["scrollX", "scrollY"]).forEach(function (name) {
   if (globalThis.__microQuickJS) {
     globalThis[name] = immediate([1, document.reference, stringIndex(name)]);
   } else {
+    var property = name === "scrollX" ? "pageXOffset" : name === "scrollY" ? "pageYOffset" : name;
     Object.defineProperty(globalThis, name, {
       get: function get() {
-        return immediate([1, document.reference, stringIndex(name)]);
+        return immediate([1, document.reference, stringIndex(property)]);
       }
     });
   }
