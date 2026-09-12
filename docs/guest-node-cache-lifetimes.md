@@ -8,15 +8,35 @@ the host-reference lease.
 ## Reproduction
 
 `packages/project-editor/test/node-cache-lifetime.browser.test.js` uses the real
-MicroQuickJS Wasm runtime and observes host-reference leases. Five rounds of
-creating and removing 100 elements leave the real DOM empty, but initially retain
-200 more leases per round, even after explicit guest collection. The cause is
-the JavaScript `WeakRef` fallback, which stores its target strongly.
+MicroQuickJS Wasm runtime and observes host-reference leases. Creating and
+removing elements leaves the real DOM empty, but initially retains their leases
+even after explicit guest collection. The first fixture accidentally treated a
+string `"false"` as truthy and performed twice the intended churn. It now decodes
+the named-call argument and tests exactly 100 removals per round.
+
+There are two independent causes:
+
+- The JavaScript `WeakRef` fallback stores its target strongly.
+- The collector finalizes only the first object in a run of adjacent dead
+  blocks. Merging subsequent blocks skips their user-class finalizers.
 
 The replacement should use collector-aware weak storage, preserve live wrapper
 identity and guest properties, and survive collection and reference reuse. It
 must not advertise a complete ECMAScript WeakRef implementation merely to supply
 the facade's private identity cache.
+
+The candidate uses two internal C functions backed by the existing weak-key
+collection implementation. A cell has one object key and an undefined value;
+dereferencing reads that key, which collection removes when unreachable. The
+new cell is explicitly rooted while its backing table is allocated. Unlike a
+standard WeakRef, dereferencing does not add an end-of-job retention rule.
+
+Host reference IDs currently increase monotonically, so dead cache cells also
+need removal. Each insertion checks at most four cells in a rotating index;
+it does not scan the entire cache or host-reference table. This maintenance is
+separate from collection of the targets. The regression checks bounded index
+growth, retained subtrees, guest properties, reinsertion, cyclic targets, invalid
+primitive arguments, and releasing a previously retained subtree.
 
 ## Separate observer discrepancy
 

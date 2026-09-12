@@ -274,20 +274,40 @@ function projectClassName(value) {
 globalThis.__wwcProjectClassName = projectClassName;
 
 var guestNodes = Object.create(null);
+var guestNodeKeys = [], guestNodeSweep = 0;
+// MicroQuickJS supplies internal weak cells, not an imitation WeakRef that
+// retains its target forever. QuickJS uses its native WeakRef implementation.
+var makeNodeReference = typeof __wwcWeakCell === "function"
+  ? __wwcWeakCell : function (node) { return new WeakRef(node); };
+var readNodeReference = typeof __wwcWeakDeref === "function"
+  ? __wwcWeakDeref : function (entry) { return entry.deref(); };
 function rememberNode(node) {
-  guestNodes[node.reference] = new WeakRef(node);
+  // Host IDs are monotonic. Drop dead cells incrementally as new nodes arrive,
+  // otherwise the index would leak even after its targets become collectible.
+  // Four checks per insertion bound the work without scanning the whole cache.
+  for (var scan = 0; scan < 4 && guestNodeKeys.length; scan++) {
+    if (guestNodeSweep >= guestNodeKeys.length) guestNodeSweep = 0;
+    var key = guestNodeKeys[guestNodeSweep], entry = guestNodes[key];
+    if (entry && readNodeReference(entry)) guestNodeSweep++;
+    else {
+      delete guestNodes[key];
+      var last = guestNodeKeys.pop();
+      if (guestNodeSweep < guestNodeKeys.length) guestNodeKeys[guestNodeSweep] = last;
+    }
+  }
+  if (!guestNodes[node.reference]) guestNodeKeys.push(node.reference);
+  guestNodes[node.reference] = makeNodeReference(node);
   return node;
 }
 function nodeForReference(reference) {
   var entry = guestNodes[reference];
-  var known = entry && entry.deref();
+  var known = entry && readNodeReference(entry);
   if (known) {
     // Each returned host reference carries a lease. Reusing the existing
     // identity means no new finalizer token will be created for this one.
     releaseHostReferenceLease(reference);
     return known;
   }
-  if (entry) delete guestNodes[reference];
   var nodeType = immediate([1, reference, stringIndex("nodeType")]);
   var node = rememberNode(nodeType === 1 ? new GuestElement(reference) : new GuestObject(reference));
   node._nodeType = nodeType;
@@ -425,7 +445,7 @@ globalThis.reconcileGuestConnectivity = function () {
   for (var at = 0; at + 3 < bytes.length; at += 4) {
     var reference = bytes[at] | bytes[at + 1] << 8 |
       bytes[at + 2] << 16 | bytes[at + 3] << 24;
-    var entry = guestNodes[reference], node = entry && entry.deref();
+    var entry = guestNodes[reference], node = entry && readNodeReference(entry);
     if (!node || !parentOf(node)) continue;
     var root = node, guard = 0;
     while (parentOf(root) && guard++ < 4096) root = parentOf(root);

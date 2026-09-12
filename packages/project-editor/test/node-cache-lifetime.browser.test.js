@@ -7,7 +7,6 @@ import { chromium } from "playwright";
 
 test("MicroQuickJS's node identity cache does not retain unreachable removed wrappers", {
   timeout: 30_000,
-  todo: "replace the strong WeakRef fallback used by the node cache",
 }, async t => {
   const root = new URL("../../../", import.meta.url).pathname;
   const work = resolve(root, "../macchiato-work");
@@ -38,25 +37,42 @@ test("MicroQuickJS's node identity cache does not retain unreachable removed wra
   const result = await page.evaluate(async () => {
     const { default: Machine } = await import("/machine.js");
     const module = await WebAssembly.compileStreaming(fetch("/guest.wasm"));
-    const held = new Set(), mount = document.getElementById("mount");
+    const held = new Set(), leases = new Map(), notices = [], mount = document.getElementById("mount");
     const machine = new Machine(module, mount, {
       stamp: new Uint8Array(WebAssembly.Module.customSections(module, "wasm-web-machine")[0]),
-      onReferenceLease(id, count) { if (count) held.add(id); else held.delete(id); },
+      onReferenceLease(id, count, object) {
+        if (count) { held.add(id); leases.set(id, { count, kind: object.constructor.name }); }
+        else { held.delete(id); leases.delete(id); }
+      },
+      onMessage: message => notices.push(JSON.parse(message)),
     });
     try {
       await machine.onmsg(0);
       const call = value => machine.onmsg(new TextEncoder().encode("\u0002churnNodes\0" + value));
       await call(false);
       const baseline = held.size, samples = [];
-      for (let round = 0; round < 5; round++) {
+      const check = value => machine.onmsg(new TextEncoder().encode("\u0002checkNodeCache\0" + JSON.stringify(value)));
+      await check("invalid");
+      for (let round = 0; round < 20; round++) {
         await call(true); await call(false);
-        samples.push({ growth: held.size - baseline, elements: mount.children.length });
+        samples.push({ growth: held.size - baseline, elements: mount.children.length, cached: notices.at(-1).cached });
       }
-      return { baseline, samples };
+      await check("hold");
+      for (let round = 0; round < 5; round++) { await call(true); await check("verify"); }
+      const whileRetained = held.size - baseline;
+      await check("release"); await check("released");
+      return { baseline, samples, whileRetained, afterRelease: held.size - baseline,
+        retainedSample: Array.from(leases).slice(-5),
+        checked: notices.filter(notice => notice.checked).map(notice => notice.checked) };
     } finally { machine.destroy(); }
   });
   t.diagnostic(JSON.stringify(result));
   assert.ok(result.samples.every(sample => sample.elements === 0), "the nodes were removed from the real DOM");
   assert.ok(result.samples.every(sample => sample.growth <= 2), "removed wrappers should release their leases after collection");
+  assert.ok(result.samples.every(sample => sample.cached <= 202),
+    "empty cache cells must not accumulate as monotonically allocated host IDs increase");
+  assert.ok(result.whileRetained > 0, "live detached wrappers still own host leases");
+  assert.ok(result.afterRelease <= 2, "releasing the retained subtree releases its leases");
+  assert.deepEqual(result.checked, ["invalid", "hold", ...Array(5).fill("verify"), "release", "released"]);
   assert.deepEqual(errors, []);
 });

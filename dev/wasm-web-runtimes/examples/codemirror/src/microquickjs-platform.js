@@ -123,14 +123,6 @@ if (!Array.from) {
   };
 }
 
-// A JavaScript ponyfill cannot make a reference weak. This preserves the API
-// while the MicroQuickJS adapter moves identity retention into its native
-// host-reference finalizers.
-if (typeof WeakRef === "undefined") {
-  globalThis.WeakRef = function WeakRefPonyfill(value) { this.value = value; };
-  WeakRef.prototype.deref = function () { return this.value; };
-}
-
 if (!Array.prototype.find) {
   Array.prototype.find = function (predicate, receiver) {
     for (var index = 0; index < this.length; index++) {

@@ -31,6 +31,10 @@ static JSValue js_bridge(JSContext *ctx, JSValue *this_value,
                          int argc, JSValue *argv);
 static JSValue js_write_text(JSContext *ctx, JSValue *this_value,
                              int argc, JSValue *argv);
+static JSValue js_weak_cell(JSContext *ctx, JSValue *this_value,
+                            int argc, JSValue *argv);
+static JSValue js_weak_deref(JSContext *ctx, JSValue *this_value,
+                             int argc, JSValue *argv);
 static JSValue js_host_reference_constructor(JSContext *ctx, JSValue *this_value,
                                              int argc, JSValue *argv);
 static void js_host_reference_finalizer(JSContext *ctx, void *opaque);
@@ -596,6 +600,37 @@ static JSValue new_weak_collection(JSContext *ctx, int class_id,
     if (argument_count && !JS_IsUndefined(argv[0]) && !JS_IsNull(argv[0]))
         return JS_ThrowTypeError(ctx, "weak collection iterable is not supported");
     return JS_NewCollection(ctx, class_id);
+}
+
+// Private facade cells reuse weak-key GC and compaction. Unlike ECMAScript
+// WeakRef, these do not keep a dereferenced target alive until the end of a job:
+// callers must retain the returned value themselves, just like any JS object.
+static JSValue js_weak_cell(JSContext *ctx, JSValue *this_value,
+                            int argc, JSValue *argv)
+{
+    JSValue cell;
+    JSGCRef cell_ref;
+    int result;
+    UNUSED(this_value);
+    if (argc < 1 || JS_GetClassID(ctx, argv[0]) < 0)
+        return JS_ThrowTypeError(ctx, "weak cell target must be an object");
+    cell = JS_NewCollection(ctx, JS_CLASS_WEAK_MAP);
+    if (JS_IsException(cell)) return cell;
+    // argv is rooted by the native call frame. The new cell needs its own root
+    // while CollectionSet allocates the table and may move the arena.
+    JS_PUSH_VALUE(ctx, cell);
+    result = JS_CollectionSet(ctx, cell, argv[0], JS_UNDEFINED);
+    JS_POP_VALUE(ctx, cell);
+    return result ? JS_ThrowOutOfMemory(ctx) : cell;
+}
+
+static JSValue js_weak_deref(JSContext *ctx, JSValue *this_value,
+                             int argc, JSValue *argv)
+{
+    UNUSED(this_value);
+    if (argc < 1 || JS_GetClassID(ctx, argv[0]) != JS_CLASS_WEAK_MAP)
+        return JS_ThrowTypeError(ctx, "invalid weak cell");
+    return JS_CollectionKeyAt(ctx, argv[0], 0);
 }
 
 static JSValue js_weak_map_constructor(JSContext *ctx, JSValue *this_value,
