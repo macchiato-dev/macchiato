@@ -956,3 +956,26 @@ Evidence: `editor-frame-default-ui.log`, `editor-frame-language-retry.log`,
 `/root/macchiato-work`. Light editor and history screenshots were inspected.
 At this checkpoint the local 3030 server and deployment archive still use the
 previous export; packaged verification precedes activation.
+
+### Packaged and live activation
+
+Export `resources-co-c671ef9` then passed all 12 packaged browser checks and
+112 editor/website non-browser tests. The 98,547-character native insertion
+took 5,512 ms in the packaged stress run; its ordinary paste path took 123 ms.
+No input semantics were suppressed to obtain that result.
+
+The local 3030 server was restarted with this build. Eight principal assets,
+including both frame shells, match the export by SHA-256. Read-only owner
+checks passed for 144 Mahjong tiles, all eight Cat Memory pairs and reset,
+50 tour slides plus embedded/expanded keyboard navigation, SQLite fragment
+navigation, and phone/desktop pane and theme changes. No owner source or notes
+were saved. Desktop Mahjong and phone Cat Memory screenshots were inspected.
+
+All 153 deployment files verify before and after tar extraction, and the
+compressed backend runs its routing, document, and policy guests under Deno.
+`/root/resources-bunny.tar.gz` now contains this export; the previous archive
+is retained under `/root/archive/2026/09/13/`. Nothing was deployed to Bunny.
+Logs and screenshots use the `editor-frame-packaged-ui`, `editor-frame-live`,
+`editor-frame-modules`, and `editor-frame-bunny-backend` names in the work
+directory. The earlier intermittent tab-strip timeout remains an open
+observation, despite the subsequent passing runs.

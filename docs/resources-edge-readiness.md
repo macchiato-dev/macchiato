@@ -1,10 +1,17 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-398f759`.
+Current local verification: 2026-09-13, export `resources-co-c671ef9`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
 ## Current build
+
+The editor now defaults to a separate iframe and MicroQuickJS machine, while
+the project UI retains history, details, and ownership of the output. The
+controller's `editorFrame: false` option keeps the direct Element path.
+The frame runs a fixed trusted shell; project code still executes only in its
+output guest. Failed language downloads remain recoverable highlighting
+warnings, not editor crashes.
 
 The editor Configuration view now formats JSON in the guest application.
 MicroQuickJS ignores the indentation argument to `JSON.stringify`; the display
@@ -21,28 +28,32 @@ their existing session. This is separate from the typing/build debounce.
 
 ## Verified
 
-- All 111 non-browser tests in `packages/project-editor/test` and
+- All 112 non-browser tests in `packages/project-editor/test` and
   `packages/website/test` pass, including JSON formatting and resource policies.
 - The mixed app browser suite has 43 passes and eight failures in the older
   SQLite-site tests. All current resources-edge cases pass: account creation,
   project publication/reversion/deletion, anonymous editing, version selection,
   templates, ZIP round-trips, resource recovery, graphics, storage denial,
   network boundaries, theme changes, Find/Replace, notifications, and roles.
-- All 11 packaged appearance/editing/language checks pass. They include real
+- All 12 packaged appearance/editing/language checks pass. They include real
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
   recovery; and language bytecode loaded without replacing the editor session.
-- Screenshots of Configuration, dark editing, and output recovery were reviewed.
+- Screenshots of light editing, history, desktop Mahjong, and phone Cat Memory
+  were reviewed, in addition to the earlier Configuration/output checks.
 - Read-only exported and live checks pass for full-height Mahjong, all Cat
   Memory pairs and reset, 50 tour slides, and SQLite fragment navigation. No
-  owner project or notes were saved. Seven principal live assets match the
+  owner project or notes were saved. Eight principal live assets match the
   export byte-for-byte after restarting the local server.
-- All 152 deployment files verify before and after archive extraction. The
+- All 153 deployment files verify before and after archive extraction. The
   compressed backend artifact runs its routing, rendering, and policy guests
   in Deno. Nothing has been deployed to Bunny.
 
-Evidence is in `/root/macchiato-work/config-readable-*`,
-`current-resources-browser-suite.log`, and `account-current-flow-final.log`.
+Current evidence is in `/root/macchiato-work/editor-frame-packaged-ui.log`,
+`editor-frame-modules.log`, `editor-frame-bunny-backend.log`,
+`editor-frame-live.log`, and their screenshot directories. The earlier broader
+app checks remain in `current-resources-browser-suite.log` and
+`account-current-flow-final.log`.
 The latter app test waits for native form navigation and guest readiness, uses
 the actual output Document, and explicitly selects a draft/history checkpoint
 instead of treating `aria-current` as an alias for newest.
@@ -63,24 +74,24 @@ to about 12.2s. Narrower layout selectors do not recover that benefit. Ordinary
 typing does not show a comparable improvement. See the
 [workspace comparison](project-editor-typing-performance.md#full-workspace-rendering-document-control-2026-09-13)
 for the controls, preserved input events, and the remaining integration boundary.
-The production editor is not yet moved into an iframe.
+That separate rendering document is now the local/default editor surface.
 
-An opt-in separate editor machine now passes browser tests through the real
+The initially opt-in separate editor machine passed browser tests through the real
 project UI, including 106 KB source, file switching, search, repeated themes,
 and startup/disposal failure cases. The direct path also passes. This test
-stubs output services; full application shortcuts and combined machine
-lifetimes remain to be checked before enabling it. See the
+stubs output services; subsequent complete-site tests checked application
+shortcuts and combined machine lifetimes before activation. See the
 [editor-surface checkpoint](project-editor-typing-performance.md#opt-in-editor-surface-implementation-2026-09-13).
-The live server and deployment archive below have not been replaced by this
-experimental source build.
+The live server and deployment archive below now include this integration.
 
-The opt-in path subsequently passed a complete-site fixture with real output,
+The new path subsequently passed a complete-site fixture with real output,
 theme changes, palette shortcuts, and interrupted startup. That work fixed
 the frame-shell response CSP and cancelled-page lifecycle handling. It also
 found and fixed the extra bootstrap exceeding the interpreter's 16-program
 table when all grammars load. The direct long-editing test passes, and two
-complete language reruns pass. An intermittent selected-tab visibility timeout
-after repeated closes still needs follow-up; see the
+complete language reruns pass. Five further direct repeats and the two framed
+language runs also pass. An intermittent selected-tab visibility timeout after
+repeated closes has not reproduced and is not declared fixed; see the
 [complete-site checkpoint](project-editor-typing-performance.md#complete-site-integration-checkpoint).
 
 The eight legacy SQLite-site failures concern removed schema paths and old
@@ -94,15 +105,16 @@ Its full framed editing and appearance tests pass, and the failed-language
 download test found a recoverable notification that needed forwarding to the
 project UI rather than escalation as a machine error. That retry now passes.
 See the [default checkpoint](project-editor-typing-performance.md#default-framed-editor-checkpoint).
-This does not yet change the live/exported artifact recorded below.
+The source checkpoint was followed by packaged tests and read-only live checks;
+the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
-`/root/resources-bunny.tar.gz` contains the verified `398f759` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `c671ef9` export. SHA-256:
 
-`0b54268fed664173a1ce538d8597b890b7977df90ea3f218df866537b4f59e44`
+`f67daaca73da41e32ff6a58bde772c29b60676e85bcb2675bde3566585430051`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-cc6c03e-before-config-format.tar.gz`.
+`/root/archive/2026/09/13/resources-bunny-398f759-before-editor-frame.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.
