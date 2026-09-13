@@ -842,6 +842,41 @@ test("Resources loads language bytecode on demand without replacing the editing 
   assert.deepEqual(downloads.sort(), ["html", "javascript", "python", "python", "rust", "css", "json",
     "markdown", "sql", "yaml", "cpp", "vue", "svelte"]
     .map(name => `project-editor-language-${name}.bin`).sort());
+  const tabs = page.locator("[data-project-tabs]");
+  const back = page.getByRole("button", { name: "Scroll tabs left" });
+  const forward = page.getByRole("button", { name: "Scroll tabs right" });
+  async function selectedTabVisible() {
+    await page.waitForFunction(() => {
+      const list = document.querySelector("[data-project-tabs]");
+      const selected = list.querySelector('[aria-selected="true"]').parentElement.getBoundingClientRect();
+      const viewport = list.getBoundingClientRect();
+      return selected.left >= viewport.left - 1 && selected.right <= viewport.right + 1;
+    }, null, { timeout: 5000 });
+  }
+  await selectedTabVisible();
+  assert.equal(await back.isVisible(), true, "newly opened tabs reveal the overflow controls");
+  assert.equal(await forward.isDisabled(), true, "the last selected tab is at the right edge");
+  const rightOffset = await tabs.evaluate(node => node.scrollLeft);
+  await back.click();
+  await page.waitForFunction(right => document.querySelector("[data-project-tabs]").scrollLeft < right - 20, rightOffset);
+  assert.equal(await forward.isEnabled(), true);
+  await openFile("index.html");
+  await selectedTabVisible();
+  assert.equal(await back.isDisabled(), true);
+  await openFile("App.svelte");
+  for (const width of [1000, 1920, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await selectedTabVisible();
+  }
+  // Closing the active end of the strip eventually removes the arrows. The
+  // controls must not keep themselves visible by consuming the available room.
+  while (await tabs.locator('[role="tab"]').count() > 1) {
+    await tabs.locator("[data-close-tab]").click();
+    await selectedTabVisible();
+  }
+  assert.equal(await back.isVisible(), false);
+  assert.equal(await forward.isVisible(), false);
+  assert.equal(await editor.getAttribute("data-editor-machine-id"), editorId);
   assert.deepEqual(errors, []);
   if (artifacts) await page.screenshot({ path: join(artifacts, "languages-recovered.png") });
 });

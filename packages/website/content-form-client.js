@@ -847,6 +847,7 @@ async function mountProjectRoot(root) {
     root.querySelector("[data-project-file-current]").textContent = selected === "config"
       ? root.dataset.configLabel || "Configuration"
       : selected;
+    scheduleTabLayout();
   }
 
   function renderStatusState() {
@@ -1252,17 +1253,40 @@ async function mountProjectRoot(root) {
   }
   openTabList.before(tabScrollBack);
   openTabList.after(tabScrollForward);
+  let tabLayoutFrame = 0;
   function syncTabOverflow() {
-    const overflowed = openTabList.scrollWidth > openTabList.clientWidth + 2;
-    tabScrollBack.hidden = !overflowed;
-    tabScrollForward.hidden = !overflowed;
+    // Compare content with the space available *without* arrows. Measuring
+    // only scrollWidth after showing them can make them keep themselves alive.
+    const first = openTabList.firstElementChild, last = openTabList.lastElementChild;
+    const contentWidth = first ? last.getBoundingClientRect().right - first.getBoundingClientRect().left : 0;
+    const availableWidth = tabScrollBack.hidden ? openTabList.clientWidth
+      : tabScrollForward.getBoundingClientRect().right - tabScrollBack.getBoundingClientRect().left;
+    const overflowed = contentWidth > availableWidth + 2;
+    if (tabScrollBack.hidden === overflowed) {
+      tabScrollBack.hidden = !overflowed;
+      tabScrollForward.hidden = !overflowed;
+    }
     tabScrollBack.disabled = openTabList.scrollLeft <= 1;
     tabScrollForward.disabled = openTabList.scrollLeft + openTabList.clientWidth >= openTabList.scrollWidth - 1;
+  }
+  function scheduleTabLayout() {
+    if (tabLayoutFrame) return;
+    tabLayoutFrame = requestAnimationFrame(() => {
+      tabLayoutFrame = 0;
+      syncTabOverflow();
+      const active = openTabList.querySelector('[aria-selected="true"]')?.parentElement;
+      if (!active || !openTabList.clientWidth) return;
+      const tab = active.getBoundingClientRect(), viewport = openTabList.getBoundingClientRect();
+      // Move only this horizontal strip, never the page or the code viewport.
+      if (tab.left < viewport.left) openTabList.scrollLeft -= viewport.left - tab.left;
+      else if (tab.right > viewport.right) openTabList.scrollLeft += tab.right - viewport.right;
+      syncTabOverflow();
+    });
   }
   tabScrollBack.addEventListener("click", () => openTabList.scrollBy({ left: -Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
   tabScrollForward.addEventListener("click", () => openTabList.scrollBy({ left: Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
   openTabList.addEventListener("scroll", syncTabOverflow);
-  new ResizeObserver(syncTabOverflow).observe(openTabList);
+  new ResizeObserver(scheduleTabLayout).observe(openTabList);
   function closeOpenTab(path) {
     if (openTabs.length <= 1) return;
     const index = openTabs.indexOf(path);
@@ -1270,7 +1294,6 @@ async function mountProjectRoot(root) {
     openTabs.splice(index, 1);
     if (selected === path) selected = openTabs[Math.min(index, openTabs.length - 1)];
     renderTabs();
-    requestAnimationFrame(syncTabOverflow);
     sendContent();
   }
   openTabList.addEventListener("click", (event) => {
@@ -1283,7 +1306,6 @@ async function mountProjectRoot(root) {
     if (!tab) return;
     selected = tab.dataset.openTab;
     renderTabs();
-    requestAnimationFrame(syncTabOverflow);
     sendContent();
   });
   let draggedTab = "";
@@ -1305,7 +1327,6 @@ async function mountProjectRoot(root) {
     openTabs.splice(targetIndex, 0, draggedTab);
     draggedTab = "";
     renderTabs();
-    requestAnimationFrame(syncTabOverflow);
   });
   openTabList.addEventListener("dragend", () => { draggedTab = ""; });
   const fileTrigger = root.querySelector("[data-project-file-trigger]");
