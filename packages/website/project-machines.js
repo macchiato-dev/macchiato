@@ -161,9 +161,13 @@ export async function createProjectAppMachine(root) {
   if (!requested) throw new Error(machineError || "Project app did not request its editor");
   return Object.freeze({ machineId, destroy() { machine.destroy(); runtime.destroy(); } });
 }
+export function loadProjectEditorModule() {
+  return moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
+}
 export async function createProjectEditorMachine({ root, onChange, onReady,
-  onLimit, onError, onRequest, services, limits, resolveImage, allowNavigate = false }) {
-  const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
+  onLimit, onError, onRequest, services, limits, resolveImage, allowNavigate = false,
+  module: suppliedModule }) {
+  const module = suppliedModule || await loadProjectEditorModule();
   const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
   const machineId = `wasm-web-machine-${nextMachine++}`;
   let response, machineError, starting = true, machineStage = "startup";
@@ -220,7 +224,7 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
   function call(name, payload) {
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
     response = machineError = undefined; machineStage = `call ${name}`;
-    machine.onmsg(callMessage(name, payload));
+    machine.onmsg(callMessage("__resourcesEditorCall", { name, value: payload }));
     if (machineError) throw new Error(machineError); if (response === undefined) throw new Error(`Guest function ${name} did not respond`);
     machineStage = "idle";
     return JSON.parse(response);

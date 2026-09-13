@@ -82,7 +82,9 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     .replace("/* PROJECT_OUTPUT_FRAME_CONTROLLER */", () => outputFrameController);
   files.set("/-/resources-site/project-output-frame.html", bytes(outputFrame));
   files.set("/-/resources-site/project-editor-frame.html",
-    bytes(readFileSync(join(directory, "project-editor-frame.html"))));
+    bytes(readFileSync(join(directory, "project-editor-frame.html"), "utf8")
+      .replace("/* PROJECT_EDITOR_FRAME_CONTROLLER */", () =>
+        readFileSync(join(generatedDirectory, "project-editor-frame-controller.js"), "utf8"))));
   files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
   files.set("/-/resources-site/project-builder-quickjs-runtime.wasm", projectBuilder);
   files.set("/-/resources-site/THIRD-PARTY-NOTICES.txt",

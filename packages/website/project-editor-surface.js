@@ -1,4 +1,4 @@
-import { createProjectEditorMachine } from "./project-machines.js";
+import { loadProjectEditorModule } from "./project-machines.js";
 
 const methods = new Set(["ConfigureLimits", "SetContent", "SetTheme", "Command",
   "Inspect", "Focus", "Select", "GetSelection", "SelectLine", "Serialize", "Restore"]);
@@ -20,12 +20,13 @@ export class ProjectEditorSurface {
     frame.title = "Code editor";
     frame.className = "project-editor__code-frame";
     frame.style.cssText = "display:block;width:100%;height:100%;border:0;visibility:hidden";
-    // The shell contains no scripts. Its CSP permits only the rendered editor
-    // styles; project text never becomes markup or browser-realm JavaScript.
+    // The shell runs only its fixed controller and the shared machine module.
+    // Project text never becomes markup or browser-realm JavaScript.
     frame.src = new URL("/-/resources-site/project-editor-frame.html",
       this.mount.ownerDocument.location.href).href;
     try {
-      await new Promise((resolve, reject) => {
+      const module = loadProjectEditorModule();
+      const loaded = new Promise((resolve, reject) => {
         const timer = setTimeout(() => finish(new Error("Editor frame did not load")), 15_000);
         const loaded = () => finish();
         const finish = error => {
@@ -38,13 +39,13 @@ export class ProjectEditorSurface {
         frame.addEventListener("load", loaded);
         this.mount.replaceChildren(frame);
       });
+      const [compiled] = await Promise.all([module, loaded]);
       if (this.disposed) throw new Error("Editor frame was closed");
       const root = frame.contentDocument;
       if (!root?.getElementById("editor")) throw new Error("Editor frame shell is unavailable");
       this.updateAppearance();
-      this.editor = await createProjectEditorMachine({
-        root,
-        limits: false,
+      this.editor = await frame.contentWindow.__resourcesCreateEditor({
+        module: compiled,
         onChange: (content, details) => this.notify({ type: "change", content, ...details }),
         onReady: value => this.notify({ ...value, type: "ready" }),
         onLimit: value => this.notify({ ...value, type: "limit" }),

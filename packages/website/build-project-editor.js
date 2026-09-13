@@ -29,6 +29,15 @@ await build({
   external: ["./machine.js"],
   outfile: join(outputDirectory, "project-output-frame-controller.js"),
 });
+await build({
+  entryPoints: [join(directory, "project-editor-frame-controller.js")],
+  bundle: true, format: "esm", platform: "browser",
+  plugins: [{ name: "editor-frame-machine", setup(builder) {
+    builder.onResolve({ filter: /\/dist\/module\/wasm-web-machine\.js$/ }, () =>
+      ({ path: "./machine.js", external: true }));
+  } }],
+  outfile: join(outputDirectory, "project-editor-frame-controller.js"),
+});
 const lowerForMicroQuickJS = async (source, plugins = []) => (await transformAsync(source, {
   comments: false,
   compact: false,

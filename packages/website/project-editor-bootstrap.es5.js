@@ -1,6 +1,15 @@
 (function () {
   "use strict";
 
+  // MicroQuickJS's named-call packet dispatches a function but does not send
+  // its return value. Keep the application reply protocol in this bootstrap,
+  // rather than teaching the interpreter about project-editor commands.
+  globalThis.__resourcesEditorCall = function (json) {
+    var request = JSON.parse(json);
+    var value = globalThis[request.name](JSON.stringify(request.value));
+    globalThis.__wwcPostMessage("__wwcResponse:" + (value == null ? "null" : value));
+  };
+
   var root = document.querySelector("[data-project-editor]");
   if (!root) {
     if (document.getElementById("editor")) load("surface.bin");
