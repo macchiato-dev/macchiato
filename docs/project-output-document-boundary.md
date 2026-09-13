@@ -64,6 +64,27 @@ media override propagates into child frames and defeats the inheritance being
 tested. The Element cases use the native page media preference. This is not a
 claim that setting `color-scheme` on an element rewrites page-wide media queries.
 
+Verification on 2026-09-13: all 37 focused regression checks pass, followed by
+the packaged editing workflow in 89.3 seconds. This includes repeated invalid
+edits, undo/redo, history promotion, theme changes, scrolling, and phone output.
+The early expanded-output and light-editor screenshots were inspected. Native
+large insertion still takes 20.8 seconds in the stress fixture; the single-start
+change is not a solution to that separate performance issue.
+
+Read-only exported and live checks pass for Mahjong, Cat Memory, 50 tour slides,
+and SQLite fragments. No owner project files or notes were saved. Seven principal
+assets match `site/resources-co-9236700` after the local restart. The controller
+is 76,525 bytes (90 bytes larger); the frame shell is 26,995 bytes (343 smaller).
+The machine and interpreter artifacts are unchanged. Build and extracted archive
+both pass all 152 manifest checks; the compressed backend runs in Deno.
+
+`/root/resources-bunny.tar.gz` has SHA-256
+`a6a0593fe1e96af05c8f97a1929089dd6fc1fd1dd4d43cd40663a7e73a633dc4`.
+Its predecessor is preserved at
+`/root/archive/2026/09/13/resources-bunny-ad2363e-before-initial-handoff.tar.gz`.
+Evidence is under `/root/macchiato-work/initial-handoff-*` and
+`initial-output-before.log`. Nothing was deployed to Bunny.
+
 The focused Chromium run passes 14 tests, including real QuickJS stateful
 updates in both grant modes without frames, fresh-state replacement, retired
 callback disposal, recovery after a throwing edit, fragment Back/Forward,
