@@ -131,7 +131,7 @@ The latter app test waits for native form navigation and guest readiness, uses
 the actual output Document, and explicitly selects a draft/history checkpoint
 instead of treating `aria-current` as an alias for newest.
 
-## Still open
+## Historical observations and follow-up measurements
 
 The interrupted pre-adaptation run, `readiness-current-site.log`, timed out on
 outer-document selectors left over from the unframed editor. It is retained
@@ -263,3 +263,45 @@ The prior archive is preserved at
 `/root/archive/2026/09/13/resources-bunny-4042e11-before-database-retry.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.
+
+## Final local-readiness audit (2026-09-13)
+
+The requested implementation is ready for a staging deployment. This audit
+checks the running site and the actual upload artifact, not just isolated
+library tests. Rust host experiments were optional and were not needed to
+reach this state; no extra privileged host layer was introduced.
+
+| Requirement | Current evidence |
+| --- | --- |
+| Existing Resources Edge content works | Read-only live checks of all five owner projects: Mahjong board, Cat Memory through all eight pairs and reset, 50 tour slides, SQLite virtual links, and the article. Editor, output, theme switches, and phone layouts pass. |
+| Immediate, consistent appearance | All eight real-startup desktop/phone theme cases pass, including system and explicit overrides, navigation, and both editor/output loading. The separate output boundary test changes system appearance without restarting guest state. |
+| Editing remains responsive and accurate | Full packaged editing workflow, two 20-cycle responsive fixtures, and real JS/Rust/104 KB TypeScript fixtures pass. Typing, Unicode, undo/redo, folding, scrolling, search, history, and malformed-CSS recovery are exercised. Recorded performance comparisons and their limitations remain above. |
+| CodeMirror stays in its own WASM surface | The default surface uses the trusted iframe shell and MicroQuickJS. The browser regression inserts hostile HTML by initial content, typing, and rich paste: source remains text, no script/image/frame/meta nodes appear, no external request occurs, and an ungranted `Eval` call fails. |
+| Output remains contained, with or without an iframe | Real guest calls attempt external images, stylesheets, scripts, frames, refresh metadata, navigation, fetch, and CSS URLs. No unexpected request occurs; the previous output survives rejected replacements. Element mode is tested without a CSP fallback. Guest globals and host storage remain separate. |
+| Lazy language loading | The registry covers JS/JSX/TS/TSX, HTML, CSS, JSON, Vue, Svelte, Markdown, Python, Rust, SQL, YAML, and C/C++. Browser checks cover requested-only downloads, shared JS/TS bytecode, delayed and failed grammar loads, retry, and preserved content/history. Plain text loads no grammar. |
+| Output updates follow the chosen lifecycle | Iframe and Element staging, startup failure, cancellation, font approval, cleanup failure, retained editor focus, and compiled-module reuse pass. Guest-directed updates keep the existing session. |
+| Ready-to-upload Bunny artifact | The extracted 171-file manifest verifies. The exact bundled entry registers before deferred work, serves static localized home pages without starting WASM, and exercises database-backed create/save/history/CSRF paths plus recovery after a database outage. All five main live executable hashes match the export, and the root archive hash matches the recorded value. |
+
+Final evidence under `/root/macchiato-work`:
+
+- `readiness-unit-final.log`: 118 non-browser tests pass.
+- `readiness-current-framed.log`: 43 applicable broad-site tests pass.
+- `readiness-final-packaged.log`: 15 packaged editing/appearance checks pass.
+- `readiness-containment-final.log`: 13 boundary/lifecycle checks pass, using
+  the built editor runtime rather than a replacement interpreter.
+- `readiness-bunny-entry-final.log`: three exact-entry checks pass against the
+  extracted archive, with dummy credentials and no network permission.
+- `readiness-live-final.log`, `readiness-live-hashes-final.log`, and
+  `readiness-manifest-final.log`: live projects, executable equality, archive
+  identity, and deployment inventory. The live Mahjong desktop and tour phone
+  screenshots were reviewed in `readiness-live-final/`.
+
+These are Chromium and local Deno results, not a formal security audit or a
+claim about Bunny's measured cold-start budget. The eight old SQLite/schema
+demo cases are still separate from this deployed architecture. The historical
+one-off geometry assertion has not recurred in repeated saved/unsaved stress
+checks; its cause was not established and no speculative workaround was added.
+
+No Bunny deployment or owner-content write was performed. Actual staging
+checks of provider callbacks, Bunny limits, and staging credentials follow the
+manual deployment instructions; production rollout is a separate decision.
