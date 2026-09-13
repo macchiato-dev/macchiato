@@ -51,6 +51,8 @@ for (const path of ["config", "data.json"]) test(`project owner validates ${path
   }
   assert.equal(requests.length, 1);
   assert.equal(requests[0].name, "build.compile");
+  assert.equal(attributes.get("data-output-machine-state"), "updating",
+    "preparing an edit must not cover existing output with the initial loader");
   assert.deepEqual(requests[0].payload.config, { example: path === "config" ? "updated" : "original" });
   assert.equal(requests[0].payload.files.find(file => file.path === "data.json").content,
     path === "config" ? "{}" : invalid, "data resources reach the real builder unchanged");

@@ -104,7 +104,9 @@
       surface.appendChild(output);
       preview.replaceChildren(surface);
     }
-    root.setAttribute("data-output-machine-state", "starting");
+    // Only initial startup covers the pane. Replacements prepare alongside
+    // the current output, which must remain visible and interactive.
+    root.setAttribute("data-output-machine-state", outputId ? "updating" : "starting");
     var sourceSnapshot = { files: files, config: config };
     root.setAttribute("data-output-machine-stage", "build");
     var built = config.build ? requestStage("build.run", sourceSnapshot) :
