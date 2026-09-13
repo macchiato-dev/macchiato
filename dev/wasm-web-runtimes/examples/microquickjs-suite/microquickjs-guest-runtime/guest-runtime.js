@@ -877,6 +877,9 @@ function eventForDelivery(reference) {
 
 function dispatch(message) {
   if (message === -1) { flush(); return; }
+  // Wasm i32 arrives signed, but the event word uses all 32 bits. Keep the
+  // flush sentinel above; slots 2048–4095 must not become negative indices.
+  message = message >>> 0;
   var callbackIndex = Math.floor(message / 1048576);
   var eventReference = message % 1048576 - 1;
   var callback = callbacks[callbackIndex];

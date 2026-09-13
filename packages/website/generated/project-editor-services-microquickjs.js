@@ -1411,8 +1411,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   for (var _iterator12 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-project-template]")), _step12; !(_step12 = _iterator12()).done;) {
     var select = _step12.value;
     var before = select.querySelector('option[value="vue"]');
-    for (var _i2 = 0, _arr2 = [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]; _i2 < _arr2.length; _i2++) {
-      var _arr2$_i = _slicedToArray(_arr2[_i2], 2),
+    for (var _i4 = 0, _arr2 = [["paint", "Canvas paint"], ["webgl", "WebGL triangle"], ["webgpu", "WebGPU triangle"], ["three", "Three.js triangle"], ["slides", "Presentation"]]; _i4 < _arr2.length; _i4++) {
+      var _arr2$_i = _slicedToArray(_arr2[_i4], 2),
         value = _arr2$_i[0],
         label = _arr2$_i[1];
       if (select.querySelector("option[value=\"" + value + "\"]")) continue;
@@ -1466,19 +1466,33 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
       tooltip = null;
     };
     button._hideInstantTooltip = hide;
-    button.addEventListener("pointerenter", function (event) {
+    var enter = function enter(event) {
       if (event.pointerType === "touch" || !shouldShow(button)) return;
       clearTimeout(showTimer);
       showTimer = setTimeout(show, 600);
-    });
-    button.addEventListener("pointerleave", hide);
-    button.addEventListener("pointerdown", hide);
-    button.addEventListener("dragstart", hide);
-    button.addEventListener("focus", function () {
+    };
+    var focus = function focus() {
       if (button.matches(":focus-visible")) show();
-    });
-    button.addEventListener("blur", hide);
-    button.addEventListener("instanttooltiphide", hide);
+    };
+    var listeners2 = [["pointerenter", enter], ["pointerleave", hide], ["pointerdown", hide], ["dragstart", hide], ["focus", focus], ["blur", hide], ["instanttooltiphide", hide]];
+    for (var _i2 = 0, _listeners7 = listeners2; _i2 < _listeners7.length; _i2++) {
+      var _listeners7$_i = _slicedToArray(_listeners7[_i2], 2),
+        type = _listeners7$_i[0],
+        listener = _listeners7$_i[1];
+      button.addEventListener(type, listener);
+    }
+    button._disposeInstantTooltip = function () {
+      hide();
+      for (var _i3 = 0, _listeners8 = listeners2; _i3 < _listeners8.length; _i3++) {
+        var _listeners8$_i = _slicedToArray(_listeners8[_i3], 2),
+          _type = _listeners8$_i[0],
+          _listener = _listeners8$_i[1];
+        button.removeEventListener(_type, _listener);
+      }
+      delete button._hideInstantTooltip;
+      delete button._disposeInstantTooltip;
+      button.removeAttribute("data-instant-tooltip-attached");
+    };
   }
   for (var _iterator13 = _createForOfIteratorHelperLoose(document.querySelectorAll("button[data-instant-tooltip]")), _step13; !(_step13 = _iterator13()).done;) {
     var button = _step13.value;
@@ -1612,7 +1626,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selectedStoredSequence, latestStoredSequence, selectedVersionField, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i3, _arr3, _arr3$_i, _button2, _label, text, tabLayoutFrame, syncTabOverflow, scheduleTabLayout, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i4, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selectedStoredSequence, latestStoredSequence, selectedVersionField, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i5, _arr3, _arr3$_i, _button2, _label, text, tabLayoutFrame, syncTabOverflow, scheduleTabLayout, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i6, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -2388,7 +2402,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               menu.replaceChildren();
               for (var _iterator17 = _createForOfIteratorHelperLoose(tabs.querySelectorAll("[data-instant-tooltip-attached='true']")), _step17; !(_step17 = _iterator17()).done;) {
                 var _button = _step17.value;
-                _button._hideInstantTooltip == null || _button._hideInstantTooltip();
+                _button._disposeInstantTooltip == null || _button._disposeInstantTooltip();
               }
               tabs.replaceChildren();
               var availableChoices = document.createElement("div");
@@ -2962,8 +2976,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             openTabList = root.querySelector("[data-project-tabs]");
             tabScrollBack = document.createElement("button");
             tabScrollForward = document.createElement("button");
-            for (_i3 = 0, _arr3 = [[tabScrollBack, "Scroll tabs left", "\u2039"], [tabScrollForward, "Scroll tabs right", "\u203A"]]; _i3 < _arr3.length; _i3++) {
-              _arr3$_i = _slicedToArray(_arr3[_i3], 3), _button2 = _arr3$_i[0], _label = _arr3$_i[1], text = _arr3$_i[2];
+            for (_i5 = 0, _arr3 = [[tabScrollBack, "Scroll tabs left", "\u2039"], [tabScrollForward, "Scroll tabs right", "\u203A"]]; _i5 < _arr3.length; _i5++) {
+              _arr3$_i = _slicedToArray(_arr3[_i5], 3), _button2 = _arr3$_i[0], _label = _arr3$_i[1], text = _arr3$_i[2];
               _button2.type = "button";
               _button2.className = "project-editor__tab-scroll";
               _button2.setAttribute("aria-label", _label);
@@ -3023,8 +3037,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             fileTrigger = root.querySelector("[data-project-file-trigger]");
             fileTriggerIcon = fileTrigger.querySelector("svg");
             fileTriggerIcon.replaceChildren();
-            for (_i4 = 0, _arr4 = ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]; _i4 < _arr4.length; _i4++) {
-              d = _arr4[_i4];
+            for (_i6 = 0, _arr4 = ["M7 4h12v14H7zM4 7v14h12", "M10 8h6M10 11h6M10 14h4"]; _i6 < _arr4.length; _i6++) {
+              d = _arr4[_i6];
               path = document.createElementNS("http://www.w3.org/2000/svg", "path");
               path.setAttribute("d", d);
               fileTriggerIcon.append(path);

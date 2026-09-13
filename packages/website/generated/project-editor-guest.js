@@ -27905,19 +27905,31 @@ function attachInstantTooltip(button, label = button.dataset.instantTooltip, sho
     tooltip = null;
   };
   button._hideInstantTooltip = hide;
-  button.addEventListener("pointerenter", (event) => {
+  const enter = (event) => {
     if (event.pointerType === "touch" || !shouldShow(button)) return;
     clearTimeout(showTimer);
     showTimer = setTimeout(show, 600);
-  });
-  button.addEventListener("pointerleave", hide);
-  button.addEventListener("pointerdown", hide);
-  button.addEventListener("dragstart", hide);
-  button.addEventListener("focus", () => {
+  };
+  const focus = () => {
     if (button.matches(":focus-visible")) show();
-  });
-  button.addEventListener("blur", hide);
-  button.addEventListener("instanttooltiphide", hide);
+  };
+  const listeners2 = [
+    ["pointerenter", enter],
+    ["pointerleave", hide],
+    ["pointerdown", hide],
+    ["dragstart", hide],
+    ["focus", focus],
+    ["blur", hide],
+    ["instanttooltiphide", hide]
+  ];
+  for (const [type, listener] of listeners2) button.addEventListener(type, listener);
+  button._disposeInstantTooltip = () => {
+    hide();
+    for (const [type, listener] of listeners2) button.removeEventListener(type, listener);
+    delete button._hideInstantTooltip;
+    delete button._disposeInstantTooltip;
+    button.removeAttribute("data-instant-tooltip-attached");
+  };
 }
 for (const button of document.querySelectorAll("button[data-instant-tooltip]")) {
   attachInstantTooltip(button);
@@ -28392,7 +28404,7 @@ async function mountProjectRoot(root) {
     rememberSession(tabSessionKey, JSON.stringify(openTabs));
     menu.replaceChildren();
     for (const button of tabs.querySelectorAll("[data-instant-tooltip-attached='true']")) {
-      button._hideInstantTooltip?.();
+      button._disposeInstantTooltip?.();
     }
     tabs.replaceChildren();
     const availableChoices = document.createElement("div");

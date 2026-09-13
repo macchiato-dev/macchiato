@@ -1197,15 +1197,16 @@ test("Resources loads language bytecode on demand without replacing the editing 
   }
   // Closing the active end of the strip eventually removes the arrows. The
   // controls must not keep themselves visible by consuming the available room.
-  for (let cycle = 0; cycle < 3; cycle++) {
+  const tabCycles = 8;
+  for (let cycle = 0; cycle < tabCycles; cycle++) {
     while (await tabs.locator('[role="tab"]').count() > 1) {
       await tabs.locator("[data-close-tab]").click();
       await selectedTabVisible();
     }
     assert.equal(await back.isVisible(), false);
     assert.equal(await forward.isVisible(), false);
-    if (cycle < 2) {
-      await page.setViewportSize({ width: cycle === 0 ? 1000 : 1440, height: 900 });
+    if (cycle < tabCycles - 1) {
+      await page.setViewportSize({ width: cycle % 2 === 0 ? 1000 : 1440, height: 900 });
       for (const file of files.slice(1)) {
         await openFile(file.path);
         await selectedTabVisible();

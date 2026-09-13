@@ -1785,11 +1785,12 @@ GuestObject.prototype.before = function (node) {
   parent.insertBefore(node, this);
 };
 GuestObject.prototype.after = function (node) {
-  var parent = parentOf(this);
+  // Adopted DOM children enter the lifetime mirror on demand, not in sibling
+  // order. Resolve the insertion point from the DOM, just like public reads.
+  var parent = this.parentNode;
   if (!parent) return;
   if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
-  var siblings = childrenOf(parent);
-  parent.insertBefore(node, siblings[siblings.indexOf(this) + 1] || null);
+  parent.insertBefore(node, this.nextSibling);
 };
 GuestElement.prototype.append = function (...values) {
   for (var i = 0; i < values.length; i++) {

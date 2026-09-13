@@ -2132,6 +2132,7 @@ function dispatch(message) {
     flush();
     return;
   }
+  message = message >>> 0;
   var callbackIndex = Math.floor(message / 1048576);
   var eventReference = message % 1048576 - 1;
   var callback = callbacks[callbackIndex];
@@ -3999,11 +4000,10 @@ GuestObject.prototype.before = function (node) {
   parent.insertBefore(node, this);
 };
 GuestObject.prototype.after = function (node) {
-  var parent = parentOf(this);
+  var parent = this.parentNode;
   if (!parent) return;
   if (!(node instanceof GuestObject)) node = document.createTextNode(String(node));
-  var siblings = childrenOf(parent);
-  parent.insertBefore(node, siblings[siblings.indexOf(this) + 1] || null);
+  parent.insertBefore(node, this.nextSibling);
 };
 GuestElement.prototype.append = function () {
   for (var i = 0; i < arguments.length; i++) {

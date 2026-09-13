@@ -6,6 +6,7 @@ import test from "node:test";
 import { chromium } from "playwright";
 
 for (const [fixture, expected] of [
+  ["callback-word", [2047, 2048, 4095]],
   ["browser-timers", ["argument", "immediate", "interval", "timeout"]],
   ["promise-rejection", ["compile: invalid CSS"]],
   ["svg-names", ["linearGradient", "linearGradient", "http://www.w3.org/2000/svg"]],
