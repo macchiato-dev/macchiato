@@ -1223,3 +1223,11 @@ session until ready, and guest-directed updates retain state. Evidence uses
 `editor-preload-browser`, `editor-preload-language` (plus `-2` and `-3`),
 `editor-preload-modules`, `editor-preload-backend`, and
 `editor-preload-output-boundaries` logs under `/root/macchiato-work`.
+
+The restarted local server passes the read-only owner checks: Mahjong, all Cat
+Memory pairs/reset, 50 tour slides, SQLite fragments, themes and phone layouts.
+Desktop and phone Mahjong screenshots were reviewed. Seven executable assets
+match the export after HTTP decompression. The 171-file archive verifies after
+extraction and is installed at `/root/resources-bunny.tar.gz`; the previous
+archive is preserved under `/root/archive/2026/09/13`. Nothing was deployed to
+Bunny, and no owner project or notes were saved.

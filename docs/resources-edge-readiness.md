@@ -1,6 +1,6 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-781c9c7`.
+Current local verification: 2026-09-13, export `resources-co-4d569f7`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
@@ -11,6 +11,12 @@ in both local resources-edge and the Bunny export. Browser URLs, MIME types,
 streaming compilation, and no-store caching remain unchanged. The initial
 four runtimes plus HTML grammar transferred 2.57 MB instead of 8.01 MB in the
 browser test, about 68% less data. This is not an end-to-end speedup claim.
+
+Editor module transfer now overlaps output startup after project compilation;
+editor execution still waits for the output paint checkpoint. A small cold-load
+comparison shortened editor readiness by about 1.3 seconds for Mahjong and
+0.6 seconds for Cat Memory under controlled network conditions. Output timing
+was mixed. See [the measurements](project-editor-typing-performance.md#overlap-editor-transfer-with-output-startup).
 
 The editor now defaults to a separate iframe and MicroQuickJS machine, while
 the project UI retains history, details, and ownership of the output. The
@@ -45,34 +51,39 @@ their existing session. This is separate from the typing/build debounce.
 
 ## Verified
 
-- All 114 non-browser tests in `packages/project-editor/test` and
+- All 115 non-browser tests in `packages/project-editor/test` and
   `packages/website/test` pass, including JSON formatting and resource policies.
 - The mixed app browser suite has 43 passes and eight failures in the older
   SQLite-site tests. All current resources-edge cases pass: account creation,
   project publication/reversion/deletion, anonymous editing, version selection,
   templates, ZIP round-trips, resource recovery, graphics, storage denial,
   network boundaries, theme changes, Find/Replace, notifications, and roles.
-- All 13 packaged appearance/editing/language checks pass. They include real
+- The current packaged run passed 12 of 13 appearance/editing/language checks;
+  the language-recovery case then passed three focused reruns (see below).
+  They include real
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
   recovery; and language bytecode loaded without replacing the editor session.
 - All 25 callback/surface/initial-output browser checks pass, including signed
   callback-word boundaries and inert HTML source in the editor through loading,
   native insertion, and rich clipboard paste.
+- The 12 initial-output/lifecycle/live-update checks were rerun and pass with
+  the loading change, covering both ordinary Element and framed output.
 - Screenshots of light editing, history, desktop Mahjong, and phone Cat Memory
   were reviewed, in addition to the earlier Configuration/output checks.
 - Read-only exported and live checks pass for full-height Mahjong, all Cat
   Memory pairs and reset, 50 tour slides, and SQLite fragment navigation. No
-  owner project or notes were saved. Seven compressed live assets match the
-  export byte-for-byte after restarting the local server.
+  owner project or notes were saved. Nine live asset paths exist in the export;
+  seven live executable assets match it byte-for-byte after HTTP decompression.
 - All 171 deployment files verify before and after archive extraction,
   including equivalence between compressed variants and their originals. The
   compressed backend artifact runs its routing, rendering, and policy guests
   in Deno. Nothing has been deployed to Bunny.
 
-Current evidence is in `/root/macchiato-work/compressed-assets-browser-final.log`,
-`compressed-assets-modules.log`, `compressed-assets-backend.log`, and
-`compressed-assets-live.log`, with their screenshot directories. The unchanged
+Current evidence is in `/root/macchiato-work/editor-preload-browser.log`,
+`editor-preload-language.log` (also `-2` and `-3`), `editor-preload-modules.log`,
+`editor-preload-backend.log`, `editor-preload-output-boundaries.log`, and
+`editor-preload-live.log`, with their screenshot directories. The unchanged
 callback/surface boundary tests remain recorded in `tab-lifetime-boundaries.log`.
 The earlier broader
 app checks remain in `current-resources-browser-suite.log` and
@@ -82,6 +93,12 @@ the actual output Document, and explicitly selects a draft/history checkpoint
 instead of treating `aria-current` as an alias for newest.
 
 ## Still open
+
+The first packaged language-recovery run found a machine-error marker during
+its intentionally failed Python grammar download. Three focused reruns passed.
+Diagnostics now preserve the actual attribute value and page errors instead of
+only reporting its count. The cause is not established, and no runtime workaround
+or relaxed assertion was added. The prior export's full suite had passed.
 
 An initial packaged rerun failed an unchanged-pane-size assertion after a
 phone/desktop switch and bulk paste. It did not repeat in the focused rerun or
@@ -149,11 +166,11 @@ the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
-`/root/resources-bunny.tar.gz` contains the verified `781c9c7` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `4d569f7` export. SHA-256:
 
-`61c559f693dead624d4e2e0f107a8d151bc9c501c269732a098eb53633f910dd`
+`af520ee95e15973e27a4ee3ae7128d134262b30cfb78990e320261b33050765f`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-9fdadc5-before-asset-compression.tar.gz`.
+`/root/archive/2026/09/13/resources-bunny-781c9c7-before-editor-preload.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.
