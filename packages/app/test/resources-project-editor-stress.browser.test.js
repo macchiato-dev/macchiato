@@ -93,9 +93,14 @@ test("Resources framed editor integrates with the site and running output", { ti
     requestAnimationFrame(sample);
   });
   const errors = [];
+  const assetResponses = new Map();
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
   page.on("response", response => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
+  page.on("response", response => {
+    const path = new URL(response.url()).pathname;
+    if (/\/-\/resources-site\/[^/]+\.(wasm|bin)$/.test(path)) assetResponses.set(path, response.headers());
+  });
   await page.context().addCookies([{ name: "resources_session", value: session,
     domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   await page.route("**/-/resources-site/controller.js*", route =>
@@ -109,6 +114,21 @@ test("Resources framed editor integrates with the site and running output", { ti
   try {
     await content.waitFor({ timeout: 15000 });
     await output.getByRole("heading", { name: "Frame fixture" }).waitFor();
+    await content.locator(".cm-line span[class]").first().waitFor();
+    for (const name of ["resources-frontend-microquickjs.wasm", "project-editor-quickjs-runtime.wasm",
+      "project-quickjs-runtime.wasm", "project-editor-language-html.bin"]) {
+      assert.equal(assetResponses.get(`/-/resources-site/${name}`)?.["content-encoding"], "gzip", name);
+    }
+    assert.deepEqual([...assetResponses.keys()].filter(path => path.includes("project-editor-language-")),
+      ["/-/resources-site/project-editor-language-html.bin"], "only the selected file's grammar is downloaded");
+    const transfers = (await Promise.all(page.frames().map(frame => frame.evaluate(() =>
+      performance.getEntriesByType("resource").filter(entry => /\.(wasm|bin)(\?|$)/.test(entry.name))
+        .map(entry => ({ path: new URL(entry.name).pathname, encoded: entry.encodedBodySize, decoded: entry.decodedBodySize }))
+    )))).flat();
+    assert.ok(transfers.length >= 4);
+    assert.ok(transfers.every(entry => entry.encoded > 0 && entry.encoded < entry.decoded),
+      `Browser receives compressed, decoded runtime bytes: ${JSON.stringify(transfers)}`);
+    t.diagnostic(JSON.stringify({ runtimeTransfers: transfers }));
     const historyButton = page.locator("[data-project-versions-proxy]");
     const historyTimes = [];
     for (let round = 0; round < 80; round++) {
@@ -369,6 +389,7 @@ function startApp(port, dataDir) {
     const timer = setTimeout(() => reject(new Error(`Server did not start\n${output}`)), 30_000);
     const append = (chunk) => {
       output += chunk;
+      if (process.env.MACCHIATO_TEST_SERVER_LOG) appendFileSync(process.env.MACCHIATO_TEST_SERVER_LOG, chunk);
       if (output.includes("Server running")) { clearTimeout(timer); resolveReady(); }
     };
     child.stdout.on("data", append); child.stderr.on("data", append); child.on("error", reject);

@@ -559,7 +559,6 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
       const headers = publicResponseHeaders(key, upstream.headers);
       if (hasCompressed) headers.set("vary", "accept-encoding");
       if (compressed) headers.set("content-encoding", "gzip");
-      if (hasCompressed) headers.set("content-length", String(expected.bytes));
       if (plan.requestedProject?.embed) {
         headers.set("content-security-policy", headers.get("content-security-policy").replace("frame-ancestors 'none'", "frame-ancestors 'self'"));
       }

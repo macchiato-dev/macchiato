@@ -56,7 +56,7 @@ test("static gzip variants round-trip and serve through the actual edge handler"
     assert.equal(response.status, 200);
     assert.equal(response.headers.get("content-type"), "application/wasm");
     assert.equal(response.headers.get("content-encoding"), zipped ? "gzip" : null);
-    assert.equal(response.headers.get("content-length"), String(expected.length));
+    assert.equal(response.headers.get("content-length"), null, "the HTTP server owns body framing");
     assert.equal(response.headers.get("vary"), "accept-encoding");
     assert.equal(response.headers.get("cache-control"), "no-store");
     assert.ok(keys.at(-1).endsWith(path + (zipped ? ".gz" : "")));

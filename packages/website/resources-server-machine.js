@@ -19,7 +19,7 @@ const documentResponseMarker = "\u001edocument-response";
 const maximumProjectRequestBytes = 72 * 1024 * 1024;
 const maximumProjectTransportBytes = 128 * 1024 * 1024;
 const maximumProjectFormBytes = 70 * 1024 * 1024;
-const documentResponseHeaders = ["access-control-allow-origin", "allow", "cache-control", "content-language",
+const documentResponseHeaders = ["access-control-allow-origin", "allow", "cache-control", "content-encoding", "content-language",
   "content-security-policy", "content-type", "cross-origin-opener-policy",
   "cross-origin-resource-policy", "location", "permissions-policy", "referrer-policy",
   "etag", "last-modified", "set-cookie", "vary", "x-content-type-options", "x-frame-options"];
