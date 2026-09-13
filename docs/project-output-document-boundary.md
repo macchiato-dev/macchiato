@@ -41,6 +41,29 @@ pass for full-height Mahjong, Cat Memory's eight pairs and reset, 50 tour slides
 and SQLite fragments. Seven principal served assets match the export after
 restart. This is a local deployment, not a Bunny staging deployment.
 
+## Initial mount uses the compiled application
+
+The editor already has the compiled project when it mounts the output. It now
+passes that project into the first guest session, in either grant mode. The
+previous path created an empty session, acknowledged readiness, then replaced
+it with a second session through another request. That unnecessary document
+replacement also removed the loading shell before the real application arrived.
+No extra debounce or iframe is introduced by the single-start path.
+
+`project-initial-output.browser.test.js` uses the real output device, frame
+controller, and QuickJS runtime. Before the fix it counted two guest surfaces;
+afterward it counts one. The test holds the runtime download, samples an actual
+screenshot pixel to check the light/dark loading backdrop, then verifies the
+compiled document language, application CSS, project-file fetch, and counter.
+Subsequent appearance changes keep the counter's state. A throwing initial
+guest leaves no registered output or orphan frame and a fresh mount recovers.
+Failed frame startup closes the channel before removing the unregistered frame.
+
+The iframe cases use native color-scheme inheritance: forcing a Playwright
+media override propagates into child frames and defeats the inheritance being
+tested. The Element cases use the native page media preference. This is not a
+claim that setting `color-scheme` on an element rewrites page-wide media queries.
+
 The focused Chromium run passes 14 tests, including real QuickJS stateful
 updates in both grant modes without frames, fresh-state replacement, retired
 callback disposal, recovery after a throwing edit, fragment Back/Forward,
