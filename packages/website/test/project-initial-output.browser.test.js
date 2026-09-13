@@ -42,6 +42,8 @@ test("initial project output mounts its compiled application without an empty gu
       const runtimeArrived = new Promise(resolve => { runtimeRequested = resolve; });
       page.on("pageerror", error => errors.push(error.message));
       await page.addInitScript(() => {
+        window.hostOnlyValue = 'host-private-fixture';
+        localStorage.setItem('host-only-value', 'host-private-fixture');
         window.documentReplacements = 0;
         const replaceChild = Node.prototype.replaceChild;
         Node.prototype.replaceChild = function (next, old) {
@@ -132,6 +134,67 @@ test("initial project output mounts its compiled application without an empty gu
           }, { iframe, color: next === 'light' ? 'rgb(198, 220, 245)' : 'rgb(23, 44, 72)' });
           assert.equal(await target.locator('#count').textContent(), '1', 'appearance updates preserve the running guest');
         }
+        // Exercise the real guest -> controller -> machine path. In element
+        // mode the test page has no CSP safety net for unexpected requests.
+        for (const [name, code] of [
+          ['external image', `
+              var node = document.createElement('img');
+              node.src = 'https://outside.test/image'; document.body.appendChild(node);
+          `],
+          ['external stylesheet', `
+              var node = document.createElement('link');
+              node.rel = 'stylesheet'; node.href = 'https://outside.test/style.css'; document.head.appendChild(node);
+          `],
+          ['iframe', `
+              var node = document.createElement('iframe');
+              node.src = 'https://outside.test/frame'; document.body.appendChild(node);
+          `],
+          ['script', `
+              var node = document.createElement('script');
+              node.src = 'https://outside.test/script.js'; document.body.appendChild(node);
+          `],
+          ['refresh', `
+              var node = document.createElement('meta');
+              node.setAttribute('http-equiv', 'refresh'); node.setAttribute('content', '0;url=https://outside.test/refresh');
+              document.head.appendChild(node);
+          `],
+          ['disallowed link', "var node = document.createElement('a'); node.setAttribute('href', 'https://outside.test/navigate'); document.body.appendChild(node);"],
+        ]) {
+          // Policy violations fail the host call after the interpreter safely
+          // unwinds; they are not ordinary catch-and-continue guest errors.
+          const failure = await page.evaluate(async ({ project, code }) => {
+            try {
+              await editor.outputDevice.load({ id: editor.initialOutputId,
+                project: { ...project, scripts: [{ code }] } });
+              return null;
+            } catch (error) { return error.message; }
+          }, { project: { ...compiled, files }, code });
+          assert.ok(failure, `${name} must be denied`);
+          assert.equal(await target.locator('#count').textContent(), '1', `${name} preserves the previous guest`);
+          assert.deepEqual(unexpected, [], `${name} must never reach the network`);
+        }
+        await page.evaluate(async () => {
+          await editor.outputDevice.run({ id: editor.initialOutputId, scripts: [{ module: true, source: 'boundary-probe.js', code: `
+            var fetchDenied = false;
+            try { await fetch('https://outside.test/fetch'); } catch (_) { fetchDenied = true; }
+            var style = document.createElement('style');
+            style.textContent = 'body { background-image: url(https://outside.test/css-image); padding: 3px; }';
+            document.head.appendChild(style);
+            globalThis.guestOnlyValue = 'guest-fixture';
+            document.getElementById('state').textContent = JSON.stringify({ fetchDenied: fetchDenied,
+              hostGlobal: typeof hostOnlyValue, hostStorage: localStorage.getItem('host-only-value') });
+          ` }] });
+        });
+        const boundary = JSON.parse(await target.locator('#state').textContent());
+        assert.equal(boundary.fetchDenied, true);
+        assert.equal(boundary.hostGlobal, 'undefined');
+        assert.equal(boundary.hostStorage, null);
+        const css = await body.evaluate(node => ({ image: getComputedStyle(node).backgroundImage,
+          padding: getComputedStyle(node).padding }));
+        assert.deepEqual(css, { image: 'none', padding: '3px' }, 'the guest strips URL values before installing CSS');
+        assert.equal(await target.evaluate(() => typeof window.guestOnlyValue), 'undefined');
+        assert.equal(page.url(), 'http://initial-output.test/');
+        assert.deepEqual(unexpected, [], 'guest resource attempts never reach the network');
         // A failed replacement must not discard the last usable application.
         if (iframe) await target.evaluate(() => { location.hash = '#/retained'; });
         const failure = await page.evaluate(async compiled => {

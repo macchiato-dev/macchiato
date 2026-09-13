@@ -101,6 +101,23 @@ the hydrated desktop and phone workspaces were inspected. This is Chromium
 coverage, not evidence from Safari or Firefox. Test instrumentation stays outside
 the shipped controller and guests.
 
+### Current output-boundary probes
+
+`project-initial-output.browser.test.js` exercises the actual website output
+device and QuickJS artifact in both grant modes. Replacement scripts attempt
+external images/stylesheets/scripts, nested iframes, refresh metadata, and
+disallowed link destinations. Each fails before making a network request and
+leaves the preceding guest usable. Separate probes check rejected fetches,
+host/guest global separation, and inability to read unprefixed host storage.
+Dynamic CSS keeps an ordinary declaration while the guest removes its URL value;
+the resulting browser style and absence of requests are both checked. Element
+mode runs without a document CSP fallback.
+
+These probes passed on 2026-09-13. They distinguish host policy failures, which
+unwind the current interpreter call, from ordinary guest-catchable fetch errors
+and guest-side CSS rewriting. They are integration regression coverage, not an
+exhaustive adversarial review of every binary-protocol operation or browser.
+
 The editor already has the compiled project when it mounts the output. It now
 passes that project into the first guest session, in either grant mode. The
 previous path created an empty session, acknowledged readiness, then replaced
