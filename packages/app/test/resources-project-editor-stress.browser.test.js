@@ -414,7 +414,7 @@ async function stopApp(child) {
   if (child.exitCode === null) child.kill("SIGKILL");
 }
 
-test("Resources preserves editor geometry through repeated responsive edits", { timeout: 90_000 }, async t => {
+for (const stored of [false, true]) test(`Resources preserves editor geometry through repeated responsive edits${stored ? " in a saved project" : ""}`, { timeout: 150_000 }, async t => {
   const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-geometry-"))]);
   const app = startApp(port, dataDir);
   t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
@@ -424,7 +424,37 @@ test("Resources preserves editor geometry through repeated responsive edits", { 
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  await page.goto(`http://resources-edge.localhost:${port}/try/article`);
+  let pathname = "/try/article";
+  if (stored) {
+    const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+    const client = createNodeSqliteClient(db);
+    const account = await createAccountStore(client).authenticateIdentity({
+      provider: "github", providerUserId: "geometry", login: "geometry",
+      name: "Geometry", email: "geometry@example.test", emailVerified: true,
+    });
+    await createContentStore(client).createProject(account.id, {
+      namespace: "user", userSlug: account.login, slug: "geometry", name: "Geometry",
+      visibility: "private", template: "html", description: "",
+      snapshot: { files: [{ path: "index.html", content: "<h1>A small article</h1>" }],
+        config: { entry: "index.html" } },
+    });
+    db.close();
+    const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+      iat: Date.now(), exp: Date.now() + 180_000 }, "local-preview-session-signing-key");
+    await page.context().addCookies([{ name: "resources_session", value: session,
+      domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+    pathname = `/${account.login}/geometry`;
+  }
+  if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
+    const directory = resolve(process.env.MACCHIATO_TEST_ASSETS_DIRECTORY);
+    await page.route("**/-/resources-site/**", async route => {
+      const name = new URL(route.request().url()).pathname.slice("/-/resources-site/".length);
+      await route.fulfill({ body: await readFile(join(directory, name)),
+        contentType: name.endsWith(".js") ? "text/javascript" : name.endsWith(".html") ? "text/html"
+          : name.endsWith(".wasm") ? "application/wasm" : "application/octet-stream" });
+    });
+  }
+  await page.goto(`http://resources-edge.localhost:${port}${pathname}`);
   const content = editorSurface(page).locator(".cm-content");
   const mount = page.locator(".project-editor__source > .project-editor__mount");
   const output = page.frameLocator("iframe.project-editor__output-frame:not([inert])");
@@ -451,9 +481,21 @@ test("Resources preserves editor geometry through repeated responsive edits", { 
       if (!event.defaultPrevented) throw new Error("Paste was not handled");
     }, `${source}<h1>Geometry ${cycle}</h1>`);
     await output.getByRole("heading", { name: `Geometry ${cycle}`, exact: true }).waitFor();
+    if (stored) {
+      await page.waitForFunction(() =>
+        document.querySelector("[data-project-editor]").dataset.draftState === "saved");
+      // Include the painted result of the save and its queued notifications,
+      // not only the synchronous draft-state assignment within the guest.
+      await page.evaluate(() => new Promise(resolve =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    }
     const after = await mount.boundingBox();
-    measurements.push({ cycle, before, after });
-    if (Math.abs(after.width - before.width) >= 1 || Math.abs(after.height - before.height) >= 1) {
+    const machineErrors = await page.locator("[data-editor-machine-error]").evaluateAll(nodes =>
+      nodes.map(node => node.getAttribute("data-editor-machine-error")));
+    const notices = await page.locator('[role="status"], [role="alert"]').evaluateAll(nodes =>
+      nodes.filter(node => node.getBoundingClientRect().height > 0).map(node => node.textContent));
+    measurements.push({ cycle, before, after, machineErrors, notices });
+    if (machineErrors.length || Math.abs(after.width - before.width) >= 1 || Math.abs(after.height - before.height) >= 1) {
       if (process.env.MACCHIATO_TEST_ARTIFACTS) {
         await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
         await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, "responsive-geometry-failed.png") });
@@ -462,6 +504,7 @@ test("Resources preserves editor geometry through repeated responsive edits", { 
     }
     assert.ok(Math.abs(after.width - before.width) < 1 && Math.abs(after.height - before.height) < 1,
       `Editor changed dimensions: ${JSON.stringify(measurements.at(-1))}`);
+    assert.deepEqual(machineErrors, [], `after responsive edit ${cycle}`);
     assert.deepEqual(errors, []);
   }
   t.diagnostic(`20 responsive edits preserved geometry: ${JSON.stringify(measurements)}`);
