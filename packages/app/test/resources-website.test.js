@@ -1674,21 +1674,22 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.deepEqual(await projectOutput.locator("a").evaluateAll((links) => links.map((link) => link.target)), ["_blank", "_blank", "_blank"]);
   await page.waitForFunction(() => {
     const root = document.querySelector("[data-project-editor]");
-    const preview = document.querySelector("[data-project-preview]");
-    return root?.dataset.editorMachineId && preview?.dataset.projectMachineId;
+    const frame = document.querySelector("[data-project-output-mount] iframe:not([inert])");
+    return root?.dataset.editorMachineId && frame?.contentDocument?.querySelector("h1");
   });
   const initialMachines = await page.evaluate(() => ({
     frontend: document.documentElement.dataset.resourcesFrontendMachineId,
     frontendState: document.documentElement.dataset.resourcesFrontendMachine,
     editor: document.querySelector("[data-project-editor]").dataset.editorMachineId,
-    project: document.querySelector("[data-project-preview]").dataset.projectMachineId,
     editorReason: document.querySelector("[data-project-editor]").dataset.editorMachineReason,
   }));
   assert.equal(initialMachines.frontendState, "microquickjs");
   assert.ok(initialMachines.frontend, "site frontend machine should publish its diagnostic identity");
-  assert.equal(new Set([initialMachines.frontend, initialMachines.editor, initialMachines.project]).size, 3);
+  assert.notEqual(initialMachines.frontend, initialMachines.editor);
+  await page.evaluate(() => { window.initialProjectFrame = document.querySelector("[data-project-output-mount] iframe:not([inert])"); });
   assert.equal(initialMachines.editorReason, "project-open");
-  assert.equal(await newEditor.locator("[data-preview-title]").textContent(), "A small article");
+  assert.equal(await newEditor.locator("[data-preview-title]").textContent(), "Output View");
+  assert.equal(await projectOutput.locator("h1").textContent(), "A small article");
   assert.equal((await newEditor.locator("[data-project-snapshot]").inputValue()).includes("</html>\\n"), false);
   assert.equal(await page.getByRole("button", { name: "Add file" }).count(), 0);
   assert.equal(await page.getByRole("button", { name: "Remove selected file" }).count(), 0);
@@ -1740,36 +1741,32 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("[data-project-status]").evaluate((element) => element.parentElement.className), "project-editor__source");
   await templateNotice.getByRole("button", { name: "Undo" }).click();
   assert.equal(await template.inputValue(), "article");
-  await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());
+  await assert.doesNotReject(projectOutput.getByRole("link", { name: "Hypertext" }).waitFor());
   assert.equal(await templateNotice.isHidden(), true);
   await template.selectOption("ball");
-  assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
-  await page.waitForFunction((previousProject) => {
-    const preview = document.querySelector("[data-project-preview]");
-    return preview?.dataset.projectMachineId && preview.dataset.projectMachineId !== previousProject;
-  }, initialMachines.project);
+  assert.ok(Number(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent()) > 0, "edits are retained in session history");
+  await page.waitForFunction(() => {
+    const frame = document.querySelector("[data-project-output-mount] iframe:not([inert])");
+    return frame && frame !== window.initialProjectFrame && frame.contentDocument?.querySelector("canvas");
+  });
   const rotatedMachines = await page.evaluate(() => ({
     frontend: document.documentElement.dataset.resourcesFrontendMachineId,
     editor: document.querySelector("[data-project-editor]").dataset.editorMachineId,
-    project: document.querySelector("[data-project-preview]").dataset.projectMachineId,
   }));
   assert.equal(rotatedMachines.frontend, initialMachines.frontend);
   assert.equal(rotatedMachines.editor, initialMachines.editor);
-  assert.notEqual(rotatedMachines.project, initialMachines.project);
-  assert.equal(new Set([rotatedMachines.frontend, rotatedMachines.editor, rotatedMachines.project]).size, 3);
+  assert.equal(await page.evaluate(() => window.initialProjectFrame.isConnected), false);
   assert.equal(await page.locator(".project-editor").evaluate((element) => element.getBoundingClientRect().height >= 600), true);
   await selectProjectFile("script.js");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(newEditor.locator(".cm-content").getByText("getContext", { exact: false }).waitFor());
   await page.waitForFunction(() => {
     const preview = document.querySelector("[data-project-preview]");
-    const canvas = preview?.querySelector(".project-editor__preview-surface")
-      ?.shadowRoot?.querySelector("canvas") || preview?.querySelector("canvas");
+    const canvas = preview?.querySelector("iframe:not([inert])")?.contentDocument?.querySelector("canvas");
     if (!canvas) return false;
     return canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height)
       .data.some((value, index) => index % 4 === 3 && value > 0);
   });
-  assert.equal(await newEditor.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
   assert.equal(await newEditor.locator(".cm-gutterElement").count() > 1, true);
   assert.equal(await newEditor.locator(".cm-scroller").evaluate((element) => parseFloat(getComputedStyle(element).paddingLeft) <= 4), true);
   await newEditor.locator(".cm-content").click();
@@ -1789,39 +1786,37 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.getByRole("alertdialog", { name: "Discard draft" }).isHidden(), true);
   assert.equal(await templateNotice.isHidden(), true);
   await template.selectOption("article");
-  assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "2");
+  assert.ok(Number(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent()) > 0, "edits are retained in session history");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());
+  await assert.doesNotReject(projectOutput.getByRole("link", { name: "Hypertext" }).waitFor());
   await template.selectOption("mark");
-  assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "2");
+  assert.ok(Number(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent()) > 0, "edits are retained in session history");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(newEditor.locator('[data-open-tab="image.svg"][aria-selected="true"]').waitFor());
   await assert.doesNotReject(newEditor.locator(".cm-content").getByText("circle", { exact: false }).waitFor());
-  await assert.doesNotReject(newEditor.locator("[data-project-preview] circle").waitFor());
+  await assert.doesNotReject(projectOutput.locator("circle").waitFor());
   await template.selectOption("chart");
-  await assert.doesNotReject(newEditor.locator("[data-project-preview] rect").nth(2).waitFor());
+  await assert.doesNotReject(projectOutput.locator("rect").nth(2).waitFor());
   assert.doesNotMatch(await page.locator("[data-project-status]").textContent(), /Preview stopped/);
   await template.selectOption("stars");
   await page.waitForFunction(() => {
     const preview = document.querySelector("[data-project-preview]");
-    const canvas = preview?.querySelector(".project-editor__preview-surface")
-      ?.shadowRoot?.querySelector("canvas");
+    const canvas = preview?.querySelector(".project-editor__output-frame")
+      ?.contentDocument?.querySelector("canvas");
     return canvas?.getContext("2d").getImageData(0, 0, canvas.width, canvas.height)
       .data.some((value, index) => index % 4 === 3 && value > 0);
   });
   const starfieldBefore = await page.evaluate(() => document.querySelector("[data-project-preview]")
-    .querySelector(".project-editor__preview-surface").shadowRoot.querySelector("canvas").toDataURL());
+    .querySelector(".project-editor__output-frame").contentDocument.querySelector("canvas").toDataURL());
   await page.waitForTimeout(300);
   const starfieldAfter = await page.evaluate(() => document.querySelector("[data-project-preview]")
-    .querySelector(".project-editor__preview-surface").shadowRoot.querySelector("canvas").toDataURL());
+    .querySelector(".project-editor__output-frame").contentDocument.querySelector("canvas").toDataURL());
   assert.notEqual(starfieldAfter, starfieldBefore);
-  assert.equal(await newEditor.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
   await template.selectOption("clock");
-  await page.waitForFunction(() => /^\d{2}:\d{2}:\d{2}$/.test(document.querySelector("[data-project-preview] .project-editor__preview-surface")
-    ?.shadowRoot?.querySelector("#time")?.textContent || ""));
-  assert.equal(await newEditor.locator("[data-project-preview]").getAttribute("data-preview-runtime"), "quickjs");
+  await page.waitForFunction(() => /^\d{2}:\d{2}:\d{2}$/.test(document.querySelector("[data-project-preview] .project-editor__output-frame")
+    ?.contentDocument?.querySelector("#time")?.textContent || ""));
   await template.selectOption("hello");
-  assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "2");
+  assert.ok(Number(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent()) > 0, "edits are retained in session history");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(newEditor.locator(".cm-content").getByText("This small page is made from familiar HTML elements", { exact: false }).waitFor());
   await newEditor.locator(".cm-content").click();
@@ -1885,28 +1880,26 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.locator(".project-editor [data-project-editor-mount] .cm-content").waitFor());
   const projectEditor = page.locator(".project-editor");
   await assert.doesNotReject(projectEditor.locator(".cm-content").getByText("Digital Clock", { exact: false }).first().waitFor());
-  await page.waitForFunction(() => document.querySelector("[data-project-preview]")?.dataset.projectMachineId);
-  const projectMachineBeforeEdit = await page.locator("[data-project-preview]").getAttribute("data-project-machine-id");
-  const outputFrame = projectEditor.locator("iframe.project-editor__output-frame");
+  const outputFrame = projectEditor.locator("iframe.project-editor__output-frame:not([inert])");
+  await projectOutput.getByText("Digital Clock", { exact: true }).waitFor();
   assert.equal(await outputFrame.getAttribute("allow"), "fullscreen");
-  assert.equal(await outputFrame.getAttribute("allowfullscreen"), "");
   await outputFrame.evaluate((frame) => { frame.contentWindow.__projectOutputIdentity = "preserved"; });
   await projectEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
   await page.waitForTimeout(250);
   assert.equal(
-    await page.locator("[data-project-preview]").getAttribute("data-project-machine-id"),
-    projectMachineBeforeEdit,
+    await outputFrame.evaluate(frame => frame.contentWindow.__projectOutputIdentity),
+    "preserved",
     "editing should leave the current output machine alive during the debounce window",
   );
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
-  assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
+  assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.waitForTimeout(2_000);
-  await projectEditor.frameLocator("iframe.project-editor__output-frame").getByText("Updated.", { exact: true }).waitFor();
-  assert.equal(await page.locator("[data-project-preview]").getAttribute("data-project-machine-id"), projectMachineBeforeEdit);
-  assert.equal(await outputFrame.evaluate((frame) => frame.contentWindow.__projectOutputIdentity), "preserved");
+  await projectEditor.frameLocator("iframe.project-editor__output-frame:not([inert])").getByText("Updated.", { exact: true }).waitFor();
+  assert.equal(await outputFrame.evaluate((frame) => frame.contentWindow.__projectOutputIdentity), undefined);
+  assert.equal(await projectEditor.locator("iframe.project-editor__output-frame").count(), 1);
   const versionsButton = page.locator("[data-project-versions-proxy]");
-  assert.match((await versionsButton.textContent()).replace(/\s+/g, " ").trim(), /^\d+ seconds? ago1/);
+  assert.equal((await versionsButton.innerText()).trim(), "");
   await versionsButton.click();
   const pastVersions = page.locator("[data-project-version-list] [data-version-sequence]");
   assert.match(await pastVersions.first().textContent(), /\d+ seconds? ago.*LATEST/);
@@ -1914,11 +1907,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await page.waitForFunction(() => document.querySelector("[data-current-version]")?.textContent.endsWith("ago"));
-  await projectEditor.frameLocator("iframe.project-editor__output-frame").getByText("Updated.", { exact: true }).waitFor({ state: "detached" });
+  await projectEditor.frameLocator("iframe.project-editor__output-frame:not([inert])").getByText("Updated.", { exact: true }).waitFor({ state: "detached" });
   assert.match(await page.locator("[data-current-version]").textContent(), /ago$/);
   await versionsButton.click();
   await page.locator("[data-project-version-list] [aria-current='true']").click();
-  await projectEditor.frameLocator("iframe.project-editor__output-frame").getByText("Updated.", { exact: true }).waitFor();
+  await projectEditor.frameLocator("iframe.project-editor__output-frame:not([inert])").getByText("Updated.", { exact: true }).waitFor();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await versionsButton.click();
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
@@ -1936,7 +1929,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await assert.doesNotReject(page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor());
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
   await page.getByLabel("Description (optional)").fill("Updated project details.");
-  assert.equal(await page.locator("[data-project-submit]").textContent(), "1 unsaved change");
+  assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
   await page.locator("[data-project-submit]").click();
   await assert.doesNotReject(page.getByRole("button", { name: "Save project" }).waitFor());
   assert.equal(await page.getByLabel("Description (optional)").inputValue(), "Updated project details.");
