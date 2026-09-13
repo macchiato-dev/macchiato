@@ -58,7 +58,9 @@ test("exports resources site as static files", async (t) => {
     ["/-/resources-site/machine.js", "/-/resources-site/controller.js"],
   );
   assert.doesNotMatch(outputFrame, /<script[^>]+src=/);
-  assert.match(outputFrame, /id="project-output-a"/);
+  assert.doesNotMatch(outputFrame, /id="project-output-[ab]"/,
+    "the frame grants its real Document rather than nesting rendering surfaces");
+  assert.match(outputFrame, /new ProjectOutput\(WasmWebMachine, module, document,/);
   // The inline controller may start with preserved comments or whitespace.
   // Its only imported browser module remains the shared Machine Host.
   const frameController = outputFrame.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];

@@ -206,8 +206,8 @@ test("Resources.co blog container examples render and surface schema errors in t
     assert.equal(await page.getByLabel("Template").inputValue(), template);
     assert.equal(await page.locator(".project-create__fields").isVisible(), true);
     assert.equal(await page.locator(".project-view__identity").count(), 0);
-    const output = page.frameLocator("[data-project-output-mount] iframe");
-    const surface = output.locator("#project-output-a > :not([inert]) > .project-output-root");
+    const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
+    const surface = output.locator("body");
     const preview = surface.locator(previewSelector);
     await preview.waitFor();
     if (template === "mark") {
@@ -241,9 +241,9 @@ test("Resources.co blog container examples render and surface schema errors in t
       assert.notEqual(await clock.textContent(), initialTime);
       await page.setViewportSize({ width: 390, height: 844 });
       await page.getByRole("button", { name: "Output View", exact: true }).click();
-      const frame = await (await page.locator("[data-project-output-mount] iframe").elementHandle()).contentFrame();
+      const frame = await (await page.locator("[data-project-output-mount] iframe:not([inert])").elementHandle()).contentFrame();
       const fillsViewport = () => {
-        const node = document.querySelector("#project-output-a > :not([inert]) > .project-output-root");
+        const node = document.querySelector("body");
         return node && Math.abs(node.getBoundingClientRect().height - innerHeight) <= 1 &&
           document.documentElement.scrollHeight === innerHeight;
       };
@@ -264,15 +264,15 @@ test("Resources.co blog container examples render and surface schema errors in t
       await page.locator('[data-project-file="style.css"]').click();
       await sourceEditor.press("Control+A");
       await sourceEditor.fill("body { background: rgb(12, 34, 56); color: rgb(240, 230, 220); } h1 { font-size: 41px; }");
-      const frame = await (await page.locator("[data-project-output-mount] iframe").elementHandle()).contentFrame();
+      const frame = await (await page.locator("[data-project-output-mount] iframe:not([inert])").elementHandle()).contentFrame();
       await frame.waitForFunction(() => {
-        const active = document.querySelector("#project-output-a > :not([inert]) > .project-output-root");
+        const active = document.querySelector("body");
         return active && getComputedStyle(active).backgroundColor === "rgb(12, 34, 56)";
       });
       assert.equal(await surface.evaluate((node) => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
       assert.equal(await surface.locator("h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
       const editedArticle = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
-      await page.locator("[data-project-output-mount] iframe").evaluate(frame => {
+      await page.locator("[data-project-output-mount] iframe:not([inert])").evaluate(frame => {
         frame.contentWindow.__templateUndoFrame = true;
       });
       await page.getByLabel("Template").selectOption("mark");
@@ -290,7 +290,7 @@ test("Resources.co blog container examples render and surface schema errors in t
       assert.equal(await surface.evaluate(node => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
       assert.equal(await surface.locator("h1").evaluate(node => getComputedStyle(node).fontSize), "41px");
       assert.equal(await page.locator("[data-project-notice]").isHidden(), true);
-      assert.equal(await page.locator("[data-project-output-mount] iframe").evaluate(frame =>
+      assert.equal(await page.locator("[data-project-output-mount] iframe:not([inert])").evaluate(frame =>
         frame.contentWindow.__templateUndoFrame), true, "template replacement and undo reuse the output iframe");
     }
     await page.close();
@@ -310,8 +310,8 @@ test("Resources.co rejected documents retain the last output and recover on edit
   await page.goto(`http://resources-edge.localhost:${port}/try?template=article`, { waitUntil: "domcontentloaded" });
   const editor = page.locator(".cm-content");
   await editor.waitFor();
-  const output = page.frameLocator("[data-project-output-mount] iframe");
-  const surface = output.locator("#project-output-a > :not([inert]) > .project-output-root");
+  const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
+  const surface = output.locator("body");
   await surface.locator("h1").waitFor();
   const originalHeading = await surface.locator("h1").textContent();
   await editor.click();
@@ -665,7 +665,7 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   assert.equal(await page.locator(".project-editor__source").isHidden(), true);
   await page.waitForFunction(() =>
     document.querySelector("[data-project-editor]")?.dataset.outputMachineState === "ready" &&
-    document.querySelector("[data-project-output-mount] iframe")?.contentDocument?.getElementById("project-output-a"));
+    document.querySelector("[data-project-output-mount] iframe:not([inert])")?.contentDocument?.body);
   await page.getByRole("button", { name: "Details" }).click();
   assert.equal(await page.locator(".project-create__layout").getAttribute("data-mobile-view"), "details");
   assert.equal(await page.locator(".project-editor__workspace").isHidden(), true);
@@ -831,8 +831,8 @@ test("a project build script runs with separate runtime and application inputs",
   await page.locator("[data-project-archive-file]").setInputFiles({
     name: "built.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
   });
-  const output = page.frameLocator("[data-project-output-mount] iframe")
-    .locator(".project-output-root:not([hidden])");
+  const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])")
+    .locator("body");
   await output.getByRole("heading", { name: "Built in an isolated JavaScript context" }).waitFor();
   assert.equal(await output.locator("h1").textContent(),
     "Built in an isolated JavaScript context");
@@ -858,8 +858,8 @@ test("Vue and Svelte starting points build and remain interactive in the output 
   for (const framework of ["vue", "svelte"]) {
     await page.getByLabel("Template").selectOption(framework);
     await page.locator(".cm-content span").first().waitFor({ timeout: 10_000 });
-    const output = page.frameLocator("[data-project-output-mount] iframe")
-      .locator(".project-output-root:not([hidden])");
+    const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])")
+      .locator("body");
     const button = output.getByRole("button", { name: "Count 0", exact: true });
     await button.waitFor({ timeout: 10_000 }).catch(async () => assert.fail(
       `${framework} did not render: ${await page.locator("body").innerText()}\n${errors.join("\n")}`));
@@ -938,8 +938,8 @@ test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the proje
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
 
   await page.getByLabel("Template").selectOption("paint");
-  const output = page.frameLocator("[data-project-output-mount] iframe")
-    .locator(".project-output-root:not([hidden])");
+  const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])")
+    .locator("body");
   let canvas = output.locator('canvas[aria-label="Click to paint colorful squares"]');
   await canvas.waitFor();
   await canvas.click({ position: { x: 100, y: 100 } });
@@ -1022,7 +1022,9 @@ test("saved project output keeps its backing while the editor is still loading",
     return { pixel, outer: await frame.evaluate(node => getComputedStyle(node).colorScheme),
       inner: await output.locator(":root").evaluate(node => getComputedStyle(node).colorScheme) };
   }
-  const colors = { dark: [21, 23, 23, 255], light: [231, 236, 255, 255] };
+  // A real Document propagates its body's background to the canvas, including
+  // the margin. The fixture deliberately owns that color in either site theme.
+  const fixtureCanvas = [232, 242, 255, 255];
   // DevTools media emulation overrides every frame independently. Test native
   // inheritance with emulation disabled, then test emulated system preferences
   // separately (without pretending an explicit choice overrides DevTools).
@@ -1100,13 +1102,13 @@ test("saved project output keeps its backing while the editor is still loading",
         const after = await backing(page);
         if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-${reload ? "reload" : "first"}-ready.png`) });
         t.diagnostic(JSON.stringify({ system, emulated, choice, reload, before, after, sampledFrames: audit.frames }));
-        assert.deepEqual(before.pixel, colors[expected], "initial iframe canvas exposes the themed backing");
+        assert.deepEqual(before.pixel, fixtureCanvas, "initial canvas uses the guest document's background");
         assert.deepEqual(after.pixel, before.pixel, "editor startup must not change the output backing");
       }
       await page.evaluate(() => { window.paintFrame = document.querySelector(".project-editor__output-frame"); });
       await page.setViewportSize({ width: 390, height: 844 });
       await page.waitForFunction(() => document.querySelector('.project-editor__workspace').dataset.view === 'preview');
-      assert.deepEqual((await backing(page)).pixel, colors[expected], "phone output keeps the same backing");
+      assert.deepEqual((await backing(page)).pixel, fixtureCanvas, "phone output keeps the same backing");
       if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-phone.png`) });
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.waitForFunction(() => document.querySelector('.project-editor__workspace').dataset.view === 'split');
@@ -1215,7 +1217,7 @@ test("project output fetches supplied files and rejects outside requests through
   ], config: { entry: "index.html", template: "html" } };
   await page.locator("[data-project-archive-file]").setInputFiles({ name: "fetch.zip",
     mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
-  const output = page.frameLocator("[data-project-output-mount] iframe");
+  const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
   await output.getByText("Fetched through the project machine", { exact: true }).waitFor();
   await output.locator("#outside").getByText(/Fetch blocked for https:\/\/assets.example/).waitFor();
   assert.deepEqual(external, [], "the denied request must never reach the browser network");
@@ -1274,7 +1276,7 @@ document.getElementById("again").addEventListener("click", () => {
 });
 </script>`;
     await page.locator(".cm-content").fill(source);
-    const output = page.frameLocator("[data-project-output-mount] iframe");
+    const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
     await output.locator("#result").waitFor({ timeout: 10000 });
     assert.equal(await output.locator("#result").textContent(), denied
       ? "SecurityError,SecurityError,SecurityError"
@@ -1326,7 +1328,7 @@ document.getElementById("change").addEventListener("click", () => {
   const expected = await native.locator("#sample").evaluate(appearance);
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
   await page.locator(".cm-content").fill(source);
-  const output = page.frameLocator("[data-project-output-mount] iframe");
+  const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
   await output.locator("#sample").waitFor({ timeout: 10000 }).catch(async error => {
     throw new Error(JSON.stringify({ errors,
       status: await page.locator("[data-project-status]").textContent(),
@@ -1372,7 +1374,7 @@ document.getElementById("still").addEventListener("click", () => target.focus({ 
 document.getElementById("scroll").addEventListener("click", () => target.focus({ preventScroll: false }));
 document.getElementById("default").addEventListener("click", () => target.focus());
 </script>`);
-  const output = page.frameLocator("[data-project-output-mount] iframe");
+  const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
   for (const [id, shouldScroll] of [["still", false], ["scroll", true], ["default", true]]) {
     await output.locator("#" + id).click();
     assert.equal(await output.locator("#destination").evaluate(node => document.activeElement === node), true);
@@ -1421,7 +1423,7 @@ test("Resources editor remains usable when browser storage access is denied", { 
     throw new Error(`Editor failed with storage denied: ${JSON.stringify({ errors, state })}`, { cause: error });
   }
   await page.locator(".cm-content").fill("<h1>Editing without storage</h1>");
-  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+  await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
     name: "Editing without storage", exact: true,
   }).waitFor();
   await page.getByRole("button", { name: "Select a file or view" }).click();
@@ -1439,7 +1441,7 @@ test("Resources editor remains usable when browser storage access is denied", { 
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
   await page.locator(".cm-content").waitFor();
   await page.locator(".cm-content").fill("<h1>Unsaved without storage</h1>");
-  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+  await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
     name: "Unsaved without storage", exact: true,
   }).waitFor();
   await page.locator("[data-project-status]").getByText(/Draft recovery could not be saved/).waitFor();
@@ -1465,7 +1467,7 @@ test("Resources editor remains usable when browser storage access is denied", { 
   assert.equal((await saved).status(), 200);
   await page.locator("[data-project-status]").getByText(/Draft saved on server, but local recovery could not be cleared/).waitFor();
   assert.equal(await page.locator("[data-project-editor]").getAttribute("data-draft-state"), "saved");
-  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+  await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
     name: "Saved without storage", exact: true,
   }).waitFor();
   assert.deepEqual(errors, []);
@@ -1612,7 +1614,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
   assert.equal(await page.locator(".layout.focused-view > .footer").isHidden(), true);
   const template = page.getByLabel("Template");
-  assert.deepEqual(await template.locator("option").allTextContents(), ["Article", "Hello, HTML", "Single-file document", "Digital clock", "Logo mark", "Bar chart", "Bouncing ball", "Starfield", "Blank project", "Presentation"]);
+  assert.deepEqual(await template.locator("option").allTextContents(), ["Article", "Hello, HTML", "Single-file document", "Digital clock", "Logo mark", "Bar chart", "Bouncing ball", "Starfield", "Canvas paint", "WebGL triangle", "WebGPU triangle", "Three.js triangle", "Presentation", "Vue SFC", "Svelte", "Blank project"]);
   assert.equal(await template.inputValue(), "article");
   assert.equal(await page.getByLabel("Container").count(), 0);
   assert.equal(await page.locator("[data-container-outline]").count(), 0);
@@ -1706,7 +1708,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(focusedGeometry.bodyHeight, focusedGeometry.viewportHeight);
   assert.ok(Math.abs(focusedGeometry.breadcrumbCenter - focusedGeometry.headerCenter) < 1);
   await page.locator("[data-project-versions-proxy]").click();
-  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds? ago$/);
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true'] [data-version-time]").textContent(), /^\d+ seconds? ago$/);
   assert.equal(await page.locator("[data-project-history]").isVisible(), true);
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
@@ -2280,7 +2282,8 @@ test("Resources project save controls publish titled latest versions", async (t)
     // frame so replacing a frame cannot erase evidence of stale first output.
     let previous = "";
     new MutationObserver(() => {
-      const heading = document.querySelector("#project-output-a h1");
+      if (window === window.top) return;
+      const heading = document.querySelector("body h1");
       const text = heading?.textContent;
       if (text && text !== previous && heading.getClientRects().length) {
         previous = text;
@@ -2296,7 +2299,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.match(await page.locator(".cm-content").innerText(), /Reload recovery marker/);
   assert.deepEqual(await page.evaluate(() => window.editorStartupContents), ["<h1>Reload recovery marker</h1>"],
     "reload must not first render the superseded server snapshot");
-  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+  await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
     name: "Reload recovery marker", exact: true,
   }).waitFor();
   assert.deepEqual(outputStartupContents, ["Reload recovery marker"],
@@ -2313,7 +2316,7 @@ test("Resources project save controls publish titled latest versions", async (t)
     }, candidate);
     outputStartupContents.length = 0;
     await page.reload({ waitUntil: "networkidle" });
-    await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", {
+    await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
       name: "Reload recovery marker", exact: true,
     }).waitFor();
     assert.deepEqual(outputStartupContents, ["Reload recovery marker"], candidate);
@@ -2380,7 +2383,7 @@ test("large project files remain readable without exceeding the editor service b
   snapshot.files.push({ path: "large.png", content: image });
   await page.locator("[data-project-archive-file]").setInputFiles({ name: "large.zip",
     mimeType: "application/zip", buffer: Buffer.from(encodeProjectArchive(snapshot)) });
-  await page.frameLocator("[data-project-output-mount] iframe").getByRole("heading", { name: "Large file fixture" }).waitFor();
+  await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", { name: "Large file fixture" }).waitFor();
   await page.locator("[data-project-file-trigger]").click();
   await page.locator('[data-project-file="large.txt"]').click();
   try {
@@ -2452,7 +2455,7 @@ test("large project files remain readable without exceeding the editor service b
   await page.locator(".cm-content").click();
   await page.locator(".cm-content").press("Control+End");
   await page.keyboard.insertText("<p>Still editable</p>");
-  await page.frameLocator("[data-project-output-mount] iframe").getByText("Still editable").waitFor();
+  await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByText("Still editable").waitFor();
   assert.deepEqual(errors, []);
 });
 
@@ -2495,7 +2498,7 @@ test("project resources survive session recovery, API saves, native publication,
     { path: "tile.svg", content: `<svg viewBox="0 0 24 24"><title>${name}</title><circle r="4"/></svg>` },
   ], config: { entry: "index.html", template: "html" } });
   const original = source("Original resource"), changed = source("Recovered resource");
-  const output = page.frameLocator("[data-project-output-mount] iframe");
+  const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
   const filesOf = snapshot => Object.fromEntries(snapshot.files.map(file => [file.path, file.content]));
   async function fillSessionStorage() {
     const quota = await page.evaluate(() => {
