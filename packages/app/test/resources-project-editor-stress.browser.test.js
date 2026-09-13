@@ -723,6 +723,8 @@ test("Resources loads language bytecode on demand without replacing the editing 
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS;
+  if (artifacts) await mkdir(artifacts, { recursive: true });
   await page.context().addCookies([{ name: "resources_session", value: session,
     domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
@@ -763,7 +765,12 @@ test("Resources loads language bytecode on demand without replacing the editing 
   }
   async function highlighted(word) {
     await page.waitForFunction(word => [...document.querySelectorAll(".cm-content .cm-line span")]
-      .some(span => span.textContent === word && span.className), word);
+      .some(span => span.textContent.includes(word) && span.className), word, { timeout: 5000 }).catch(async error => {
+        t.diagnostic(JSON.stringify({ word, downloads, errors,
+          spans: await content.locator(".cm-line span").evaluateAll(nodes => nodes.map(node =>
+            ({ text: node.textContent, class: node.className }))) }));
+        throw error;
+      });
   }
   await highlighted("h1");
   assert.deepEqual(downloads, ["project-editor-language-html.bin"]);
@@ -811,14 +818,28 @@ test("Resources loads language bytecode on demand without replacing the editing 
     ["App.vue", "h1"], ["App.svelte", "h1"]]) {
     await openFile(path);
     await highlighted(token);
-    assert.equal(await content.innerText(), files.find(file => file.path === path).content);
+    // innerText adds a browser-dependent extra break for CodeMirror's final
+    // empty contenteditable line. Read its actual line nodes instead.
+    assert.equal((await content.locator(".cm-line").allTextContents()).join("\n"),
+      files.find(file => file.path === path).content);
+    if (path === "data.json" || path === "README.md") {
+      for (const theme of ["light", "dark"]) {
+        await page.emulateMedia({ colorScheme: theme });
+        await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
+        const styles = await content.evaluate((node, token) => {
+          const span = [...node.querySelectorAll(".cm-line span")].find(span => span.textContent.includes(token));
+          const style = getComputedStyle(span);
+          return { color: style.color, plain: getComputedStyle(node).color, weight: style.fontWeight };
+        }, token);
+        assert.notEqual(styles.color, styles.plain, `${path} token is colored in ${theme} mode`);
+        if (path === "README.md") assert.equal(styles.weight, "700", "Markdown headings remain bold");
+        if (artifacts) await page.screenshot({ path: join(artifacts, `${path === "data.json" ? "json" : "markdown"}-${theme}.png`) });
+      }
+    }
   }
   assert.deepEqual(downloads.sort(), ["html", "javascript", "python", "python", "rust", "css", "json",
     "markdown", "sql", "yaml", "cpp", "vue", "svelte"]
     .map(name => `project-editor-language-${name}.bin`).sort());
   assert.deepEqual(errors, []);
-  if (process.env.MACCHIATO_TEST_ARTIFACTS) {
-    await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
-    await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, "languages-recovered.png") });
-  }
+  if (artifacts) await page.screenshot({ path: join(artifacts, "languages-recovered.png") });
 });

@@ -333,7 +333,12 @@ The browser regression switches between files and Markdown fences in the real
 MicroQuickJS Wasm runtime, with both stamped and downloaded modules. It holds a
 download while typing and verifies selection and undo after the parser arrives.
 The project-page test verifies that an HTML project initially requests only
-the HTML language module. A smaller regression also checks that dynamically
+the HTML language module, and then opens files using every shipped language
+package. It delays Rust while editing and switching to JavaScript, checks the
+shared JavaScript/TypeScript download, and fails Python's first request before
+retrying it. A parser outage stays a non-blocking notice inside the editor
+guest; it is not a machine failure and does not require restarting CodeMirror.
+A smaller regression also checks that dynamically
 interned bytecode-string property keys survive collection: ROM strings are not
 GC-marked, but their canonical entries must remain valid for the context's
 lifetime. The patch retains those entries without retaining unused atom-table
