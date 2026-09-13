@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
@@ -81,6 +82,18 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
   assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
   const visualInput = process.env.MACCHIATO_TEST_VISUAL_INPUT === "1";
   const renderFrame = process.env.MACCHIATO_TEST_RENDER_FRAME === "1";
+  // Use a saved, anonymous Resources response to retain the real workspace's
+  // CSS/layout dependencies without running its application or output guests.
+  // Only this test's trusted setup runs; the inserted file remains editor text.
+  const workspacePage = process.env.MACCHIATO_TEST_WORKSPACE_PAGE
+    ? (await readFile(process.env.MACCHIATO_TEST_WORKSPACE_PAGE, "utf8"))
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi, "")
+    : null;
+  if (workspacePage !== null) assert.match(workspacePage, /data-project-editor-mount/);
+  const workspaceSha256 = workspacePage === null ? null
+    : createHash("sha256").update(workspacePage).digest("hex");
+  const narrowWorkspaceSelectors = process.env.MACCHIATO_DIRECT_LAYOUT_SELECTORS === "1";
+  assert.ok(!narrowWorkspaceSelectors || workspacePage, "selector experiment requires the real workspace");
   assert.ok(!visualInput || process.env.MACCHIATO_TEST_ARTIFACTS, "visual input requires an artifacts directory");
   const keyInterval = Number(process.env.MACCHIATO_TEST_KEY_INTERVAL ?? (visualInput ? 100 : 0));
   assert.ok(Number.isFinite(keyInterval) && keyInterval >= 0 && keyInterval <= 1000);
@@ -103,6 +116,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
     const assets = { "/machine.js": machine, "/core.js": core, "/language.js": language, "/editor.wasm": wasm };
     await page.route("http://bulk-input.test/**", route => {
       const path = new URL(route.request().url()).pathname;
+      if (workspacePage && path === "/") return route.fulfill({ contentType: "text/html", body: workspacePage });
       if (renderFrame && path === "/") return route.fulfill({ contentType: "text/html", body: `<!doctype html>
         <style>body { margin:0; } iframe { position:absolute; left:0; top:56px;
           width:${editorWidth}px; height:calc(100% - 56px); border:0; }</style>
@@ -117,6 +131,50 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         </style><div id="guest"><div id="editor"></div></div>` });
     });
     await page.goto("http://bulk-input.test/");
+    let changedSelectors = 0;
+    if (narrowWorkspaceSelectors) changedSelectors = await page.evaluate(() => {
+      let count = 0;
+      function narrow(rules) {
+        for (const rule of rules) {
+          if (rule.selectorText) {
+            const before = rule.selectorText;
+            const after = before
+              .replaceAll("html:has(.focused-view)", "html:has(> body > .focused-view)")
+              .replaceAll("body:has(.focused-view)", "body:has(> .focused-view)")
+              .replaceAll(".project-editor:has(.project-editor__workspace", ".project-editor:has(> .project-editor__workspace");
+            if (after !== before) { rule.selectorText = after; count++; }
+          }
+          if (rule.cssRules) narrow(rule.cssRules);
+        }
+      }
+      for (const sheet of document.styleSheets) narrow(sheet.cssRules);
+      return count;
+    });
+    if (narrowWorkspaceSelectors) assert.ok(changedSelectors > 0, "layout selector experiment must change rules");
+    if (workspacePage) {
+      await page.evaluate(renderFrame => {
+        document.documentElement.dataset.theme = "light";
+        document.documentElement.dataset.themeChoice = "light";
+        const editor = document.querySelector("[data-project-editor]");
+        editor.dataset.editorMachineState = "ready";
+        editor.dataset.outputMachineState = "ready";
+        const mount = document.querySelector("[data-project-editor-mount]");
+        mount.id = "guest";
+        mount.replaceChildren();
+        const child = document.createElement(renderFrame ? "iframe" : "div");
+        if (renderFrame) {
+          child.src = "/editor.html";
+          child.title = "Code editor";
+          child.setAttribute("sandbox", "allow-scripts allow-same-origin");
+          child.style.cssText = "width:100%;height:100%;border:0;display:block";
+        } else {
+          child.id = "editor";
+          child.style.height = "100%";
+        }
+        mount.append(child);
+      }, renderFrame);
+      if (renderFrame) await page.frameLocator("[data-project-editor-mount] iframe").locator("#editor").waitFor();
+    }
     // The same trusted setup runs in each editor's realm. Inserted source is
     // only text, never executed; no user code is added to this rendering frame.
     const view = renderFrame ? page.frames().find(frame => frame.url().endsWith("/editor.html")) : page;
@@ -154,7 +212,8 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         contentEditable: content.contentEditable,
         userModify: getComputedStyle(content).getPropertyValue("-webkit-user-modify") };
     });
-    results.push({ run, mode, method: "geometry", language: selectedLanguage, rawSource, renderFrame, ...geometry });
+    results.push({ run, mode, method: "geometry", language: selectedLanguage, rawSource, renderFrame,
+      workspace: !!workspacePage, workspaceSha256, changedSelectors, ...geometry });
     t.diagnostic(JSON.stringify(results.at(-1)));
     if (visualInput) assert.equal(geometry.narrowGlyphWidth, geometry.wideGlyphWidth,
       "visual comparisons need an installed monospace font, not a proportional fallback");
