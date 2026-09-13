@@ -133,6 +133,7 @@ test("initial project output mounts its compiled application without an empty gu
           assert.equal(await target.locator('#count').textContent(), '1', 'appearance updates preserve the running guest');
         }
         // A failed replacement must not discard the last usable application.
+        if (iframe) await target.evaluate(() => { location.hash = '#/retained'; });
         const failure = await page.evaluate(async compiled => {
           try {
             await editor.outputDevice.load({ id: editor.initialOutputId,
@@ -174,6 +175,8 @@ test("initial project output mounts its compiled application without an empty gu
         if (iframe) {
           assert.equal(target.isDetached(), true);
           assert.equal(await page.locator('#editing').evaluate(node => node === document.activeElement), true);
+          assert.match(await page.locator('iframe').getAttribute('src'), /#\/retained$/);
+          assert.equal(page.url(), 'http://initial-output.test/');
         }
         // Genuine guest-driven updates continue within the active session.
         await page.evaluate(async () => {
@@ -220,6 +223,21 @@ test("initial project output mounts its compiled application without an empty gu
         await recovered.getByText('Ready from project files', { exact: true }).waitFor();
         await recovered.locator('#count').click();
         assert.equal(await recovered.locator('#count').textContent(), '1');
+        if (iframe && theme === 'light') {
+          const arriving = new Promise(resolve => { frameRequested = resolve; });
+          let release;
+          frameGate = new Promise(resolve => { release = resolve; });
+          await page.evaluate(project => {
+            window.destroyedReplacement = editor.outputDevice.load({ id: editor.initialOutputId, project })
+              .then(() => 'unexpected success', error => error.message);
+          }, { ...compiled, files });
+          await arriving;
+          await page.evaluate(() => editor.destroy());
+          release(); frameGate = null;
+          assert.match(await page.evaluate(() => destroyedReplacement), /replaced or destroyed/);
+          assert.equal(await page.locator('iframe').count(), 0);
+          assert.equal(await page.evaluate(() => editor.outputDevice.outputs.size), 0);
+        }
         assert.deepEqual(errors, []);
         assert.deepEqual(unexpected, []);
       } finally {

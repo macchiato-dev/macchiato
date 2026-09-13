@@ -212,7 +212,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.ok(await editor.getAttribute("data-editor-machine-id"));
   // The default article grants *.wikipedia.org without a path suffix. The
   // iframe must enforce the same policy as the project configuration UI.
-  const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame");
+  const output = page.frameLocator("[data-project-preview] iframe.project-editor__output-frame:not([inert])");
   await output.getByRole("heading", { name: "A small article" }).waitFor();
   assert.equal(await output.locator('a[href^="https://en.wikipedia.org/"]').count(), 3);
   // Pointer capture must exist in the editor's MicroQuickJS guest, not only

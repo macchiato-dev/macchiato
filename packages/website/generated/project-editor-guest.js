@@ -28828,7 +28828,7 @@ async function mountProjectRoot(root) {
   openTabList.after(tabScrollForward);
   let tabLayoutFrame = 0;
   function syncTabOverflow() {
-    const first = openTabList.firstElementChild, last = openTabList.lastElementChild;
+    const first = openTabList.firstChild, last = openTabList.lastChild;
     const contentWidth = first ? last.getBoundingClientRect().right - first.getBoundingClientRect().left : 0;
     const availableWidth = tabScrollBack.hidden ? openTabList.clientWidth : tabScrollForward.getBoundingClientRect().right - tabScrollBack.getBoundingClientRect().left;
     const overflowed = contentWidth > availableWidth + 2;
@@ -28852,8 +28852,12 @@ async function mountProjectRoot(root) {
       syncTabOverflow();
     });
   }
-  tabScrollBack.addEventListener("click", () => openTabList.scrollBy({ left: -Math.max(120, openTabList.clientWidth * 0.7), behavior: "smooth" }));
-  tabScrollForward.addEventListener("click", () => openTabList.scrollBy({ left: Math.max(120, openTabList.clientWidth * 0.7), behavior: "smooth" }));
+  tabScrollBack.addEventListener("click", () => {
+    openTabList.scrollLeft -= Math.max(120, openTabList.clientWidth * 0.7);
+  });
+  tabScrollForward.addEventListener("click", () => {
+    openTabList.scrollLeft += Math.max(120, openTabList.clientWidth * 0.7);
+  });
   openTabList.addEventListener("scroll", syncTabOverflow);
   new ResizeObserver(scheduleTabLayout).observe(openTabList);
   function closeOpenTab(path) {

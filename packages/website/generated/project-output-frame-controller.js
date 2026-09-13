@@ -587,7 +587,7 @@ function imageResolver(files) {
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
 async function start(payload, port) {
-  const module = await WebAssembly.compileStreaming(fetch("./project-quickjs-runtime.wasm"));
+  const module = payload.module instanceof WebAssembly.Module ? payload.module : await WebAssembly.compileStreaming(fetch("./project-quickjs-runtime.wasm"));
   if (destroyed) return;
   storage = new ProjectOutputStorage(window, payload.storageScope);
   output = new ProjectOutput(WasmWebMachine, module, document, (project) => ({
@@ -616,7 +616,7 @@ async function start(payload, port) {
     storage.destroy();
     throw error;
   }
-  if (!destroyed) port.postMessage({ protocol, type: "ready" });
+  if (!destroyed) port.postMessage({ protocol, type: "ready", module });
 }
 async function operation(name, payload) {
   if (name === "destroy") {

@@ -1764,8 +1764,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               });
             };
             syncTabOverflow = function _syncTabOverflow() {
-              var first = openTabList.firstElementChild,
-                last = openTabList.lastElementChild;
+              var first = openTabList.firstChild,
+                last = openTabList.lastChild;
               var contentWidth = first ? last.getBoundingClientRect().right - first.getBoundingClientRect().left : 0;
               var availableWidth = tabScrollBack.hidden ? openTabList.clientWidth : tabScrollForward.getBoundingClientRect().right - tabScrollBack.getBoundingClientRect().left;
               var overflowed = contentWidth > availableWidth + 2;
@@ -2935,16 +2935,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             openTabList.after(tabScrollForward);
             tabLayoutFrame = 0;
             tabScrollBack.addEventListener("click", function () {
-              return openTabList.scrollBy({
-                left: -Math.max(120, openTabList.clientWidth * 0.7),
-                behavior: "smooth"
-              });
+              openTabList.scrollLeft -= Math.max(120, openTabList.clientWidth * 0.7);
             });
             tabScrollForward.addEventListener("click", function () {
-              return openTabList.scrollBy({
-                left: Math.max(120, openTabList.clientWidth * 0.7),
-                behavior: "smooth"
-              });
+              openTabList.scrollLeft += Math.max(120, openTabList.clientWidth * 0.7);
             });
             openTabList.addEventListener("scroll", syncTabOverflow);
             new ResizeObserver(scheduleTabLayout).observe(openTabList);
