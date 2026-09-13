@@ -196,8 +196,8 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
     }
     if (text.startsWith("__wwcResponse:")) { response = text.slice(14); return; }
     const message = JSON.parse(text);
-    if (message.type === "editor-bytecode-started") root.dataset.editorBytecodeState = "started";
-    if (message.type === "editor-application-ready") root.dataset.editorApplicationState = "ready";
+    if (message.type === "editor-bytecode-started" && root.dataset) root.dataset.editorBytecodeState = "started";
+    if (message.type === "editor-application-ready" && root.dataset) root.dataset.editorApplicationState = "ready";
       if (message.protocol === "resources-editor-v1") {
         Promise.resolve().then(() => message.name === "bytecode.load"
           ? installBytecode(message.payload || {}) : onRequest(message.name, message.payload || {})).then(
@@ -234,5 +234,10 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
       if (!disposed) machine.onmsg(callMessage("__resourcesEditorReceive", message));
     },
     inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
-    focus() { root.querySelector(".cm-content")?.focus(); }, destroy() { disposed = true; machine.destroy(); root.replaceChildren(); } });
+    focus() { root.querySelector(".cm-content")?.focus(); }, destroy() {
+      disposed = true; machine.destroy();
+      // A Document grant owns its content, not the browser's Document itself.
+      if (root.nodeType === 9) root.body?.replaceChildren();
+      else root.replaceChildren();
+    } });
 }

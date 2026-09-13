@@ -273,12 +273,16 @@ execFileSync(join(microRuntime, "microquickjs", "mqjs"),
 const controllerBytecode = join(outputDirectory, "project-editor-application.bin");
 execFileSync(join(microRuntime, "microquickjs", "mqjs"), ["-m32", "-o", controllerBytecode,
   join(directory, "project-editor-bootstrap.es5.js")], { stdio: "inherit" });
+const surfaceBytecode = join(outputDirectory, "project-editor-surface.bin");
+execFileSync(join(microRuntime, "microquickjs", "mqjs"), ["-m32", "-o", surfaceBytecode,
+  join(directory, "project-editor-surface.es5.js")], { stdio: "inherit" });
 execFileSync(process.execPath, [
   join(workspace, "dev", "wasm-web-runtimes", "examples", "microquickjs-suite", "scripts", "stamp-wasm.js"),
   join(microRuntime, "target", "wasm32-unknown-unknown", "release", "wasm_web_container_example_runtime.wasm"),
   join(outputDirectory, "project-editor-quickjs-runtime.wasm"),
   `runtime.bin=${runtimeBytecode}`,
   `application.bin=${controllerBytecode}`,
+  `surface.bin=${surfaceBytecode}`,
   `editor.bin=${editorBytecode}`,
   `project.bin=${projectServicesBytecode}`,
   `language-atoms.bin=${atomBytecode}`,

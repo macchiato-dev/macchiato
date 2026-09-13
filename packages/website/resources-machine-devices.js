@@ -4,6 +4,7 @@ import { decodeProjectArchive, encodeProjectArchive, projectArchiveFilename } fr
 import { ProjectOutputStorage } from "./project-output-storage.js";
 import { boundedStorageReply, storageResponse } from "./storage-service.js";
 import { DRAFT_KEY, PENDING_KEY_PREFIX, PROJECT_RESOURCE_PREFIX as projectResourcePrefix } from "./project-session.js";
+import { ProjectEditorSurface } from "./project-editor-surface.js";
 
 const encoder = new TextEncoder();
 const allowedMethods = new Set(["GET", "POST", "DELETE"]);
@@ -284,6 +285,7 @@ export class ResourcesEditorDevice {
     this.request = request;
     this.hostCall = call;
     this.editor = null;
+    this.editorSurface = null;
     this.initialSnapshot = null;
     this.initialOutputId = null;
     this.deferInitialOutput = false;
@@ -292,7 +294,7 @@ export class ResourcesEditorDevice {
     this.operations = Object.freeze({
       "editor.command": (payload) => this.editor.command(payload),
       "editor.destroy": () => this.destroy(),
-      "editor.focus": () => this.editor.focus(),
+      "editor.focus": () => this.editorSurface ? this.editorSurface.call("Focus") : this.editor.focus(),
       "editor.history.checkpoint": (payload) => this.editor.callGuest("__resourcesProjectHistoryCheckpoint", payload),
       "editor.history.initialize": (payload) => this.editor.callGuest("__resourcesProjectHistoryInitialize", payload),
       "editor.history.inspect": () => this.editor.callGuest("__resourcesProjectHistoryInspect", {}),
@@ -309,7 +311,7 @@ export class ResourcesEditorDevice {
       "editor.theme": (payload) => this.editor.callGuest("__codeEditorSetTheme", payload),
     });
   }
-  async mount({ deferOutput = false } = {}) {
+  async mount({ deferOutput = false, editorFrame = false } = {}) {
     if (this.editor) return { machineId: this.editor.machineId };
     const root = this.document.querySelector("[data-project-editor]")?.closest(".project-workspace");
     if (!root) throw new Error("Project editor mount is unavailable");
@@ -343,7 +345,16 @@ export class ResourcesEditorDevice {
       // Paint useful output before CodeMirror evaluates on the same thread.
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     }
-    this.editor = await createProjectEditorMachine({
+    const surfaceMessages = [];
+    if (editorFrame) {
+      this.editorSurface = new ProjectEditorSurface(root.querySelector("[data-project-editor-mount]"),
+        message => {
+          if (this.editor) this.editor.callGuest("__resourcesEditorSurfaceReceive", message);
+          else surfaceMessages.push(message);
+        }, error => this.deliver({ type: "editor-error", message: error?.message || String(error) }));
+      await this.editorSurface.start();
+    }
+    try { this.editor = await createProjectEditorMachine({
       root,
       allowNavigate: "self",
       // The guest supplies the existing resource handle, not megabytes of
@@ -360,8 +371,16 @@ export class ResourcesEditorDevice {
       },
       onRequest: (name, payload) => this.request(name, payload),
       services: {
-        call: (name, payloadText) => JSON.stringify(this.hostCall(name,
-          payloadText ? JSON.parse(payloadText) : {})),
+        call: (name, payloadText) => {
+          const payload = payloadText ? JSON.parse(payloadText) : {};
+          if (name === "editor.surface.call") {
+            // Expected command failures must return to the guest as data:
+            // throwing through an imported function unwinds its Wasm stack.
+            try { return JSON.stringify({ value: this.editorSurface.call(payload.method, payload.value) }); }
+            catch (error) { return JSON.stringify({ error: error?.message || String(error) }); }
+          }
+          return JSON.stringify(this.hostCall(name, payload));
+        },
         route: {
           get: () => this.document.defaultView.location.pathname,
           search: () => this.document.defaultView.location.search,
@@ -369,7 +388,12 @@ export class ResourcesEditorDevice {
         },
         storage: this.storageDevice,
       },
-    });
+    }); } catch (error) {
+      this.editorSurface?.destroy();
+      this.editorSurface = null;
+      throw error;
+    }
+    for (const message of surfaceMessages) this.editor.callGuest("__resourcesEditorSurfaceReceive", message);
     for (const message of this.outputErrors.values()) this.receiveOutput(message);
     this.outputErrors.clear();
     return { machineId: this.editor.machineId };
@@ -382,7 +406,7 @@ export class ResourcesEditorDevice {
   getInitialSnapshot() {
     if (!this.initialSnapshot) throw new Error("Initial project snapshot is unavailable");
     return { snapshot: this.initialSnapshot, outputId: this.initialOutputId,
-      deferOutput: this.deferInitialOutput };
+      deferOutput: this.deferInitialOutput, editorSurface: !!this.editorSurface };
   }
   prepareSubmission() {
     const field = this.document.querySelector("[data-project-editor] [data-project-snapshot]");
@@ -451,6 +475,8 @@ export class ResourcesEditorDevice {
     for (const id of this.outputIds) this.outputDevice.destroyOutput(id);
     this.outputIds.clear();
     this.outputErrors.clear();
+    this.editorSurface?.destroy();
+    this.editorSurface = null;
     this.editor?.destroy();
     this.editor = null;
     this.initialSnapshot = null;

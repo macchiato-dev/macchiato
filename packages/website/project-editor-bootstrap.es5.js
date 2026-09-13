@@ -2,23 +2,45 @@
   "use strict";
 
   var root = document.querySelector("[data-project-editor]");
-  if (!root) return;
+  if (!root) {
+    if (document.getElementById("editor")) load("surface.bin");
+    return;
+  }
   var mount = root.querySelector("[data-project-editor-mount]");
   var snapshotField = root.querySelector("[data-project-snapshot]");
   if (!mount || !snapshotField) throw new Error("Project editor surface is incomplete");
   root.setAttribute("data-output-owner", "editor");
 
-  var editor = document.createElement("div");
-  editor.id = "editor";
-  mount.replaceChildren(editor);
-  globalThis.__CODE_EDITOR_DEFER_START__ = true;
-  load("editor.bin");
   var initialWorkspace = JSON.parse(globalThis.__wwcServiceCall(
     "editor.workspace.initial", "{}"));
+  if (initialWorkspace.editorSurface) {
+    // These are synchronous application commands, not forwarded DOM objects.
+    // Each machine keeps its own document and interpreter event dispatch.
+    globalThis.__browserUseNotify = globalThis.__wwcPostMessage;
+    ["ConfigureLimits", "SetContent", "SetTheme", "Command", "Inspect", "Focus",
+      "Select", "GetSelection", "SelectLine", "Serialize", "Restore"].forEach(function (method) {
+      globalThis["__codeEditor" + method] = function (json) {
+        var reply = JSON.parse(globalThis.__wwcServiceCall("editor.surface.call",
+          JSON.stringify({ method: method, value: json ? JSON.parse(json) : {} })));
+        if (reply.error) throw new Error(reply.error);
+        return JSON.stringify(reply.value);
+      };
+    });
+    globalThis.__resourcesEditorSurfaceReceive = function (json) {
+      if (globalThis.__codeEditorNotify) globalThis.__codeEditorNotify(JSON.parse(json));
+      return "null";
+    };
+  } else {
+    var editor = document.createElement("div");
+    editor.id = "editor";
+    mount.replaceChildren(editor);
+    globalThis.__CODE_EDITOR_DEFER_START__ = true;
+    load("editor.bin");
+    globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(function (name) {
+      return request("bytecode.load", { name: name }).then(function () { load(name); });
+    });
+  }
   var initialSnapshot = initialWorkspace.snapshot;
-  globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(function (name) {
-    return request("bytecode.load", { name: name }).then(function () { load(name); });
-  });
   var projectUiLoaded = false;
   function loadProjectUi() {
     if (projectUiLoaded) return;
