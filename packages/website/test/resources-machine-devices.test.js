@@ -37,6 +37,42 @@ function storageWindow() {
   return { sessionStorage: area(), localStorage: area(), addEventListener() {} };
 }
 
+test("editor preload overlaps output startup and preserves an early download failure", async t => {
+  let requests = 0, releaseOutput;
+  const output = new Promise(resolve => { releaseOutput = resolve; });
+  t.mock.method(globalThis, "fetch", async () => {
+    requests++;
+    return new Response("unavailable", { status: 503 });
+  });
+  const previous = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = callback => queueMicrotask(callback);
+  t.after(() => {
+    if (previous) globalThis.requestAnimationFrame = previous;
+    else delete globalThis.requestAnimationFrame;
+  });
+  const field = { value: JSON.stringify({ files: [], config: {} }) };
+  const root = { querySelector: selector => selector === "[data-project-snapshot]" ? field : null };
+  const document = { querySelector: () => ({ closest: () => root }) };
+  const device = new ResourcesEditorDevice(document, () => {}, {}, {}, {},
+    new ResourcesProjectResourceDevice());
+  device.mountInitialOutput = async (_root, _check, onCompiled) => {
+    assert.equal(requests, 0, "builder gets the connection first");
+    onCompiled();
+    onCompiled();
+    assert.equal(requests, 1, "only one module download per mount");
+    await output;
+  };
+  const mounting = device.mount();
+  let finished = false;
+  const rejected = assert.rejects(mounting, /Project runtime response 503/).then(() => { finished = true; });
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(finished, false, "a failed preload does not interrupt output startup");
+  releaseOutput();
+  await rejected;
+  assert.equal(device.editor, null);
+  assert.equal(device.mounting, null);
+});
+
 test("output trees accept bounded inline operation bytes, not coercible values", () => {
   const output = new ResourcesOutputDevice(null, () => {}, null);
   const tree = compileProjectFiles([{ path: "index.html", content: '<p style="color:red">Text</p>' }]).tree;

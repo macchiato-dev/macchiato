@@ -123,11 +123,18 @@ test("Resources framed editor integrates with the site and running output", { ti
       ["/-/resources-site/project-editor-language-html.bin"], "only the selected file's grammar is downloaded");
     const transfers = (await Promise.all(page.frames().map(frame => frame.evaluate(() =>
       performance.getEntriesByType("resource").filter(entry => /\.(wasm|bin)(\?|$)/.test(entry.name))
-        .map(entry => ({ path: new URL(entry.name).pathname, encoded: entry.encodedBodySize, decoded: entry.decodedBodySize }))
+        .map(entry => ({ path: new URL(entry.name).pathname,
+          start: performance.timeOrigin + entry.startTime,
+          encoded: entry.encodedBodySize, decoded: entry.decodedBodySize }))
     )))).flat();
     assert.ok(transfers.length >= 4);
     assert.ok(transfers.every(entry => entry.encoded > 0 && entry.encoded < entry.decoded),
       `Browser receives compressed, decoded runtime bytes: ${JSON.stringify(transfers)}`);
+    const editorDownload = transfers.filter(entry => entry.path.endsWith("/project-editor-quickjs-runtime.wasm"));
+    const outputDownload = transfers.find(entry => entry.path.endsWith("/project-quickjs-runtime.wasm"));
+    assert.equal(editorDownload.length, 1, "both editor contexts share one compiled module");
+    assert.ok(editorDownload[0].start < outputDownload.start,
+      "editor download overlaps output startup instead of waiting for output readiness");
     t.diagnostic(JSON.stringify({ runtimeTransfers: transfers }));
     const historyButton = page.locator("[data-project-versions-proxy]");
     const historyTimes = [];

@@ -1167,3 +1167,44 @@ archive is `/root/resources-bunny.tar.gz`, with its predecessor in the dated
 archive directory. No Bunny deployment was performed. Evidence uses the
 `compressed-assets-browser-final`, `compressed-assets-modules`,
 `compressed-assets-backend`, and `compressed-assets-live` log prefixes.
+
+### Overlap editor transfer with output startup
+
+Cold Chromium checks now measure readiness rather than the load event. With
+fresh browser processes, caching disabled, 1,000,000 bytes/second download
+throughput and 50 ms request latency, gzip versus identity delivery averaged:
+
+| Project | Identity output/editor (s) | Gzip output/editor (s) |
+| --- | ---: | ---: |
+| Mahjong | 11.77 / 15.80 | 7.29 / 10.71 |
+| Cat Memory | 9.29 / 11.64 | 4.35 / 5.88 |
+
+Each cell averages two runs, ordered identity/gzip/gzip/identity per project.
+One unthrottled warmup was excluded. This is a small controlled-network sample,
+not a production latency guarantee. Owner requests were read-only; both games
+and syntax highlighting were checked. Evidence: `loading-compression-comparison`
+under `/root/macchiato-work`.
+
+Resource timings also exposed a serialized editor download: it started only
+after output readiness. Starting it alongside the builder improved editor
+readiness but competed with the builder for bandwidth. The selected change
+starts editor download/compilation after project compilation, overlapping
+output startup. Editor execution still waits for the output paint checkpoint.
+Both editor contexts share the compiled module. An early download failure is
+observed without interrupting output and is rethrown when starting the editor;
+closing the project still invalidates its pending mount.
+
+An additional before/after/after/before run used identically built controller
+overrides and gzip for both variants:
+
+| Project | Before output/editor (s) | After output/editor (s) |
+| --- | ---: | ---: |
+| Mahjong | 6.98 / 10.29 | 6.71 / 9.03 |
+| Cat Memory | 4.45 / 5.83 | 4.51 / 5.28 |
+
+The output-to-editor gap fell from 3.31 to 2.32 seconds for Mahjong and from
+1.38 to 0.78 seconds for Cat Memory. Output timings were mixed; parallel
+transfers still share bandwidth, and CPU timing varies. No claim is made that
+every pane becomes faster. Evidence: `loading-editor-preload-abba/results.json`,
+with screenshots beside it; the earlier candidates use `loading-editor-preload`
+and `loading-editor-late-preload`. The failure-path unit suite passes (17 tests).

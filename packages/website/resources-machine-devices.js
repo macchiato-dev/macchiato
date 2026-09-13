@@ -1,4 +1,4 @@
-import { createProjectBuildMachine, createProjectEditorMachine, createProjectOutputMachine } from "./project-machines.js";
+import { createProjectBuildMachine, createProjectEditorMachine, createProjectOutputMachine, loadProjectEditorModule } from "./project-machines.js";
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 import { decodeProjectArchive, encodeProjectArchive, projectArchiveFilename } from "../hub/src/project-archive.js";
 import { ProjectOutputStorage } from "./project-output-storage.js";
@@ -350,16 +350,29 @@ export class ResourcesEditorDevice {
     // requests it explicitly after its browser facade has started.
     snapshotField.value = "";
     snapshotField.textContent = "";
+    // Don't compete with the builder download. Once it has compiled the
+    // project, overlap editor module loading with output startup instead.
+    let editorModule;
+    const preloadEditor = () => {
+      if (editorModule) return;
+      editorModule = loadProjectEditorModule();
+      // Navigation can end this mount before the await below. Observe early
+      // rejection, but await the original promise so failure reaches the UI.
+      editorModule.catch(() => {});
+    };
     this.deferInitialOutput = deferOutput === true;
     if (this.deferInitialOutput) {
       root.querySelector("[data-project-editor]").dataset.outputMachineState = "waiting";
     } else {
-      await this.mountInitialOutput(root, check);
+      await this.mountInitialOutput(root, check, preloadEditor);
       check();
       // Paint useful output before CodeMirror evaluates on the same thread.
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       check();
     }
+    preloadEditor(); // Also covers deferred, empty, or failed initial output.
+    const module = await editorModule;
+    check();
     const surfaceMessages = [];
     if (editorFrame) {
       this.editorSurface = new ProjectEditorSurface(root.querySelector("[data-project-editor-mount]"),
@@ -377,6 +390,7 @@ export class ResourcesEditorDevice {
     let editor;
     try { editor = await createProjectEditorMachine({
       root,
+      module,
       allowNavigate: "self",
       // The guest supplies the existing resource handle, not megabytes of
       // image text. The Machine Host still validates the resolved data URL.
@@ -442,7 +456,7 @@ export class ResourcesEditorDevice {
     field.value = this.projectResources.hydrateText(field.value);
     return null;
   }
-  async mountInitialOutput(root, check = () => {}) {
+  async mountInitialOutput(root, check = () => {}, onCompiled = () => {}) {
     // The workspace also contains the details form; output state belongs on
     // the editor section, where subsequent guest updates and loaders read it.
     root = root.querySelector("[data-project-editor]");
@@ -464,6 +478,7 @@ export class ResourcesEditorDevice {
       root.dataset.outputMachineStage = "compile";
       const compiled = await this.buildDevice.compile(project);
       check();
+      onCompiled();
       const options = project.config?.containerOptions || {};
       root.dataset.outputMachineStage = "load";
       // Compilation is already complete. Start with that application rather
