@@ -83,7 +83,7 @@ test("Resources Edge closes registration without adding social links to every pa
   await assert.doesNotReject(page.getByRole("complementary").filter({ hasText: "Follow Resources.co" }).waitFor());
   await page.getByLabel("Account menu").click();
   assert.equal(await page.getByRole("link", { name: "Sign up" }).count(), 0);
-  await page.screenshot({ path: "/tmp/resources-signups-disabled-home.png" });
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resources-signups-disabled-home.png") });
   await page.goto(`http://resources-edge.localhost:${port}/about`, { waitUntil: "networkidle" });
   assert.equal(await page.getByText("Follow Resources.co", { exact: true }).count(), 0);
   await page.goto(`http://resources-edge.localhost:${port}/signup`, { waitUntil: "networkidle" });
@@ -1836,11 +1836,14 @@ test("Resources.co edge account creates organizations and projects in a real bro
   const visibleConfiguration = await newEditor.locator(".cm-content").innerText();
   assert.doesNotMatch(visibleConfiguration, /allowedElements/);
   assert.match(visibleConfiguration, /"container": "page"/);
+  assert.match(visibleConfiguration, /\n  "sandbox": \{\n    "network": false,/);
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/project-configuration-formatted.png") });
   await newEditor.locator(".cm-content").focus();
   await page.keyboard.type("not editable");
   assert.equal(await newEditor.locator(".cm-content").innerText(), visibleConfiguration);
   await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "Draft saved in this session");
   await page.reload({ waitUntil: "networkidle" });
+  await page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor();
   assert.equal(await page.locator("[data-project-editor]").getAttribute("data-draft-state"), "saved");
   const restoredDraftVersionCount = await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent();
   await page.getByLabel("Title", { exact: true }).fill("Digital Clock");
@@ -1876,6 +1879,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("main.layout").getAttribute("data-view"), "focused");
   assert.equal(await page.locator(".layout.focused-view > .nav").isHidden(), true);
   assert.equal(await page.locator(".layout.focused-view > .footer").isHidden(), true);
+  await page.waitForFunction(() => document.querySelector("[data-project-versions-proxy] .project-editor__version-count")?.textContent === "1");
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await assert.doesNotReject(page.locator(".project-editor [data-project-editor-mount] .cm-content").waitFor());
   const projectEditor = page.locator(".project-editor");
@@ -1902,6 +1906,10 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal((await versionsButton.innerText()).trim(), "");
   await versionsButton.click();
   const pastVersions = page.locator("[data-project-version-list] [data-version-sequence]");
+  const editedSequence = await page.locator("[data-project-version-list] [aria-current='true']").getAttribute("data-version-sequence");
+  const editedVersionSelector = editedSequence
+    ? `[data-project-version-list] [data-version-sequence="${editedSequence}"]`
+    : "[data-project-version-list] .project-editor__version:not([data-version-sequence])";
   assert.match(await pastVersions.first().textContent(), /\d+ seconds? ago.*LATEST/);
   assert.notEqual(await pastVersions.first().getAttribute("title"), "");
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
@@ -1910,7 +1918,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await projectEditor.frameLocator("iframe.project-editor__output-frame:not([inert])").getByText("Updated.", { exact: true }).waitFor({ state: "detached" });
   assert.match(await page.locator("[data-current-version]").textContent(), /ago$/);
   await versionsButton.click();
-  await page.locator("[data-project-version-list] [aria-current='true']").click();
+  // Reopening keeps the historical selection; choose the edited checkpoint
+  // explicitly rather than treating aria-current as an alias for newest.
+  await page.locator(editedVersionSelector).click();
   await projectEditor.frameLocator("iframe.project-editor__output-frame:not([inert])").getByText("Updated.", { exact: true }).waitFor();
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await versionsButton.click();
@@ -1930,7 +1940,12 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(new URL(page.url()).pathname, "/tiny-tools/digital-clock");
   await page.getByLabel("Description (optional)").fill("Updated project details.");
   assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
+  const detailPublication = page.waitForResponse(response => response.request().method() === "POST" &&
+    new URL(response.url()).pathname.startsWith("/projects/"));
   await page.locator("[data-project-submit]").click();
+  assert.equal((await detailPublication).status(), 303);
+  await page.waitForLoadState("networkidle");
+  await page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor();
   await assert.doesNotReject(page.getByRole("button", { name: "Save project" }).waitFor());
   assert.equal(await page.getByLabel("Description (optional)").inputValue(), "Updated project details.");
   const storedTemplate = page.getByLabel("Template");
@@ -1949,21 +1964,29 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.reload({ waitUntil: "networkidle" });
+  await page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor();
   assert.equal(await page.getByLabel("Template").inputValue(), templateBeforeReplacement);
   assert.equal(await page.locator("[data-project-snapshot]").inputValue(), snapshotBeforeTemplate);
   await page.getByLabel("Template").selectOption("mark");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.reload({ waitUntil: "networkidle" });
+  await page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor();
   const draftFlash = page.locator("[data-draft-flash]");
   await assert.doesNotReject(draftFlash.getByRole("button", { name: "Revert to published version" }).waitFor());
-  assert.match(await draftFlash.textContent(), /unsaved changes/i);
+  assert.match(await draftFlash.textContent(), /There are draft changes\./);
   assert.equal(await draftFlash.evaluate((element) => getComputedStyle(element).borderColor), "rgb(201, 155, 55)");
-  await page.screenshot({ path: "/tmp/resources-draft-flash.png" });
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/resources-draft-flash.png") });
   await draftFlash.getByRole("button", { name: "Dismiss" }).click();
   assert.equal(await draftFlash.count(), 0);
   await page.reload({ waitUntil: "networkidle" });
+  await page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor();
+  const revertPublication = page.waitForResponse(response => response.request().method() === "POST" &&
+    new URL(response.url()).pathname.startsWith("/projects/"));
   await page.locator("[data-draft-flash]").getByRole("button", { name: "Revert to published version" }).click();
+  assert.equal((await revertPublication).status(), 303);
+  await page.waitForLoadState("networkidle");
+  await page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor();
   await assert.doesNotReject(page.getByRole("button", { name: "Save project" }).waitFor());
   assert.equal(await page.getByLabel("Template").inputValue(), templateBeforeReplacement);
   assert.equal(await page.locator("[data-project-snapshot]").inputValue(), snapshotBeforeTemplate);
@@ -1975,7 +1998,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("#crumb .here").textContent(), "tiny-tools");
   assert.equal((await page.locator("#brand-path").innerText()).trim(), "Resources.co");
   await page.getByRole("link", { name: /Digital Clock/ }).click();
-  assert.equal(await page.locator("script:not([type='application/json'])").count(), 4);
+  const pageScripts = await page.locator("script[src]").evaluateAll(nodes => nodes.map(node => node.getAttribute("src")));
+  assert.equal(pageScripts.length, 1, "the page loads only its frontend controller script");
+  assert.match(pageScripts[0], /^\/-\/resources-site\/controller\.js(?:\?|$)/);
   const guest = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await guest.goto(`http://resources-edge.localhost:${port}/tiny-tools/digital-clock`, { waitUntil: "networkidle" });
   assert.equal(await guest.locator("main.layout").getAttribute("data-view"), "focused");
@@ -1990,7 +2015,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   const guestEditor = guest.locator(".project-editor .cm-content");
   await assert.doesNotReject(guestEditor.waitFor());
   await guestEditor.fill("<h1>Visitor experiment</h1>");
-  await assert.doesNotReject(guest.locator("[data-project-preview] h1", { hasText: "Visitor experiment" }).waitFor());
+  await assert.doesNotReject(guest.frameLocator("[data-project-output-mount] iframe:not([inert])")
+    .locator("h1", { hasText: "Visitor experiment" }).waitFor());
   await guest.waitForTimeout(1_700);
   assert.equal(await guest.locator("[data-project-save]").textContent(), "");
   assert.equal(await guest.locator("[data-project-status]").getAttribute("data-state"), "normal");
