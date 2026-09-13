@@ -39,13 +39,21 @@ test("Resources framed editor integrates with the site and running output", { ti
     '<h1>Frame fixture</h1>\n<button id="count">0</button>\n' +
     '<script>document.getElementById("count").addEventListener("click", function () {' +
     ' this.textContent = String(Number(this.textContent) + 1); });</script>\n</body></html>';
-  await createContentStore(client).createProject(account.id, {
+  const historyStore = createContentStore(client);
+  const fixtureProject = await historyStore.createProject(account.id, {
     namespace: "user", userSlug: account.login, slug: "surface", name: "Surface",
     description: "", visibility: "private", template: "html",
     snapshot: { files: [{ path: "index.html", content: source },
       { path: "style.css", content: "h1 { color: rebeccapurple; }" }],
       config: { entry: "index.html", editorTabs: ["index.html", "style.css"] } },
   });
+  for (let index = 1; index < 64; index++) {
+    await historyStore.saveProjectSnapshot(account.id, fixtureProject.id, {
+      files: [{ path: "index.html", content: source + `\n<!-- checkpoint ${index} -->` },
+        { path: "style.css", content: "h1 { color: rebeccapurple; }" }],
+      config: { entry: "index.html", editorTabs: ["index.html", "style.css"] },
+    }, { reason: "manual" });
+  }
   db.close();
   const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
     iat: Date.now(), exp: Date.now() + 180_000 }, "local-preview-session-signing-key");
@@ -101,6 +109,26 @@ test("Resources framed editor integrates with the site and running output", { ti
   try {
     await content.waitFor({ timeout: 15000 });
     await output.getByRole("heading", { name: "Frame fixture" }).waitFor();
+    const historyButton = page.locator("[data-project-versions-proxy]");
+    const historyTimes = [];
+    for (let round = 0; round < 80; round++) {
+      const started = performance.now();
+      await historyButton.click();
+      await page.waitForFunction(() => document.querySelectorAll(
+        "[data-project-history] [data-version-sequence]").length === 64);
+      assert.deepEqual(errors, [], `history opening ${round + 1}`);
+      historyTimes.push(Math.round(performance.now() - started));
+      await historyButton.click();
+    }
+    t.diagnostic(JSON.stringify({ historyOpens: historyTimes.length, rows: 64,
+      firstTenMs: historyTimes.slice(0, 10), lastTenMs: historyTimes.slice(-10) }));
+    const previousOutput = await page.locator("iframe.project-editor__output-frame:not([inert])").elementHandle();
+    await historyButton.click();
+    await page.locator('[data-project-history] [data-version-sequence="1"] span').first().click();
+    await page.waitForFunction(() => document.querySelector('input[name="selectedVersion"]').value === "1");
+    assert.equal(await page.locator("[data-project-snapshot]").evaluate(node => JSON.parse(node.value).files[0].content), source);
+    await previousOutput.waitForElementState("hidden");
+    await output.getByRole("button", { name: "0", exact: true }).waitFor();
     await output.getByRole("button", { name: "0", exact: true }).click();
     assert.equal(await output.locator("#count").textContent(), "1");
     await content.click();

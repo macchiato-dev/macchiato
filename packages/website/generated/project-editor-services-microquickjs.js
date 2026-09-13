@@ -1919,7 +1919,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, {
                         current: !viewingHistorical
                       });
-                      current.addEventListener("click", function () {
+                      current._selectVersion = function () {
                         clearNotice();
                         if (!viewingHistorical) return;
                         state = currentSnapshot;
@@ -1935,7 +1935,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                         showCurrentVersion();
                         refreshSubmitLabel();
                         setStatus("Current version");
-                      });
+                      };
                       if (hasCurrentDraft && latestStoredSequence === null) versionList.append(current);
                       _loop8 = _regenerator().m(function _loop8() {
                         var version, timestamp, button;
@@ -1950,7 +1950,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                                 latest: version.latest,
                                 current: viewingHistorical ? selectedStoredSequence === version.sequence : !hasCurrentDraft && version.latest
                               });
-                              button.addEventListener("click", _asyncToGenerator(_regenerator().m(function _callee7() {
+                              button._selectVersion = _asyncToGenerator(_regenerator().m(function _callee7() {
                                 var response2, result2;
                                 return _regenerator().w(function (_context7) {
                                   while (1) switch (_context7.n) {
@@ -1992,7 +1992,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                                       return _context7.a(2);
                                   }
                                 }, _callee7);
-                              })));
+                              }));
                               versionList.append(button);
                               if (hasCurrentDraft && version.latest) versionList.append(current);
                             case 1:
@@ -2025,7 +2025,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               var current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, {
                 current: !viewingHistorical
               });
-              current.addEventListener("click", function () {
+              current._selectVersion = function () {
                 clearNotice();
                 if (!viewingHistorical) return;
                 state = currentSnapshot;
@@ -2039,7 +2039,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                 renderPreview();
                 showCurrentVersion();
                 setStatus("Current version");
-              });
+              };
               versionList.append(current);
               _toConsumableArray(localHistory.patches).reverse().forEach(function (_, reverseIndex) {
                 var sequence = localHistory.patches.length - reverseIndex;
@@ -2047,7 +2047,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                   sequence: sequence,
                   current: viewingHistorical && selectedStoredSequence === sequence
                 });
-                button.addEventListener("click", function () {
+                button._selectVersion = function () {
                   clearNotice();
                   if (pending2) checkpointDraft({
                     destructive: pendingDestructive
@@ -2067,7 +2067,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                   renderPreview();
                   setStatus("Viewing version " + sequence);
                   showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
-                });
+                };
                 versionList.append(button);
               });
             };
@@ -2799,6 +2799,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             currentVersion = versionButton.querySelector("[data-current-version]");
             historyPanel = root.querySelector("[data-project-history]");
             versionList = historyPanel.querySelector("[data-project-version-list]");
+            versionList.addEventListener("click", function (event) {
+              var choice = event.target.closest == null ? void 0 : event.target.closest(".project-editor__version");
+              if (choice && versionList.contains(choice)) choice._selectVersion == null || choice._selectVersion();
+            });
             document.body.append(historyPanel);
             projectId = __resourcesDatasetGet(root, "data-project-id");
             persistence = __resourcesDatasetGet(root, "data-persistence") || "stored";

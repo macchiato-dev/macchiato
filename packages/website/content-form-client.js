@@ -389,6 +389,12 @@ async function mountProjectRoot(root) {
   const currentVersion = versionButton.querySelector("[data-current-version]");
   const historyPanel = root.querySelector("[data-project-history]");
   const versionList = historyPanel.querySelector("[data-project-version-list]");
+  // Rows are replaced whenever history is opened. Keep one subscription on
+  // the persistent list; discarded rows can release their guest-only actions.
+  versionList.addEventListener("click", (event) => {
+    const choice = event.target.closest?.(".project-editor__version");
+    if (choice && versionList.contains(choice)) choice._selectVersion?.();
+  });
   // A transformed focused-view ancestor would otherwise make `position:
   // fixed` relative to the project surface instead of the viewport.
   document.body.append(historyPanel);
@@ -1098,7 +1104,7 @@ async function mountProjectRoot(root) {
   function renderDraftVersions() {
     versionList.replaceChildren();
     const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: !viewingHistorical });
-    current.addEventListener("click", () => {
+    current._selectVersion = () => {
       clearNotice();
       if (!viewingHistorical) return;
       state = currentSnapshot;
@@ -1112,14 +1118,14 @@ async function mountProjectRoot(root) {
       renderPreview();
       showCurrentVersion();
       setStatus("Current version");
-    });
+    };
     versionList.append(current);
     [...localHistory.patches].reverse().forEach((_, reverseIndex) => {
       const sequence = localHistory.patches.length - reverseIndex;
       const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], {
         sequence, current: viewingHistorical && selectedStoredSequence === sequence,
       });
-      button.addEventListener("click", () => {
+      button._selectVersion = () => {
         clearNotice();
         if (pending) checkpointDraft({ destructive: pendingDestructive });
         pending = false;
@@ -1137,7 +1143,7 @@ async function mountProjectRoot(root) {
         renderPreview();
         setStatus(`Viewing version ${sequence}`);
         showSelectedVersion(button.textContent, localHistory.versionTimes[sequence - 1]);
-      });
+      };
       versionList.append(button);
     });
   }
@@ -1156,7 +1162,7 @@ async function mountProjectRoot(root) {
       selectedVersionField.value = String(latestStoredSequence);
     }
     const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: !viewingHistorical });
-    current.addEventListener("click", () => {
+    current._selectVersion = () => {
       clearNotice();
       if (!viewingHistorical) return;
       state = currentSnapshot;
@@ -1172,7 +1178,7 @@ async function mountProjectRoot(root) {
       showCurrentVersion();
       refreshSubmitLabel();
       setStatus("Current version");
-    });
+    };
     if (hasCurrentDraft && latestStoredSequence === null) versionList.append(current);
     for (const version of versions) {
       const timestamp = version.latest ? version.savedAt || version.createdAt : version.createdAt;
@@ -1180,7 +1186,7 @@ async function mountProjectRoot(root) {
         sequence: version.sequence, title: version.title, latest: version.latest,
         current: viewingHistorical ? selectedStoredSequence === version.sequence : !hasCurrentDraft && version.latest,
       });
-      button.addEventListener("click", async () => {
+      button._selectVersion = async () => {
         clearNotice();
         await save();
         if (!viewingHistorical) currentSnapshot = state;
@@ -1200,7 +1206,7 @@ async function mountProjectRoot(root) {
         showSelectedVersion(relativeVersionTime(timestamp), timestamp);
         refreshSubmitLabel();
         setStatus(`Viewing ${button.textContent}`);
-      });
+      };
       versionList.append(button);
       if (hasCurrentDraft && version.latest) versionList.append(current);
     }
