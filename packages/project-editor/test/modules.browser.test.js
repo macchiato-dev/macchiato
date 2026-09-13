@@ -187,7 +187,8 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   await load(files);
   assert.equal(await surface.innerText(), "AB70");
   // Exercise the shipped guest's DOM calls, not just the HTML compiler. These
-  // attempts must fail inside both integrations and leave the active output intact.
+  // attempts must fail inside both integrations. Element staging retains the
+  // old app; a whole-Document refresh has already retired it and clears failures.
   const boundaryFiles = [
     { path: "index.html", content: '<main></main><script src="boundary.js"></script>' },
     { path: "boundary.js", content: "" },
@@ -202,22 +203,30 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     'document.querySelector("main").innerHTML = \'<img src="https://outside.test/inner.png">\';',
     'document.querySelector("main").innerHTML = \'<svg><image href="https://outside.test/svg.png" /></svg>\';',
     'document.documentElement.setAttribute("data-wwm-scope", "spoof");',
-    'document.documentElement.removeAttribute("data-wwm-scope");',
+    // Only Element grants need a scope marker. Whole Documents have no marker
+    // to remove; setting/forging this reserved attribute is still denied above.
+    ...(!iframe ? ['document.documentElement.removeAttribute("data-wwm-scope");'] : []),
     'document.querySelector("main").innerHTML = \'<div data-wwm-scope="spoof"></div>\';',
   ]) {
     boundaryFiles[1].content = source;
     await assert.rejects(load(boundaryFiles), undefined, source);
-    assert.equal(await surface.innerText(), "AB70", "denied replacements preserve the active application");
+    if (iframe) {
+      assert.equal(await surface.count(), 0, "a denied Document refresh leaves no partial application");
+      await load(files);
+    }
+    assert.equal(await surface.innerText(), "AB70", "the output remains usable after a denied replacement");
   }
   const outputDocument = iframe ? page.frames().find(frame => frame !== page.mainFrame()) : page;
   if (iframe) {
     await load([{ path: 'index.html', content: '<style>body { min-height: 100vh; background: #102e29; }</style><main>Full height</main>' }]);
-    const size = await outputDocument.locator('.project-output-root > html > body:has(> main)').evaluate(node => ({
+    const size = await outputDocument.locator('html > body:has(> main)').evaluate(node => ({
       height: node.getBoundingClientRect().height, viewport: window.innerHeight, minimum: getComputedStyle(node).minHeight,
     }));
     assert.ok(size.height >= size.viewport, 'iframe defaults must not override app body dimensions: ' + JSON.stringify(size));
   }
-  await outputDocument.evaluate(() => {
+  // The entire frame Document is granted. Host secrets belong outside that
+  // Document, just as they belong outside #guest in the Element integration.
+  await page.evaluate(() => {
     document.body.id = "outside-ancestor";
     const sibling = document.createElement("div");
     sibling.id = "outside-secret";
@@ -235,7 +244,7 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   `;
   await load(boundaryFiles);
   assert.equal(await surface.innerText(), "[true,true,true,true]", "queries and traversal stay within the output root");
-  assert.equal(await outputDocument.locator("#outside-secret").innerText(), "Private host content");
+  assert.equal(await page.locator("#outside-secret").innerText(), "Private host content");
   // Replacing `body` with a host scope class must not turn a root sibling
   // selector into authority over neighboring host content.
   const escapedStyles = [
@@ -244,9 +253,9 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   ];
   for (const selector of escapedStyles) {
     boundaryFiles[0].content = `<style>${selector} { color: #ff0001; }</style><main>Scoped</main>`;
-    const before = await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color);
+    const before = await page.locator('#outside-secret').evaluate(node => getComputedStyle(node).color);
     await load(boundaryFiles);
-    assert.equal(await outputDocument.locator('#outside-secret').evaluate(node => getComputedStyle(node).color), before);
+    assert.equal(await page.locator('#outside-secret').evaluate(node => getComputedStyle(node).color), before);
     assert.equal(await surface.innerText(), 'Scoped',
       'a confined selector remains valid without gaining access to host siblings');
   }
@@ -312,14 +321,17 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
   assert.equal(await surface.innerText(), "Fresh");
   const documentFrame = iframe ? page.frames().find(frame => frame !== page.mainFrame()) : page;
   assert.equal(await documentFrame.evaluate(() => outputInstances), 1, "loads reuse the actual Wasm instance");
-  assert.equal(await documentFrame.locator('.project-output-root style').count(), 1, "old application styles are removed");
+  const applicationStyles = documentFrame.locator(iframe ? 'style' : '.project-output-root style');
+  assert.equal(await applicationStyles.count(), 1, "old application styles are removed");
   classic[1].content = 'document.querySelector("main").textContent = "Failed replacement"; throw Error("New code failed");';
   await assert.rejects(load(classic), /New code failed/);
-  assert.equal(await surface.innerText(), "Fresh", "failed preparation keeps the visible application");
-  assert.equal(await documentFrame.locator('.project-output-root style').count(), 1);
+  if (iframe) assert.equal(await surface.count(), 0, "failed Document startup clears the partial application");
+  else assert.equal(await surface.innerText(), "Fresh", "failed Element preparation keeps the visible application");
+  assert.equal(await applicationStyles.count(), iframe ? 0 : 1);
   classic[1].content = 'const broken = ;';
   await assert.rejects(load(classic), /SyntaxError/);
-  assert.equal(await surface.innerText(), "Fresh", "the output runtime rejects malformed JavaScript without replacing the current application");
+  if (iframe) assert.equal(await surface.count(), 0, "malformed JavaScript cannot leave a partial Document app");
+  else assert.equal(await surface.innerText(), "Fresh", "malformed JavaScript does not replace the staged Element app");
   classic[1].content = 'const greet = (name = "World") => `Hello ${name}`; document.querySelector("main").textContent = greet();';
   await load(classic);
   assert.equal(await surface.innerText(), "Hello World", "modern JavaScript is validated by the project runtime");
@@ -333,15 +345,16 @@ for (const iframe of [false, true]) test(`project modules stay in QuickJS (${ifr
     window.supersededLoad = window.output.load(project).then(() => "unexpected success", error => error.message);
   }, { ...compileProjectFiles(slowFiles), files: slowFiles });
   await documentFrame.locator('main').filter({ hasText: 'Preparing' }).waitFor({ state: 'attached' });
-  assert.equal(await documentFrame.locator('main').filter({ hasText: 'Preparing' }).isVisible(), false);
-  assert.equal(await documentFrame.locator('main').filter({ hasText: 'Fresh' }).isVisible(), true);
+  assert.equal(await documentFrame.locator('main').filter({ hasText: 'Preparing' }).isVisible(), iframe);
+  assert.equal(await documentFrame.locator('main').filter({ hasText: 'Fresh' }).isVisible(), !iframe);
   classic[1].content = 'const privateValue = "Replaced slow load"; document.querySelector("main").textContent = privateValue;';
   await load(classic);
   assert.match(await page.evaluate(() => supersededLoad), /replaced or destroyed/);
   assert.equal(await surface.innerText(), 'Replaced slow load');
   slowFiles[1].content = 'setTimeout(() => { throw Error("Startup callback failed"); }, 5); await new Promise(() => {});';
   await assert.rejects(load(slowFiles), /Startup callback failed/);
-  assert.equal(await surface.innerText(), 'Replaced slow load');
+  if (iframe) assert.equal(await surface.count(), 0, "a rejected Document startup is cleared");
+  else assert.equal(await surface.innerText(), 'Replaced slow load');
   // A stale fetch must not resume application code against a newer output.
   files[1].content = 'fetch("https://resource.test/old").then(r => r.text()).then(text => document.querySelector("main").textContent = text);';
   const startFetch = () => page.evaluate(project => window.output.load(project), {
