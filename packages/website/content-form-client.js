@@ -3,6 +3,7 @@ import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot, normaliz
 import { validateAllowedUrlPatterns } from "/-/resources-site/url-pattern.js";
 import { downloadProjectArchive, importProjectArchive, mountResourcesProjectEditor, navigationType, readProjectRecovery, replaceFrontendPath, writeProjectRecovery } from "/-/resources-site/project-editor-runtime.js";
 import { editorLanguageForPath } from "../project-editor/src/languages.js";
+import { formatProjectJson } from "../project-editor/src/format-json.js";
 import { mountContentNameFields } from "./content-name-fields.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "./project-session.js";
 
@@ -569,7 +570,7 @@ async function mountProjectRoot(root) {
 
   let editorDocumentLimits = null;
   function selectedSource() {
-    if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
+    if (selected === "config") return formatProjectJson(state.config) + "\n";
     return state.files.find((file) => file.path === selected)?.content ?? "";
   }
   function selectedContent() {
