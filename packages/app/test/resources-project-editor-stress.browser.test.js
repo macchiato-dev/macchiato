@@ -266,11 +266,16 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
 
   await page.evaluate(() => {
     window.outputBuilds = 0;
+    window.outputLoadingOverlays = [];
     window.outputBuildObserver = new MutationObserver(records => {
       for (const record of records) if (record.oldValue === 'build') outputBuilds++;
+      const root = document.querySelector('[data-project-editor]');
+      if (['starting', 'updating'].includes(root.dataset.outputMachineState)) {
+        outputLoadingOverlays.push(getComputedStyle(root.querySelector('.project-editor__preview > .project-editor__pane-loading')).display);
+      }
     });
     outputBuildObserver.observe(document.querySelector('[data-project-editor]'), {
-      attributes: true, attributeOldValue: true, attributeFilter: ['data-output-machine-stage'],
+      attributes: true, attributeOldValue: true, attributeFilter: ['data-output-machine-stage', 'data-output-machine-state'],
     });
   });
   await content.fill(source);
@@ -298,6 +303,10 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.waitForTimeout(1_200);
   assert.equal(await page.evaluate(() => outputBuilds), 1,
     'one editing burst must cause one output build, not competing debounce timers');
+  const overlays = await page.evaluate(() => outputLoadingOverlays);
+  assert.ok(overlays.length > 0, 'observed replacement preparation');
+  assert.ok(overlays.every(display => display === 'none'),
+    'the initial spinner must not cover the running output during replacement');
   await page.evaluate(() => outputBuildObserver.disconnect());
   await assertDividersAligned("output refresh");
   await page.screenshot({ path: join(artifacts, "editor-light.png") });
