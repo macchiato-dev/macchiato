@@ -692,6 +692,15 @@ async function mountProjectRoot(root) {
         root: editorMount,
         limits: false,
         onChange: receiveEditorChange,
+        onLanguageError(message) {
+          // A parser download is optional, not a stopped editor. Late failures
+          // for another tab must not replace the current tab's notices.
+          if (message.language !== language()) return;
+          activeNotice = true;
+          activeStatusSurface = "editor";
+          statusNotice.textContent = `Syntax highlighting unavailable for ${message.language}. You can keep editing; reopen the file to retry.`;
+          renderStatusState();
+        },
         onOutputError(error) {
           setStatus(`Output stopped: ${error.message}`, "error", null, "output");
         },

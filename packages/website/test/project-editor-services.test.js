@@ -17,6 +17,17 @@ test("output errors do not resolve an unrelated pending editor service request",
       { value: null, error: "Project recovery resource is unavailable" }),
   };
   runInNewContext(bundle.outputFiles[0].text, context);
+  const languageErrors = [];
+  const editor = await context.Services.mountResourcesProjectEditor({
+    onLanguageError: message => languageErrors.push(message),
+    onViolation: () => assert.fail("a parser outage must not stop the editor"),
+  });
+  const languageError = { type: "language-error", language: "python", message: "Unavailable" };
+  context.__resourcesEditorLocalReceive(languageError);
+  assert.equal(languageErrors[0], languageError, "the notice stays in the editor guest");
+  editor.destroy();
+  context.__resourcesEditorLocalReceive(languageError);
+  assert.equal(languageErrors.length, 1, "disposed workspaces ignore late notices");
   assert.equal(context.Services.navigationType(), "reload");
   assert.throws(() => context.Services.readProjectRecovery("expired"), /Project recovery resource is unavailable/);
   assert.throws(() => context.Services.writeProjectRecovery("expired", "{}"), /Project recovery resource is unavailable/);

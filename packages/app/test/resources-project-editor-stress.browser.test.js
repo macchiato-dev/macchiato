@@ -684,3 +684,141 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.doesNotMatch(guest, /__codeEditorBeforeInput/);
   assert.doesNotMatch(runtime, /code-editor-use|packages\/code-editor-use/i);
 });
+
+test("Resources loads language bytecode on demand without replacing the editing session", { timeout: 90_000 }, async (t) => {
+  const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-languages-"))]);
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.ready;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const client = createNodeSqliteClient(db);
+  const account = await createAccountStore(client).authenticateIdentity({
+    provider: "github", providerUserId: "editor-languages", login: "editor-languages",
+    name: "Editor Languages", email: "editor-languages@example.test", emailVerified: true,
+  });
+  const files = [
+    { path: "index.html", content: "<h1>Language fixture</h1>" },
+    { path: "notes.txt", content: "Plain text needs no parser." },
+    { path: "main.rs", content: "fn main() {\n    let answer = 42;\n}\n" },
+    { path: "main.py", content: "def answer():\n    return 42\n" },
+    { path: "app.js", content: "const answer = 42;\n" },
+    { path: "types.ts", content: "interface Answer { value: number }\n" },
+    { path: "style.css", content: ".answer { color: red; }\n" },
+    { path: "data.json", content: '{ "answer": true }\n' },
+    { path: "README.md", content: "# Answer\n\n**Forty-two**\n" },
+    { path: "query.sql", content: "SELECT answer FROM questions;\n" },
+    { path: "config.yaml", content: "answer: true\n" },
+    { path: "main.cpp", content: "int main() { return 42; }\n" },
+    { path: "App.vue", content: "<template><h1>Answer</h1></template>\n" },
+    { path: "App.svelte", content: "<h1>Answer</h1>\n" },
+  ];
+  await createContentStore(client).createProject(account.id, {
+    namespace: "user", userSlug: account.login, slug: "languages", name: "Languages",
+    description: "", visibility: "private", template: "html",
+    snapshot: { files, config: { entry: "index.html" } },
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 180_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.context().addCookies([{ name: "resources_session", value: session,
+    domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
+    const directory = resolve(process.env.MACCHIATO_TEST_ASSETS_DIRECTORY);
+    await page.route("**/-/resources-site/**", async route => {
+      const name = new URL(route.request().url()).pathname.slice("/-/resources-site/".length);
+      await route.fulfill({ body: await readFile(join(directory, name)),
+        contentType: name.endsWith(".js") ? "text/javascript" : name.endsWith(".html") ? "text/html"
+          : name.endsWith(".wasm") ? "application/wasm" : "application/octet-stream" });
+    });
+  }
+  const downloads = [], errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => {
+    const name = new URL(request.url()).pathname.split("/").pop();
+    if (/^project-editor-language-.*\.bin$/.test(name)) downloads.push(name);
+  });
+  let releaseRust;
+  const rustDownload = new Promise(resolve => { releaseRust = resolve; });
+  t.after(releaseRust);
+  await page.route("**/project-editor-language-rust.bin", async route => {
+    await rustDownload;
+    if (!page.isClosed()) await route.fallback();
+  });
+  let pythonAttempts = 0;
+  await page.route("**/project-editor-language-python.bin", async route => {
+    if (++pythonAttempts === 1) await route.fulfill({ status: 503, body: "Temporary parser outage" });
+    else await route.fallback();
+  });
+  await page.goto(`http://resources-edge.localhost:${port}/${account.login}/languages`);
+  const editor = page.locator("[data-project-editor]"), content = editor.locator(".cm-content");
+  await content.waitFor();
+  const editorId = await editor.getAttribute("data-editor-machine-id");
+  async function openFile(path) {
+    await page.locator("[data-project-file-trigger]").click();
+    await page.locator(`[data-project-file-options] [data-project-file="${path}"]`).click();
+    assert.equal(await editor.getAttribute("data-editor-machine-id"), editorId);
+  }
+  async function highlighted(word) {
+    await page.waitForFunction(word => [...document.querySelectorAll(".cm-content .cm-line span")]
+      .some(span => span.textContent === word && span.className), word);
+  }
+  await highlighted("h1");
+  assert.deepEqual(downloads, ["project-editor-language-html.bin"]);
+  await openFile("notes.txt");
+  assert.equal(downloads.length, 1, "plain text doesn't download a parser");
+  await openFile("main.rs");
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("// kept while loading");
+  const editedRust = await content.innerText();
+  assert.match(editedRust, /kept while loading/);
+  // The delayed Rust result must not change the active JavaScript language.
+  await openFile("app.js");
+  await highlighted("const");
+  releaseRust();
+  await page.waitForTimeout(300);
+  await highlighted("const");
+  await openFile("main.rs");
+  await highlighted("fn");
+  assert.equal(await content.innerText(), editedRust);
+  await content.click();
+  await page.keyboard.press("Control+z");
+  assert.doesNotMatch(await content.innerText(), /kept while loading/);
+  await page.keyboard.press("Control+y");
+  assert.equal(await content.innerText(), editedRust, "loading the parser preserves undo/redo");
+  await openFile("types.ts");
+  await highlighted("interface");
+  assert.equal(downloads.filter(name => name.includes("javascript")).length, 1,
+    "TypeScript and JavaScript share one downloaded package");
+  await openFile("main.py");
+  await page.getByText("Syntax highlighting unavailable for python.", { exact: false }).waitFor();
+  await content.click();
+  await page.keyboard.press("Control+End");
+  await page.keyboard.type("# still editable");
+  assert.match(await content.innerText(), /still editable/);
+  await openFile("notes.txt");
+  await openFile("main.py");
+  await highlighted("def");
+  assert.equal(pythonAttempts, 2, "a failed parser download can be retried without reloading");
+  assert.match(await content.innerText(), /still editable/);
+  assert.doesNotMatch(await page.locator("body").innerText(), /Editor stopped:/);
+  assert.equal(await page.getByText("Syntax highlighting unavailable for python.", { exact: false }).isVisible(), false);
+  for (const [path, token] of [["style.css", "red"], ["data.json", "true"], ["README.md", "# "],
+    ["query.sql", "SELECT"], ["config.yaml", "true"], ["main.cpp", "int"],
+    ["App.vue", "h1"], ["App.svelte", "h1"]]) {
+    await openFile(path);
+    await highlighted(token);
+    assert.equal(await content.innerText(), files.find(file => file.path === path).content);
+  }
+  assert.deepEqual(downloads.sort(), ["html", "javascript", "python", "python", "rust", "css", "json",
+    "markdown", "sql", "yaml", "cpp", "vue", "svelte"]
+    .map(name => `project-editor-language-${name}.bin`).sort());
+  assert.deepEqual(errors, []);
+  if (process.env.MACCHIATO_TEST_ARTIFACTS) {
+    await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
+    await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, "languages-recovered.png") });
+  }
+});

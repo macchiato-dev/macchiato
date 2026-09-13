@@ -6,7 +6,7 @@ import {
 
 const notifyHost = globalThis.__browserUseNotify;
 globalThis.__codeEditorNotify = (message) => {
-  if (message && ["change", "ready", "limit"].includes(message.type)) {
+  if (message && ["change", "ready", "limit", "language-error"].includes(message.type)) {
     globalThis.__resourcesEditorLocalReceive?.(message);
     return;
   }

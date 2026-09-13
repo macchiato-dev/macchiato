@@ -47,6 +47,7 @@ globalThis.__resourcesEditorLocalReceive = (message) => {
     { syntaxErrors: message.syntaxErrors === true });
   else if (message.type === "ready") listeners?.onReady?.(message);
   else if (message.type === "limit") listeners?.onLimit?.(message);
+  else if (message.type === "language-error") listeners?.onLanguageError?.(message);
   else if (message.type === "output-error") listeners?.onOutputError?.(new Error(message.message));
   else if (message.type === "output-ready") listeners?.onOutputReady?.();
 };
