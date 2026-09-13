@@ -74,14 +74,17 @@ their existing session. This is separate from the typing/build debounce.
 
 - All 118 non-browser tests in `packages/project-editor/test` and
   `packages/website/test` pass, including JSON formatting and resource policies.
-- The earlier mixed app browser suite recorded 43 passes and eight failures
-  in older SQLite-site tests. That result predates the default framed editor.
-  A fresh broad run exposed stale outer-document CodeMirror selectors and was
-  stopped after repeated selector timeouts. Those tests are being adapted to
-  the real editor document; the earlier 43 passes are not current verification
-  of accounts, templates, ZIP round-trips, graphics, storage denial, and the
-  other broad cases. The separately maintained packaged editing checks below
-  already target the iframe and pass.
+- The current broad app browser suite passes all 43 applicable tests with the
+  framed editor. Eight older SQLite-site cases remain explicitly excluded;
+  this is not a claim that those obsolete cases pass. Coverage includes
+  accounts, templates, ZIP round-trips, graphics, storage denial, saves and
+  history, notifications, and organization roles. Editor checks now inspect
+  its actual iframe document, including selection, scrolling, and theme colors.
+- Real JavaScript (358 lines), Rust (405 lines), and TypeScript (2,191 lines,
+  104 KB) pass highlighted editing at both ends, Unicode insertion, undo/redo,
+  folding, and wheel-driven rendering without a follow-up click. Median
+  per-key Playwright round trips were about 24–25 ms for JavaScript/Rust and
+  40–41 ms for TypeScript, not isolated interpreter timings.
 - All 13 packaged appearance/editing/language checks pass. They include real
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
@@ -113,8 +116,11 @@ Current evidence is in `/root/macchiato-work/dense-finally-browser.log`,
 `dense-finally-live-verified.log`, with their screenshot directories. The unchanged
 output lifecycle checks remain in `editor-preload-output-boundaries.log`;
 callback/surface boundary tests remain recorded in `tab-lifetime-boundaries.log`.
-The earlier broader
-app checks remain in `current-resources-browser-suite.log` and
+The current broad run is `readiness-current-framed.log` (43 passes, 375.8s),
+preceded by six focused passes in `readiness-frame-tests.log`. Search screenshots
+in `readiness-current-framed/` were reviewed at phone/light and desktop/dark
+sizes. Substantial-source coverage is in `real-source-interactions-final.log`.
+The earlier broader app checks remain in `current-resources-browser-suite.log` and
 `account-current-flow-final.log`.
 The latter app test waits for native form navigation and guest readiness, uses
 the actual output Document, and explicitly selects a draft/history checkpoint
@@ -122,11 +128,16 @@ instead of treating `aria-current` as an alias for newest.
 
 ## Still open
 
-Complete the broad `resources-website.test.js` rerun after adapting its
-CodeMirror selectors and document-scoped checks to the framed editor. The
-interrupted pre-adaptation evidence is `readiness-current-site.log` under
-`/root/macchiato-work`; it is not an application failure diagnosis or a passing
-suite. Test changes are checkpointed as WIP while the focused rerun proceeds.
+The interrupted pre-adaptation run, `readiness-current-site.log`, timed out on
+outer-document selectors left over from the unframed editor. It is retained
+as diagnostic history, not an application failure diagnosis or a passing
+suite. The corrected full run above used this explicit exclusion pattern:
+
+```text
+resources sqlite site (is mounted|DOM schema|transitions|uses a moderate|prefetches|has a responsive)|resources user menu (module composes|safe polygon)
+```
+
+Those eight old SQLite-site cases still need separate migration or retirement.
 
 An initial packaged rerun failed an unchanged-pane-size assertion after a
 phone/desktop switch and bulk paste. It did not repeat in the focused rerun or
