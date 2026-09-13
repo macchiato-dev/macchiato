@@ -595,6 +595,9 @@ deno test --config packages/website/deno.json --allow-read \
 deno test --allow-read --allow-env \
   packages/website/test/bunny-entry-artifact.test.ts -- \
   dist/resources-bunny
+deno test --allow-read --allow-env \
+  packages/website/test/bunny-deferred-artifact.test.ts -- \
+  dist/resources-bunny
 ```
 
 The Deno smoke test decompresses the actual upload, compiles both runtimes,
@@ -610,6 +613,14 @@ states against exported HTML. WASM startup is prohibited on these paths. It
 uses a dummy Storage key, needs no network permission, and restores its test
 environment afterward. Its Deno execution time is not a Bunny cold-start
 measurement.
+
+The deferred entry test routes the bundled libSQL client's Hrana requests to
+an in-memory SQLite fixture (Deno's `node:sqlite` compatibility API). The actual
+exported application, routing, document and SQL-policy guests initialize the
+schema and handle authenticated project creation, saving and history. It also
+simulates a transient database outage and checks that a later request recovers
+without reloading the edge script; anonymous home stays available throughout.
+It uses only disposable data and dummy credentials, with no network permission.
 
 The build defaults `BLOG_EXAMPLES_ORIGIN` to
 `https://blog-examples.resources.co`. Set it explicitly only when building for

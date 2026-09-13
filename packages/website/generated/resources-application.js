@@ -142,7 +142,10 @@
     }
     let initialized2;
     function initialize2() {
-      initialized2 ||= client.batch(ACCOUNT_SCHEMA.map((sql) => ({ sql, args: [] })));
+      initialized2 ||= client.batch(ACCOUNT_SCHEMA.map((sql) => ({ sql, args: [] }))).catch((error) => {
+        initialized2 = null;
+        throw error;
+      });
       return initialized2;
     }
     async function providersForUser(userId) {
@@ -591,7 +594,13 @@
   function createOrganizationStore(client, { now = Date.now, randomId = () => crypto.randomUUID() } = {}) {
     if (!client?.execute || !client?.batch) throw new Error("Organization store requires a libSQL-compatible client");
     let initialized2;
-    const initialize2 = () => initialized2 ||= client.batch(ORGANIZATION_SCHEMA.map((sql) => ({ sql, args: [] })));
+    function initialize2() {
+      initialized2 ||= client.batch(ORGANIZATION_SCHEMA.map((sql) => ({ sql, args: [] }))).catch((error) => {
+        initialized2 = null;
+        throw error;
+      });
+      return initialized2;
+    }
     async function managedOrganization(slugValue, userId) {
       const slug2 = namespaceName(slugValue, { field: "organization name" });
       const result = await client.execute({
@@ -1060,7 +1069,13 @@
     if (typeof snapshotDiffer !== "function") throw new Error("Content store requires a snapshot differ");
     if (typeof snapshotValidator !== "function") throw new Error("Content store requires a snapshot validator");
     let initialized2;
-    const initialize2 = () => initialized2 ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] })));
+    function initialize2() {
+      initialized2 ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] }))).catch((error) => {
+        initialized2 = null;
+        throw error;
+      });
+      return initialized2;
+    }
     return Object.freeze({
       initialize: initialize2,
       async getProject(namespace, projectSlug, viewerUserId = null) {
@@ -1887,7 +1902,10 @@
       accounts.initialize(),
       content.initialize(),
       organizations.initialize()
-    ]));
+    ])).catch((error) => {
+      initialized = null;
+      throw error;
+    });
     return initialized;
   }
   var planDocument = createResourcesDocumentPlanner({
@@ -1900,8 +1918,12 @@
       return ["error", "unknown application operation"];
     }
     if (input[0] === "initialize") {
-      await initialize();
-      return ["ok"];
+      try {
+        await initialize();
+        return ["ok"];
+      } catch (error) {
+        return ["error", errorValue(error)];
+      }
     }
     if (input[0] === "store" && input.length === 4) {
       return storeCall(input[1], input[2], input[3]);

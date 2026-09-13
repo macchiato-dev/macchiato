@@ -153,7 +153,13 @@ for (const interrupted of [false, true]) Deno.test(`exported Bunny deferred rout
     if (interrupted) {
       const failed = await serve(new Request(env.PUBLIC_ORIGIN + "/blog"));
       assert(failed.status === 503, "The unavailable database should fail the initial request");
+      assert(failed.headers.get("cache-control") === "no-store", "Database failure must not be cached");
       assert(errors.length > 0, "Initialization failure should be logged");
+      const beforeHome = sql.statements.length;
+      const home = await serve(new Request(env.PUBLIC_ORIGIN + "/"));
+      assert(home.status === 200 && home.headers.get("x-resources-edge-tier") === "bootstrap",
+        "A database failure must not block anonymous home");
+      assert(sql.statements.length === beforeHome, "Anonymous home retried database initialization");
       errors.length = 0;
     }
     for (const path of ["/blog", "/try/article", "/-/resources-site/controller.js"]) {
