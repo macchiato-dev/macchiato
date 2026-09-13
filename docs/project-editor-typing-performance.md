@@ -741,3 +741,72 @@ and `editor-frame-real-js{,-control}`, with matching sibling logs. The test and
 documentation are committed; the live site and verified Bunny archive are
 unchanged. Application-scale layout costs and the broader completion audit
 remain open.
+
+## Full workspace rendering-document control: 2026-09-13
+
+The isolated-page test above did not include the Resources stylesheet. The
+benchmark now accepts `MACCHIATO_TEST_WORKSPACE_PAGE`, a saved anonymous
+`/try?template=article` response. It removes application scripts and mounts only
+the measured editor. Header, toolbar, details, layout, and their stylesheet stay
+present. Neither the outer application nor output guest executes. This isolates
+the surrounding DOM/CSS dependency, not total live-project performance.
+
+The script-stripped shell SHA-256 is
+`c0296dd36442d8a16d82f0bea9779cc5bc64cecf1fec66d5d123080a7b026461`.
+Both rendering modes measure 585 by 798 pixels with the same 13px monospace font,
+18.2px line height, and light syntax palette. Each condition runs native,
+MicroQuickJS, MicroQuickJS, native, with warmup and no profiling or recording.
+
+| 106,432-character bulk replacement | Native | MicroQuickJS |
+| --- | --- | --- |
+| Workspace, direct | 11.32–11.58 s | 12.10–12.17 s |
+| Workspace, iframe | 5.68–5.96 s | 6.72–6.74 s |
+| Workspace, repeated direct | 11.16–11.36 s | 12.13–12.22 s |
+| Workspace, 15 narrowed layout selectors | 10.56–10.93 s | 12.07–12.08 s |
+
+The optional selector control rewrites broad `:has()` descendants to direct
+children where the workspace structure permits it. It does not recover the
+iframe benefit and has not been adopted in production. The test flag remains
+`MACCHIATO_DIRECT_LAYOUT_SELECTORS=1` for reproducibility.
+
+All cases preserve one `beforeinput`, 3,874 `input` events, one application change,
+exact contents, undo/redo, and typo/correction. The shared native improvement
+points to a browser DOM/style/layout cost rather than an interpreter-only cost;
+it does not identify a specific expensive browser operation. These unusual
+native bulk replacements are not the ordinary paste-handler path.
+
+Separate recorded runs use the raw 106,402-character JavaScript file and its
+language module, with 100ms between keys. Before the fixture-theme correction,
+direct guest paste is 91–92ms and framed paste 82–93ms. Guest keys are 17–74ms
+directly and 21–66ms framed; native keys are 5–13ms and 4–25ms. This does not
+establish an ordinary-typing speedup. Video and frame sampling add overhead;
+do not combine these numbers with the unrecorded bulk results.
+
+Screenshot review caught that the fixture supplied light CSS variables without
+calling the editor's theme API. It now sets the light theme before mounting in
+both native and guest cases. Visual runs additionally open Find, type a query,
+retain search focus, dismiss with Escape, scroll to the end, and return to the
+first line. This is test-fixture correction, not a production theme change.
+The frame still needs the workspace's search-control CSS explicitly supplied
+before integration; inherited parent-document selectors do not cross the frame.
+
+Artifacts are retained under `/root/macchiato-work/workspace-input-*` and
+`workspace-typing-{direct,frame}{,-ui}`, with sibling logs. This response fixture
+is not a source asset and is not committed. Tests and findings are checkpoints;
+the live site and Bunny archive remain the verified `398f759` build.
+
+### Integration boundary
+
+An editor frame must not expand the current machine's DOM grant across two
+documents. The present editor machine contains both project UI/history and
+CodeMirror. The next integration experiment should separate CodeMirror into its
+own guest/session and DOM device rooted in the editor frame, with the controller
+relaying explicit editor commands and changes. The project UI keeps ownership
+of history, files, output, and status. Source text remains data, never host code.
+
+Preserve synchronous command results where callers rely on them; do not change
+native editing events into asynchronous messages. Verify file switching and
+undo history, lazy language loading, repeated theme changes, focus/shortcuts,
+search/completion geometry, resizing, and disposal with the real project UI.
+Keep the no-frame path available. The benchmark alone is not evidence that this
+integration is implemented or that its lifetime and containment checks pass.

@@ -56,6 +56,15 @@ controlled native-versus-WASM comparison and does not attribute the delay to
 the interpreter. Investigate that path without changing input-event semantics
 or mistaking profiling overhead for application cost.
 
+A controlled workspace-shell experiment now reproduces the bulk cost with
+native CodeMirror too. Rendering the editor in an iframe reduces the guest's
+106 KB replacement from about 12.1s to 6.7s; the repeated direct control returns
+to about 12.2s. Narrower layout selectors do not recover that benefit. Ordinary
+typing does not show a comparable improvement. See the
+[workspace comparison](project-editor-typing-performance.md#full-workspace-rendering-document-control-2026-09-13)
+for the controls, preserved input events, and the remaining integration boundary.
+The production editor is not yet moved into an iframe.
+
 The eight legacy SQLite-site failures concern removed schema paths and old
 navigation/theme/menu expectations. They have not been skipped in source or
 declared passing. A future focused command should use `--test-skip-pattern`

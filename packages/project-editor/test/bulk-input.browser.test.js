@@ -31,7 +31,8 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   const parserName = parser || "html";
   const languageSource = process.env.MACCHIATO_TEST_LANGUAGE_SOURCE_FILE ||
     join(generated, `project-editor-language-${parserName}.js`);
-  const setup = `__codeEditorSetContent(JSON.stringify({language:${JSON.stringify(selectedLanguage)},content:"Initial"}));`;
+  const setup = `__codeEditorSetTheme('{"theme":"light"}');\n` +
+    `__codeEditorSetContent(JSON.stringify({language:${JSON.stringify(selectedLanguage)},content:"Initial"}));`;
   const parseBudget = Number(process.env.MACCHIATO_TEST_PARSE_BUDGET || 0);
   assert.ok(Number.isInteger(parseBudget) && parseBudget >= 0 && parseBudget <= 20);
   assert.ok(!parseBudget || process.env.MACCHIATO_TYPING_CHECKPOINTS, "budget experiment requires checkpoints");
@@ -401,6 +402,28 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
       await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
       await writeFile(join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}-frames.json`), JSON.stringify(frames));
       await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}-after.png`) });
+      // A rendering-frame experiment must retain the editor's ordinary UI,
+      // not just its text updates. Keep these checks outside timed input.
+      await page.keyboard.press("Escape");
+      await page.keyboard.press("Control+f");
+      const search = view.locator('.cm-search input[name="search"]');
+      await search.waitFor();
+      await search.fill("function");
+      await page.keyboard.press("Enter");
+      assert.equal(await search.evaluate(node => node === document.activeElement), true);
+      await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}-search.png`) });
+      await page.keyboard.press("Escape");
+      await content.focus();
+      await page.keyboard.press("Control+End");
+      await view.waitForFunction(() => {
+        const scroll = document.querySelector(".cm-scroller");
+        return scroll.scrollTop > 0;
+      });
+      await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}-bottom.png`) });
+      await page.keyboard.press("Control+Home");
+      await view.waitForFunction(() => document.querySelector(".cm-scroller").scrollTop === 0);
+      assert.equal(await content.locator(".cm-line").first().textContent(),
+        (text.slice(0, typingOffset) + inserted + text.slice(typingOffset)).split("\n")[0]);
     }
     // Keep rendered text and class spans as evidence for styling experiments,
     // outside the timed input sequence. A parsed tree alone does not prove
