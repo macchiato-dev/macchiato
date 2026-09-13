@@ -859,6 +859,44 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     });
     return entry ? entry.name : "plain";
   }
+  function formatProjectJson(value) {
+    var source = JSON.stringify(value);
+    if (source === void 0) return source;
+    var parts = [];
+    var depth = 0,
+      quoted = false,
+      escaped = false;
+    var newline = function newline() {
+      return parts.push("\n", "  ".repeat(depth));
+    };
+    for (var i = 0; i < source.length; i++) {
+      var char = source[i];
+      if (quoted) {
+        parts.push(char);
+        if (escaped) escaped = false;else if (char === "\\") escaped = true;else if (char === '"') quoted = false;
+      } else if (char === '"') {
+        quoted = true;
+        parts.push(char);
+      } else if (char === "{" || char === "[") {
+        parts.push(char);
+        var closing = char === "{" ? "}" : "]";
+        if (source[i + 1] === closing) parts.push(source[++i]);else {
+          depth++;
+          newline();
+        }
+      } else if (char === "}" || char === "]") {
+        depth--;
+        newline();
+        parts.push(char);
+      } else if (char === ",") {
+        parts.push(char);
+        newline();
+      } else {
+        parts.push(char === ":" ? ": " : char);
+      }
+    }
+    return parts.join("");
+  }
   function mountContentNameFields() {
     var generatedSlugs = new WeakMap();
     var pattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -2692,7 +2730,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             };
             selectedSource = function _selectedSource() {
               var _state$files$find$con, _state$files$find;
-              if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
+              if (selected === "config") return formatProjectJson(state.config) + "\n";
               return (_state$files$find$con = (_state$files$find = state.files.find(function (file) {
                 return file.path === selected;
               })) == null ? void 0 : _state$files$find.content) != null ? _state$files$find$con : "";

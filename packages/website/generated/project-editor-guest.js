@@ -27531,6 +27531,45 @@ async function mountResourcesProjectEditor(options) {
   });
 }
 
+// packages/project-editor/src/format-json.js
+function formatProjectJson(value) {
+  const source = JSON.stringify(value);
+  if (source === void 0) return source;
+  const parts = [];
+  let depth = 0, quoted = false, escaped = false;
+  const newline = () => parts.push("\n", "  ".repeat(depth));
+  for (let i2 = 0; i2 < source.length; i2++) {
+    const char = source[i2];
+    if (quoted) {
+      parts.push(char);
+      if (escaped) escaped = false;
+      else if (char === "\\") escaped = true;
+      else if (char === '"') quoted = false;
+    } else if (char === '"') {
+      quoted = true;
+      parts.push(char);
+    } else if (char === "{" || char === "[") {
+      parts.push(char);
+      const closing2 = char === "{" ? "}" : "]";
+      if (source[i2 + 1] === closing2) parts.push(source[++i2]);
+      else {
+        depth++;
+        newline();
+      }
+    } else if (char === "}" || char === "]") {
+      depth--;
+      newline();
+      parts.push(char);
+    } else if (char === ",") {
+      parts.push(char);
+      newline();
+    } else {
+      parts.push(char === ":" ? ": " : char);
+    }
+  }
+  return parts.join("");
+}
+
 // packages/website/content-name-fields.js
 function mountContentNameFields() {
   const generatedSlugs = /* @__PURE__ */ new WeakMap();
@@ -28165,7 +28204,7 @@ async function mountProjectRoot(root) {
   }
   let editorDocumentLimits = null;
   function selectedSource() {
-    if (selected === "config") return JSON.stringify(state.config, null, 2) + "\n";
+    if (selected === "config") return formatProjectJson(state.config) + "\n";
     return state.files.find((file) => file.path === selected)?.content ?? "";
   }
   function selectedContent() {
