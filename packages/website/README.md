@@ -628,6 +628,15 @@ bounded resource table contains one QuickJS runtime reused by the application
 and SQL-policy instances, their separate bytecode programs, and the MicroQuickJS
 routing/document runtime and bytecode. One shared promise performs that Storage read.
 
+Public `resources-site` JavaScript, WASM, and language bytecode also have
+precompressed `.gz` variants in the Storage export. The static handler chooses
+them through `Accept-Encoding` and returns the original MIME type with
+`Content-Encoding: gzip`; browser URLs and streaming compilation stay unchanged.
+Local resources-edge uses the same preparation and negotiation. This does not
+enable caching or compress user/API responses. Upload the complete export,
+including the variants; the deployment verifier checks that each decompresses
+to its original asset. No additional environment variable is needed.
+
 The Resources application and its SQL policy run in separate Wasm machines.
 Application `sql` messages are forwarded to the policy machine, which owns the
 fixed statement catalog, argument validation, read/write selection, batch

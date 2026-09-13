@@ -1,10 +1,16 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-9fdadc5`.
+Current local verification: 2026-09-13, export `resources-co-781c9c7`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
 ## Current build
+
+Static JavaScript, WASM, and language bytecode have precompressed gzip variants
+in both local resources-edge and the Bunny export. Browser URLs, MIME types,
+streaming compilation, and no-store caching remain unchanged. The initial
+four runtimes plus HTML grammar transferred 2.57 MB instead of 8.01 MB in the
+browser test, about 68% less data. This is not an end-to-end speedup claim.
 
 The editor now defaults to a separate iframe and MicroQuickJS machine, while
 the project UI retains history, details, and ownership of the output. The
@@ -39,14 +45,14 @@ their existing session. This is separate from the typing/build debounce.
 
 ## Verified
 
-- All 112 non-browser tests in `packages/project-editor/test` and
+- All 114 non-browser tests in `packages/project-editor/test` and
   `packages/website/test` pass, including JSON formatting and resource policies.
 - The mixed app browser suite has 43 passes and eight failures in the older
   SQLite-site tests. All current resources-edge cases pass: account creation,
   project publication/reversion/deletion, anonymous editing, version selection,
   templates, ZIP round-trips, resource recovery, graphics, storage denial,
   network boundaries, theme changes, Find/Replace, notifications, and roles.
-- All 12 packaged appearance/editing/language checks pass. They include real
+- All 13 packaged appearance/editing/language checks pass. They include real
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
   recovery; and language bytecode loaded without replacing the editor session.
@@ -57,15 +63,16 @@ their existing session. This is separate from the typing/build debounce.
   were reviewed, in addition to the earlier Configuration/output checks.
 - Read-only exported and live checks pass for full-height Mahjong, all Cat
   Memory pairs and reset, 50 tour slides, and SQLite fragment navigation. No
-  owner project or notes were saved. Eight principal live assets match the
+  owner project or notes were saved. Seven compressed live assets match the
   export byte-for-byte after restarting the local server.
-- All 153 deployment files verify before and after archive extraction. The
+- All 171 deployment files verify before and after archive extraction,
+  including equivalence between compressed variants and their originals. The
   compressed backend artifact runs its routing, rendering, and policy guests
   in Deno. Nothing has been deployed to Bunny.
 
-Current evidence is in `/root/macchiato-work/history-lifetime-packaged-final.log`,
-`history-lifetime-modules.log`, `history-lifetime-bunny-backend.log`, and
-`history-lifetime-live.log`, with their screenshot directories. The unchanged
+Current evidence is in `/root/macchiato-work/compressed-assets-browser-final.log`,
+`compressed-assets-modules.log`, `compressed-assets-backend.log`, and
+`compressed-assets-live.log`, with their screenshot directories. The unchanged
 callback/surface boundary tests remain recorded in `tab-lifetime-boundaries.log`.
 The earlier broader
 app checks remain in `current-resources-browser-suite.log` and
@@ -142,11 +149,11 @@ the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
-`/root/resources-bunny.tar.gz` contains the verified `9fdadc5` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `781c9c7` export. SHA-256:
 
-`723e2e340268381159253c159c5d6cb2ab2a7bf2a14d85aa5246b1ae049ecc10`
+`61c559f693dead624d4e2e0f107a8d151bc9c501c269732a098eb53633f910dd`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-f9ce237-before-history-lifetime.tar.gz`.
+`/root/archive/2026/09/13/resources-bunny-9fdadc5-before-asset-compression.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.

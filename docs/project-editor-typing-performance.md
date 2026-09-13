@@ -1107,3 +1107,63 @@ range, and mutation-scope suites. These include native/guest caret blink and
 trusted text dragging, not just synthetic selection calls. Evidence:
 `editor-current-behavior-boundaries.log`. This is a test-only checkpoint; the
 local application and deployment archive remain the verified `9fdadc5` build.
+
+### Runtime transfer compression
+
+The local static path was returning runtime and bytecode files without HTTP
+compression. `withCompressedArtifacts` now prepares gzip variants for static
+`resources-site` JavaScript, WASM, and bytecode files. Export and local preview
+share this function, using the built-in Compression Streams API. It does not
+compress per request, alter browser URLs, restore caching, or add a decoder to
+the frontend controller. HTML and user/API responses are outside this path.
+
+The static handler negotiates gzip, respects explicit refusals, preserves MIME
+types, and varies by `Accept-Encoding`. Storage requests ask for identity so
+the stored compressed bytes are not confused with transport compression.
+The deployment verifier decompresses each variant and checks its size and hash
+against the original asset. This follows the standard HTTP deployment pattern
+described in the [WebAssembly deployment guidance](https://emscripten.org/docs/compiling/Deploying-Pages.html);
+it introduces no Emscripten build dependency.
+
+The first integrated run found that the server machine's document-response
+header allowlist rejected `Content-Encoding`. That website route now permits
+the header. `Content-Length` remains controlled by the HTTP server rather than
+being granted to guest response descriptors; the generic server policy is
+unchanged. The direct handler and server-boundary unit checks pass (21 tests).
+
+A real Chromium project-page request then reported these body sizes:
+
+| Asset | Encoded bytes | Decoded bytes |
+| --- | ---: | ---: |
+| Frontend runtime | 179,899 | 400,132 |
+| Build runtime | 1,179,422 | 5,010,038 |
+| Editor runtime | 827,293 | 1,588,224 |
+| Output runtime | 285,925 | 816,994 |
+| HTML grammar | 93,242 | 193,220 |
+| Total | 2,565,781 | 8,008,608 |
+
+This is about 68% less transfer, not a measured CPU or end-to-end load-time
+speedup. The same test verifies native browser decoding/compilation, HTML-only
+initial grammar loading, 80 history openings, and continued interaction.
+Evidence is in `compressed-assets-first-fixed.log` and
+`compressed-assets-boundary-unit.log` under `/root/macchiato-work`.
+Source checkpoints: `ca0558c8` and `781c9c7b`. The previously deployed local
+build remains in place until packaged verification finishes.
+
+Export `781c9c7` then passed all 13 packaged browser checks, all 114
+editor/website non-browser checks, and the Deno compressed-backend test.
+The separate 21-test edge/server-boundary run also passed. Native bulk input
+took 8,170 ms for 99,225 characters in this run, while ordinary paste took
+140 ms; compression is not being credited with a typing-speed improvement.
+
+The local server now serves this build. Seven compressed executable assets
+match the export byte-for-byte, and the live header check preserves
+`application/wasm`, `no-store`, and `Vary: accept-encoding`. Read-only owner
+checks pass Mahjong, all Cat Memory pairs/reset, 50 tour slides plus keyboard
+navigation, SQLite fragments, and theme/pane switches. The Cat Memory screenshot
+was inspected. No project or notes were saved. All 171 deployment files verify
+after archive extraction, including decompressed equivalence. The refreshed
+archive is `/root/resources-bunny.tar.gz`, with its predecessor in the dated
+archive directory. No Bunny deployment was performed. Evidence uses the
+`compressed-assets-browser-final`, `compressed-assets-modules`,
+`compressed-assets-backend`, and `compressed-assets-live` log prefixes.
