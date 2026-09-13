@@ -1248,8 +1248,10 @@ test("Resources loads language bytecode on demand without replacing the editing 
     "TypeScript and JavaScript share one downloaded package");
   await openFile("main.py");
   await page.getByText("Syntax highlighting unavailable for python.", { exact: false }).waitFor();
-  assert.equal(await page.locator("[data-editor-machine-error]").count(), 0,
-    "the parser failure is not reported as a machine failure to the outer page");
+  const machineErrors = await page.locator("[data-editor-machine-error]").evaluateAll(nodes =>
+    nodes.map(node => node.getAttribute("data-editor-machine-error")));
+  assert.deepEqual(machineErrors, [],
+    `the parser failure is not a machine failure: ${JSON.stringify({ machineErrors, errors })}`);
   await content.click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type("# still editable");

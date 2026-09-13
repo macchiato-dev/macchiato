@@ -1208,3 +1208,18 @@ transfers still share bandwidth, and CPU timing varies. No claim is made that
 every pane becomes faster. Evidence: `loading-editor-preload-abba/results.json`,
 with screenshots beside it; the earlier candidates use `loading-editor-preload`
 and `loading-editor-late-preload`. The failure-path unit suite passes (17 tests).
+
+Export `4d569f7` passes all 115 non-browser checks and the compressed-backend
+test. The packaged browser suite passed 12 of 13 checks: the language test
+found a machine-error attribute during its deliberately failed Python download.
+The test previously reported only the attribute count; it now includes its
+value and page errors. Three focused language reruns passed, including retry,
+all languages, tab cycling, and undo/redo. The original marker's cause is not
+established; no runtime workaround was added or failure assertion relaxed.
+
+All 12 initial-output/lifecycle/live-update browser checks also pass: ordinary
+Element and framed output remain supported, replacements preserve the old
+session until ready, and guest-directed updates retain state. Evidence uses
+`editor-preload-browser`, `editor-preload-language` (plus `-2` and `-3`),
+`editor-preload-modules`, `editor-preload-backend`, and
+`editor-preload-output-boundaries` logs under `/root/macchiato-work`.
