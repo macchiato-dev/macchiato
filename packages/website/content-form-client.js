@@ -1257,7 +1257,8 @@ async function mountProjectRoot(root) {
   function syncTabOverflow() {
     // Compare content with the space available *without* arrows. Measuring
     // only scrollWidth after showing them can make them keep themselves alive.
-    const first = openTabList.firstElementChild, last = openTabList.lastElementChild;
+    // renderTabs creates only element children in this strip.
+    const first = openTabList.firstChild, last = openTabList.lastChild;
     const contentWidth = first ? last.getBoundingClientRect().right - first.getBoundingClientRect().left : 0;
     const availableWidth = tabScrollBack.hidden ? openTabList.clientWidth
       : tabScrollForward.getBoundingClientRect().right - tabScrollBack.getBoundingClientRect().left;
@@ -1283,8 +1284,8 @@ async function mountProjectRoot(root) {
       syncTabOverflow();
     });
   }
-  tabScrollBack.addEventListener("click", () => openTabList.scrollBy({ left: -Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
-  tabScrollForward.addEventListener("click", () => openTabList.scrollBy({ left: Math.max(120, openTabList.clientWidth * .7), behavior: "smooth" }));
+  tabScrollBack.addEventListener("click", () => { openTabList.scrollLeft -= Math.max(120, openTabList.clientWidth * .7); });
+  tabScrollForward.addEventListener("click", () => { openTabList.scrollLeft += Math.max(120, openTabList.clientWidth * .7); });
   openTabList.addEventListener("scroll", syncTabOverflow);
   new ResizeObserver(scheduleTabLayout).observe(openTabList);
   function closeOpenTab(path) {
