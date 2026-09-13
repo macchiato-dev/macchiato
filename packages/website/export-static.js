@@ -3,6 +3,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createResourcesArtifactSet } from "./artifacts.js";
+import { withCompressedArtifacts } from "./artifact-compression.js";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 const defaultOut = join(directory, "exported");
@@ -25,7 +26,7 @@ export async function exportResourcesSite({ out = defaultOut, clean = true, them
   const outDir = resolve(out);
   if (clean) await rm(outDir, { recursive: true, force: true });
   await mkdir(outDir, { recursive: true });
-  const artifactSet = createResourcesArtifactSet({ theme, blogExamplesOrigin });
+  const artifactSet = await withCompressedArtifacts(createResourcesArtifactSet({ theme, blogExamplesOrigin }));
   for (const [file, content] of artifactSet.files) {
     const target = join(outDir, file.slice(1));
     await mkdir(dirname(target), { recursive: true });

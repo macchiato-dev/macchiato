@@ -32,6 +32,15 @@ for (const path of actual) {
   if (record.bytes !== bytes.length || record.sha256 !== sha256) {
     throw new Error(`Deployment digest mismatch: ${name}`);
   }
+  if (/\/-\/resources-site\/[^/]+\.(wasm|bin|js)\.gz$/.test(name)) {
+    const original = expected.get(name.slice(0, -3));
+    const decoded = await new Response(new Blob([bytes]).stream()
+      .pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+    if (!original || decoded.byteLength !== original.bytes ||
+        createHash("sha256").update(new Uint8Array(decoded)).digest("hex") !== original.sha256) {
+      throw new Error(`Compressed deployment variant differs from its source: ${name}`);
+    }
+  }
 }
 
 const prefix = deployment.storagePrefix.replace(/^site\//, "").replace(/\/$/, "");

@@ -1,3 +1,4 @@
+import { acceptsGzip, compressibleArtifact } from "../artifact-compression.js";
 import {
   normalizeExportManifest,
   pathToObjectKey,
@@ -544,15 +545,21 @@ export function createResourcesEdgeHandler({ config, authConfig = null, gitlabAu
         staticShellExists: manifest.files.has(staticKey) });
       const key = localizedObjectKey(locale, pathToObjectKey(plan.shellPath));
       if (!manifest.files.has(key)) return new Response("Not found", { status: 404 });
-      const upstream = await fetchStorage(fetchImpl, storageRequest(config, key));
+      const hasCompressed = compressibleArtifact.test(key) && manifest.files.has(`${key}.gz`);
+      const compressed = hasCompressed && acceptsGzip(request.headers.get("accept-encoding"));
+      const storageKey = compressed ? `${key}.gz` : key;
+      const upstream = await fetchStorage(fetchImpl, storageRequest(config, storageKey));
       if (upstream.status === 404) return new Response("Not found", { status: 404 });
       if (!upstream.ok) return new Response("Storage unavailable", { status: 502 });
-      const expected = manifest.artifacts.get(key);
+      const expected = manifest.artifacts.get(storageKey);
       const receivedLength = Number(upstream.headers.get("content-length") || 0);
       if (receivedLength && receivedLength !== expected.bytes) {
         throw new Error(`Storage length mismatch for ${key}`);
       }
       const headers = publicResponseHeaders(key, upstream.headers);
+      if (hasCompressed) headers.set("vary", "accept-encoding");
+      if (compressed) headers.set("content-encoding", "gzip");
+      if (hasCompressed) headers.set("content-length", String(expected.bytes));
       if (plan.requestedProject?.embed) {
         headers.set("content-security-policy", headers.get("content-security-policy").replace("frame-ancestors 'none'", "frame-ancestors 'self'"));
       }

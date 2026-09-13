@@ -124,7 +124,7 @@ export function storageObjectUrl(config, key) {
 export function storageRequest(config, key) {
   return new Request(storageObjectUrl(config, key), {
     method: "GET",
-    headers: { AccessKey: config.storageAccessKey },
+    headers: { AccessKey: config.storageAccessKey, "accept-encoding": "identity" },
     redirect: "manual",
   });
 }

@@ -1,4 +1,5 @@
 import { createResourcesArtifactSet } from "./artifacts.js";
+import { withCompressedArtifacts } from "./artifact-compression.js";
 import { createEdgeConfig } from "./edge/models.js";
 import { publicResponseHeaders } from "./edge/models.js";
 import { createResourcesBootstrapHandler } from "./edge/bootstrap.js";
@@ -20,11 +21,11 @@ const config = createEdgeConfig({
   MANIFEST_TTL_MS: "300000",
 });
 const previewEnv = globalThis.process?.env || {};
-const artifactSet = createResourcesArtifactSet({
+const artifactSet = await withCompressedArtifacts(createResourcesArtifactSet({
   theme: resourcesEdgePreviewConfig.theme,
   generatedAt: "local-preview",
   blogExamplesOrigin: previewEnv.BLOG_EXAMPLES_ORIGIN || "http://blog-examples.localhost:3030",
-});
+}));
 const storageFetch = createMemoryStorageAdapter({ config, artifactSet });
 const fetchImpl = (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
