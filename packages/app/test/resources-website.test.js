@@ -223,8 +223,25 @@ test("Resources.co blog container examples render and surface schema errors in t
       assert.equal(await surface.evaluate(node => getComputedStyle(node).backgroundColor), "rgb(23, 26, 26)",
         "the clock must load its own stylesheet through its HTML entry");
       assert.equal(await surface.locator("main").evaluate(node => getComputedStyle(node).textAlign), "center");
-      const height = await surface.evaluate(node => ({ surface: node.getBoundingClientRect().height, viewport: innerHeight }));
-      assert.ok(height.surface >= height.viewport, `the document background must fill its iframe: ${JSON.stringify(height)}`);
+      // A real Document propagates the body's background to its canvas; its
+      // body box need not stretch to viewport height to paint that background.
+      const viewport = await surface.evaluate(() => ({ height: document.documentElement.scrollHeight, viewport: innerHeight }));
+      assert.equal(viewport.height, viewport.viewport);
+      const frameBox = await page.locator("[data-project-output-mount] iframe:not([inert])").boundingBox();
+      const bottomPixel = await page.screenshot({ clip: {
+        x: Math.floor(frameBox.x + frameBox.width / 2),
+        // Stay above the project pane's inset bottom divider.
+        y: Math.floor(frameBox.y + frameBox.height - 8), width: 1, height: 1,
+      } });
+      const background = await page.evaluate(async bytes => {
+        const image = await createImageBitmap(new Blob([new Uint8Array(bytes)], { type: "image/png" }));
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0); image.close();
+        return [...context.getImageData(0, 0, 1, 1).data];
+      }, [...bottomPixel]);
+      assert.deepEqual(background, [23, 26, 26, 255], "the guest background paints the bottom of the viewport");
       await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-clock.png") });
       await page.locator("[data-project-file-trigger]").click();
       await page.locator('[data-project-file="script.js"]').click();
@@ -244,7 +261,7 @@ test("Resources.co blog container examples render and surface schema errors in t
       const frame = await (await page.locator("[data-project-output-mount] iframe:not([inert])").elementHandle()).contentFrame();
       const fillsViewport = () => {
         const node = document.querySelector("body");
-        return node && Math.abs(node.getBoundingClientRect().height - innerHeight) <= 1 &&
+        return node && getComputedStyle(node).backgroundColor === "rgb(23, 26, 26)" &&
           document.documentElement.scrollHeight === innerHeight;
       };
       await frame.waitForFunction(fillsViewport);
@@ -264,10 +281,10 @@ test("Resources.co blog container examples render and surface schema errors in t
       await page.locator('[data-project-file="style.css"]').click();
       await sourceEditor.press("Control+A");
       await sourceEditor.fill("body { background: rgb(12, 34, 56); color: rgb(240, 230, 220); } h1 { font-size: 41px; }");
-      const frame = await (await page.locator("[data-project-output-mount] iframe:not([inert])").elementHandle()).contentFrame();
-      await frame.waitForFunction(() => {
-        const active = document.querySelector("body");
-        return active && getComputedStyle(active).backgroundColor === "rgb(12, 34, 56)";
+      await page.waitForFunction(() => {
+        const frame = document.querySelector("[data-project-output-mount] iframe:not([inert])");
+        const active = frame?.contentDocument?.body;
+        return active && frame.contentWindow.getComputedStyle(active).backgroundColor === "rgb(12, 34, 56)";
       });
       assert.equal(await surface.evaluate((node) => getComputedStyle(node).backgroundColor), "rgb(12, 34, 56)");
       assert.equal(await surface.locator("h1").evaluate((node) => getComputedStyle(node).fontSize), "41px");
@@ -291,7 +308,8 @@ test("Resources.co blog container examples render and surface schema errors in t
       assert.equal(await surface.locator("h1").evaluate(node => getComputedStyle(node).fontSize), "41px");
       assert.equal(await page.locator("[data-project-notice]").isHidden(), true);
       assert.equal(await page.locator("[data-project-output-mount] iframe:not([inert])").evaluate(frame =>
-        frame.contentWindow.__templateUndoFrame), true, "template replacement and undo reuse the output iframe");
+        frame.contentWindow.__templateUndoFrame), undefined, "template changes and undo start fresh output guests");
+      assert.equal(await page.locator("[data-project-output-mount] iframe").count(), 1);
     }
     await page.close();
   }
@@ -1122,7 +1140,7 @@ test("saved project output keeps its backing while the editor is still loading",
             guest: await page.frameLocator(".project-editor__output-frame").locator("#scheme").textContent() }));
           throw error;
         });
-        assert.deepEqual((await backing(page)).pixel, colors[resolved]);
+        assert.deepEqual((await backing(page)).pixel, fixtureCanvas);
         assert.equal(await page.evaluate(() => window.paintFrame === document.querySelector(".project-editor__output-frame")), true);
       }
       if (emulated) {
@@ -1130,7 +1148,7 @@ test("saved project output keeps its backing while the editor is still loading",
           await page.emulateMedia({ colorScheme: next });
           await page.frameLocator(".project-editor__output-frame").locator("#scheme").filter({ hasText: next }).waitFor();
           await page.waitForFunction(next => document.documentElement.dataset.theme === next, next);
-          assert.deepEqual((await backing(page)).pixel, colors[next]);
+          assert.deepEqual((await backing(page)).pixel, fixtureCanvas);
           assert.equal(await page.evaluate(() => window.paintFrame === document.querySelector(".project-editor__output-frame")), true);
         }
       }
@@ -1631,7 +1649,8 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByLabel(/One pattern per line/).hover();
   await assert.doesNotReject(page.getByRole("tooltip").waitFor({ state: "visible" }));
   assert.match(await page.getByRole("tooltip").textContent(), /specific path.*backquotes.*regular expression.*forward slashes/i);
-  assert.equal(await page.locator(".project-editor iframe").count(), 0);
+  assert.equal(await page.locator(".project-editor__source iframe").count(), 0);
+  assert.equal(await page.locator("[data-project-output-mount] iframe:not([inert])").count(), 1);
   assert.equal(await page.locator("script[src^='/\-/resources-site/content-form.js?v=']").count(), 0);
   assert.equal(await page.locator("script[src^='/\-/resources-site/controller.js?v=']").count(), 1);
   await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
@@ -1648,10 +1667,11 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.notEqual(await newEditor.locator(".cm-line").nth(2).evaluate((element) => getComputedStyle(element.firstElementChild, "::selection").backgroundColor), "rgba(0, 0, 0, 0)");
   await assert.doesNotReject(newEditor.getByRole("button", { name: "Split view" }).waitFor());
   await page.waitForTimeout(500);
-  await assert.doesNotReject(newEditor.getByRole("link", { name: "Hypertext" }).waitFor());
-  await assert.doesNotReject(newEditor.getByRole("link", { name: "WebAssembly" }).waitFor());
-  await assert.doesNotReject(newEditor.getByRole("link", { name: "Capability-based security" }).waitFor());
-  assert.deepEqual(await newEditor.locator("[data-project-preview] a").evaluateAll((links) => links.map((link) => link.target)), ["_blank", "_blank", "_blank"]);
+  const projectOutput = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
+  await assert.doesNotReject(projectOutput.getByRole("link", { name: "Hypertext" }).waitFor());
+  await assert.doesNotReject(projectOutput.getByRole("link", { name: "WebAssembly" }).waitFor());
+  await assert.doesNotReject(projectOutput.getByRole("link", { name: "Capability-based security" }).waitFor());
+  assert.deepEqual(await projectOutput.locator("a").evaluateAll((links) => links.map((link) => link.target)), ["_blank", "_blank", "_blank"]);
   await page.waitForFunction(() => {
     const root = document.querySelector("[data-project-editor]");
     const preview = document.querySelector("[data-project-preview]");
@@ -1833,7 +1853,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByLabel("Description (optional)").fill("A small HTML clock.");
   await page.getByLabel("Namespace").selectOption({ label: "Tiny Tools" });
   await page.locator("[data-project-versions-proxy]").click();
-  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds? ago$/);
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true'] [data-version-time]").textContent(), /^\d+ seconds? ago$/);
   assert.equal(await page.locator("[data-project-history]").isVisible(), true);
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
@@ -2252,7 +2272,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history] .project-editor__popover-head").textContent(), "Version history");
   assert.equal(await page.locator("[data-project-history-close]").count(), 0);
-  assert.match(await page.locator("[data-project-version-list] [aria-current='true']").textContent(), /^\d+ seconds? ago$/);
+  assert.match(await page.locator("[data-project-version-list] [aria-current='true'] [data-version-time]").textContent(), /^\d+ seconds? ago$/);
   assert.equal(await page.locator("[data-project-version-list] .project-editor__latest").count(), 1);
   const latest = page.locator("[data-project-version-list] [data-version-sequence]", { hasText: "LATEST" }).first();
   await latest.waitFor();
