@@ -74,11 +74,14 @@ their existing session. This is separate from the typing/build debounce.
 
 - All 118 non-browser tests in `packages/project-editor/test` and
   `packages/website/test` pass, including JSON formatting and resource policies.
-- The mixed app browser suite has 43 passes and eight failures in the older
-  SQLite-site tests. All current resources-edge cases pass: account creation,
-  project publication/reversion/deletion, anonymous editing, version selection,
-  templates, ZIP round-trips, resource recovery, graphics, storage denial,
-  network boundaries, theme changes, Find/Replace, notifications, and roles.
+- The earlier mixed app browser suite recorded 43 passes and eight failures
+  in older SQLite-site tests. That result predates the default framed editor.
+  A fresh broad run exposed stale outer-document CodeMirror selectors and was
+  stopped after repeated selector timeouts. Those tests are being adapted to
+  the real editor document; the earlier 43 passes are not current verification
+  of accounts, templates, ZIP round-trips, graphics, storage denial, and the
+  other broad cases. The separately maintained packaged editing checks below
+  already target the iframe and pass.
 - All 13 packaged appearance/editing/language checks pass. They include real
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
@@ -118,6 +121,12 @@ the actual output Document, and explicitly selects a draft/history checkpoint
 instead of treating `aria-current` as an alias for newest.
 
 ## Still open
+
+Complete the broad `resources-website.test.js` rerun after adapting its
+CodeMirror selectors and document-scoped checks to the framed editor. The
+interrupted pre-adaptation evidence is `readiness-current-site.log` under
+`/root/macchiato-work`; it is not an application failure diagnosis or a passing
+suite. Test changes are checkpointed as WIP while the focused rerun proceeds.
 
 An initial packaged rerun failed an unchanged-pane-size assertion after a
 phone/desktop switch and bulk paste. It did not repeat in the focused rerun or
