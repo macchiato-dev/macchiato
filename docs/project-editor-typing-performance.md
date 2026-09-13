@@ -1280,3 +1280,36 @@ The current `/root/resources-bunny.tar.gz` contains export `4042e11`; its
 predecessor is preserved in `/root/archive/2026/09/13`. No Bunny deployment was
 performed. Evidence adds `dense-finally-browser`, `dense-finally-runtime-tests`,
 `dense-finally-backend`, and `dense-finally-live-verified` logs.
+
+### Substantial highlighted source (2026-09-13)
+
+The language lifecycle fixture's tiny snippets establish lazy loading and
+recovery, but not substantial-file editing performance. A separate packaged
+browser check now opens real tracked repository files without executing them
+as project scripts: `resources-server-machine.js` (358 lines), `word.rs`
+(405 lines), and `wasm-web-machine.ts` (2,191 lines, about 104 KB).
+
+It types comments at both ends, corrects a typo, inserts `é 🐈`, checks exact
+source preservation through undo/redo, folds and unfolds real ranges, and
+scrolls with the mouse wheel without a follow-up click to prompt rendering.
+The final gutter number and row alignment are checked after each bottom edit.
+Only HTML, JavaScript and Rust grammar packages are requested; TypeScript
+shares the JavaScript package. Autosaves complete without machine errors.
+
+The first extension of the test incorrectly expected an unedited large file
+to be inline text in the hidden snapshot field. It is intentionally an opaque
+resource handle. The corrected folding assertions preserve that handle; exact
+text comparisons occur after actual edits materialize the changed source.
+No runtime change or relaxed source-preservation assertion was needed.
+
+In the complete interaction run against export `b46589e`, median per-key
+round trips were 24–25 ms for JavaScript/Rust and 40–41 ms for TypeScript,
+similar at the top and bottom. The slowest individual measured key was 87 ms.
+These include Playwright dispatch and transport overhead and are not isolated
+interpreter benchmarks or broad device-performance guarantees. The complete
+check passed in about 20 seconds. Initial typing-only and complete-interaction
+runs passed; screenshots of Rust's beginning and TypeScript's end were inspected.
+
+Evidence: `/root/macchiato-work/real-source-current.log`,
+`real-source-interactions.log` (the resource-handle assertion failure), and
+`real-source-interactions-final.log`, with matching screenshot directories.
