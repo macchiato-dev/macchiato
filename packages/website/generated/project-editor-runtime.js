@@ -3532,21 +3532,21 @@ function createProjectImageResolver(files = []) {
   }
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
-async function createProjectOutputMachine({ root, scripts = [], options = {}, onError }) {
+async function createProjectOutputMachine({ root, scripts = [], project, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
-  const output = new ProjectOutput(WasmWebMachine, module, root, (project) => {
-    const files = project.files || options.files || [];
+  const output = new ProjectOutput(WasmWebMachine, module, root, (project2) => {
+    const files = project2.files || options.files || [];
     return {
       ...options,
       files,
-      environment: { ...options.environment, ...project.environment },
-      fetchResource: options.fetchResource ?? createProjectFetch(files, project.allowedFetchOrigins || []),
+      environment: { ...options.environment, ...project2.environment },
+      fetchResource: options.fetchResource ?? createProjectFetch(files, project2.allowedFetchOrigins || []),
       resolveImage: options.resolveImage ?? createProjectImageResolver(files),
-      allowNavigate: options.allowNavigate ?? ((url) => urlMatchesAllowedPatterns(url, project.allowedLinkPatterns || []))
+      allowNavigate: options.allowNavigate ?? ((url) => urlMatchesAllowedPatterns(url, project2.allowedLinkPatterns || []))
     };
   }, onError);
   try {
-    await output.load({ scripts, files: options.files });
+    await output.load(project ?? { scripts, files: options.files });
   } catch (error) {
     output.destroy();
     throw error;
