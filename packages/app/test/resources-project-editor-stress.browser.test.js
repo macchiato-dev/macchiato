@@ -386,6 +386,59 @@ async function stopApp(child) {
   if (child.exitCode === null) child.kill("SIGKILL");
 }
 
+test("Resources preserves editor geometry through repeated responsive edits", { timeout: 90_000 }, async t => {
+  const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-geometry-"))]);
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.ready;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.goto(`http://resources-edge.localhost:${port}/try/article`);
+  const content = editorSurface(page).locator(".cm-content");
+  const mount = page.locator(".project-editor__source > .project-editor__mount");
+  const output = page.frameLocator("iframe.project-editor__output-frame:not([inert])");
+  await content.waitFor();
+  await output.getByRole("heading", { name: "A small article" }).waitFor();
+  const source = "<!--\n" + "Source remains inert during the geometry test.\n".repeat(1800) + "-->";
+  const measurements = [];
+  for (let cycle = 0; cycle < 20; cycle++) {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForFunction(() => document.querySelector(".project-editor__workspace").dataset.view === "preview");
+    await page.locator('[data-project-view="editor"]').click();
+    await content.waitFor();
+    await page.setViewportSize({ width: cycle % 2 ? 1000 : 1440, height: 900 });
+    await page.waitForFunction(() => document.querySelector(".project-editor__workspace").dataset.view === "split");
+    await content.waitFor();
+    const before = await mount.boundingBox();
+    await content.click();
+    await page.keyboard.press("Control+a");
+    await content.evaluate((node, value) => {
+      const clipboardData = new DataTransfer();
+      clipboardData.setData("text/plain", value);
+      const event = new ClipboardEvent("paste", { clipboardData, bubbles: true, cancelable: true });
+      node.dispatchEvent(event);
+      if (!event.defaultPrevented) throw new Error("Paste was not handled");
+    }, `${source}<h1>Geometry ${cycle}</h1>`);
+    await output.getByRole("heading", { name: `Geometry ${cycle}`, exact: true }).waitFor();
+    const after = await mount.boundingBox();
+    measurements.push({ cycle, before, after });
+    if (Math.abs(after.width - before.width) >= 1 || Math.abs(after.height - before.height) >= 1) {
+      if (process.env.MACCHIATO_TEST_ARTIFACTS) {
+        await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
+        await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS, "responsive-geometry-failed.png") });
+      }
+      t.diagnostic(JSON.stringify(measurements));
+    }
+    assert.ok(Math.abs(after.width - before.width) < 1 && Math.abs(after.height - before.height) < 1,
+      `Editor changed dimensions: ${JSON.stringify(measurements.at(-1))}`);
+    assert.deepEqual(errors, []);
+  }
+  t.diagnostic(`20 responsive edits preserved geometry: ${JSON.stringify(measurements)}`);
+});
+
 test("Resources creates and heavily edits a project without code-editor-use", { timeout: 180_000 }, async (t) => {
   const started = performance.now();
   const report = message => {
