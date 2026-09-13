@@ -65,6 +65,15 @@ typing does not show a comparable improvement. See the
 for the controls, preserved input events, and the remaining integration boundary.
 The production editor is not yet moved into an iframe.
 
+An opt-in separate editor machine now passes browser tests through the real
+project UI, including 106 KB source, file switching, search, repeated themes,
+and startup/disposal failure cases. The direct path also passes. This test
+stubs output services; full application shortcuts and combined machine
+lifetimes remain to be checked before enabling it. See the
+[editor-surface checkpoint](project-editor-typing-performance.md#opt-in-editor-surface-implementation-2026-09-13).
+The live server and deployment archive below have not been replaced by this
+experimental source build.
+
 The eight legacy SQLite-site failures concern removed schema paths and old
 navigation/theme/menu expectations. They have not been skipped in source or
 declared passing. A future focused command should use `--test-skip-pattern`

@@ -810,3 +810,62 @@ undo history, lazy language loading, repeated theme changes, focus/shortcuts,
 search/completion geometry, resizing, and disposal with the real project UI.
 Keep the no-frame path available. The benchmark alone is not evidence that this
 integration is implemented or that its lifetime and containment checks pass.
+
+### Opt-in editor-surface implementation: 2026-09-13
+
+`ResourcesEditorDevice.mount({ editorFrame: true })` now creates a separate
+MicroQuickJS editor machine rooted in a trusted frame Document. The project UI
+machine retains files, history, and output ownership. Its editor commands cross
+an explicit synchronous application interface; native editing events stay in
+the editor's own document. The default remains the direct editor. This is not
+yet enabled in the live site or the verified Bunny archive.
+
+Two integration details mattered:
+
+- Constructing the machine bridge in the parent realm while granting a frame
+  Document produced observer records from the wrong realm for existing host
+  checks. The trusted frame controller now constructs the bridge locally.
+  `structuredClone` gives it a realm-local wrapper for the already compiled
+  WebAssembly module; it does not download or compile the interpreter again.
+  No machine permissions or observer allowlists were expanded.
+- MicroQuickJS's named-call packet does not return the JavaScript function's
+  result. The application bootstrap explicitly sends its existing response
+  message, keeping that convention out of the interpreter. The project UI
+  receives values, never cross-document DOM references.
+
+The rebuilt editor artifact is 1,586,800 bytes, 3,308 bytes larger than the
+verified direct-only artifact. The surface bootstrap is 1,792 bytes within that
+artifact; the frame controller is about 9 KB of additional readable JavaScript.
+Search controls need their styles inside the frame. Copying only the font
+family, rather than a resolved `font` shorthand, preserves the existing 13px
+monospace text instead of accidentally enlarging it.
+
+`packages/website/test/project-editor-surface.browser.test.js` checks the
+standalone surface and the actual project UI/history guest using the `/try`
+workspace DOM and CSS. It verifies native typing and correction, undo/redo,
+Find and Escape, repeated light/dark switches, lazy language loading, snapshot
+updates, file switching, visible highlighting, and disposal. It also checks
+double-start rejection, cancellation during frame loading, unavailable-shell
+cleanup, and rejection of commands after closure. Source remains text; the
+surface does not expose an eval command. These tests stub output services;
+they do not prove the complete outer/UI/editor/output lifetime integration.
+All 111 non-browser editor/website tests also pass after rebuilding; their log
+is `editor-surface-module-tests.log` in the same work directory.
+
+The same 106,402-character JavaScript source passes through the real project UI
+in both modes. Eight first-page keys with a typo/correction, 100ms apart, take
+39–78ms framed and 31–58ms directly in this unrecorded run. These are inclusive
+Playwright measurements, not a consistent ordinary-typing speedup. The earlier
+controlled bulk-replacement comparison remains separate evidence.
+
+Reproduce using `MACCHIATO_TEST_BUILT_RUNTIME=1` and optionally
+`MACCHIATO_TEST_SOURCE_FILE`; set `MACCHIATO_TEST_EDITOR_FRAME=0` for the direct
+workspace control. Logs are `editor-surface-built-{frame,direct}.log` under
+`/root/macchiato-work`, with workspace and search screenshots alongside them.
+
+Before enabling the option, test the complete application, including output,
+navigation during loading, layout switches/resizing, and application shortcuts.
+Native key events do not bubble out of a frame: the existing command-palette
+shortcut needs an explicit application intent, not replayed CodeMirror events
+or a wider DOM grant. The controller and deployment export still need a full
+rebuild and verification before this becomes the live configuration.

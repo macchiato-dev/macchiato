@@ -352,7 +352,8 @@ export class ResourcesEditorDevice {
           if (this.editor) this.editor.callGuest("__resourcesEditorSurfaceReceive", message);
           else surfaceMessages.push(message);
         }, error => this.deliver({ type: "editor-error", message: error?.message || String(error) }));
-      await this.editorSurface.start();
+      try { await this.editorSurface.start(); }
+      catch (error) { this.editorSurface = null; throw error; }
     }
     try { this.editor = await createProjectEditorMachine({
       root,

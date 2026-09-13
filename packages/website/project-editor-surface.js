@@ -15,6 +15,7 @@ export class ProjectEditorSurface {
     this.disposed = false;
   }
   async start() {
+    if (this.disposed || this.frame) throw new Error("Editor surface has already been started or closed");
     const frame = this.mount.ownerDocument.createElement("iframe");
     this.frame = frame;
     frame.title = "Code editor";
@@ -66,7 +67,10 @@ export class ProjectEditorSurface {
     for (const name of style) if (name.startsWith("--resources-editor-")) {
       doc.documentElement.style.setProperty(name, style.getPropertyValue(name));
     }
-    doc.body.style.font = style.font;
+    // Preserve the browser's default monospace sizing. Copying the computed
+    // `font` shorthand freezes a resolved sans-serif pixel size and enlarges
+    // CodeMirror when it switches the family to monospace.
+    doc.body.style.fontFamily = style.fontFamily;
     doc.documentElement.style.colorScheme =
       this.mount.ownerDocument.documentElement.dataset.theme === "light" ? "light" : "dark";
   }

@@ -195,7 +195,8 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
     if (text.startsWith("__wwcBytecode:")) { installedName = text.slice(14); return; }
     if (text.startsWith("__wwcError:")) {
       machineError = `${machineStage}: ${text.slice(11)}`;
-      if (!starting) queueMicrotask(() => onError?.(new Error(machineError)));
+      const error = new Error(machineError);
+      if (!starting) queueMicrotask(() => { if (!disposed) onError?.(error); });
       return;
     }
     if (text.startsWith("__wwcResponse:")) { response = text.slice(14); return; }
@@ -212,16 +213,25 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
       );
       return;
     }
-    queueMicrotask(() => { if (message.type === "change") onChange(message.content, { syntaxErrors: message.syntaxErrors === true });
+    queueMicrotask(() => { if (disposed) return;
+      if (message.type === "change") onChange(message.content, { syntaxErrors: message.syntaxErrors === true });
       else if (message.type === "ready") onReady?.(message);
       else if (message.type === "limit") onLimit?.(message);
       else if (message.type === "language-error") onError?.(new Error(`Language ${message.language}: ${message.message}`));
     });
     },
   });
-  await machine.onmsg(0); if (machineError) throw new Error(machineError);
-  starting = false; machineStage = "idle";
+  try {
+    await machine.onmsg(0); if (machineError) throw new Error(machineError);
+    starting = false; machineStage = "idle";
+    if (limits !== false) call("__codeEditorConfigureLimits", limits || { maxLines: 5_000, maxCharacters: 1_000_000 });
+  } catch (error) {
+    disposed = true;
+    machine.destroy();
+    throw error;
+  }
   function call(name, payload) {
+    if (disposed) throw new Error("Editor is closed");
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
     response = machineError = undefined; machineStage = `call ${name}`;
     machine.onmsg(callMessage("__resourcesEditorCall", { name, value: payload }));
@@ -229,7 +239,6 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
     machineStage = "idle";
     return JSON.parse(response);
   }
-  if (limits !== false) call("__codeEditorConfigureLimits", limits || { maxLines: 5_000, maxCharacters: 1_000_000 });
   return Object.freeze({ machineId, setContent(content, language = "plain", options = {}) {
       return call("__codeEditorSetContent", { content, language, ...options });
     },
@@ -238,7 +247,8 @@ export async function createProjectEditorMachine({ root, onChange, onReady,
       if (!disposed) machine.onmsg(callMessage("__resourcesEditorReceive", message));
     },
     inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
-    focus() { root.querySelector(".cm-content")?.focus(); }, destroy() {
+    focus() { if (!disposed) root.querySelector(".cm-content")?.focus(); }, destroy() {
+      if (disposed) return;
       disposed = true; machine.destroy();
       // A Document grant owns its content, not the browser's Document itself.
       if (root.nodeType === 9) root.body?.replaceChildren();

@@ -32,7 +32,8 @@ test("editor surface keeps commands, input, themes and languages in its document
     `project.bin=${join(website, "generated/project-editor-services.bin")}`,
     `language-atoms.bin=${join(website, "generated/project-editor-language-atoms.bin")}`,
     `application.bin=${join(directory, "application.bin")}`, `surface.bin=${join(directory, "surface.bin")}`]);
-  const wasm = await readFile(join(directory, "editor.wasm"));
+  const wasm = await readFile(process.env.MACCHIATO_TEST_BUILT_RUNTIME === "1"
+    ? join(website, "generated/project-editor-quickjs-runtime.wasm") : join(directory, "editor.wasm"));
   const controller = (await build({ entryPoints: [join(website, "project-editor-surface.js")],
     bundle: true, write: false, format: "esm", platform: "browser" })).outputFiles[0].text;
   const devices = (await build({ entryPoints: [join(website, "resources-machine-devices.js")],
@@ -62,7 +63,7 @@ test("editor surface keeps commands, input, themes and languages in its document
   page.on("pageerror", error => errors.push(error.message));
   await page.route("**/*", async route => {
     const url = new URL(route.request().url());
-    if (url.origin === "http://editor-surface.test") {
+    if (url.origin === "http://editor-surface.localhost") {
       if (url.pathname === "/surface.js") return route.fulfill({ body: controller, contentType: "text/javascript" });
       if (url.pathname === "/devices.js") return route.fulfill({ body: devices, contentType: "text/javascript" });
       if (url.pathname === "/workspace") return route.fulfill({ contentType: "text/html", body:
@@ -87,7 +88,10 @@ test("editor surface keeps commands, input, themes and languages in its document
     unexpected.push(url.href);
     return route.abort();
   });
-  await page.goto("http://editor-surface.test/");
+  await page.goto("http://editor-surface.localhost/");
+  const editorFrame = process.env.MACCHIATO_TEST_EDITOR_FRAME !== "0";
+  const largeSource = process.env.MACCHIATO_TEST_SOURCE_FILE
+    ? await readFile(process.env.MACCHIATO_TEST_SOURCE_FILE, "utf8") : null;
   await page.evaluate(async () => {
     const { ProjectEditorSurface } = await import("/surface.js");
     window.changes = [];
@@ -147,15 +151,38 @@ test("editor surface keeps commands, input, themes and languages in its document
   assert.deepEqual(await page.evaluate(() => failures), []);
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);
+  await assert.rejects(page.evaluate(() => surface.start()), /already been started/);
+  assert.equal(await page.locator("iframe").count(), 1, "starting twice cannot orphan an editor");
   await page.evaluate(() => { surface.destroy(); surface.destroy(); });
   assert.equal(await page.locator("iframe").count(), 0);
   await assert.rejects(page.evaluate(() => surface.call("Inspect")), /unavailable/);
+  await assert.rejects(page.evaluate(() => surface.start()), /closed/);
+  assert.equal(await page.evaluate(async () => {
+    const { ProjectEditorSurface } = await import("/surface.js");
+    const pending = new ProjectEditorSurface(document.querySelector(".project-editor__mount"),
+      () => { throw new Error("Closed editor sent a notification"); }, () => {});
+    const starting = pending.start();
+    pending.destroy();
+    try { await starting; return "unexpected success"; }
+    catch (error) { return error.message; }
+  }), "Editor frame was closed");
+  assert.equal(await page.locator("iframe").count(), 0);
+  const shellUrl = "**/project-editor-frame.html";
+  const brokenShell = route => route.fulfill({ contentType: "text/html", body: "<!doctype html><title>Unavailable</title>" });
+  await page.route(shellUrl, brokenShell);
+  await assert.rejects(page.evaluate(async () => {
+    const { ProjectEditorSurface } = await import("/surface.js");
+    const failed = new ProjectEditorSurface(document.querySelector(".project-editor__mount"), () => {}, () => {});
+    await failed.start();
+  }), /shell is unavailable/);
+  assert.equal(await page.locator("iframe").count(), 0, "failed startup removes the frame");
+  await page.unroute(shellUrl, brokenShell);
 
   // Exercise the actual project UI/history guest against the new surface,
   // not merely a standalone editor. Output services are stubs in this case;
   // whole-application output lifetimes have their separate integration tests.
-  await page.goto("http://editor-surface.test/workspace");
-  await page.evaluate(async () => {
+  await page.goto("http://editor-surface.localhost/workspace");
+  await page.evaluate(async ({ editorFrame, largeSource }) => {
     const { ResourcesEditorDevice, ResourcesStorageDevice, ResourcesProjectResourceDevice } = await import("/devices.js");
     const resources = new ResourcesProjectResourceDevice();
     const storage = new ResourcesStorageDevice(window, resources);
@@ -163,6 +190,10 @@ test("editor surface keeps commands, input, themes and languages in its document
       { path: "index.html", content: "<h1>Surface fixture</h1>" },
       { path: "style.css", content: "h1 { color: rebeccapurple; }" }
     ], config: { entry: "index.html", editorTabs: ["index.html", "style.css"] } };
+    if (largeSource !== null) {
+      snapshot.files.push({ path: "large.js", content: largeSource });
+      snapshot.config.editorTabs.push("large.js");
+    }
     document.querySelector("[data-project-snapshot]").value = JSON.stringify(snapshot);
     window.failures = [];
     const request = async name => {
@@ -185,10 +216,14 @@ test("editor surface keeps commands, input, themes and languages in its document
     window.device = new ResourcesEditorDevice(document, message => {
       if (message.type === "editor-error") failures.push(message.message);
     }, { destroyOutput() {} }, {}, storage, resources, request, call);
-    await device.mount({ editorFrame: true, deferOutput: true });
-  });
-  const workspaceContent = page.frameLocator("iframe.project-editor__code-frame").locator(".cm-content");
+    await device.mount({ editorFrame, deferOutput: true });
+  }, { editorFrame, largeSource });
+  const workspaceContent = editorFrame
+    ? page.frameLocator("iframe.project-editor__code-frame").locator(".cm-content")
+    : page.locator(".cm-content");
   await workspaceContent.waitFor();
+  assert.equal(await workspaceContent.evaluate(node => getComputedStyle(node).fontSize), "13px",
+    "the frame retains the direct editor's default monospace size");
   assert.equal(await page.evaluate(() => device.editor.inspect().document), "<h1>Surface fixture</h1>");
   try { await workspaceContent.click({ timeout: 3000 }); }
   catch (error) {
@@ -212,7 +247,26 @@ test("editor surface keeps commands, input, themes and languages in its document
   await page.waitForFunction(() => device.editor.inspect().document.includes("Edited"));
   await page.waitForFunction(() => device.editor.inspect().languageLoaded);
   await workspaceContent.locator(".cm-line span").first().waitFor();
-  await page.screenshot({ path: join(work, "editor-surface-workspace.png") });
+  await page.screenshot({ path: join(work, `editor-surface-workspace-${editorFrame ? "frame" : "direct"}.png`) });
+  if (largeSource !== null) {
+    await page.getByRole("tab", { name: "large.js", exact: true }).click();
+    await page.waitForFunction(() => device.editor.inspect().languageLoaded);
+    await workspaceContent.click();
+    await page.keyboard.press("Control+Home");
+    await page.keyboard.press("ArrowRight");
+    let inserted = "";
+    const milliseconds = [];
+    for (const key of [..." hellp", "Backspace", "o"]) {
+      const started = performance.now();
+      await page.keyboard.press(key === " " ? "Space" : key);
+      milliseconds.push(Math.round(performance.now() - started));
+      inserted = key === "Backspace" ? inserted.slice(0, -1) : inserted + key;
+      assert.equal(await page.evaluate(() => device.editor.inspect().document),
+        largeSource.slice(0, 1) + inserted + largeSource.slice(1));
+      await page.waitForTimeout(100);
+    }
+    t.diagnostic(JSON.stringify({ editorFrame, characters: largeSource.length, keyMilliseconds: milliseconds }));
+  }
   assert.deepEqual(await page.evaluate(() => failures), []);
   assert.deepEqual(errors, []);
   assert.deepEqual(unexpected, []);

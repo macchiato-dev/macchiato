@@ -3599,6 +3599,9 @@ async function createProjectBuildMachine() {
     }
   });
 }
+function loadProjectEditorModule() {
+  return moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
+}
 async function createProjectEditorMachine({
   root,
   onChange,
@@ -3609,9 +3612,10 @@ async function createProjectEditorMachine({
   services,
   limits,
   resolveImage,
-  allowNavigate = false
+  allowNavigate = false,
+  module: suppliedModule
 }) {
-  const module = await moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
+  const module = suppliedModule || await loadProjectEditorModule();
   const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
   const machineId = `wasm-web-machine-${nextMachine++}`;
   let response, machineError, starting = true, machineStage = "startup";
@@ -3647,7 +3651,10 @@ async function createProjectEditorMachine({
       }
       if (text.startsWith("__wwcError:")) {
         machineError = `${machineStage}: ${text.slice(11)}`;
-        if (!starting) queueMicrotask(() => onError?.(new Error(machineError)));
+        const error = new Error(machineError);
+        if (!starting) queueMicrotask(() => {
+          if (!disposed) onError?.(error);
+        });
         return;
       }
       if (text.startsWith("__wwcResponse:")) {
@@ -3655,8 +3662,8 @@ async function createProjectEditorMachine({
         return;
       }
       const message2 = JSON.parse(text);
-      if (message2.type === "editor-bytecode-started") root.dataset.editorBytecodeState = "started";
-      if (message2.type === "editor-application-ready") root.dataset.editorApplicationState = "ready";
+      if (message2.type === "editor-bytecode-started" && root.dataset) root.dataset.editorBytecodeState = "started";
+      if (message2.type === "editor-application-ready" && root.dataset) root.dataset.editorApplicationState = "ready";
       if (message2.protocol === "resources-editor-v1") {
         Promise.resolve().then(() => message2.name === "bytecode.load" ? installBytecode(message2.payload || {}) : onRequest(message2.name, message2.payload || {})).then(
           (value) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", { id: message2.id, value })),
@@ -3668,6 +3675,7 @@ async function createProjectEditorMachine({
         return;
       }
       queueMicrotask(() => {
+        if (disposed) return;
         if (message2.type === "change") onChange(message2.content, { syntaxErrors: message2.syntaxErrors === true });
         else if (message2.type === "ready") onReady?.(message2);
         else if (message2.type === "limit") onLimit?.(message2);
@@ -3675,21 +3683,28 @@ async function createProjectEditorMachine({
       });
     }
   });
-  await machine.onmsg(0);
-  if (machineError) throw new Error(machineError);
-  starting = false;
-  machineStage = "idle";
+  try {
+    await machine.onmsg(0);
+    if (machineError) throw new Error(machineError);
+    starting = false;
+    machineStage = "idle";
+    if (limits !== false) call("__codeEditorConfigureLimits", limits || { maxLines: 5e3, maxCharacters: 1e6 });
+  } catch (error) {
+    disposed = true;
+    machine.destroy();
+    throw error;
+  }
   function call(name, payload) {
+    if (disposed) throw new Error("Editor is closed");
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
     response = machineError = void 0;
     machineStage = `call ${name}`;
-    machine.onmsg(callMessage(name, payload));
+    machine.onmsg(callMessage("__resourcesEditorCall", { name, value: payload }));
     if (machineError) throw new Error(machineError);
     if (response === void 0) throw new Error(`Guest function ${name} did not respond`);
     machineStage = "idle";
     return JSON.parse(response);
   }
-  if (limits !== false) call("__codeEditorConfigureLimits", limits || { maxLines: 5e3, maxCharacters: 1e6 });
   return Object.freeze({
     machineId,
     setContent(content, language = "plain", options = {}) {
@@ -3702,12 +3717,14 @@ async function createProjectEditorMachine({
     },
     inspect: () => ({ ...call("__codeEditorInspect", {}), machine: { machineId } }),
     focus() {
-      root.querySelector(".cm-content")?.focus();
+      if (!disposed) root.querySelector(".cm-content")?.focus();
     },
     destroy() {
+      if (disposed) return;
       disposed = true;
       machine.destroy();
-      root.replaceChildren();
+      if (root.nodeType === 9) root.body?.replaceChildren();
+      else root.replaceChildren();
     }
   });
 }
