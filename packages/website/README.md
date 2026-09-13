@@ -829,9 +829,9 @@ deno run --config packages/website/deno.json \
 ```
 
 The command uses the same SQL migration ledger and verifies all expected tables
-through `sqlite_schema`. It never uses the read-only token;
-application reads can move to that separate client once the planned
-query/mutation capability split is implemented.
+through `sqlite_schema`. It never uses the read-only token. The running
+application already sends named reads through its separate read-only client;
+both database tokens are required in the Edge Script environment.
 
 Home and Browse are curated discovery surfaces. They list public projects only
 from the `benatkin`, `resources`, and `macchiato` namespaces. This does not make
@@ -864,9 +864,9 @@ OAuth client IDs/secrets, and a fresh `SESSION_SIGNING_KEY`. From Bunny
 Database's Access page, use **Add Secrets to Edge Script** so Bunny supplies
 the database URL plus full-access and read-only tokens. This application creates
 accounts and projects, so explicit mutation handlers still require the
-full-access token. Retain the read-only token for the planned default client;
-do not silently fall back from a read-only operation to full access once that
-boundary is implemented.
+full-access token. Named reads use the read-only token and do not fall back to
+full access. Supply both tokens; the exported-entry regression exercises both
+clients through the real bundled transport.
 
 Attach two hostnames to the same validated export and Edge Script. Production
 uses `https://blog-examples.resources.co`; staging uses
