@@ -125,7 +125,11 @@ function notification(row) {
 export function createOrganizationStore(client, { now = Date.now, randomId = () => crypto.randomUUID() } = {}) {
   if (!client?.execute || !client?.batch) throw new Error("Organization store requires a libSQL-compatible client");
   let initialized;
-  const initialize = () => (initialized ||= client.batch(ORGANIZATION_SCHEMA.map((sql) => ({ sql, args: [] }))));
+  function initialize() {
+    initialized ||= client.batch(ORGANIZATION_SCHEMA.map((sql) => ({ sql, args: [] })))
+      .catch(error => { initialized = null; throw error; });
+    return initialized;
+  }
 
   async function managedOrganization(slugValue, userId) {
     const slug = namespaceName(slugValue, { field: "organization name" });

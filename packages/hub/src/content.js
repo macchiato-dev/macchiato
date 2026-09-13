@@ -351,7 +351,11 @@ export function createContentStore(client, {
   if (typeof snapshotDiffer !== "function") throw new Error("Content store requires a snapshot differ");
   if (typeof snapshotValidator !== "function") throw new Error("Content store requires a snapshot validator");
   let initialized;
-  const initialize = () => (initialized ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] }))));
+  function initialize() {
+    initialized ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] })))
+      .catch(error => { initialized = null; throw error; });
+    return initialized;
+  }
 
   return Object.freeze({
     initialize,

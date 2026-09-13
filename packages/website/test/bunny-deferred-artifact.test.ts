@@ -1,4 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
+import { createAccountStore } from "../../hub/src/accounts.js";
+import { createNodeSqliteClient } from "../adapters/node-sqlite-client.js";
+import { seal } from "../auth/session.js";
 
 // The real bundled libSQL client speaks Hrana v2 to this in-memory fixture.
 // This deliberately supports only the protocol operations used by the app;
@@ -90,7 +93,7 @@ function assert(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
 }
 
-Deno.test("exported Bunny entry initializes its deferred machines and database once", async () => {
+for (const interrupted of [false, true]) Deno.test(`exported Bunny deferred routes${interrupted ? " recover after a database outage" : " initialize once"}`, async () => {
   assert(Deno.args[0], "Pass the resources-bunny export directory");
   const root = new URL("file:///");
   root.pathname = `${await Deno.realPath(Deno.args[0])}/`;
@@ -113,6 +116,7 @@ Deno.test("exported Bunny entry initializes its deferred machines and database o
   type Handler = (request: Request) => Promise<Response>;
   let handler: Handler | undefined;
   const storage: string[] = [], tokens = new Set<string>();
+  let failDatabase = interrupted;
   const errors: string[] = [];
   const originalError = console.error;
   try {
@@ -125,6 +129,10 @@ Deno.test("exported Bunny entry initializes its deferred machines and database o
         const token = request.headers.get("authorization") || "";
         assert(["Bearer fixture-write-key", "Bearer fixture-read-key"].includes(token), "Wrong database credential");
         tokens.add(token);
+        if (failDatabase) {
+          failDatabase = false;
+          return new Response("Temporary database outage", { status: 503 });
+        }
         try { return await sql.fetch(request); }
         catch (error) { errors.push(`Database fixture: ${String(error)}`); throw error; }
       }
@@ -142,6 +150,12 @@ Deno.test("exported Bunny entry initializes its deferred machines and database o
     await import(new URL(`edge/script.ts?deferred=${crypto.randomUUID()}`, root).href);
     const serve = handler as Handler | undefined;
     assert(serve && storage.length === 0 && sql.statements.length === 0, "Entry must register before deferred work");
+    if (interrupted) {
+      const failed = await serve(new Request(env.PUBLIC_ORIGIN + "/blog"));
+      assert(failed.status === 503, "The unavailable database should fail the initial request");
+      assert(errors.length > 0, "Initialization failure should be logged");
+      errors.length = 0;
+    }
     for (const path of ["/blog", "/try/article", "/-/resources-site/controller.js"]) {
       const response = await serve(new Request(env.PUBLIC_ORIGIN + path));
       assert(response.status === 200, `${path}: ${response.status}; ${errors.join("; ")}; SQL calls: ${sql.statements.length}; last SQL: ${sql.statements.at(-1)}`);
@@ -156,6 +170,58 @@ Deno.test("exported Bunny entry initializes its deferred machines and database o
     assert(response.status === 200, "Warm deferred request failed");
     assert(sql.statements.filter(sql => /CREATE TABLE|INSERT OR IGNORE INTO resource_schema_migrations/i.test(sql)).length === initialization,
       "Warm request reinitialized the database");
+
+    // Seed only the identity. Project creation, validation, history and saves
+    // below all go through the uploaded controller and its actual guests.
+    const account = await createAccountStore(createNodeSqliteClient(database)).authenticateIdentity({
+      provider: "github", providerUserId: "artifact-user", login: "artifact-user",
+      name: "Artifact User", email: "artifact@example.test", emailVerified: true,
+    });
+    const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+      iat: Date.now(), exp: Date.now() + 60_000 }, env.SESSION_SIGNING_KEY);
+    const cookie = `__Host-resources_session=${session}`;
+    async function authenticated(path: string, init: RequestInit = {}) {
+      const headers = new Headers(init.headers);
+      headers.set("cookie", cookie);
+      if (init.method === "POST") headers.set("origin", env.PUBLIC_ORIGIN);
+      return serve!(new Request(env.PUBLIC_ORIGIN + path, { ...init, headers }));
+    }
+    async function formToken(path: string) {
+      const page = await authenticated(path);
+      assert(page.status === 200, `${path} did not render: ${page.status}; ${errors.join("; ")}`);
+      const html = await page.text();
+      const token = html.match(/name="csrf" value="([^"]+)"/);
+      assert(token, `No CSRF token in ${path}`);
+      return token[1];
+    }
+    const snapshot = { files: [{ path: "index.html", content: "<h1>Artifact project</h1>" }], config: { entry: "index.html" } };
+    const created = await authenticated("/projects", {
+      method: "POST", body: new URLSearchParams({
+        csrf: await formToken("/projects/new"), name: "Artifact project", slug: "artifact-project",
+        namespace: "user", template: "blank", visibility: "private", snapshot: JSON.stringify(snapshot),
+      }),
+    });
+    assert(created.status === 303 && created.headers.get("location") === "/artifact-user/artifact-project",
+      `Project creation failed: ${created.status}, ${created.headers.get("location")}; ${errors.join("; ")}`);
+    const project = database.prepare("SELECT id FROM resource_projects WHERE slug = ?").get("artifact-project");
+    assert(project, "Project was not stored");
+    const csrf = await formToken("/artifact-user/artifact-project");
+    const edited = { ...snapshot, files: [{ path: "index.html", content: "<h1>Saved through Bunny entry</h1>" }] };
+    const saved = await authenticated(`/api/projects/${project.id}/snapshot`, {
+      method: "POST", headers: { "content-type": "application/json", "x-resources-csrf": csrf },
+      body: JSON.stringify({ snapshot: edited, manual: true }),
+    });
+    assert(saved.status === 200, `Save failed: ${saved.status}; ${await saved.clone().text()}; ${errors.join("; ")}`);
+    assert(JSON.stringify((await saved.json()).snapshot) === JSON.stringify(edited), "Save returned a different snapshot");
+    const workspace = await authenticated("/-/projects/artifact-user/artifact-project/workspace");
+    assert(workspace.status === 200 && JSON.stringify((await workspace.json()).snapshot) === JSON.stringify(edited), "Workspace did not retain the saved edit");
+    const versions = await authenticated(`/api/projects/${project.id}/versions`);
+    assert(versions.status === 200 && (await versions.json()).versions.length === 2, "Save did not create exactly one version");
+    const denied = await authenticated(`/api/projects/${project.id}/snapshot`, {
+      method: "POST", headers: { "content-type": "application/json", "x-resources-csrf": "invalid" },
+      body: JSON.stringify({ snapshot, manual: true }),
+    });
+    assert(denied.status === 403, "Invalid save authorization was not rejected");
     assert(tokens.size === 2, "Both read and write clients should be exercised");
     assert(errors.length === 0, errors.join("; "));
   } finally {

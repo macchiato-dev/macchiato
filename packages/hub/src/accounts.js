@@ -123,7 +123,8 @@ export function createAccountStore(client, {
   let initialized;
 
   function initialize() {
-    initialized ||= client.batch(ACCOUNT_SCHEMA.map((sql) => ({ sql, args: [] })));
+    initialized ||= client.batch(ACCOUNT_SCHEMA.map((sql) => ({ sql, args: [] })))
+      .catch(error => { initialized = null; throw error; });
     return initialized;
   }
 

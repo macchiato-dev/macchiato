@@ -126,7 +126,12 @@ async function storeCall(storeName, method, args) {
 function initialize() {
   initialized ||= migrations.ready().then(() => Promise.all([
     accounts.initialize(), content.initialize(), organizations.initialize(),
-  ]));
+  ])).catch(error => {
+    // Cache successful initialization and share in-flight work, but allow the
+    // next request to retry after a transient database failure.
+    initialized = null;
+    throw error;
+  });
   return initialized;
 }
 
@@ -139,8 +144,12 @@ globalThis.serverHandle = async function serverHandle(input) {
     return ["error", "unknown application operation"];
   }
   if (input[0] === "initialize") {
-    await initialize();
-    return ["ok"];
+    try {
+      await initialize();
+      return ["ok"];
+    } catch (error) {
+      return ["error", errorValue(error)];
+    }
   }
   if (input[0] === "store" && input.length === 4) {
     return storeCall(input[1], input[2], input[3]);
