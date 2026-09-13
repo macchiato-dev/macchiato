@@ -473,7 +473,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.match(await content.innerText(), /Recovered output/);
 
   // Quoting a font family is valid CSS. An unfinished quote while editing is
-  // not: keep the working iframe interactive, then recover without a reload.
+  // not: keep the working iframe interactive, then swap after a valid edit.
   const fontFrame = await page.locator("iframe.project-editor__output-frame").elementHandle();
   const fontEditorId = await editor.getAttribute("data-editor-machine-id");
   const fontSource = (family, revision) => `<style>h1 { font-family: ${family}; }</style>
@@ -508,7 +508,9 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await output.getByRole("heading", { name: "Font revision recovered", exact: true }).waitFor();
   await page.getByText(/Output stopped:.*CSS declaration is incomplete/).waitFor({ state: "hidden" });
   assert.equal(await editor.getAttribute("data-editor-machine-id"), fontEditorId);
-  assert.ok(await fontFrame.evaluate(node => node === document.querySelector("iframe.project-editor__output-frame")));
+  assert.equal(await fontFrame.evaluate(node => node.isConnected), false,
+    "valid edits replace the output frame, not the editor machine");
+  assert.equal(await page.locator("iframe.project-editor__output-frame").count(), 1);
   await fontFrame.dispose();
   await page.screenshot({ path: join(artifacts, "font-edit-recovered.png") });
   checkpoint("repeated font-edit recovery without reload");

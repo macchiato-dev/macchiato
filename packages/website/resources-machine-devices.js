@@ -459,6 +459,88 @@ export class ResourcesEditorDevice {
   }
 }
 
+// The controller owns these surfaces; the guest receives only the document
+// inside one frame. Replacement never grants two guests the same live DOM.
+class ProjectFrameOutput {
+  constructor(mount, connect, storageScope) {
+    this.mount = mount;
+    this.connect = connect;
+    this.storageScope = storageScope;
+    this.active = this.preparing = null;
+    this.disposed = false;
+  }
+  async load(project) {
+    if (this.disposed) throw new Error("Project output was destroyed");
+    this.remove(this.preparing);
+    const doc = this.mount.ownerDocument, frame = doc.createElement("iframe");
+    frame.className = "project-editor__output-frame";
+    frame.title = "Project output";
+    frame.sandbox = "allow-scripts allow-same-origin allow-forms";
+    frame.allow = "fullscreen";
+    const url = new URL("/-/resources-site/project-output-frame.html", doc.location.href);
+    url.hash = this.active?.frame.contentWindow.location.hash || "";
+    frame.src = url.href;
+    frame.inert = true;
+    frame.style.cssText = "display:block;position:absolute;inset:0;width:100%;height:100%;border:0;visibility:hidden;pointer-events:none";
+    this.mount.style.position = "relative";
+    const pending = { frame, abort: new AbortController(), output: null };
+    this.preparing = pending;
+    try {
+      await new Promise((resolve, reject) => {
+        const finish = error => {
+          frame.removeEventListener("load", ready);
+          frame.removeEventListener("error", failed);
+          pending.abort.signal.removeEventListener("abort", cancelled);
+          error ? reject(error) : resolve();
+        };
+        const ready = () => finish();
+        const failed = () => finish(new Error("Project output frame failed to load"));
+        const cancelled = () => finish(new Error("Project output was replaced or destroyed"));
+        frame.addEventListener("load", ready);
+        frame.addEventListener("error", failed);
+        pending.abort.signal.addEventListener("abort", cancelled, { once: true });
+        this.mount.append(frame);
+      });
+      pending.output = await this.connect(frame, { ...project,
+        storageScope: this.storageScope, module: this.module }, pending.abort.signal);
+      if (this.preparing !== pending) throw new Error("Project output was replaced or destroyed");
+      this.module = pending.output.module;
+      const previous = this.active;
+      const hadFocus = previous && doc.activeElement === previous.frame;
+      this.active = pending;
+      this.preparing = null;
+      frame.style.cssText = "display:block;width:100%;height:100%;border:0";
+      frame.inert = false;
+      if (hadFocus) frame.focus();
+      this.remove(previous);
+      return null;
+    } catch (error) {
+      if (this.preparing === pending) this.preparing = null;
+      this.remove(pending);
+      throw error;
+    }
+  }
+  remove(entry) {
+    if (!entry) return;
+    entry.abort.abort();
+    entry.output?.destroy();
+    entry.frame.remove();
+  }
+  require() {
+    if (!this.active) throw new Error("Project output is unavailable");
+    return this.active.output;
+  }
+  inspect() { return this.require().inspect(); }
+  setContent(tree, document) { return this.require().setContent(tree, document); }
+  run(scripts) { return this.require().run(scripts); }
+  destroy() {
+    this.disposed = true;
+    this.remove(this.preparing);
+    this.remove(this.active);
+    this.preparing = this.active = this.module = null;
+  }
+}
+
 export class ResourcesOutputDevice {
   constructor(document, deliver, projectResources) {
     this.document = document;
@@ -495,30 +577,16 @@ export class ResourcesOutputDevice {
       allowedLinkPatterns: Array.isArray(payload.allowedLinkPatterns) ? payload.allowedLinkPatterns : [],
       environment: payload.environment || {},
     };
-    let frame = null;
-    if (payload.iframe !== false) {
-      frame = this.document.createElement("iframe");
-      frame.className = "project-editor__output-frame";
-      frame.title = "Project output";
-      // Native dialog forms need allow-forms. The machine prevents every
-      // network submission; no project JavaScript runs in the browser realm.
-      frame.sandbox = "allow-scripts allow-same-origin allow-forms";
-      frame.allow = "fullscreen";
-      frame.src = "/-/resources-site/project-output-frame.html";
-      frame.style.cssText = "display:block;width:100%;height:100%;border:0";
-      await new Promise((resolve, reject) => {
-        frame.addEventListener("load", resolve, { once: true });
-        frame.addEventListener("error", () => reject(new Error("Project output frame failed to load")), { once: true });
-        mount.replaceChildren(frame);
-      });
-    }
     const id = this.nextId++;
     const storageScope = mount.closest("[data-project-id]")?.dataset.projectId ||
       this.document.location.pathname;
     let output;
-    if (frame) output = await this.connectFrame(frame, {
-      ...project, storageScope,
-    }, id);
+    if (payload.iframe !== false) {
+      output = new ProjectFrameOutput(mount, (frame, project, signal) =>
+        this.connectFrame(frame, project, id, signal), storageScope);
+      try { await output.load(project); }
+      catch (error) { output.destroy(); throw error; }
+    }
     else {
       const storage = new ProjectOutputStorage(this.document.defaultView, storageScope);
       try {
@@ -534,7 +602,7 @@ export class ResourcesOutputDevice {
     this.outputs.set(id, output);
     return id;
   }
-  connectFrame(frame, payload, outputId) {
+  connectFrame(frame, payload, outputId, signal) {
     const protocol = "resources-project-output-machine-v1";
     const channel = new MessageChannel();
     const pending = new Map();
@@ -550,9 +618,12 @@ export class ResourcesOutputDevice {
         pending.clear();
         channel.port1.close();
         frame.remove();
+        signal?.removeEventListener("abort", cancel);
         reject(error);
-        this.deliver({ type: "output-error", id: outputId, message });
       };
+      const cancel = () => fail("Project output was replaced or destroyed");
+      if (signal?.aborted) return cancel();
+      signal?.addEventListener("abort", cancel, { once: true });
       channel.port1.onmessage = ({ data }) => {
         if (data?.protocol !== protocol) return;
         if (data.type === "error") {
@@ -560,21 +631,24 @@ export class ResourcesOutputDevice {
           return;
         }
         if (data.type === "failed") return fail(data.error || "Project output frame failed");
-        if (data.type === "ready") return resolve(Object.freeze({
-          destroy() {
-            if (disposed) return;
-            disposed = true;
-            channel.port1.postMessage({ protocol, type: "request", id: nextRequest++, name: "destroy" });
-            for (const operation of pending.values()) operation.reject(new Error("Project output was destroyed"));
-            pending.clear();
-            channel.port1.close();
-            frame.remove();
-          },
-          inspect: () => request("inspect", {}),
-          setContent: (tree, document) => request("setContent", { tree, document }),
-          run: (scripts) => request("run", { scripts }),
-          load: (project) => request("load", { project }),
-        }));
+        if (data.type === "ready") {
+          signal?.removeEventListener("abort", cancel);
+          return resolve(Object.freeze({
+            module: data.module,
+            destroy() {
+              if (disposed) return;
+              disposed = true;
+              channel.port1.postMessage({ protocol, type: "request", id: nextRequest++, name: "destroy" });
+              for (const operation of pending.values()) operation.reject(new Error("Project output was destroyed"));
+              pending.clear();
+              channel.port1.close();
+              frame.remove();
+            },
+            inspect: () => request("inspect", {}),
+            setContent: (tree, document) => request("setContent", { tree, document }),
+            run: (scripts) => request("run", { scripts }),
+          }));
+        }
         if (data.type !== "response") return;
         const operation = pending.get(data.id);
         if (!operation) return;

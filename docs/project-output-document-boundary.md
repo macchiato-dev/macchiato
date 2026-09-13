@@ -1,20 +1,23 @@
 # Project output's rendering document
 
-## Current direction: direct document refresh and guest-directed live updates
+## Current direction: staged replacement and guest-directed live updates
 
-The additional two-rendering-frame design below was **not adopted**. Output
-must also work without an iframe. The implementation now accepts a real
-Document grant for whole-page output, or an element grant for embedded output.
-The website may use its existing configurable outer iframe; this change adds
-no frames and does not require one in `ProjectOutput`.
+Output works with or without an iframe. For configured iframe output, the
+website controller prepares a hidden sibling iframe with a fresh guest, giving
+that guest its real Document. It reveals the replacement only after startup
+succeeds, then removes the previous frame. This is not the nested rendering-frame
+design investigated below. Element output similarly stages an isolated subtree;
+`ProjectOutput` itself does not require an iframe.
 
 There are two distinct update paths:
 
-- A replacement `load` creates a fresh guest session. For a Document grant it
-  retires the old guest before replacing the document element. The browser
-  Document, history, and interpreter remain; application state restarts.
-  Failed startup can be recovered by another load, but does not restore the
-  retired guest. Element grants retain their isolated staging-subtree path.
+- A replacement `load` creates a fresh guest session. The previous app remains
+  visible and usable during preparation, including when startup fails. Successful
+  replacement restarts application state. Newer edits cancel pending replacements.
+  Frames reuse the compiled WebAssembly module, not the previous interpreter or
+  JavaScript context. The current fragment is carried over; full iframe history
+  is not. Editor focus is not stolen. Old frames and their private channels are
+  discarded after the swap.
 - A guest-directed live update uses the current session and its own update
   code. `run` does not dispose the session or rerun startup automatically.
   The guest decides how to update its DOM and preserve application state.
@@ -25,12 +28,20 @@ Neither path adds a debounce to a ready update's handoff. The editor's existing
 typing/build debounce is separate. A guest capable of genuine in-place updates
 should not be forced through the replacement-load fallback.
 
-The document viewport comparison now passes its root-unit and canvas-color
+Direct users of `ProjectOutput` with a Document still get an in-place document
+refresh: they must retire its guest before granting that same Document again.
+Staging an entire page is a controller responsibility, outside the machine.
+
+Browser regression tests cover failed/successful replacement, interaction with
+the old guest during loading, cancellation after entering guest code, retained
+editor focus, light/dark loading colors, and compiled-runtime reuse. Element
+lifetime tests also cover pending font approval and disposal with failing hooks.
+
+The document viewport comparison passes its root-unit and canvas-color
 assertions. The following sections preserve the earlier investigation and
 experimental requirements; their claims about pending production assertions
 and retaining the old guest after every failed startup describe that earlier
-design, not the current Document replacement contract. The rebuilt export and
-local live site now pass the verification recorded below.
+design. The following deployment record predates sibling-frame staging.
 
 The rebuilt-site stress test also passes with the direct Document grant:
 expanded output works before the editor finishes downloading, document

@@ -65,7 +65,10 @@ function imageResolver(files) {
 }
 
 async function start(payload, port) {
-  const module = await WebAssembly.compileStreaming(fetch("./project-quickjs-runtime.wasm"));
+  // A replacement frame gets the already compiled, trusted runtime through
+  // its private controller channel; application code remains project data.
+  const module = payload.module instanceof WebAssembly.Module ? payload.module
+    : await WebAssembly.compileStreaming(fetch("./project-quickjs-runtime.wasm"));
   if (destroyed) return;
   storage = new ProjectOutputStorage(window, payload.storageScope);
   output = new ProjectOutput(WasmWebMachine, module, document, project => ({
@@ -88,7 +91,7 @@ async function start(payload, port) {
   }), reportError);
   try { await output.load(payload); }
   catch (error) { output.destroy(); storage.destroy(); throw error; }
-  if (!destroyed) port.postMessage({ protocol, type: "ready" });
+  if (!destroyed) port.postMessage({ protocol, type: "ready", module });
 }
 
 async function operation(name, payload) {

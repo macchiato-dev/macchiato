@@ -36,6 +36,7 @@ test("initial project output mounts its compiled application without an empty gu
       // native color-scheme inheritance. Use inheritance for the iframe case.
       const page = await browser.newPage({ colorScheme: iframe ? null : theme });
       const errors = [], unexpected = [];
+      let frameGate, frameRequested, runtimeDownloads = 0;
       let releaseRuntime, runtimeRequested;
       const runtimeGate = new Promise(resolve => { releaseRuntime = resolve; });
       const runtimeArrived = new Promise(resolve => { runtimeRequested = resolve; });
@@ -58,11 +59,16 @@ test("initial project output mounts its compiled application without an empty gu
         const url = new URL(route.request().url());
         if (url.origin === "http://initial-output.test") {
           if (url.pathname.endsWith("runtime.wasm")) {
+            runtimeDownloads++;
             runtimeRequested();
             await runtimeGate;
             return route.fulfill({ body: wasm, contentType: "application/wasm" });
           }
-          if (url.pathname.endsWith("project-output-frame.html")) return route.fulfill({ body: shell, contentType: "text/html" });
+          if (url.pathname.endsWith("project-output-frame.html")) {
+            frameRequested?.();
+            if (frameGate) await frameGate;
+            return route.fulfill({ body: shell, contentType: "text/html" });
+          }
           if (url.pathname.endsWith("machine.js")) return route.fulfill({ body: machine, contentType: "text/javascript" });
           if (url.pathname === "/devices.js") return route.fulfill({ body: devices, contentType: "text/javascript" });
           if (url.pathname === "/") return route.fulfill({ contentType: "text/html", body: `<!doctype html>
@@ -125,6 +131,74 @@ test("initial project output mounts its compiled application without an empty gu
             return getComputedStyle(body).backgroundColor === color;
           }, { iframe, color: next === 'light' ? 'rgb(198, 220, 245)' : 'rgb(23, 44, 72)' });
           assert.equal(await target.locator('#count').textContent(), '1', 'appearance updates preserve the running guest');
+        }
+        // A failed replacement must not discard the last usable application.
+        const failure = await page.evaluate(async compiled => {
+          try {
+            await editor.outputDevice.load({ id: editor.initialOutputId,
+              project: { ...compiled, scripts: [{ code: "throw Error('Replacement rejected');" }] } });
+          } catch (error) { return error.message; }
+        }, { ...compiled, files });
+        assert.match(failure, /Replacement rejected/);
+        assert.equal(await target.locator('#count').textContent(), '1');
+        await target.locator('#count').click();
+        assert.equal(await target.locator('#count').textContent(), '2');
+        assert.equal(await page.locator('iframe, .project-output-root').count(), 1);
+
+        let releaseFrame;
+        const arrived = new Promise(resolve => { frameRequested = resolve; });
+        if (iframe) frameGate = new Promise(resolve => { releaseFrame = resolve; });
+        await page.evaluate(compiled => {
+          window.replacement = editor.outputDevice.load({ id: editor.initialOutputId, project: compiled });
+        }, { ...compiled, files });
+        if (iframe) {
+          await arrived;
+          assert.equal(await page.locator('iframe').count(), 2);
+          assert.equal(await page.locator('iframe:visible').count(), 1);
+          await target.locator('#count').click();
+          assert.equal(await target.locator('#count').textContent(), '3', 'old guest remains interactive during startup');
+          // Editing elsewhere must not have its focus stolen by the swap.
+          await page.evaluate(() => {
+            const input = document.createElement('input');
+            input.id = 'editing'; document.body.append(input); input.focus();
+          });
+          releaseFrame();
+          frameGate = null;
+        }
+        await page.evaluate(() => replacement);
+        const replacement = iframe ? page.frameLocator('iframe') : page;
+        await replacement.getByText('Ready from project files', { exact: true }).waitFor();
+        assert.equal(await replacement.locator('#count').textContent(), '0');
+        assert.equal(await page.locator('iframe, .project-output-root').count(), 1);
+        assert.equal(runtimeDownloads, 1, 'replacement reuses the compiled runtime');
+        if (iframe) {
+          assert.equal(target.isDetached(), true);
+          assert.equal(await page.locator('#editing').evaluate(node => node === document.activeElement), true);
+        }
+        // Genuine guest-driven updates continue within the active session.
+        await page.evaluate(async () => {
+          await editor.outputDevice.run({ id: editor.initialOutputId,
+            scripts: [{ code: "document.getElementById('count').textContent = String(++count);" }] });
+        });
+        assert.equal(await replacement.locator('#count').textContent(), '1');
+        if (iframe && theme === 'light') {
+          // Abort after the new frame has connected and entered guest code,
+          // not only while its HTML is downloading.
+          const slow = { ...compiled, files, scripts: [{ module: true, source: 'slow.js',
+            code: "document.getElementById('state').textContent = 'Preparing'; await new Promise(function (resolve) { setTimeout(resolve, 10000); });" }] };
+          await page.evaluate(project => {
+            window.superseded = editor.outputDevice.load({ id: editor.initialOutputId, project })
+              .then(() => 'unexpected success', error => error.message);
+          }, slow);
+          await page.frameLocator('iframe[inert]').getByText('Preparing', { exact: true }).waitFor({ state: 'attached' });
+          await page.frameLocator('iframe:not([inert])').locator('#count').click();
+          assert.equal(await page.frameLocator('iframe:not([inert])').locator('#count').textContent(), '2');
+          await page.evaluate(async project => {
+            await editor.outputDevice.load({ id: editor.initialOutputId, project });
+          }, { ...compiled, files });
+          assert.match(await page.evaluate(() => superseded), /replaced or destroyed/);
+          assert.equal(await page.locator('iframe').count(), 1);
+          assert.equal(runtimeDownloads, 1);
         }
         // Initial startup now runs real project code. A failure must dispose
         // the unregistered frame/session so the next edit can mount cleanly.
