@@ -83,6 +83,13 @@ diagnostics and a failure screenshot are now retained. A separate test race
 was removed by creating recovery data through a real editor change rather than
 overwriting session storage behind an in-flight save. See the
 [history checkpoint](project-editor-typing-performance.md#history-list-callback-lifetime).
+The follow-up adds a focused 20-cycle responsive/paste test and two further
+passing long-editing runs. It also reruns eight behavior/containment suites
+(238 passing assertions/subtests), including caret blink, trusted dragging,
+pane resizing, media queries, and document/reference boundaries. See the
+[geometry follow-up](project-editor-typing-performance.md#responsive-geometry-follow-up).
+These tests did not establish the cause of the original mismatch; no runtime
+or layout workaround was added.
 
 The native bulk-insertion stress path took 14,070 ms for 106,458 characters;
 the ordinary paste-handler path took 123 ms for 106,432 characters. Native

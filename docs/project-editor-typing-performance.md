@@ -1082,3 +1082,28 @@ notes were saved. All 153 deployment files verify after tar extraction.
 `/root/archive/2026/09/13/`; nothing was deployed to Bunny. Evidence uses the
 `history-lifetime-packaged-final`, `history-lifetime-modules`,
 `history-lifetime-live`, and `history-lifetime-bunny-backend` log prefixes.
+
+### Responsive geometry follow-up
+
+A focused anonymous Article test now performs 20 phone-to-desktop transitions,
+alternating 1000- and 1440-pixel desktop widths and pasting an approximately
+81 KB inert document after each transition. All 20 preserve the editor's exact
+rectangle: 365 or 585 pixels wide and 798 pixels high. It samples the baseline
+after the existing view/visibility signals, without adding an arbitrary settle
+delay. On failure it records every measured rectangle and a screenshot.
+Source regression: `5c86ae54`; evidence: `responsive-geometry.log` under
+`/root/macchiato-work`.
+
+Two additional complete long-editing runs pass recovery, history selection and
+republishing, invalid/valid CSS updates, phone/desktop views, paste, native bulk
+insertion, undo, and redo. Logs: `responsive-long-1.log` and
+`responsive-long-2.log`. These runs do not explain the earlier one-off size
+failure; its diagnostic assertion remains, and no speculative application
+layout change was made.
+
+The current runtime also passes 238 browser assertions/subtests across eight
+caret, pane-resize, document-realm, media-query, inherited-markup, reference,
+range, and mutation-scope suites. These include native/guest caret blink and
+trusted text dragging, not just synthetic selection calls. Evidence:
+`editor-current-behavior-boundaries.log`. This is a test-only checkpoint; the
+local application and deployment archive remain the verified `9fdadc5` build.
