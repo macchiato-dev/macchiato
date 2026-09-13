@@ -1,6 +1,6 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-4d569f7`.
+Current local verification: 2026-09-13, export `resources-co-4042e11`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
@@ -17,6 +17,13 @@ editor execution still waits for the output paint checkpoint. A small cold-load
 comparison shortened editor readiness by about 1.3 seconds for Mahjong and
 0.6 seconds for Cat Memory under controlled network conditions. Output timing
 was mixed. See [the measurements](project-editor-typing-performance.md#overlap-editor-transfer-with-output-startup).
+
+The intermittent editor error is now reproduced and fixed. It occurred in
+autosave cleanup, not the subsequent Python grammar failure: Babel's finally
+helper attempted a sparse-array write that MicroQuickJS rejects. The guest
+build preallocates its private exception-record slots. Two table literals
+change, adding eight bytes to the editor WASM; the host and sandbox policies
+are unchanged. See [the failing control and fix](project-editor-typing-performance.md#dense-babel-exception-records-2026-09-13).
 
 The editor now defaults to a separate iframe and MicroQuickJS machine, while
 the project UI retains history, details, and ownership of the output. The
@@ -58,12 +65,15 @@ their existing session. This is separate from the typing/build debounce.
   project publication/reversion/deletion, anonymous editing, version selection,
   templates, ZIP round-trips, resource recovery, graphics, storage denial,
   network boundaries, theme changes, Find/Replace, notifications, and roles.
-- The current packaged run passed 12 of 13 appearance/editing/language checks;
-  the language-recovery case then passed three focused reruns (see below).
-  They include real
+- All 13 packaged appearance/editing/language checks pass. They include real
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
   recovery; and language bytecode loaded without replacing the editor session.
+- The strengthened language lifecycle test also passes with Chromium slowed
+  to 4x CPU cost. It explicitly awaits completed autosave and checks for errors
+  around every file switch. The old artifact fails that test at normal speed.
+- All 28 runtime compatibility checks pass, including a failing-before control
+  and 21 generator cleanup cases compared with native JavaScript.
 - All 25 callback/surface/initial-output browser checks pass, including signed
   callback-word boundaries and inert HTML source in the editor through loading,
   native insertion, and rich clipboard paste.
@@ -80,10 +90,11 @@ their existing session. This is separate from the typing/build debounce.
   compressed backend artifact runs its routing, rendering, and policy guests
   in Deno. Nothing has been deployed to Bunny.
 
-Current evidence is in `/root/macchiato-work/editor-preload-browser.log`,
-`editor-preload-language.log` (also `-2` and `-3`), `editor-preload-modules.log`,
-`editor-preload-backend.log`, `editor-preload-output-boundaries.log`, and
-`editor-preload-live.log`, with their screenshot directories. The unchanged
+Current evidence is in `/root/macchiato-work/dense-finally-browser.log`,
+`dense-finally-slow.log`, `dense-finally-before.log`, `dense-finally-modules.log`,
+`dense-finally-backend.log`, `dense-finally-runtime-tests.log`, and
+`dense-finally-live-verified.log`, with their screenshot directories. The unchanged
+output lifecycle checks remain in `editor-preload-output-boundaries.log`;
 callback/surface boundary tests remain recorded in `tab-lifetime-boundaries.log`.
 The earlier broader
 app checks remain in `current-resources-browser-suite.log` and
@@ -93,12 +104,6 @@ the actual output Document, and explicitly selects a draft/history checkpoint
 instead of treating `aria-current` as an alias for newest.
 
 ## Still open
-
-The first packaged language-recovery run found a machine-error marker during
-its intentionally failed Python grammar download. Three focused reruns passed.
-Diagnostics now preserve the actual attribute value and page errors instead of
-only reporting its count. The cause is not established, and no runtime workaround
-or relaxed assertion was added. The prior export's full suite had passed.
 
 An initial packaged rerun failed an unchanged-pane-size assertion after a
 phone/desktop switch and bulk paste. It did not repeat in the focused rerun or
@@ -166,11 +171,11 @@ the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
-`/root/resources-bunny.tar.gz` contains the verified `4d569f7` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `4042e11` export. SHA-256:
 
-`af520ee95e15973e27a4ee3ae7128d134262b30cfb78990e320261b33050765f`
+`52d7d59feebd6282d5f138ff799546c8bdd48aae91fd6af26623e7f41beaf5a8`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-781c9c7-before-editor-preload.tar.gz`.
+`/root/archive/2026/09/13/resources-bunny-4d569f7-before-dense-finally.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.

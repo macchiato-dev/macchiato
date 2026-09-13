@@ -1266,3 +1266,17 @@ Evidence under `/root/macchiato-work`: `language-recovery-investigation-1` throu
 `-5`, `language-recovery-slow`, `babel-dense-finally`, `dense-finally-before`,
 `dense-finally-slow`, and `dense-finally-modules` logs. The build is undergoing
 the full packaged browser check before local activation.
+
+The complete packaged suite then passed all 13 checks, and the runtime's
+standard compatibility suite passed all 28 tests. The compressed backend runs
+in Deno, and all 171 files verify before and after archive extraction. The live
+probe initially raced the server restart (`ERR_CONNECTION_REFUSED`); after a
+successful HTTP readiness check, the same probe passed Mahjong, Cat Memory,
+50 tour slides, SQLite fragments, and theme/pane changes. No owner content or
+notes were saved. Seven live executable assets match the export after HTTP
+decompression. The recovered-language screenshot was reviewed.
+
+The current `/root/resources-bunny.tar.gz` contains export `4042e11`; its
+predecessor is preserved in `/root/archive/2026/09/13`. No Bunny deployment was
+performed. Evidence adds `dense-finally-browser`, `dense-finally-runtime-tests`,
+`dense-finally-backend`, and `dense-finally-live-verified` logs.
