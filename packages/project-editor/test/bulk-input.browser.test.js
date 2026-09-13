@@ -80,6 +80,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
   const editorWidth = Number(process.env.MACCHIATO_TEST_EDITOR_WIDTH || 720);
   assert.ok(Number.isFinite(editorWidth) && editorWidth > 0 && editorWidth <= 1440);
   const visualInput = process.env.MACCHIATO_TEST_VISUAL_INPUT === "1";
+  const renderFrame = process.env.MACCHIATO_TEST_RENDER_FRAME === "1";
   assert.ok(!visualInput || process.env.MACCHIATO_TEST_ARTIFACTS, "visual input requires an artifacts directory");
   const keyInterval = Number(process.env.MACCHIATO_TEST_KEY_INTERVAL ?? (visualInput ? 100 : 0));
   assert.ok(Number.isFinite(keyInterval) && keyInterval >= 0 && keyInterval <= 1000);
@@ -102,17 +103,25 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
     const assets = { "/machine.js": machine, "/core.js": core, "/language.js": language, "/editor.wasm": wasm };
     await page.route("http://bulk-input.test/**", route => {
       const path = new URL(route.request().url()).pathname;
+      if (renderFrame && path === "/") return route.fulfill({ contentType: "text/html", body: `<!doctype html>
+        <style>body { margin:0; } iframe { position:absolute; left:0; top:56px;
+          width:${editorWidth}px; height:calc(100% - 56px); border:0; }</style>
+        <iframe src="/editor.html" title="Code editor" sandbox="allow-scripts allow-same-origin"></iframe>` });
       return route.fulfill(assets[path]
         ? { body: assets[path], contentType: path.endsWith("wasm") ? "application/wasm" : "text/javascript" }
         : { contentType: "text/html", body: `<style>
           body { margin: 0; ${palette} }
-          #guest { position: absolute; top: 56px; left: 0; bottom: 0; width: ${editorWidth}px; contain: size; }
+          #guest { position: absolute; top: ${renderFrame ? 0 : 56}px; left: 0; bottom: 0; width: ${editorWidth}px; contain: size; }
           #editor, .cm-editor { height: 100%; }
           .cm-scroller { overflow: auto; }
         </style><div id="guest"><div id="editor"></div></div>` });
     });
     await page.goto("http://bulk-input.test/");
-    await page.evaluate(async ({ mode, setup, checkpoints }) => {
+    // The same trusted setup runs in each editor's realm. Inserted source is
+    // only text, never executed; no user code is added to this rendering frame.
+    const view = renderFrame ? page.frames().find(frame => frame.url().endsWith("/editor.html")) : page;
+    assert.ok(view, "the editor rendering document is available");
+    await view.evaluate(async ({ mode, setup, checkpoints }) => {
       window.messages = [];
       window.events = { beforeinput: 0, input: 0 };
       for (const type of Object.keys(events)) document.addEventListener(type, () => events[type]++);
@@ -133,8 +142,8 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
       window.typingCheckpoint = name => mode === "native" ? window[name]()
         : machine.onmsg(new TextEncoder().encode("\u0002" + name + "\0{}"));
     }, { mode, setup, checkpoints });
-    const content = page.locator(".cm-content");
-    const geometry = await page.locator(".cm-scroller").evaluate(node => {
+    const content = view.locator(".cm-content");
+    const geometry = await view.locator(".cm-scroller").evaluate(node => {
       const style = getComputedStyle(node), box = node.getBoundingClientRect();
       const content = node.querySelector(".cm-content");
       const metrics = document.createElement("canvas").getContext("2d");
@@ -145,7 +154,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         contentEditable: content.contentEditable,
         userModify: getComputedStyle(content).getPropertyValue("-webkit-user-modify") };
     });
-    results.push({ run, mode, method: "geometry", language: selectedLanguage, rawSource, ...geometry });
+    results.push({ run, mode, method: "geometry", language: selectedLanguage, rawSource, renderFrame, ...geometry });
     t.diagnostic(JSON.stringify(results.at(-1)));
     if (visualInput) assert.equal(geometry.narrowGlyphWidth, geometry.wideGlyphWidth,
       "visual comparisons need an installed monospace font, not a proportional fallback");
@@ -170,7 +179,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
       await paste(before);
       await page.keyboard.press("Control+End");
       await page.keyboard.press("Control+A");
-      await page.evaluate(() => { messages.length = 0; events.beforeinput = events.input = 0; });
+      await view.evaluate(() => { messages.length = 0; events.beforeinput = events.input = 0; });
       const profileDirectory = process.env.MACCHIATO_CPU_PROFILE_DIR;
       const traceDirectory = process.env.MACCHIATO_BROWSER_TRACE_DIR;
       // Browser layout/editing is invisible in guest-only phase timers. Keep
@@ -185,7 +194,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         await profiler.send("Profiler.enable");
         await profiler.send("Profiler.start");
       }
-      if (checkpoints) await page.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
+      if (checkpoints) await view.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
       const started = performance.now();
       if (method === "paste") await paste(text);
       else await page.keyboard.insertText(text);
@@ -212,7 +221,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         await writeFile(join(profileDirectory, `${run}-${mode}-${method}.cpuprofile`), JSON.stringify(profile));
         await profiler.detach();
       }
-      const state = await page.evaluate(() => ({
+      const state = await view.evaluate(() => ({
         events, changes: messages.filter(message => message.type === "change").length,
         text: messages.filter(message => message.type === "change").at(-1)?.content,
       }));
@@ -221,7 +230,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         events: state.events, changes: state.changes });
       t.diagnostic(JSON.stringify(results.at(-1)));
       if (checkpoints) {
-        const measured = await page.evaluate(() => {
+        const measured = await view.evaluate(() => {
           typingCheckpoint("reportTypingCheckpoints");
           return messages.filter(message => message.type === "typing-checkpoints").at(-1);
         });
@@ -229,16 +238,16 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         t.diagnostic(JSON.stringify(results.at(-1)));
       }
       await page.keyboard.press("Control+z");
-      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), before);
+      assert.equal(await view.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), before);
       await page.keyboard.press("Control+y");
-      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), text);
+      assert.equal(await view.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content), text);
     }
     // A large document must also remain useful for ordinary first-page edits.
     // Type a short phrase, make a typo, and correct it using real key events.
     if (parseBeforeTyping) {
       // Diagnostic control: separate catching up after bulk replacement from
       // incremental edits to an already parsed document. Never used by the app.
-      const parsing = await page.evaluate(() => {
+      const parsing = await view.evaluate(() => {
         typingCheckpoint("finishBulkParsing");
         return messages.filter(message => message.type === "parse-before-typing").at(-1);
       });
@@ -256,7 +265,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
     t.diagnostic(JSON.stringify(results.at(-1)));
     let inserted = "";
     const keyMilliseconds = [];
-    if (visualInput) await page.evaluate(() => {
+    if (visualInput) await view.evaluate(() => {
       window.visualFrames = [];
       const started = performance.now();
       window.recordVisualFrame = () => {
@@ -270,7 +279,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
       };
       recordVisualFrame();
     });
-    if (checkpoints) await page.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
+    if (checkpoints) await view.evaluate(() => typingCheckpoint("resetTypingCheckpoints"));
     const typingDirectory = process.env.MACCHIATO_TYPING_CPU_PROFILE_DIR;
     const typingProfiler = typingDirectory ? await context.newCDPSession(page) : null;
     if (typingProfiler) {
@@ -282,7 +291,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
       await page.keyboard.press(key === " " ? "Space" : key);
       keyMilliseconds.push(Math.round(performance.now() - started));
       inserted = key === "Backspace" ? inserted.slice(0, -1) : inserted + key;
-      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
+      assert.equal(await view.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
         text.slice(0, typingOffset) + inserted + text.slice(typingOffset));
       if (keyInterval) await page.waitForTimeout(keyInterval);
     }
@@ -298,7 +307,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
     // would hide contention between background work and newly arriving keys.
     if (process.env.MACCHIATO_TEST_INPUT_BURST === "1") await typeQueuedBurst();
     if (checkpoints) {
-      const timings = await page.evaluate(() => {
+      const timings = await view.evaluate(() => {
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1);
       });
@@ -307,11 +316,11 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         viewportParsed: timings.viewportParsed, documentParsed: timings.documentParsed });
       t.diagnostic(JSON.stringify(results.at(-1)));
       const parseWaitStarted = performance.now();
-      await page.waitForFunction(() => {
+      await view.waitForFunction(() => {
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1).viewportParsed;
       }, null, { timeout: 10000 });
-      const completed = await page.evaluate(() =>
+      const completed = await view.evaluate(() =>
         messages.filter(message => message.type === "typing-checkpoints").at(-1));
       results.push({ run, mode, method: "viewport-parse-wait", position: typingPosition,
         milliseconds: Math.round(performance.now() - parseWaitStarted), timings: completed.timings,
@@ -326,7 +335,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
     t.diagnostic(JSON.stringify(results.at(-1)));
     if (visualInput) {
       await page.waitForTimeout(300);
-      const frames = await page.evaluate(() => {
+      const frames = await view.evaluate(() => {
         cancelAnimationFrame(visualFrameHandle);
         return visualFrames;
       });
@@ -345,7 +354,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
       // Serial Playwright key presses cannot expose yielding to already queued
       // input while a background parser is busy on the main thread.
       const session = await context.newCDPSession(page);
-      const viewportParsedBefore = checkpoints ? await page.evaluate(() => {
+      const viewportParsedBefore = checkpoints ? await view.evaluate(() => {
         typingCheckpoint("reportTypingCheckpoints");
         return messages.filter(message => message.type === "typing-checkpoints").at(-1).viewportParsed;
       }) : null;
@@ -363,14 +372,14 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
         }, index * 30);
       })));
       await session.detach();
-      assert.equal(await page.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
+      assert.equal(await view.evaluate(() => messages.filter(message => message.type === "change").at(-1)?.content),
         text.slice(0, typingOffset) + inserted + letters + text.slice(typingOffset));
       results.push({ run, mode, method: "queued-typing", disableInputPending, viewportParsedBefore,
         interval: 30, acknowledgements });
       t.diagnostic(JSON.stringify(results.at(-1)));
     }
     assert.deepEqual(errors, []);
-    await page.evaluate(() => window.machine?.destroy());
+    await view.evaluate(() => window.machine?.destroy());
     await context.close();
     if (visualInput) await page.video().saveAs(join(process.env.MACCHIATO_TEST_ARTIFACTS, `${run}-${mode}.webm`));
   }
