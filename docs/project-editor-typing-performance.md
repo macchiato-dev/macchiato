@@ -930,3 +930,29 @@ Final rebuilt-artifact checks pass in both complete-site modes, the separate
 tests. Their logs use the `editor-surface-full-site-final-*`,
 `editor-surface-final`, `editor-surface-integrated-module-tests`, and
 `editor-surface-edge-policy-tests` names in the same work directory.
+
+### Default framed-editor checkpoint
+
+The source controller now defaults to `editorFrame: true`; its explicit false
+option retains the direct surface. The complete-site test still exercises both
+options, while the general UI suite now targets the default frame's editor.
+
+The framed suite passed startup and navigation appearance in eight desktop and
+phone combinations, and the long editing/history/output-recovery scenario.
+The latter includes 80 edits, undo/redo, scrolling gutters, repeated font-edit
+recovery, and a 98 KB native insertion (5,087 ms in this run). This timing is
+not a replacement for the controlled native/guest comparison above.
+
+A deliberately failed Python grammar download exposed one missed boundary:
+the editor surface treated the recoverable language notification as a machine
+error. It now forwards that notification to the project UI's existing warning
+and retry behavior. The complete language test passes after rebuilding, without
+replacing the editing session. Five further direct tab-strip stress runs also
+passed; the earlier intermittent visibility failure remains documented rather
+than attributed to a speculative fix.
+
+Evidence: `editor-frame-default-ui.log`, `editor-frame-language-retry.log`,
+`editor-frame-default-ui/`, and `editor-tabs-repeat-{1..5}.log` under
+`/root/macchiato-work`. Light editor and history screenshots were inspected.
+At this checkpoint the local 3030 server and deployment archive still use the
+previous export; packaged verification precedes activation.

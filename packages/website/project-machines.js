@@ -164,7 +164,7 @@ export async function createProjectAppMachine(root) {
 export function loadProjectEditorModule() {
   return moduleFor("/-/resources-site/project-editor-quickjs-runtime.wasm");
 }
-export async function createProjectEditorMachine({ root, onChange, onReady, onShortcut,
+export async function createProjectEditorMachine({ root, onChange, onReady, onShortcut, onLanguageError,
   onLimit, onError, onRequest, services, limits, resolveImage, allowNavigate = false,
   module: suppliedModule }) {
   const module = suppliedModule || await loadProjectEditorModule();
@@ -218,7 +218,8 @@ export async function createProjectEditorMachine({ root, onChange, onReady, onSh
       else if (message.type === "ready") onReady?.(message);
       else if (message.type === "limit") onLimit?.(message);
       else if (message.type === "shortcut") onShortcut?.(message.name);
-      else if (message.type === "language-error") onError?.(new Error(`Language ${message.language}: ${message.message}`));
+      // A missing grammar is recoverable; it does not stop the editor machine.
+      else if (message.type === "language-error") onLanguageError?.(message);
     });
     },
   });

@@ -22,7 +22,7 @@ async function loadModule(url, signal) {
   return WebAssembly.compileStreaming(response);
 }
 
-export async function startResourcesMachineController() {
+export async function startResourcesMachineController({ editorFrame = true } = {}) {
   let machine, editorDevice, outputDevice;
   let disposed = false;
   const startup = new AbortController();
@@ -84,7 +84,7 @@ export async function startResourcesMachineController() {
     "archive.import": () => archiveDevice.import(),
     "build.compile": (payload) => buildDevice.compile(payload),
     "build.run": (payload) => buildDevice.run(payload),
-    "editor.mount": (payload) => editorDevice.mount(payload),
+    "editor.mount": (payload) => editorDevice.mount({ ...payload, editorFrame }),
     "editor.output.mount": (payload) => editorDevice.mountOutput(payload),
     "fetch": (payload) => fetchDevice.request(payload),
     "output.load": (payload) => outputDevice.load(payload),

@@ -89,6 +89,13 @@ declared passing. A future focused command should use `--test-skip-pattern`
 for that separate legacy surface; the negative lookahead name filter used in
 this run did not exclude it.
 
+The source controller now enables the separate editor surface by default.
+Its full framed editing and appearance tests pass, and the failed-language
+download test found a recoverable notification that needed forwarding to the
+project UI rather than escalation as a machine error. That retry now passes.
+See the [default checkpoint](project-editor-typing-performance.md#default-framed-editor-checkpoint).
+This does not yet change the live/exported artifact recorded below.
+
 ## Deployment artifact
 
 `/root/resources-bunny.tar.gz` contains the verified `398f759` export. SHA-256:

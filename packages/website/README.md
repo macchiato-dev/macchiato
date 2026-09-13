@@ -60,12 +60,18 @@ may continue using full-document navigation.
 
 ### Project editor environment
 
-The focused project view mounts the `project-editor` guest directly into a bounded page
-subtree; it does not use an iframe. CodeMirror state, extensions, and commands
+The focused project view keeps the project UI in a bounded page subtree and
+mounts CodeMirror in its own iframe and machine. The trusted controller can
+select the direct surface with
+`startResourcesMachineController({ editorFrame: false })`. CodeMirror state,
+extensions, and commands
 run in a dedicated MicroQuickJS WebAssembly runtime with declared heap and stack
 limits. The host owns only the constrained DOM renderer and filtered input
 bridge, and disposes their listeners, handles, context, and runtime on page
-teardown. Build the controller and guest artifacts with
+teardown. The fixed frame shell constructs its bridge in the frame's realm;
+project source remains text edited by the guest, never browser-executed code.
+History and project details stay in the project UI machine, which owns the
+editor and output through controller services. Build the controller and guest artifacts with
 `node packages/website/build-project-editor.js`. The editor artifact currently
 retains the filename `project-editor-quickjs-runtime.wasm`, despite using
 MicroQuickJS. Language bytecode downloads and executes on guest request; the

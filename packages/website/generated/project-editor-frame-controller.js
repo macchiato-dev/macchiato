@@ -75,6 +75,7 @@ async function createProjectEditorMachine({
   onChange,
   onReady,
   onShortcut,
+  onLanguageError,
   onLimit,
   onError,
   onRequest,
@@ -149,7 +150,7 @@ async function createProjectEditorMachine({
         else if (message.type === "ready") onReady?.(message);
         else if (message.type === "limit") onLimit?.(message);
         else if (message.type === "shortcut") onShortcut?.(message.name);
-        else if (message.type === "language-error") onError?.(new Error(`Language ${message.language}: ${message.message}`));
+        else if (message.type === "language-error") onLanguageError?.(message);
       });
     }
   });

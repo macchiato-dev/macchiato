@@ -18,6 +18,10 @@ import { createNodeSqliteClient } from "../../../packages/website/adapters/node-
 const root = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = join(root, "packages/app/src/index.js");
 
+function editorSurface(page) {
+  return page.frameLocator("iframe.project-editor__code-frame");
+}
+
 test("Resources framed editor integrates with the site and running output", { timeout: 90_000 }, async t => {
   const work = resolve(root, "../macchiato-work");
   await mkdir(work, { recursive: true });
@@ -50,10 +54,10 @@ test("Resources framed editor integrates with the site and running output", { ti
   const controllerFile = join(root, "packages/website/frontend/controller.ts");
   const controllerSource = await readFile(controllerFile, "utf8");
   const editorFrame = process.env.MACCHIATO_TEST_EDITOR_FRAME !== "0";
-  assert.ok(controllerSource.includes("editorDevice.mount(payload)"));
+  assert.ok(controllerSource.includes("startResourcesMachineController().catch"));
   const controller = (await build({
-    stdin: { contents: controllerSource.replace("editorDevice.mount(payload)",
-      `editorDevice.mount({ ...payload, editorFrame: ${editorFrame} })`), loader: "ts",
+    stdin: { contents: controllerSource.replace("startResourcesMachineController().catch",
+      `startResourcesMachineController({ editorFrame: ${editorFrame} }).catch`), loader: "ts",
       resolveDir: join(root, "packages/website/frontend"), sourcefile: "controller.ts" },
     bundle: true, write: false, format: "esm", platform: "browser", external: ["./machine.js"],
     plugins: [{ name: "test-machine", setup(builder) {
@@ -264,7 +268,7 @@ test("Resources preserves first-paint appearance through frontend startup and na
       await page.goto(origin + "/");
       await check();
       await page.goto(origin + "/projects/new");
-      await page.locator(".cm-content").waitFor({ state: mobile ? "attached" : "visible" });
+      await editorSurface(page).locator(".cm-content").waitFor({ state: mobile ? "attached" : "visible" });
       await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.outputMachineState === 'ready');
       await check();
       if (process.env.MACCHIATO_TEST_ARTIFACTS) {
@@ -289,7 +293,7 @@ test("Resources preserves first-paint appearance through frontend startup and na
             else assert.ok(!changed && paint.theme === previous, 'appearance must not revert after switching');
           }
           assert.ok(changed);
-          const color = await page.locator('.cm-content').evaluate(node => getComputedStyle(node).color);
+          const color = await editorSurface(page).locator('.cm-content').evaluate(node => getComputedStyle(node).color);
           if (editorColors.has(next)) assert.equal(color, editorColors.get(next), 'editor theme survives repeated switches');
           else editorColors.set(next, color);
           previous = next;
@@ -463,7 +467,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   });
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
   const editor = page.locator("[data-project-editor]");
-  const content = editor.locator(".cm-content");
+  const content = editorSurface(page).locator(".cm-content");
   let earlyOutput;
   try {
     await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.outputMachineState === 'ready');
@@ -497,7 +501,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   });
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.outputMachineState === "ready");
-  await page.waitForFunction(() => document.querySelectorAll(".cm-line span[class]").length > 0);
+  await content.locator(".cm-line span[class]").first().waitFor();
   assert.deepEqual(languageDownloads, ["project-editor-language-html.bin"]);
   // The frontend is MicroQuickJS: this also catches guest-wrapper APIs that
   // work in full QuickJS but are absent from the smaller engine.
@@ -629,9 +633,9 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await content.click();
 
   await page.keyboard.press("Control+z");
-  await page.waitForFunction(() => !document.querySelector(".cm-content").textContent.includes("Editable row 100"));
+  await content.filter({ hasText: "Editable row 100" }).waitFor({ state: "hidden" });
   await page.keyboard.press("Control+y");
-  await page.waitForFunction(() => document.querySelector(".cm-content").textContent.includes("Editable row 100"));
+  await content.filter({ hasText: "Editable row 100" }).waitFor();
   assert.equal((await content.innerText()).trim(), source.trim());
   checkpoint("undo/redo restored source");
 
@@ -647,12 +651,12 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.match(editedSnapshot, /<!-- typed correction -->/);
   for (let index = 1; index <= 80; index++) assert.ok(editedSnapshot.includes(`<!-- revision ${index} -->`));
   assert.match(await content.innerText(), /revision 80/);
-  const scroller = editor.locator(".cm-scroller");
+  const scroller = editorSurface(page).locator(".cm-scroller");
   await scroller.evaluate((node) => { node.scrollTop = 0; node.dispatchEvent(new Event("scroll")); });
   await page.waitForTimeout(100);
   await scroller.evaluate((node) => { node.scrollTop = node.scrollHeight; node.dispatchEvent(new Event("scroll")); });
   await page.waitForTimeout(100);
-  const renderedLineNumbers = (await editor.locator(".cm-lineNumbers .cm-gutterElement").allTextContents())
+  const renderedLineNumbers = (await editorSurface(page).locator(".cm-lineNumbers .cm-gutterElement").allTextContents())
     .map(Number).filter(Number.isFinite);
   assert.ok(Math.max(...renderedLineNumbers) > 170);
   assert.match(await content.innerText(), /revision 80/);
@@ -672,7 +676,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await editor.getAttribute("data-persistence"), "stored", "the saved project is an authenticated owner view");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   await page.reload({ waitUntil: "networkidle" });
-  await page.locator(".cm-content").waitFor();
+  await editorSurface(page).locator(".cm-content").waitFor();
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineState === "ready");
   const restoredSnapshot = await page.locator("[data-project-snapshot]").inputValue();
   assert.equal(await editor.getAttribute("data-persistence"), "stored", "reload must not silently fall back to the public view");
@@ -686,7 +690,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   // The output's asynchronous failures belong beneath the output, not just
   // in its iframe's console or in the CodeMirror error channel.
   checkpoint("saved project reloaded");
-  await page.locator(".cm-content").fill('<button id="fail">Fail later</button><script>' +
+  await editorSurface(page).locator(".cm-content").fill('<button id="fail">Fail later</button><script>' +
     'document.getElementById("fail").addEventListener("click", function () {' +
     'setTimeout(function () { throw new Error("output timer regression"); }, 10);' +
     '});</script>');
@@ -700,7 +704,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.equal(await editor.getAttribute("data-output-machine-state"), "failed");
   await page.screenshot({ path: join(artifacts, "output-timer-error.png") });
   assert.ok(errors.every(error => /output timer regression/.test(error)), JSON.stringify(errors));
-  await page.locator(".cm-content").fill("<h1>Recovered output</h1><!-- Español: 🀄 -->");
+  await editorSurface(page).locator(".cm-content").fill("<h1>Recovered output</h1><!-- Español: 🀄 -->");
   assert.ok(await page.evaluate(() => {
     const root = document.querySelector('[data-project-editor]');
     return sessionStorage.getItem('resources_project_pending_v1:' + root.dataset.projectId) ===
@@ -919,7 +923,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       }
       if (mode === "absolute") {
         node.style.position = "relative";
-        Object.assign(node.querySelector(".cm-editor").style, { position: "absolute", inset: "0" });
+        Object.assign(node.querySelector(".project-editor__code-frame, .cm-editor").style,
+          { position: "absolute", inset: "0" });
         return;
       }
       const box = node.getBoundingClientRect();
@@ -1063,7 +1068,7 @@ test("Resources loads language bytecode on demand without replacing the editing 
     else await route.fallback();
   });
   await page.goto(`http://resources-edge.localhost:${port}/${account.login}/languages`);
-  const editor = page.locator("[data-project-editor]"), content = editor.locator(".cm-content");
+  const editor = page.locator("[data-project-editor]"), content = editorSurface(page).locator(".cm-content");
   await content.waitFor();
   const editorId = await editor.getAttribute("data-editor-machine-id");
   async function openFile(path) {
@@ -1072,8 +1077,8 @@ test("Resources loads language bytecode on demand without replacing the editing 
     assert.equal(await editor.getAttribute("data-editor-machine-id"), editorId);
   }
   async function highlighted(word) {
-    await page.waitForFunction(word => [...document.querySelectorAll(".cm-content .cm-line span")]
-      .some(span => span.textContent.includes(word) && span.className), word, { timeout: 5000 }).catch(async error => {
+    await content.locator(".cm-line span[class]").filter({ hasText: word }).first()
+      .waitFor({ timeout: 5000 }).catch(async error => {
         t.diagnostic(JSON.stringify({ word, downloads, errors,
           text: await content.innerText(),
           status: await page.locator("[data-project-status]").allTextContents(),
