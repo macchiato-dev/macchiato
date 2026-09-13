@@ -1,6 +1,6 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-c671ef9`.
+Current local verification: 2026-09-13, export `resources-co-f9ce237`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
@@ -12,6 +12,12 @@ controller's `editorFrame: false` option keeps the direct Element path.
 The frame runs a fixed trusted shell; project code still executes only in its
 output guest. Failed language downloads remain recoverable highlighting
 warnings, not editor crashes.
+
+The tab-strip failure is now reproduced and fixed: guest `after()` reads real
+sibling order for adopted nodes, tab replacement disposes tooltip listeners,
+and guest event dispatch decodes the full unsigned callback word. No host
+capability or limit was widened. The regression now performs eight complete
+open/close cycles across narrow and wide layouts.
 
 The editor Configuration view now formats JSON in the guest application.
 MicroQuickJS ignores the indentation argument to `JSON.stringify`; the display
@@ -39,6 +45,9 @@ their existing session. This is separate from the typing/build debounce.
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
   recovery; and language bytecode loaded without replacing the editor session.
+- All 25 callback/surface/initial-output browser checks pass, including signed
+  callback-word boundaries and inert HTML source in the editor through loading,
+  native insertion, and rich clipboard paste.
 - Screenshots of light editing, history, desktop Mahjong, and phone Cat Memory
   were reviewed, in addition to the earlier Configuration/output checks.
 - Read-only exported and live checks pass for full-height Mahjong, all Cat
@@ -49,9 +58,10 @@ their existing session. This is separate from the typing/build debounce.
   compressed backend artifact runs its routing, rendering, and policy guests
   in Deno. Nothing has been deployed to Bunny.
 
-Current evidence is in `/root/macchiato-work/editor-frame-packaged-ui.log`,
-`editor-frame-modules.log`, `editor-frame-bunny-backend.log`,
-`editor-frame-live.log`, and their screenshot directories. The earlier broader
+Current evidence is in `/root/macchiato-work/tab-lifetime-packaged.log`,
+`tab-lifetime-modules.log`, `tab-lifetime-bunny-backend.log`,
+`tab-lifetime-boundaries.log`, `tab-lifetime-live.log`, and their screenshot
+directories. The earlier broader
 app checks remain in `current-resources-browser-suite.log` and
 `account-current-flow-final.log`.
 The latter app test waits for native form navigation and guest readiness, uses
@@ -90,9 +100,10 @@ the frame-shell response CSP and cancelled-page lifecycle handling. It also
 found and fixed the extra bootstrap exceeding the interpreter's 16-program
 table when all grammars load. The direct long-editing test passes, and two
 complete language reruns pass. Five further direct repeats and the two framed
-language runs also pass. An intermittent selected-tab visibility timeout after
-repeated closes has not reproduced and is not declared fixed; see the
-[complete-site checkpoint](project-editor-typing-performance.md#complete-site-integration-checkpoint).
+language runs also passed. Extending that scenario reproduced the selected-tab
+visibility problem and uncovered the sibling-order and callback-lifetime bugs
+now fixed in this export; see the
+[reproduction](project-editor-typing-performance.md#reproduced-tab-strip-and-callback-lifetime-failures).
 
 The eight legacy SQLite-site failures concern removed schema paths and old
 navigation/theme/menu expectations. They have not been skipped in source or
@@ -110,11 +121,11 @@ the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
-`/root/resources-bunny.tar.gz` contains the verified `c671ef9` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `f9ce237` export. SHA-256:
 
-`f67daaca73da41e32ff6a58bde772c29b60676e85bcb2675bde3566585430051`
+`21acb0ebecb12cecaf2c3575964e3867eec4f3ceb00538e9e8814b61c1b2f0a8`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-398f759-before-editor-frame.tar.gz`.
+`/root/archive/2026/09/13/resources-bunny-c671ef9-before-tab-lifetime.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.

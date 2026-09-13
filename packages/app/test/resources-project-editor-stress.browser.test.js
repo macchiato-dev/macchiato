@@ -1194,6 +1194,9 @@ test("Resources loads language bytecode on demand without replacing the editing 
   for (const width of [1000, 1920, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await selectedTabVisible();
+    if (artifacts && width === 1000) {
+      await page.screenshot({ path: join(artifacts, "tabs-overflow-narrow.png") });
+    }
   }
   // Closing the active end of the strip eventually removes the arrows. The
   // controls must not keep themselves visible by consuming the available room.

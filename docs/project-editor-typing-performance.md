@@ -979,3 +979,55 @@ Logs and screenshots use the `editor-frame-packaged-ui`, `editor-frame-live`,
 `editor-frame-modules`, and `editor-frame-bunny-backend` names in the work
 directory. The earlier intermittent tab-strip timeout remains an open
 observation, despite the subsequent passing runs.
+
+### Reproduced tab-strip and callback-lifetime failures
+
+Repeatedly reopening and closing the language fixture at 1000 and 1440 pixels
+reproduced the tab-strip failure. Its right arrow had been inserted after all
+the toolbar controls, so overflow measurements included unrelated controls.
+The guest's `after()` used its private lifetime mirror for sibling order;
+adopted DOM nodes enter that mirror on demand, not in document order. It now
+uses the actual `parentNode` and `nextSibling` reads. The host is unchanged.
+An explicit adjacency assertion fails against the old runtime.
+
+Longer runs then reached callback IDs above 2047. WebAssembly delivers their
+packed words as signed i32 values; the guest decoded them as negative callback
+indices. Dispatch now normalizes the word to unsigned after recognizing the
+flush sentinel. A real browser-timer regression fails before this fix and
+passes afterward for slots 2047, 2048, and 4095.
+
+Tab rendering also hid old tooltips without unregistering their listeners.
+Replaced tabs now dispose tooltip timers and listeners, returning their slots
+through the existing guest unsubscribe path. Eight full open/close cycles,
+alternating viewport widths, pass without increasing the 4096-slot limit.
+This is explicit component cleanup, not a new policy that invalidates every
+detached DOM node or a claim about arbitrary guest listener cycles.
+
+The separate editor test now loads, inserts, and pastes source containing
+scripts, remote images, styles, frames, and refresh metadata. The content stays
+exact source text, creates no such elements, triggers no unexpected requests,
+and does not navigate. All 25 callback/surface/initial-output browser checks
+pass with these source artifacts. Evidence is in `editor-tabs-cycles.log`,
+`editor-tab-sibling-before.log`, `callback-word-before.log`,
+`callback-word-after.log`, `editor-tabs-lifetime.log`, and
+`tab-lifetime-boundaries.log` under `/root/macchiato-work`.
+
+Commit `f9ce2373` contains these fixes. Packaged verification is separate from
+the focused tests above; the preceding live/export record still applies until
+the rebuilt deployment is checked and activated.
+
+The `f9ce237` export subsequently passed all 12 packaged application browser
+checks (including eight tab cycles), 112 non-browser checks, the Deno backend
+test, and all 153 deployment-file checks before and after archive extraction.
+The narrow overflowing-tab screenshot was inspected: the arrows flank the
+strip, with file/history controls remaining outside it. Native bulk insertion
+of 98,905 characters took 5,345 ms; the ordinary paste path took 129 ms.
+
+After restarting the local server, eight principal live assets match the
+export by digest. Read-only owner checks again passed Mahjong, all Cat Memory
+pairs/reset, 50 tour slides and keyboard navigation, and SQLite fragments,
+including phone/desktop theme and pane switches. No owner project or notes
+were saved. `/root/resources-bunny.tar.gz` now holds this export; the preceding
+archive is preserved under `/root/archive/2026/09/13/`. Nothing was deployed to
+Bunny. Evidence uses the `tab-lifetime-packaged`, `tab-lifetime-modules`,
+`tab-lifetime-live`, and `tab-lifetime-bunny-backend` log prefixes.
