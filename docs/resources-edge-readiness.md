@@ -85,10 +85,12 @@ their existing session. This is separate from the typing/build debounce.
   folding, and wheel-driven rendering without a follow-up click. Median
   per-key Playwright round trips were about 24–25 ms for JavaScript/Rust and
   40–41 ms for TypeScript, not isolated interpreter timings.
-- All 13 packaged appearance/editing/language checks pass. They include real
+- All 15 current packaged appearance/editing/language checks pass. They include real
   frontend startup and navigation on desktop/phone; explicit and system themes;
   repeated edits; undo/redo; historical selection and republishing; invalid CSS
   recovery; and language bytecode loaded without replacing the editor session.
+  The full rerun includes both saved and unsaved 20-cycle geometry fixtures and
+  the substantial-source test, using the exported `b46589e` browser assets.
 - The strengthened language lifecycle test also passes with Chromium slowed
   to 4x CPU cost. It explicitly awaits completed autosave and checks for errors
   around every file switch. The old artifact fails that test at normal speed.
@@ -120,6 +122,9 @@ The current broad run is `readiness-current-framed.log` (43 passes, 375.8s),
 preceded by six focused passes in `readiness-frame-tests.log`. Search screenshots
 in `readiness-current-framed/` were reviewed at phone/light and desktop/dark
 sizes. Substantial-source coverage is in `real-source-interactions-final.log`.
+The complete packaged rerun is `readiness-final-packaged.log` (15 passes,
+283.4s), with screenshots in `readiness-final-packaged/`. No runtime changes or
+archive regeneration were needed for these test and documentation updates.
 The earlier broader app checks remain in `current-resources-browser-suite.log` and
 `account-current-flow-final.log`.
 The latter app test waits for native form navigation and guest readiness, uses
@@ -191,9 +196,9 @@ now fixed in this export; see the
 
 The eight legacy SQLite-site failures concern removed schema paths and old
 navigation/theme/menu expectations. They have not been skipped in source or
-declared passing. A future focused command should use `--test-skip-pattern`
-for that separate legacy surface; the negative lookahead name filter used in
-this run did not exclude it.
+declared passing. The current 43-test run uses `--test-skip-pattern` for that
+separate legacy surface; the earlier negative lookahead name filter did not
+exclude it.
 
 The source controller now enables the separate editor surface by default.
 Its full framed editing and appearance tests pass, and the failed-language
