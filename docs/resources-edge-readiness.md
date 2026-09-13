@@ -171,6 +171,29 @@ the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
+Additional checks of the same `4042e11` export on 2026-09-13:
+
+- Responsive geometry stress now covers a disposable saved project as well
+  as an anonymous project: 20 phone/desktop/edit cycles each, with completed
+  autosaves checked in the saved case. Both passed, with unchanged editor
+  bounds and no machine errors. The older `4d569f7` control reproduces the
+  finally-table error but retains its geometry; this does not establish the
+  cause of the original historical geometry failure.
+- Read-only live checks now include `benatkin/test-article`, completing the
+  five existing owner projects. Its heading, three links, separate stylesheet,
+  framed output, editor, and theme switches passed. Desktop and phone
+  screenshots were captured; the desktop screenshot was visually inspected.
+  No owner content was saved or changed.
+- The actual bundled Bunny entry passed a Deno smoke test: HTTP registration
+  precedes Storage access, and all eight combinations of GET/HEAD, English/
+  Spanish, and open/closed signup state return the expected exported home
+  without fetching or compiling the deferred backend. Network access was not
+  granted. This verifies the local entry path, not Bunny's startup time.
+
+Evidence is in `/root/macchiato-work/saved-geometry-current.log`,
+`saved-geometry-before-painted.log`, `all-owner-article.log`, and
+`bunny-entry-artifact.log`; screenshots are in `all-owner-projects/`.
+
 `/root/resources-bunny.tar.gz` contains the verified `4042e11` export. SHA-256:
 
 `52d7d59feebd6282d5f138ff799546c8bdd48aae91fd6af26623e7f41beaf5a8`

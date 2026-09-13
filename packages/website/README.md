@@ -592,6 +592,9 @@ node --test packages/website/test/*.test.js
 deno test --config packages/website/deno.json --allow-read \
   packages/website/test/bunny-machine-artifact.test.ts -- \
   dist/resources-bunny/site/resources-co-REVISION/machines/backend.bin
+deno test --allow-read --allow-env \
+  packages/website/test/bunny-entry-artifact.test.ts -- \
+  dist/resources-bunny
 ```
 
 The Deno smoke test decompresses the actual upload, compiles both runtimes,
@@ -599,6 +602,14 @@ executes routing and escaped document rendering, and checks SQL-policy
 rejection. It needs no database, deployment key, or network permission. These
 local checks do not establish Bunny's startup timing or replace a staging
 playtest against its database and Storage configuration.
+
+The entry test imports the actual single-file edge script, intercepting only
+its platform HTTP registration and Storage fetches. It verifies registration
+before fetching, then GET/HEAD home responses for both languages and signup
+states against exported HTML. WASM startup is prohibited on these paths. It
+uses a dummy Storage key, needs no network permission, and restores its test
+environment afterward. Its Deno execution time is not a Bunny cold-start
+measurement.
 
 The build defaults `BLOG_EXAMPLES_ORIGIN` to
 `https://blog-examples.resources.co`. Set it explicitly only when building for
