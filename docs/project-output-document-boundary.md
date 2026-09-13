@@ -52,6 +52,35 @@ pass for full-height Mahjong, Cat Memory's eight pairs and reset, 50 tour slides
 and SQLite fragments. Seven principal served assets match the export after
 restart. This is a local deployment, not a Bunny staging deployment.
 
+## Staged replacement verification (2026-09-13)
+
+The `cc6c03e` export includes sibling-frame staging and the separate `updating`
+state: only initial `starting` shows the pane's loading overlay. Existing output
+stays visible while a replacement builds. No machine API or permissions changed.
+
+- Browser lifetime tests pass for iframe/element output in light/dark modes,
+  including cancellation, destruction, startup failure, retained focus, fragment
+  carry-over, and reuse of the compiled runtime.
+- The packaged editing test passes an 80-edit burst, scrolling, undo/redo,
+  historical-version selection and republishing, repeated malformed font CSS,
+  recovery, and phone views. It checks the actual loading-overlay CSS during
+  replacement. The language suite also passes tab overflow, resizing, parser
+  failures/retries, and on-demand loading without replacing the editor session.
+- Screenshots of light/dark editing, recovery, and phone output were inspected.
+  Read-only exported/live checks pass Mahjong's full-height board, Cat Memory's
+  eight pairs and reset, 50 tour slides, and SQLite fragment navigation. Owner
+  project content was not saved or changed by these checks.
+- Seven principal live assets match the export byte-for-byte. The 152-file
+  manifest passes both before and after extracting the archive; the compressed
+  backend artifact passes its Deno execution test.
+
+The refreshed `/root/resources-bunny.tar.gz` has SHA-256
+`8ed6c891c2d10c073f814281bded9760cd200c512928c03d4204426c877fc5a2`.
+Its predecessor is preserved at
+`/root/archive/2026/09/13/resources-bunny-96ec43a-before-staged-output.tar.gz`.
+This verifies local deployment and packaging, not a Bunny staging deployment or
+a controlled performance comparison.
+
 ## Initial mount uses the compiled application
 
 The editor already has the compiled project when it mounts the output. It now
