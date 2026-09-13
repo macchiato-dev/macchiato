@@ -32,6 +32,12 @@ and retaining the old guest after every failed startup describe that earlier
 design, not the current Document replacement contract. Production rebuild and
 live-site verification of this new path remain pending.
 
+The rebuilt-site stress test also passes with the direct Document grant:
+expanded output works before the editor finishes downloading, document
+attributes survive initial loading and edits, repeated invalid CSS edits
+recover, and no additional rendering frames are introduced. The light-theme
+editing screenshot was inspected. This does not yet claim a live deployment.
+
 The focused Chromium run passes 14 tests, including real QuickJS stateful
 updates in both grant modes without frames, fresh-state replacement, retired
 callback disposal, recovery after a throwing edit, fragment Back/Forward,

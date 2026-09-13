@@ -452,6 +452,8 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
       throw error;
     }
     await content.waitFor();
+    assert.equal(await page.locator('[data-project-submit]').isDisabled(), true,
+      'the selected saved version is clean after publication and reload');
   }
   await publishSelection();
   await historyButton.click();
