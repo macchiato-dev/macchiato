@@ -57,8 +57,8 @@ test("Resources framed editor integrates with the site and running output", { ti
   db.close();
   const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
     iat: Date.now(), exp: Date.now() + 180_000 }, "local-preview-session-signing-key");
-  // Exercise the opt-in path without changing the production default. All
-  // other controller code, guests, services and server routes are real.
+  // Exercise the framed default, or the direct comparison when requested.
+  // All other controller code, guests, services and server routes are real.
   const controllerFile = join(root, "packages/website/frontend/controller.ts");
   const controllerSource = await readFile(controllerFile, "utf8");
   const editorFrame = process.env.MACCHIATO_TEST_EDITOR_FRAME !== "0";
@@ -853,11 +853,13 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   await page.screenshot({ path: join(artifacts, "font-edit-recovered.png") });
   checkpoint("repeated font-edit recovery without reload");
 
-  await page.evaluate(() => {
+  // Create the recovery copy through the editor, rather than overwriting its
+  // storage behind an in-flight save of the previous font edit.
+  await content.fill('<h1>Recovered session draft</h1>');
+  await page.waitForFunction(() => {
     const root = document.querySelector('[data-project-editor]');
-    const snapshot = JSON.parse(root.querySelector('[data-project-snapshot]').value);
-    snapshot.files[0].content = '<h1>Recovered session draft</h1>';
-    sessionStorage.setItem('resources_project_pending_v1:' + root.dataset.projectId, JSON.stringify(snapshot));
+    const pending = sessionStorage.getItem('resources_project_pending_v1:' + root.dataset.projectId);
+    return pending && JSON.parse(pending).files[0].content === '<h1>Recovered session draft</h1>';
   });
   await page.reload();
   await output.getByRole('heading', { name: 'Recovered session draft', exact: true }).waitFor();
@@ -962,6 +964,12 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   }
   assert.equal(await mount.evaluate(node => getComputedStyle(node).contain), process.env.MACCHIATO_EDITOR_CONTAIN || "size");
   const originalSize = await mount.boundingBox();
+  const originalLayout = await mount.evaluate(node => ({
+    notices: [...document.querySelectorAll('[role="status"], [role="alert"]')]
+      .filter(node => node.getBoundingClientRect().height > 0).map(node => node.textContent),
+    parentHeight: node.parentElement.getBoundingClientRect().height,
+    viewport: [innerWidth, innerHeight],
+  }));
   for (const native of [false, true]) {
     const text = native ? nativeSource : large;
     const before = JSON.parse(await page.locator("[data-project-snapshot]").inputValue()).files[0].content;
@@ -1007,7 +1015,19 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     assert.equal(await snapshotText(), text);
     await output.getByRole("heading", { name: "Large input", exact: true }).waitFor();
     const size = await mount.boundingBox();
-    assert.ok(Math.abs(size.width - originalSize.width) < 1 && Math.abs(size.height - originalSize.height) < 1);
+    if (Math.abs(size.width - originalSize.width) >= 1 || Math.abs(size.height - originalSize.height) >= 1) {
+      await page.screenshot({ path: join(artifacts, "large-input-layout-failed.png") });
+      t.diagnostic(JSON.stringify({ originalSize, size, originalLayout,
+        currentLayout: await mount.evaluate(node => ({
+          notices: [...document.querySelectorAll('[role="status"], [role="alert"]')]
+            .filter(node => node.getBoundingClientRect().height > 0).map(node => node.textContent),
+          parentHeight: node.parentElement.getBoundingClientRect().height,
+          viewport: [innerWidth, innerHeight],
+        })),
+      }));
+    }
+    assert.ok(Math.abs(size.width - originalSize.width) < 1 && Math.abs(size.height - originalSize.height) < 1,
+      `Editor mount changed after insertion: ${JSON.stringify({ originalSize, size })}`);
     await content.click();
     await page.keyboard.press("Control+z");
     assert.equal(await snapshotText(), before, "undo restores the whole pre-insertion document");

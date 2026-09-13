@@ -1031,3 +1031,37 @@ were saved. `/root/resources-bunny.tar.gz` now holds this export; the preceding
 archive is preserved under `/root/archive/2026/09/13/`. Nothing was deployed to
 Bunny. Evidence uses the `tab-lifetime-packaged`, `tab-lifetime-modules`,
 `tab-lifetime-live`, and `tab-lifetime-bunny-backend` log prefixes.
+
+### History-list callback lifetime
+
+A disposable project with 64 saved snapshots reproduced another listener
+lifetime issue: repeatedly opening history rebuilt all rows and registered new
+guest callbacks without unregistering the discarded rows. The original version
+exhausted the 4096 callback slots during an 80-open test. The failure is recorded
+in `history-lifetime-before.log` under `/root/macchiato-work`.
+
+The persistent history list now owns one delegated click listener. Each row
+holds its action only as a guest-side property, so replacing rows does not
+allocate new host subscriptions. This covers saved snapshots and session-draft
+history without changing their selection or publication behavior. It is an
+application cleanup fix, not a change to arbitrary detached-node lifetimes.
+
+The 80-open test passes, including clicking the nested text of version 1,
+replacing the output, and continuing to edit. The first ten openings measured
+69–105 ms and the last ten 83–97 ms in this run; these are diagnostics, not a
+controlled benchmark. The separate long-editing test also passes selection,
+republishing an older version, undo/redo, repeated invalid/valid font edits,
+theme changes, and bulk insertion. Evidence: `history-lifetime-actions.log`.
+Commit `9fdadc55` contains the source fix and regression. Packaged and live
+verification follows separately.
+
+The first packaged run passed 11 of 12 checks but failed the bulk insertion's
+unchanged-pane-size assertion after a phone/desktop switch. A focused rerun
+instead failed at recovery: the test injected a pending snapshot directly into
+session storage while the application's preceding edit could still be saved.
+Recovery is now exercised by an actual editor change before reload, avoiding
+that out-of-band race. The next focused run passes both recovery and pane-size
+checks. The original size mismatch has not been independently explained;
+the assertion remains intact with rectangle/status diagnostics and a failure
+screenshot. Logs: `history-lifetime-packaged.log`, `history-lifetime-layout.log`,
+and `history-lifetime-layout-recovery.log`.
