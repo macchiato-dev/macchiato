@@ -1127,7 +1127,7 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.doesNotMatch(runtime, /code-editor-use|packages\/code-editor-use/i);
 });
 
-test("Resources loads language bytecode on demand without replacing the editing session", { timeout: 90_000 }, async (t) => {
+test("Resources loads language bytecode on demand without replacing the editing session", { timeout: 360_000 }, async (t) => {
   const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-languages-"))]);
   const app = startApp(port, dataDir);
   t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
@@ -1165,6 +1165,15 @@ test("Resources loads language bytecode on demand without replacing the editing 
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  // Slow the real browser, not guest timers or event delivery. This makes
+  // timing-sensitive file switches reproducible without changing semantics.
+  const cpuRate = Number(process.env.MACCHIATO_TEST_LANGUAGE_CPU_RATE || 1);
+  assert.ok(Number.isFinite(cpuRate) && cpuRate >= 1 && cpuRate <= 4);
+  if (cpuRate !== 1) {
+    const devtools = await page.context().newCDPSession(page);
+    await devtools.send("Emulation.setCPUThrottlingRate", { rate: cpuRate });
+    t.diagnostic(`Language lifecycle check at ${cpuRate}x CPU slowdown`);
+  }
   const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS;
   if (artifacts) await mkdir(artifacts, { recursive: true });
   await page.context().addCookies([{ name: "resources_session", value: session,
@@ -1200,10 +1209,20 @@ test("Resources loads language bytecode on demand without replacing the editing 
   const editor = page.locator("[data-project-editor]"), content = editorSurface(page).locator(".cm-content");
   await content.waitFor();
   const editorId = await editor.getAttribute("data-editor-machine-id");
+  async function healthy(step) {
+    const machineErrors = await page.locator("[data-editor-machine-error]").evaluateAll(nodes =>
+      nodes.map(node => node.getAttribute("data-editor-machine-error")));
+    if (machineErrors.length || errors.length) {
+      await page.screenshot({ path: join(root, "../macchiato-work/editor-language-machine-failure.png") });
+    }
+    assert.deepEqual({ machineErrors, errors }, { machineErrors: [], errors: [] }, step);
+  }
   async function openFile(path) {
+    await healthy(`before opening ${path}`);
     await page.locator("[data-project-file-trigger]").click();
     await page.locator(`[data-project-file-options] [data-project-file="${path}"]`).click();
     assert.equal(await editor.getAttribute("data-editor-machine-id"), editorId);
+    await healthy(`after opening ${path}`);
   }
   async function highlighted(word) {
     await content.locator(".cm-line span[class]").filter({ hasText: word }).first()
