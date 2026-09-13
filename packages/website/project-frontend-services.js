@@ -1,4 +1,5 @@
 import { storageRequest } from "./resources-storage-client.js";
+import { openCommandPalette } from "../command-palette-use/src/client.js";
 
 const pending = new Map();
 let nextRequest = 1;
@@ -11,6 +12,7 @@ function call(name, payload = {}) {
 
 export function hasSessionValue(key) { return storageRequest("has", "session", key); }
 export function navigationType() { return call("navigation.type"); }
+export function setProjectEditorTheme(theme) { return call("editor.theme", { theme }); }
 
 export function requestFrontendService(name, payload = {}) {
   const id = nextRequest++;
@@ -45,6 +47,10 @@ export async function createProjectBuildMachine() {
 
 globalThis.__resourcesFrontendReceive = (json) => {
   const message = JSON.parse(json);
+  if (message.type === "command-palette") {
+    openCommandPalette();
+    return "null";
+  }
   if (message.type === "editor-change") {
     editorListeners?.onChange?.(message.content, { syntaxErrors: message.syntaxErrors === true });
     return "null";

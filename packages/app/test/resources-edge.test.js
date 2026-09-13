@@ -61,6 +61,17 @@ test("Resources runtime assets are not cached while their protocol is changing",
   }
 });
 
+test("only the named machine frame shells allow same-origin embedding", () => {
+  for (const name of ["project-editor-frame.html", "project-output-frame.html"]) {
+    const csp = publicResponseHeaders(`-/resources-site/${name}`).get("content-security-policy");
+    assert.match(csp, /frame-ancestors 'self'/);
+    assert.match(csp, /script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'/);
+  }
+  for (const name of ["index.html", "-/resources-site/other-frame.html"]) {
+    assert.match(publicResponseHeaders(name).get("content-security-policy"), /frame-ancestors 'none'/);
+  }
+});
+
 const manifest = {
   subdomain: "resources-co",
   generatedAt: "2026-07-21T00:00:00.000Z",

@@ -5,6 +5,14 @@
   // as text; project execution belongs to the separate output machine.
   globalThis.__CODE_EDITOR_DEFER_START__ = true;
   load("editor.bin");
+  // Site commands cross as intents. Do not replay native editing events in
+  // another Document, where selection and CodeMirror's handlers differ.
+  document.addEventListener("keydown", function (event) {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+      event.preventDefault();
+      globalThis.__wwcPostMessage(JSON.stringify({ type: "shortcut", name: "command-palette" }));
+    }
+  });
   var requests = {};
   var nextRequest = 1;
   globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(function (name) {

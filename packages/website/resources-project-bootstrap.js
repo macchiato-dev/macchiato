@@ -1,4 +1,4 @@
-import { hasSessionValue, navigationType, requestFrontendService } from "./project-frontend-services.js";
+import { hasSessionValue, navigationType, requestFrontendService, setProjectEditorTheme } from "./project-frontend-services.js";
 import { mountProjectPresentation } from "./project-presentation.js";
 import { hasProjectRecovery } from "./project-session.js";
 
@@ -6,6 +6,7 @@ import { hasProjectRecovery } from "./project-session.js";
 // belongs to its editor child. The host controller resolves the capability to
 // the server-rendered project root before constructing that child.
 if (document.querySelector("[data-project-editor]")) {
+  document.addEventListener("themechange", event => setProjectEditorTheme(event.detail.theme));
   const root = document.querySelector("[data-project-editor]");
   mountProjectPresentation(root);
   const deferOutput = hasProjectRecovery({

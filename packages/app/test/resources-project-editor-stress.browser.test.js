@@ -8,6 +8,7 @@ import { join, resolve } from "node:path";
 import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 import { chromium } from "playwright";
+import { build } from "esbuild";
 
 import { createAccountStore } from "@macchiato-dev/hub/accounts";
 import { createContentStore } from "../../hub/src/content.js";
@@ -16,6 +17,127 @@ import { createNodeSqliteClient } from "../../../packages/website/adapters/node-
 
 const root = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = join(root, "packages/app/src/index.js");
+
+test("Resources framed editor integrates with the site and running output", { timeout: 90_000 }, async t => {
+  const work = resolve(root, "../macchiato-work");
+  await mkdir(work, { recursive: true });
+  const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(work, "resources-editor-frame-"))]);
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.ready;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const client = createNodeSqliteClient(db);
+  const account = await createAccountStore(client).authenticateIdentity({
+    provider: "github", providerUserId: "editor-frame", login: "editor-frame",
+    name: "Editor Frame", email: "frame@example.test", emailVerified: true,
+  });
+  const source = '<!doctype html>\n<html><head><title>Frame fixture</title></head><body>\n' +
+    '<h1>Frame fixture</h1>\n<button id="count">0</button>\n' +
+    '<script>document.getElementById("count").addEventListener("click", function () {' +
+    ' this.textContent = String(Number(this.textContent) + 1); });</script>\n</body></html>';
+  await createContentStore(client).createProject(account.id, {
+    namespace: "user", userSlug: account.login, slug: "surface", name: "Surface",
+    description: "", visibility: "private", template: "html",
+    snapshot: { files: [{ path: "index.html", content: source },
+      { path: "style.css", content: "h1 { color: rebeccapurple; }" }],
+      config: { entry: "index.html", editorTabs: ["index.html", "style.css"] } },
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 180_000 }, "local-preview-session-signing-key");
+  // Exercise the opt-in path without changing the production default. All
+  // other controller code, guests, services and server routes are real.
+  const controllerFile = join(root, "packages/website/frontend/controller.ts");
+  const controllerSource = await readFile(controllerFile, "utf8");
+  assert.ok(controllerSource.includes("editorDevice.mount(payload)"));
+  const controller = (await build({
+    stdin: { contents: controllerSource.replace("editorDevice.mount(payload)",
+      "editorDevice.mount({ ...payload, editorFrame: true })"), loader: "ts",
+      resolveDir: join(root, "packages/website/frontend"), sourcefile: "controller.ts" },
+    bundle: true, write: false, format: "esm", platform: "browser", external: ["./machine.js"],
+    plugins: [{ name: "test-machine", setup(builder) {
+      builder.onResolve({ filter: /dev\/wasm-web-machine\/dist\/module\/wasm-web-machine\.js$/ },
+        () => ({ path: "./machine.js", external: true }));
+    } }],
+  })).outputFiles[0].text;
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: "light" });
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
+  page.on("response", response => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
+  await page.context().addCookies([{ name: "resources_session", value: session,
+    domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  await page.route("**/-/resources-site/controller.js*", route =>
+    route.fulfill({ contentType: "text/javascript", body: controller }));
+  const origin = `http://resources-edge.localhost:${port}`;
+  await page.goto(`${origin}/${account.login}/surface`);
+  const editor = page.frameLocator("iframe.project-editor__code-frame");
+  const content = editor.locator(".cm-content");
+  const output = page.frameLocator("iframe.project-editor__output-frame:not([inert])");
+  try {
+    await content.waitFor({ timeout: 15000 });
+    await output.getByRole("heading", { name: "Frame fixture" }).waitFor();
+    await output.getByRole("button", { name: "0", exact: true }).click();
+    assert.equal(await output.locator("#count").textContent(), "1");
+    await content.click();
+    await page.keyboard.press("Control+Home");
+    await page.keyboard.press("End");
+    await page.keyboard.type("\n<!-- framd");
+    await page.keyboard.press("Backspace");
+    await page.keyboard.type("e -->");
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => JSON.parse(document.querySelector("[data-project-snapshot]").value)
+      .files[0].content.includes("<!-- frame -->"));
+    await output.getByRole("button", { name: "0", exact: true }).waitFor();
+    await output.getByRole("button", { name: "0", exact: true }).click();
+    await page.getByRole("tab", { name: "style.css", exact: true }).click();
+    await content.filter({ hasText: "rebeccapurple" }).waitFor();
+    await page.getByRole("tab", { name: "index.html", exact: true }).click();
+    await content.filter({ hasText: "<!-- frame -->" }).waitFor();
+    assert.equal(await output.locator("#count").textContent(), "1", "switching files doesn't reset output");
+    for (const theme of ["dark", "light", "dark", "light"]) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.waitForFunction(theme => document.documentElement.dataset.theme === theme, theme);
+      const color = theme === "dark" ? "rgb(29, 32, 32)" : "rgb(217, 225, 227)";
+      await editor.locator(".cm-editor").evaluate((node, expected) => {
+        if (getComputedStyle(node).backgroundColor !== expected) throw new Error("Editor theme didn't follow the site");
+      }, color);
+    }
+    for (const view of ["editor", "split", "preview", "split"]) {
+      await page.locator(`[data-project-view="${view}"]`).click();
+      if (view !== "preview") await content.waitFor();
+    }
+    await page.locator("[data-project-present]").click();
+    const expanded = await page.locator("iframe.project-editor__output-frame:not([inert])").boundingBox();
+    assert.ok(expanded.width > 1430 && expanded.height > 890);
+    await page.locator("[data-project-present-close]").click();
+    assert.equal(await output.locator("#count").textContent(), "1");
+    await content.click();
+    await page.keyboard.press("Control+k");
+    await page.locator("[data-command-dialog][open]").waitFor({ timeout: 3000 });
+    await page.keyboard.press("Escape");
+    await page.screenshot({ path: join(work, "editor-surface-full-site.png") });
+    assert.deepEqual(errors, []);
+    await page.locator('a[href="/"]').first().click();
+    await page.waitForURL(origin + "/");
+    assert.equal(await page.locator("iframe.project-editor__code-frame").count(), 0);
+    await page.goBack();
+    await content.waitFor();
+    await output.getByRole("heading", { name: "Frame fixture" }).waitFor();
+    assert.deepEqual(errors, []);
+  } catch (error) {
+    t.diagnostic(JSON.stringify({ errors, url: page.url(),
+      state: await page.locator('[data-project-editor]').evaluate(node => ({
+        editor: node.dataset.editorMachineState, output: node.dataset.outputMachineState,
+        error: node.dataset.editorMachineError })),
+      frames: page.frames().map(frame => frame.url()),
+      text: (await page.locator("body").innerText()).slice(-2000) }));
+    await page.screenshot({ path: join(work, "editor-surface-full-site-failure.png") });
+    throw error;
+  }
+});
 
 test("Resources preserves first-paint appearance through frontend startup and navigation", { timeout: 180_000 }, async t => {
   const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-hydration-theme-"))]);

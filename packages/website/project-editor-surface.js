@@ -50,6 +50,7 @@ export class ProjectEditorSurface {
         onChange: (content, details) => this.notify({ type: "change", content, ...details }),
         onReady: value => this.notify({ ...value, type: "ready" }),
         onLimit: value => this.notify({ ...value, type: "limit" }),
+        onShortcut: name => this.notify({ type: "shortcut", name }),
         onError: this.onError,
         onRequest() { throw new Error("Editor surface service is not granted"); },
       });

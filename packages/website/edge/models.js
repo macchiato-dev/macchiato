@@ -142,7 +142,8 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   headers.set("permissions-policy", "camera=(), microphone=(), geolocation=()");
   headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") ? "cross-origin" : "same-origin");
   if (key.startsWith("-/blog-examples/")) headers.set("access-control-allow-origin", "*");
-  const embeddedRunner = key === "-/resources-site/project-output-frame.html";
+  const embeddedRunner = key === "-/resources-site/project-output-frame.html" ||
+    key === "-/resources-site/project-editor-frame.html";
   headers.set("content-security-policy", key.startsWith("-/blog-examples/")
     ? "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
     : `default-src 'self'; script-src 'self' ${embeddedRunner ? "'unsafe-inline' " : `'${themeBootstrapCsp}' `}'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' https://cdn.jsdelivr.net https://unpkg.com https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; img-src 'self' data:; frame-src 'self' https://codesandbox.io https://blog-examples.resources.co https://staging-blog-examples.resources.co http://blog-examples.localhost:*; object-src 'none'; base-uri 'none'; frame-ancestors ${embeddedRunner ? "'self'" : "'none'"}; form-action 'self'`);

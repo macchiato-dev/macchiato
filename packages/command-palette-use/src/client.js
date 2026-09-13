@@ -17,6 +17,10 @@ function openPalette(trigger) {
   input.focus();
 }
 
+export function openCommandPalette() {
+  openPalette(document.querySelector("[data-command-open]"));
+}
+
 function closePalette(dialog) {
   if (dialog?.open) dialog.close();
 }
@@ -39,7 +43,7 @@ document.addEventListener("click", (event) => {
 document.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
-    openPalette(document.querySelector("[data-command-open]"));
+    openCommandPalette();
     return;
   }
   if (event.key === "Escape") closePalette(document.querySelector("[data-command-dialog][open]"));

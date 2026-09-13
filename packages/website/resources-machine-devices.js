@@ -308,7 +308,6 @@ export class ResourcesEditorDevice {
       "editor.status.begin": (payload) => this.editor.callGuest("__resourcesProjectStatusBegin", payload),
       "editor.status.inspect": () => this.editor.callGuest("__resourcesProjectStatusInspect", {}),
       "editor.status.report": (payload) => this.editor.callGuest("__resourcesProjectStatusReport", payload),
-      "editor.theme": (payload) => this.editor.callGuest("__codeEditorSetTheme", payload),
     });
   }
   async mount({ deferOutput = false, editorFrame = false } = {}) {
@@ -349,6 +348,10 @@ export class ResourcesEditorDevice {
     if (editorFrame) {
       this.editorSurface = new ProjectEditorSurface(root.querySelector("[data-project-editor-mount]"),
         message => {
+          if (message.type === "shortcut" && message.name === "command-palette") {
+            this.deliver({ type: "command-palette" });
+            return;
+          }
           if (this.editor) this.editor.callGuest("__resourcesEditorSurfaceReceive", message);
           else surfaceMessages.push(message);
         }, error => this.deliver({ type: "editor-error", message: error?.message || String(error) }));
@@ -394,6 +397,7 @@ export class ResourcesEditorDevice {
       this.editorSurface = null;
       throw error;
     }
+    this.setTheme({ theme: this.hostCall("appearance.theme") });
     for (const message of surfaceMessages) this.editor.callGuest("__resourcesEditorSurfaceReceive", message);
     for (const message of this.outputErrors.values()) this.receiveOutput(message);
     this.outputErrors.clear();
@@ -467,10 +471,18 @@ export class ResourcesEditorDevice {
     return id;
   }
   call(name, payload) {
+    if (name === "editor.theme") return this.setTheme(payload);
     if (!this.editor) throw new Error(`Project editor is not mounted: ${name}`);
     const operation = this.operations[name];
     if (operation) return operation(payload);
     throw new Error(`Unknown editor operation: ${name}`);
+  }
+  setTheme(payload) {
+    if (payload.theme !== "dark" && payload.theme !== "light") throw new TypeError("Invalid editor theme");
+    if (this.editor) return this.editor.callGuest("__codeEditorSetTheme", payload);
+    if (this.editorSurface?.editor) return this.editorSurface.call("SetTheme", payload);
+    // Startup reads the site's current appearance once the machine exists.
+    return null;
   }
   destroy() {
     for (const id of this.outputIds) this.outputDevice.destroyOutput(id);
