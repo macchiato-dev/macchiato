@@ -1,10 +1,24 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-4042e11`.
+Current local verification: 2026-09-13, export `resources-co-b46589e`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
 ## Current build
+
+A transient database outage no longer permanently poisons initialization.
+The application guest and its account, content and organization stores clear
+failed initialization promises while preserving shared in-flight work and
+successful initialization. Initialization errors use the guest's structured
+error response instead of losing their detail at the controller boundary.
+The exported `4042e11` control reproduces the failure: after one database 503,
+the next deferred request returns 503 without another SQL attempt. The new
+export recovers, using the same loaded backend artifact. Anonymous home stays
+available during the outage. No write operation is automatically retried.
+
+Only the server application guest changed in this rebuild. The browser
+controller, machine host, frontend, editor and output runtime bytes match the
+previous export. The compressed backend artifact grew by 306 bytes.
 
 Static JavaScript, WASM, and language bytecode have precompressed gzip variants
 in both local resources-edge and the Bunny export. Browser URLs, MIME types,
@@ -58,7 +72,7 @@ their existing session. This is separate from the typing/build debounce.
 
 ## Verified
 
-- All 115 non-browser tests in `packages/project-editor/test` and
+- All 118 non-browser tests in `packages/project-editor/test` and
   `packages/website/test` pass, including JSON formatting and resource policies.
 - The mixed app browser suite has 43 passes and eight failures in the older
   SQLite-site tests. All current resources-edge cases pass: account creation,
@@ -171,6 +185,28 @@ the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
+The `b46589e` retry build passes the three actual-entry checks (static home,
+deferred initialization, and recovery after a database outage), including
+authenticated project creation, saving, workspace retrieval, history and CSRF
+rejection through the exported guests and bundled libSQL transport. These use
+an in-memory SQLite fixture and dummy credentials without network permission.
+They pass again against the extracted deployment archive. The separate
+compressed-backend routing/rendering/policy test also passes.
+
+The packaged long-editing and lazy-language cases were rerun and both pass.
+All five owner projects pass read-only live checks after the server restart;
+no owner files or notes were changed. Desktop/phone screenshots were captured,
+and the Cat Memory desktop screenshot was inspected. Its output is scrolled
+after the full-game/reset interaction; this screenshot is not an initial-paint
+check. Five live executable assets were compared with the export after HTTP
+decompression and match exactly.
+
+Evidence: `/root/macchiato-work/bunny-deferred-retry-before.log`,
+`database-retry-entry.log`, `database-retry-extracted-entry.log`,
+`database-retry-backend.log`, `database-retry-unit-final.log`,
+`database-retry-browser.log`, and `database-retry-live.log`. Screenshots are
+in `database-retry-browser/` and `database-retry-live/`.
+
 Additional checks of the same `4042e11` export on 2026-09-13:
 
 - Responsive geometry stress now covers a disposable saved project as well
@@ -194,11 +230,11 @@ Evidence is in `/root/macchiato-work/saved-geometry-current.log`,
 `saved-geometry-before-painted.log`, `all-owner-article.log`, and
 `bunny-entry-artifact.log`; screenshots are in `all-owner-projects/`.
 
-`/root/resources-bunny.tar.gz` contains the verified `4042e11` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `b46589e` export. SHA-256:
 
-`52d7d59feebd6282d5f138ff799546c8bdd48aae91fd6af26623e7f41beaf5a8`
+`0e04ab99f4e1dde4b14f5cd498da1dfa66e1f248e5bb74e259bd81d0e0426696`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-4d569f7-before-dense-finally.tar.gz`.
+`/root/archive/2026/09/13/resources-bunny-4042e11-before-database-retry.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.
