@@ -92,7 +92,7 @@ export function createProjectImageResolver(files = []) {
   }
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
-export async function createProjectOutputMachine({ root, scripts = [], options = {}, onError }) {
+export async function createProjectOutputMachine({ root, scripts = [], project, options = {}, onError }) {
   const module = await moduleFor("/-/resources-site/project-quickjs-runtime.wasm");
   const output = new ProjectOutput(WasmWebMachine, module, root, project => {
     const files = project.files || options.files || [];
@@ -103,7 +103,7 @@ export async function createProjectOutputMachine({ root, scripts = [], options =
       allowNavigate: options.allowNavigate ?? (url => urlMatchesAllowedPatterns(url, project.allowedLinkPatterns || [])),
     };
   }, onError);
-  try { await output.load({ scripts, files: options.files }); }
+  try { await output.load(project ?? { scripts, files: options.files }); }
   catch (error) { output.destroy(); throw error; }
   const machineId = `wasm-web-machine-${nextMachine++}`;
   return Object.freeze({

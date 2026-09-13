@@ -413,21 +413,18 @@ export class ResourcesEditorDevice {
       root.dataset.outputMachineStage = "compile";
       const compiled = await this.buildDevice.compile(project);
       const options = project.config?.containerOptions || {};
+      root.dataset.outputMachineStage = "load";
+      // Compilation is already complete. Start with that application rather
+      // than creating an empty guest and replacing it in a second round trip.
       const outputId = await this.outputDevice.mount({
-        rootKey: "1", scripts: [], iframe: project.config?.output?.iframe !== false,
+        rootKey: "1", iframe: project.config?.output?.iframe !== false,
+        tree: compiled.tree, document: compiled.document,
+        stylesheets: compiled.stylesheets, scripts: compiled.scripts,
         files: project.files, allowedFetchOrigins: options.allowedFetchOrigins || [],
         allowedLinkPatterns: options.allowedLinkPatterns || [],
         environment: project.config?.environment || {},
       });
       this.outputIds.add(outputId);
-      root.dataset.outputMachineStage = "load";
-      await this.outputDevice.load({ id: outputId, project: {
-        tree: compiled.tree, document: compiled.document, stylesheets: compiled.stylesheets,
-        scripts: compiled.scripts, files: project.files,
-        allowedFetchOrigins: options.allowedFetchOrigins || [],
-        allowedLinkPatterns: options.allowedLinkPatterns || [],
-        environment: project.config?.environment || {},
-      } });
       this.initialOutputId = outputId;
       root.dataset.outputMachineStage = "ready";
       root.dataset.outputMachineState = "ready";
@@ -488,6 +485,16 @@ export class ResourcesOutputDevice {
     const mount = [...this.document.querySelectorAll("[data-project-output-mount]")]
       .find((element) => element.dataset.projectOutputMount === payload.rootKey);
     if (!mount) throw new Error("Project output mount is unavailable");
+    if (payload.tree !== undefined) this.validateTree(payload.tree);
+    const project = {
+      tree: payload.tree, document: payload.document,
+      stylesheets: Array.isArray(payload.stylesheets) ? payload.stylesheets : [],
+      scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
+      files: this.projectResources.hydrateFiles(payload.files),
+      allowedFetchOrigins: Array.isArray(payload.allowedFetchOrigins) ? payload.allowedFetchOrigins : [],
+      allowedLinkPatterns: Array.isArray(payload.allowedLinkPatterns) ? payload.allowedLinkPatterns : [],
+      environment: payload.environment || {},
+    };
     let frame = null;
     if (payload.iframe !== false) {
       frame = this.document.createElement("iframe");
@@ -506,25 +513,18 @@ export class ResourcesOutputDevice {
       });
     }
     const id = this.nextId++;
-    const files = this.projectResources.hydrateFiles(payload.files);
     const storageScope = mount.closest("[data-project-id]")?.dataset.projectId ||
       this.document.location.pathname;
     let output;
     if (frame) output = await this.connectFrame(frame, {
-      storageScope,
-      files,
-      scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
-      allowedFetchOrigins: Array.isArray(payload.allowedFetchOrigins) ? payload.allowedFetchOrigins : [],
-      allowedLinkPatterns: Array.isArray(payload.allowedLinkPatterns) ? payload.allowedLinkPatterns : [],
-      environment: payload.environment || {},
+      ...project, storageScope,
     }, id);
     else {
       const storage = new ProjectOutputStorage(this.document.defaultView, storageScope);
       try {
         output = await createProjectOutputMachine({
-          root: mount,
-          scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
-          options: { environment: payload.environment || {}, files, services: { storage } },
+          root: mount, project,
+          options: { services: { storage } },
           onError: (error) => this.deliver({ type: "output-error", id, message: error?.message || String(error) }),
         });
       } catch (error) { storage.destroy(); throw error; }
@@ -542,7 +542,15 @@ export class ResourcesOutputDevice {
     let disposed = false;
     return new Promise((resolve, reject) => {
       const fail = (message) => {
-        reject(new Error(message));
+        if (disposed) return;
+        // Startup may fail before mount registers this output for disposal.
+        disposed = true;
+        const error = new Error(message);
+        for (const operation of pending.values()) operation.reject(error);
+        pending.clear();
+        channel.port1.close();
+        frame.remove();
+        reject(error);
         this.deliver({ type: "output-error", id: outputId, message });
       };
       channel.port1.onmessage = ({ data }) => {
