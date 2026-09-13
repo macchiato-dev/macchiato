@@ -297,7 +297,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }
   var notifyHost = globalThis.__browserUseNotify;
   globalThis.__codeEditorNotify = function (message) {
-    if (message && ["change", "ready", "limit"].includes(message.type)) {
+    if (message && ["change", "ready", "limit", "language-error"].includes(message.type)) {
       globalThis.__resourcesEditorLocalReceive == null || globalThis.__resourcesEditorLocalReceive(message);
       return;
     }
@@ -547,10 +547,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return "null";
   };
   globalThis.__resourcesEditorLocalReceive = function (message) {
-    var _listeners, _listeners2, _listeners3, _listeners4, _listeners5;
+    var _listeners, _listeners2, _listeners3, _listeners4, _listeners5, _listeners6;
     if (message.type === "change") (_listeners = listeners) == null || _listeners.onChange == null || _listeners.onChange(message.content, {
       syntaxErrors: message.syntaxErrors === true
-    });else if (message.type === "ready") (_listeners2 = listeners) == null || _listeners2.onReady == null || _listeners2.onReady(message);else if (message.type === "limit") (_listeners3 = listeners) == null || _listeners3.onLimit == null || _listeners3.onLimit(message);else if (message.type === "output-error") (_listeners4 = listeners) == null || _listeners4.onOutputError == null || _listeners4.onOutputError(new Error(message.message));else if (message.type === "output-ready") (_listeners5 = listeners) == null || _listeners5.onOutputReady == null || _listeners5.onOutputReady();
+    });else if (message.type === "ready") (_listeners2 = listeners) == null || _listeners2.onReady == null || _listeners2.onReady(message);else if (message.type === "limit") (_listeners3 = listeners) == null || _listeners3.onLimit == null || _listeners3.onLimit(message);else if (message.type === "language-error") (_listeners4 = listeners) == null || _listeners4.onLanguageError == null || _listeners4.onLanguageError(message);else if (message.type === "output-error") (_listeners5 = listeners) == null || _listeners5.onOutputError == null || _listeners5.onOutputError(new Error(message.message));else if (message.type === "output-ready") (_listeners6 = listeners) == null || _listeners6.onOutputReady == null || _listeners6.onOutputReady();
   };
   var EditorResponse = function () {
     function EditorResponse(value) {
@@ -2472,6 +2472,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                         root: editorMount,
                         limits: false,
                         onChange: receiveEditorChange,
+                        onLanguageError: function onLanguageError(message) {
+                          if (message.language !== language()) return;
+                          activeNotice = true;
+                          activeStatusSurface = "editor";
+                          statusNotice.textContent = "Syntax highlighting unavailable for " + message.language + ". You can keep editing; reopen the file to retry.";
+                          renderStatusState();
+                        },
                         onOutputError: function onOutputError(error) {
                           setStatus("Output stopped: " + error.message, "error", null, "output");
                         },

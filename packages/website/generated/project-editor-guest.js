@@ -27150,7 +27150,7 @@ function emptyProjectSnapshot() {
 // packages/website/project-editor-guest.js
 var notifyHost = globalThis.__browserUseNotify;
 globalThis.__codeEditorNotify = (message) => {
-  if (message && ["change", "ready", "limit"].includes(message.type)) {
+  if (message && ["change", "ready", "limit", "language-error"].includes(message.type)) {
     globalThis.__resourcesEditorLocalReceive?.(message);
     return;
   }
@@ -27369,6 +27369,7 @@ globalThis.__resourcesEditorLocalReceive = (message) => {
   );
   else if (message.type === "ready") listeners?.onReady?.(message);
   else if (message.type === "limit") listeners?.onLimit?.(message);
+  else if (message.type === "language-error") listeners?.onLanguageError?.(message);
   else if (message.type === "output-error") listeners?.onOutputError?.(new Error(message.message));
   else if (message.type === "output-ready") listeners?.onOutputReady?.();
 };
@@ -28268,6 +28269,13 @@ async function mountProjectRoot(root) {
         root: editorMount,
         limits: false,
         onChange: receiveEditorChange,
+        onLanguageError(message) {
+          if (message.language !== language3()) return;
+          activeNotice = true;
+          activeStatusSurface = "editor";
+          statusNotice.textContent = `Syntax highlighting unavailable for ${message.language}. You can keep editing; reopen the file to retry.`;
+          renderStatusState();
+        },
         onOutputError(error) {
           setStatus(`Output stopped: ${error.message}`, "error", null, "output");
         },
