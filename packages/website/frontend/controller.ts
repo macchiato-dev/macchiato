@@ -16,18 +16,41 @@ function callMessage(name, payload) {
   return message;
 }
 
-async function loadModule(url) {
-  const response = await fetch(url, { credentials: "same-origin" });
+async function loadModule(url, signal) {
+  const response = await fetch(url, { credentials: "same-origin", signal });
   if (!response.ok) throw new Error(`Machine response ${response.status}: ${url}`);
   return WebAssembly.compileStreaming(response);
 }
 
 export async function startResourcesMachineController() {
-  const module = await loadModule("/-/resources-site/resources-frontend-microquickjs.wasm");
+  let machine, editorDevice, outputDevice;
+  let disposed = false;
+  const startup = new AbortController();
+  function destroy() {
+    if (disposed) return;
+    disposed = true;
+    startup.abort();
+    editorDevice?.destroy();
+    outputDevice?.destroy();
+    machine?.destroy();
+    window.removeEventListener("pagehide", pagehide);
+  }
+  // A BFCache document keeps its machines for restoration. A discarded
+  // document cancels owned work, including the first runtime download.
+  function pagehide(event) { if (!event.persisted) destroy(); }
+  window.addEventListener("pagehide", pagehide);
+  let module;
+  try { module = await loadModule("/-/resources-site/resources-frontend-microquickjs.wasm", startup.signal); }
+  catch (error) {
+    if (disposed) return;
+    destroy();
+    throw error;
+  }
+  if (disposed) return;
   const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
-  let machine;
 
   async function deliver(message) {
+    if (disposed) return;
     await machine.onmsg(callMessage("__resourcesFrontendReceive", message));
   }
 
@@ -53,9 +76,9 @@ export async function startResourcesMachineController() {
     return service(payload);
   }
 
-  const outputDevice = new ResourcesOutputDevice(document,
+  outputDevice = new ResourcesOutputDevice(document,
     (message) => editorDevice.receiveOutput(message), projectResources);
-  const editorDevice = new ResourcesEditorDevice(document, deliver, outputDevice, buildDevice,
+  editorDevice = new ResourcesEditorDevice(document, deliver, outputDevice, buildDevice,
     storageDevice, projectResources, editorRequest, editorCall);
   asynchronousServices = Object.freeze({
     "archive.import": () => archiveDevice.import(),
@@ -92,6 +115,7 @@ export async function startResourcesMachineController() {
   });
 
   async function receive(text) {
+    if (disposed) return;
     if (text.startsWith("__wwcError:")) {
       document.documentElement.dataset.resourcesFrontendMachineState = "failed";
       console.error("Resources frontend machine:", text.slice(11));
@@ -106,6 +130,7 @@ export async function startResourcesMachineController() {
       const value = await service(request.payload || {});
       await deliver({ id: request.id, value });
     } catch (error) {
+      if (disposed) return;
       console.error("Resources controller service:", request.name, error);
       await deliver({ id: request.id, error: error?.message || String(error) });
     }
@@ -129,13 +154,11 @@ export async function startResourcesMachineController() {
   document.documentElement.dataset.resourcesFrontendMachine = "microquickjs";
   document.documentElement.dataset.resourcesFrontendMachineId = machineId;
   document.documentElement.dataset.resourcesFrontendMachineState = "starting";
-  await machine.onmsg(0);
+  try { await machine.onmsg(0); }
+  catch (error) { destroy(); throw error; }
+  if (disposed) return;
   document.documentElement.dataset.resourcesFrontendMachineState = "ready";
-  return Object.freeze({ machineId, destroy() {
-    editorDevice.destroy();
-    outputDevice.destroy();
-    machine.destroy();
-  } });
+  return Object.freeze({ machineId, destroy });
 }
 
 startResourcesMachineController().catch((error) => {

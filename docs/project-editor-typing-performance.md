@@ -869,3 +869,64 @@ Native key events do not bubble out of a frame: the existing command-palette
 shortcut needs an explicit application intent, not replayed CodeMirror events
 or a wider DOM grant. The controller and deployment export still need a full
 rebuild and verification before this becomes the live configuration.
+
+### Complete-site integration checkpoint
+
+The app browser test `Resources framed editor integrates with the site and
+running output` now uses an authenticated fixture project, the actual outer
+MicroQuickJS guest, project UI guest, separate editor guest, and QuickJS output.
+Only the controller's editor-frame option is substituted in the test build;
+server routes, resource fetching, compilation, and output are not stubs.
+`MACCHIATO_TEST_EDITOR_FRAME=0` runs the same scenario directly.
+
+The first runs found missing integration rather than editor defects:
+
+- The response CSP blocked the new frame shell. Only the two named machine
+  shells now allow same-origin ancestors and their fixed inline controllers;
+  other documents retain `frame-ancestors 'none'`.
+- Site theme events did not reach the framed editor. The outer guest now
+  forwards the resolved theme through the controller service, and startup
+  reads the current theme. This also sets the direct editor's theme facet.
+- Ctrl-K in the frame could not reach the site's command palette. The editor
+  guest emits a specific shortcut intent, which reaches the outer guest's
+  existing palette function. Native CodeMirror events are not replayed.
+- Leaving during a runtime download logged the departed page's cancelled
+  fetch as a live failure. Controller teardown now begins with the initial
+  download, disposes discarded documents, and retains BFCache documents.
+  Editor starts coalesce; stale workspace replies and pending output mounts
+  cannot become the new active session after disposal.
+
+The complete-site scenario checks corrected typing, actual output replacement,
+output state across file switches, repeated system-theme changes, pane modes,
+window resizing, expanded output, palette activation without editing source,
+navigation/back, and leaving while the editor download is held. Sampled paints
+show no mismatched editor background during its theme switches. BFCache
+retention is the lifecycle policy; these runs do not establish that Chromium
+actually chose BFCache rather than reloading on Back.
+
+The direct-editor regression suite passed eight startup/theme combinations and
+the long editing/save/history/recovery scenario, then exposed a capacity
+regression: the new bootstrap plus all lazy grammars required 17 bytecode
+program slots, but the runtime had 16. Its descriptor table now has 32 entries;
+the 32 MB JavaScript arena and 4 MB bytecode-storage budget are unchanged.
+The artifact test counts bootstraps and distinct grammar packages against the
+declared capacity. Parser failures also retain their actual reason in the UI.
+
+Two subsequent complete language runs passed, including Svelte, retries,
+Markdown/JSON themes, and file-strip scrolling. One intervening run timed out
+while revealing the selected tab after repeated closes. That intermittent
+visibility failure is not declared fixed; the test now records tab geometry
+and a screenshot when it occurs. It remains part of the next integration audit.
+
+Evidence is in `/root/macchiato-work/editor-surface-full-site*.log`,
+`editor-surface-direct-regressions.log`, `editor-surface-languages-fixed*.log`,
+and the full-site screenshots. The updated editor WASM is 1,587,348 bytes;
+the frame controller is 9,120 bytes. The option remains off in production,
+and the live controller and `/root/resources-bunny.tar.gz` still match the
+verified `398f759` export. Default activation and packaged verification remain.
+
+Final rebuilt-artifact checks pass in both complete-site modes, the separate
+106 KB editor test, all 112 editor/website module tests, and 11 edge-policy
+tests. Their logs use the `editor-surface-full-site-final-*`,
+`editor-surface-final`, `editor-surface-integrated-module-tests`, and
+`editor-surface-edge-policy-tests` names in the same work directory.

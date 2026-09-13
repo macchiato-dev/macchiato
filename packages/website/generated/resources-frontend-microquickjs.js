@@ -12,7 +12,7 @@ function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 (function () {
   var _resourcesFrontend = _asyncToGenerator(_regenerator().m(function _callee2() {
-    var storageRequest, _loop, _i, _arr, isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, closePalette, _loop2, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, call, hasSessionValue, navigationType, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, DRAFT_KEY, PENDING_KEY_PREFIX, pendingProjectSnapshotKey, hasProjectRecovery, root3, deferOutput, root2, mountContentNameFields;
+    var storageRequest, _loop, _i, _arr, isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, openCommandPalette, closePalette, _loop2, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, call, hasSessionValue, navigationType, setProjectEditorTheme, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, DRAFT_KEY, PENDING_KEY_PREFIX, pendingProjectSnapshotKey, hasProjectRecovery, root3, deferOutput, root2, mountContentNameFields;
     return _regenerator().w(function (_context4) {
       while (1) switch (_context4.n) {
         case 0:
@@ -152,6 +152,11 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
               }));
             });
           };
+          setProjectEditorTheme = function _setProjectEditorThem(theme) {
+            return call("editor.theme", {
+              theme: theme
+            });
+          };
           navigationType = function _navigationType() {
             return call("navigation.type");
           };
@@ -210,6 +215,9 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           };
           closePalette = function _closePalette(dialog) {
             if (dialog != null && dialog.open) dialog.close();
+          };
+          openCommandPalette = function _openCommandPalette() {
+            openPalette(document.querySelector("[data-command-open]"));
           };
           openPalette = function _openPalette(trigger) {
             var dialog = paletteFor(trigger);
@@ -309,7 +317,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           document.addEventListener("keydown", function (event) {
             if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
               event.preventDefault();
-              openPalette(document.querySelector("[data-command-open]"));
+              openCommandPalette();
               return;
             }
             if (event.key === "Escape") closePalette(document.querySelector("[data-command-dialog][open]"));
@@ -387,6 +395,10 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           outputListeners = new Map();
           globalThis.__resourcesFrontendReceive = function (json) {
             var message = JSON.parse(json);
+            if (message.type === "command-palette") {
+              openCommandPalette();
+              return "null";
+            }
             if (message.type === "editor-change") {
               editorListeners == null || editorListeners.onChange == null || editorListeners.onChange(message.content, {
                 syntaxErrors: message.syntaxErrors === true
@@ -481,6 +493,9 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           DRAFT_KEY = "resources_project_draft_v5";
           PENDING_KEY_PREFIX = "resources_project_pending_v1:";
           if (document.querySelector("[data-project-editor]")) {
+            document.addEventListener("themechange", function (event) {
+              return setProjectEditorTheme(event.detail.theme);
+            });
             root3 = document.querySelector("[data-project-editor]");
             mountProjectPresentation(root3);
             deferOutput = hasProjectRecovery({

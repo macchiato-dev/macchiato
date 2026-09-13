@@ -1,10 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ResourcesProjectResourceDevice, ResourcesStorageDevice, ResourcesFetchDevice, ResourcesArchiveDevice, ResourcesOutputDevice } from "../resources-machine-devices.js";
+import { ResourcesProjectResourceDevice, ResourcesStorageDevice, ResourcesFetchDevice, ResourcesArchiveDevice, ResourcesOutputDevice, ResourcesEditorDevice } from "../resources-machine-devices.js";
 import { encodeProjectArchive } from "../../hub/src/project-archive.js";
 import { compileProjectFiles } from "../../project-editor/src/single-file-compiler.js";
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "../project-session.js";
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot } from "../../hub/src/project-history.js";
+
+test("editor startup coalesces callers and rejects a late workspace after disposal", async () => {
+  let release, requests = 0;
+  const reply = new Promise(resolve => { release = resolve; });
+  const field = { value: "original snapshot" };
+  const root = { querySelector: selector => selector === "[data-project-snapshot]" ? field
+    : { dataset: { projectSnapshotUrl: "/api/projects/fixture/workspace" } } };
+  const document = { querySelector: () => ({ closest: () => root }) };
+  const device = new ResourcesEditorDevice(document, () => assert.fail("no notifications after close"),
+    { destroyOutput() { assert.fail("no output was created"); } }, {}, {},
+    new ResourcesProjectResourceDevice(), () => { requests++; return reply; });
+  const first = device.mount({ deferOutput: true });
+  assert.equal(device.mount({ deferOutput: true }), first);
+  assert.equal(requests, 1);
+  device.destroy();
+  release({ status: 200, body: JSON.stringify({ snapshot: { files: [], config: {} } }) });
+  await assert.rejects(first, /closed during startup/);
+  assert.equal(field.value, "original snapshot");
+  assert.equal(device.editor, null);
+  assert.equal(device.initialSnapshot, null);
+});
 
 function storageWindow() {
   const area = () => {

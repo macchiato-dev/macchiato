@@ -2535,6 +2535,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                           activeNotice = true;
                           activeStatusSurface = "editor";
                           statusNotice.textContent = "Syntax highlighting unavailable for " + message.language + ". You can keep editing; reopen the file to retry.";
+                          if (message.message) statusNotice.textContent += " " + message.message;
                           renderStatusState();
                         },
                         onOutputError: function onOutputError(error) {

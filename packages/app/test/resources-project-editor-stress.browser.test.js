@@ -49,10 +49,11 @@ test("Resources framed editor integrates with the site and running output", { ti
   // other controller code, guests, services and server routes are real.
   const controllerFile = join(root, "packages/website/frontend/controller.ts");
   const controllerSource = await readFile(controllerFile, "utf8");
+  const editorFrame = process.env.MACCHIATO_TEST_EDITOR_FRAME !== "0";
   assert.ok(controllerSource.includes("editorDevice.mount(payload)"));
   const controller = (await build({
     stdin: { contents: controllerSource.replace("editorDevice.mount(payload)",
-      "editorDevice.mount({ ...payload, editorFrame: true })"), loader: "ts",
+      `editorDevice.mount({ ...payload, editorFrame: ${editorFrame} })`), loader: "ts",
       resolveDir: join(root, "packages/website/frontend"), sourcefile: "controller.ts" },
     bundle: true, write: false, format: "esm", platform: "browser", external: ["./machine.js"],
     plugins: [{ name: "test-machine", setup(builder) {
@@ -63,6 +64,22 @@ test("Resources framed editor integrates with the site and running output", { ti
   const browser = await chromium.launch();
   t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: "light" });
+  await page.addInitScript(() => {
+    if (window !== top) return;
+    window.editorAppearanceMismatches = [];
+    let samples = 0;
+    function sample() {
+      const frame = document.querySelector("iframe.project-editor__code-frame");
+      const code = frame?.contentDocument?.querySelector(".cm-editor");
+      if (code && frame.getBoundingClientRect().width && getComputedStyle(frame).visibility === "visible") {
+        const expected = document.documentElement.dataset.theme === "light" ? "rgb(217, 225, 227)" : "rgb(29, 32, 32)";
+        const actual = frame.contentWindow.getComputedStyle(code).backgroundColor;
+        if (actual !== expected) editorAppearanceMismatches.push({ actual, expected });
+      }
+      if (++samples < 1200) requestAnimationFrame(sample);
+    }
+    requestAnimationFrame(sample);
+  });
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   page.on("console", message => { if (message.type() === "error") errors.push(message.text()); });
@@ -73,7 +90,8 @@ test("Resources framed editor integrates with the site and running output", { ti
     route.fulfill({ contentType: "text/javascript", body: controller }));
   const origin = `http://resources-edge.localhost:${port}`;
   await page.goto(`${origin}/${account.login}/surface`);
-  const editor = page.frameLocator("iframe.project-editor__code-frame");
+  const editor = editorFrame ? page.frameLocator("iframe.project-editor__code-frame")
+    : page.locator("[data-project-editor-mount]");
   const content = editor.locator(".cm-content");
   const output = page.frameLocator("iframe.project-editor__output-frame:not([inert])");
   try {
@@ -114,11 +132,20 @@ test("Resources framed editor integrates with the site and running output", { ti
     assert.ok(expanded.width > 1430 && expanded.height > 890);
     await page.locator("[data-project-present-close]").click();
     assert.equal(await output.locator("#count").textContent(), "1");
+    for (const width of [1000, 1920, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const bounds = await (editorFrame ? page.locator("iframe.project-editor__code-frame")
+        : editor.locator(".cm-editor")).boundingBox();
+      assert.ok(bounds.width > 200 && bounds.height > 700, "the editor follows its resized pane");
+    }
+    const beforeShortcut = await content.textContent();
     await content.click();
     await page.keyboard.press("Control+k");
     await page.locator("[data-command-dialog][open]").waitFor({ timeout: 3000 });
     await page.keyboard.press("Escape");
-    await page.screenshot({ path: join(work, "editor-surface-full-site.png") });
+    assert.equal(await content.textContent(), beforeShortcut, "the site shortcut doesn't edit the source");
+    assert.deepEqual(await page.evaluate(() => editorAppearanceMismatches), [], "no wrong-theme editor paints");
+    await page.screenshot({ path: join(work, `editor-surface-full-site-${editorFrame ? "frame" : "direct"}.png`) });
     assert.deepEqual(errors, []);
     await page.locator('a[href="/"]').first().click();
     await page.waitForURL(origin + "/");
@@ -126,6 +153,28 @@ test("Resources framed editor integrates with the site and running output", { ti
     await page.goBack();
     await content.waitFor();
     await output.getByRole("heading", { name: "Frame fixture" }).waitFor();
+    assert.deepEqual(errors, []);
+    await page.goto(origin + "/");
+    let releaseDownload, downloadStarted;
+    const gate = new Promise(resolve => { releaseDownload = resolve; });
+    const started = new Promise(resolve => { downloadStarted = resolve; });
+    const runtimePattern = "**/project-editor-quickjs-runtime.wasm";
+    const delayRuntime = async route => { downloadStarted(); await gate; await route.fallback(); };
+    await page.route(runtimePattern, delayRuntime);
+    try {
+      await page.goto(`${origin}/${account.login}/surface`, { waitUntil: "domcontentloaded" });
+      await started;
+      await output.getByRole("heading", { name: "Frame fixture" }).waitFor();
+      assert.equal(await content.count(), 0, "the editor download is deliberately held");
+      await page.goto(origin + "/");
+    } finally {
+      releaseDownload();
+      await page.unroute(runtimePattern, delayRuntime);
+    }
+    await page.waitForFunction(() => document.documentElement.dataset.resourcesFrontendMachineState === "ready");
+    assert.equal(await page.locator("iframe.project-editor__code-frame").count(), 0);
+    await page.goto(`${origin}/${account.login}/surface`);
+    await content.waitFor();
     assert.deepEqual(errors, []);
   } catch (error) {
     t.diagnostic(JSON.stringify({ errors, url: page.url(),
@@ -1026,8 +1075,12 @@ test("Resources loads language bytecode on demand without replacing the editing 
     await page.waitForFunction(word => [...document.querySelectorAll(".cm-content .cm-line span")]
       .some(span => span.textContent.includes(word) && span.className), word, { timeout: 5000 }).catch(async error => {
         t.diagnostic(JSON.stringify({ word, downloads, errors,
+          text: await content.innerText(),
+          status: await page.locator("[data-project-status]").allTextContents(),
+          selected: await page.locator('[role="tab"][aria-selected="true"]').allTextContents(),
           spans: await content.locator(".cm-line span").evaluateAll(nodes => nodes.map(node =>
             ({ text: node.textContent, class: node.className }))) }));
+        await page.screenshot({ path: join(root, "../macchiato-work/editor-language-failure.png") });
         throw error;
       });
   }
@@ -1110,7 +1163,15 @@ test("Resources loads language bytecode on demand without replacing the editing 
       const selected = list.querySelector('[aria-selected="true"]').parentElement.getBoundingClientRect();
       const viewport = list.getBoundingClientRect();
       return selected.left >= viewport.left - 1 && selected.right <= viewport.right + 1;
-    }, null, { timeout: 5000 });
+    }, null, { timeout: 5000 }).catch(async error => {
+      t.diagnostic(JSON.stringify({ errors, tabs: await tabs.evaluate(list => ({
+        count: list.children.length, scroll: list.scrollLeft, width: list.clientWidth,
+        total: list.scrollWidth, viewport: list.getBoundingClientRect().toJSON(),
+        selected: list.querySelector('[aria-selected="true"]').parentElement.getBoundingClientRect().toJSON(),
+      })) }));
+      await page.screenshot({ path: join(root, "../macchiato-work/editor-tabs-failure.png") });
+      throw error;
+    });
   }
   await selectedTabVisible();
   assert.equal(await back.isVisible(), true, "newly opened tabs reveal the overflow controls");

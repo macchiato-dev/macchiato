@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
+import { editorLanguages } from "../../project-editor/src/languages.js";
 
 test("project editor embeds bytecode compiled from the current guest runtime", async (t) => {
   const root = fileURLToPath(new URL("../../../", import.meta.url));
@@ -46,6 +47,7 @@ test("project editor embeds bytecode compiled from the current guest runtime", a
   let runtime;
   let editor;
   let project;
+  const programs = new Set(editorLanguages.map(language => `language-${language.package}.bin`));
   for (const entry of new TextDecoder().decode(stamp.subarray(0, headerEnd)).split(",")) {
     const [name, size] = entry.split(":");
     const length = Number(size);
@@ -53,9 +55,14 @@ test("project editor embeds bytecode compiled from the current guest runtime", a
     if (name === "runtime.bin") runtime = stamp.slice(offset, offset + length);
     if (name === "editor.bin") editor = stamp.slice(offset, offset + length);
     if (name === "project.bin") project = stamp.slice(offset, offset + length);
+    if (name.endsWith(".bin") && name !== "runtime.bin") programs.add(name);
     offset += length;
   }
   assert.equal(offset, stamp.length);
+  const guest = await readFile(join(examples, "microquickjs-suite/microquickjs-guest-runtime/src/guest.c"), "utf8");
+  const capacity = Number(/^#define MAX_PROGRAMS (\d+)$/m.exec(guest)?.[1]);
+  assert.ok(programs.size <= capacity,
+    `${programs.size} bootstrap/language programs exceed the runtime's ${capacity} slots`);
   assert.ok(runtime, "runtime.bin is present in the editor stamp");
   assert.ok(Buffer.from(runtime).equals(await readFile(bytecode)),
     "embedded editor runtime is stale: rebuild its bytecode before stamping the WASM");

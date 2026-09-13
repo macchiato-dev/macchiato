@@ -74,6 +74,15 @@ lifetimes remain to be checked before enabling it. See the
 The live server and deployment archive below have not been replaced by this
 experimental source build.
 
+The opt-in path subsequently passed a complete-site fixture with real output,
+theme changes, palette shortcuts, and interrupted startup. That work fixed
+the frame-shell response CSP and cancelled-page lifecycle handling. It also
+found and fixed the extra bootstrap exceeding the interpreter's 16-program
+table when all grammars load. The direct long-editing test passes, and two
+complete language reruns pass. An intermittent selected-tab visibility timeout
+after repeated closes still needs follow-up; see the
+[complete-site checkpoint](project-editor-typing-performance.md#complete-site-integration-checkpoint).
+
 The eight legacy SQLite-site failures concern removed schema paths and old
 navigation/theme/menu expectations. They have not been skipped in source or
 declared passing. A future focused command should use `--test-skip-pattern`

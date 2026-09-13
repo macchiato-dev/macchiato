@@ -104,7 +104,10 @@ static uint8_t stamp_memory[4 * 1024 * 1024];
 static JSContext *context;
 static int bytecode_loading_open = 1;
 
-#define MAX_PROGRAMS 16
+/* Include bootstrap programs as well as lazily installed language modules.
+   The editor currently needs 17 entries; this small descriptor table does
+   not reserve more bytecode storage or enlarge the JavaScript arena. */
+#define MAX_PROGRAMS 32
 typedef struct {
     const uint8_t *name;
     uint32_t name_length;

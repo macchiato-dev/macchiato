@@ -146,6 +146,12 @@ test("editor surface keeps commands, input, themes and languages in its document
   assert.equal(languageRequests.length, 2);
   await page.evaluate(() => surface.call("SetContent", { content: "const again = true;", language: "javascript" }));
   assert.equal(languageRequests.length, 2, "returning to a language reuses its bytecode");
+  for (const language of ["vue", "svelte"]) {
+    await page.evaluate(language => surface.call("SetContent", { content: "<h1>Answer</h1>\n", language }), language);
+    await page.waitForFunction(() => failures.length || surface.call("Inspect").languageLoaded);
+    assert.deepEqual(await page.evaluate(() => failures), [], `${language} parser loads`);
+    await content.locator(".cm-line span").first().waitFor();
+  }
   await assert.rejects(page.evaluate(() => surface.call("Eval", { source: "alert(1)" })), /not granted/);
   assert.equal(await page.locator("#outside").textContent(), "Outside grant");
   assert.deepEqual(await page.evaluate(() => failures), []);

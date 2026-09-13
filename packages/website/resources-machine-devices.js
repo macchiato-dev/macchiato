@@ -286,6 +286,8 @@ export class ResourcesEditorDevice {
     this.hostCall = call;
     this.editor = null;
     this.editorSurface = null;
+    this.mountGeneration = 0;
+    this.mounting = null;
     this.initialSnapshot = null;
     this.initialOutputId = null;
     this.deferInitialOutput = false;
@@ -310,8 +312,19 @@ export class ResourcesEditorDevice {
       "editor.status.report": (payload) => this.editor.callGuest("__resourcesProjectStatusReport", payload),
     });
   }
-  async mount({ deferOutput = false, editorFrame = false } = {}) {
-    if (this.editor) return { machineId: this.editor.machineId };
+  mount(options = {}) {
+    if (this.editor) return Promise.resolve({ machineId: this.editor.machineId });
+    if (this.mounting) return this.mounting;
+    const generation = this.mountGeneration;
+    this.mounting = this.mountOnce(options, generation).finally(() => {
+      if (generation === this.mountGeneration) this.mounting = null;
+    });
+    return this.mounting;
+  }
+  async mountOnce({ deferOutput = false, editorFrame = false }, generation) {
+    const check = () => {
+      if (generation !== this.mountGeneration) throw new Error("Project editor closed during startup");
+    };
     const root = this.document.querySelector("[data-project-editor]")?.closest(".project-workspace");
     if (!root) throw new Error("Project editor mount is unavailable");
     const snapshotField = root.querySelector("[data-project-snapshot]");
@@ -321,6 +334,7 @@ export class ResourcesEditorDevice {
       const response = await this.request("fetch", {
         url: snapshotUrl, method: "GET", headers: { Accept: "application/json" },
       });
+      check();
       if (response.status < 200 || response.status >= 300) {
         throw new Error(`Project workspace response: ${response.status}`);
       }
@@ -340,9 +354,11 @@ export class ResourcesEditorDevice {
     if (this.deferInitialOutput) {
       root.querySelector("[data-project-editor]").dataset.outputMachineState = "waiting";
     } else {
-      await this.mountInitialOutput(root);
+      await this.mountInitialOutput(root, check);
+      check();
       // Paint useful output before CodeMirror evaluates on the same thread.
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      check();
     }
     const surfaceMessages = [];
     if (editorFrame) {
@@ -355,10 +371,11 @@ export class ResourcesEditorDevice {
           if (this.editor) this.editor.callGuest("__resourcesEditorSurfaceReceive", message);
           else surfaceMessages.push(message);
         }, error => this.deliver({ type: "editor-error", message: error?.message || String(error) }));
-      try { await this.editorSurface.start(); }
-      catch (error) { this.editorSurface = null; throw error; }
+      try { await this.editorSurface.start(); check(); }
+      catch (error) { if (generation === this.mountGeneration) this.editorSurface = null; throw error; }
     }
-    try { this.editor = await createProjectEditorMachine({
+    let editor;
+    try { editor = await createProjectEditorMachine({
       root,
       allowNavigate: "self",
       // The guest supplies the existing resource handle, not megabytes of
@@ -393,10 +410,14 @@ export class ResourcesEditorDevice {
         storage: this.storageDevice,
       },
     }); } catch (error) {
-      this.editorSurface?.destroy();
-      this.editorSurface = null;
+      if (generation === this.mountGeneration) {
+        this.editorSurface?.destroy();
+        this.editorSurface = null;
+      }
       throw error;
     }
+    if (generation !== this.mountGeneration) { editor.destroy(); check(); }
+    this.editor = editor;
     this.setTheme({ theme: this.hostCall("appearance.theme") });
     for (const message of surfaceMessages) this.editor.callGuest("__resourcesEditorSurfaceReceive", message);
     for (const message of this.outputErrors.values()) this.receiveOutput(message);
@@ -421,7 +442,7 @@ export class ResourcesEditorDevice {
     field.value = this.projectResources.hydrateText(field.value);
     return null;
   }
-  async mountInitialOutput(root) {
+  async mountInitialOutput(root, check = () => {}) {
     // The workspace also contains the details form; output state belongs on
     // the editor section, where subsequent guest updates and loaders read it.
     root = root.querySelector("[data-project-editor]");
@@ -439,8 +460,10 @@ export class ResourcesEditorDevice {
       root.dataset.outputMachineStage = "build";
       const source = { files: snapshot.files, config: snapshot.config || {} };
       const project = source.config.build ? await this.buildDevice.run(source) : source;
+      check();
       root.dataset.outputMachineStage = "compile";
       const compiled = await this.buildDevice.compile(project);
+      check();
       const options = project.config?.containerOptions || {};
       root.dataset.outputMachineStage = "load";
       // Compilation is already complete. Start with that application rather
@@ -453,11 +476,14 @@ export class ResourcesEditorDevice {
         allowedLinkPatterns: options.allowedLinkPatterns || [],
         environment: project.config?.environment || {},
       });
+      try { check(); }
+      catch (error) { this.outputDevice.destroyOutput(outputId); throw error; }
       this.outputIds.add(outputId);
       this.initialOutputId = outputId;
       root.dataset.outputMachineStage = "ready";
       root.dataset.outputMachineState = "ready";
     } catch (error) {
+      check();
       root.dataset.outputMachineState = "failed";
       root.dataset.outputMachineError = error?.message || String(error);
       this.deliver({ type: "output-error", id: 0,
@@ -485,6 +511,8 @@ export class ResourcesEditorDevice {
     return null;
   }
   destroy() {
+    this.mountGeneration++;
+    this.mounting = null;
     for (const id of this.outputIds) this.outputDevice.destroyOutput(id);
     this.outputIds.clear();
     this.outputErrors.clear();
@@ -586,6 +614,8 @@ export class ResourcesOutputDevice {
     this.deliver = deliver;
     this.projectResources = projectResources;
     this.outputs = new Map();
+    this.pending = new Set();
+    this.generation = 0;
     this.nextId = 1;
     this.operations = Object.freeze({
       "output.destroy": (output, payload) => {
@@ -601,6 +631,7 @@ export class ResourcesOutputDevice {
     });
   }
   async mount(payload) {
+    const generation = this.generation;
     if (typeof payload.rootKey !== "string" || !/^[1-9][0-9]{0,9}$/.test(payload.rootKey))
       throw new Error("Project output mount identity is invalid");
     const mount = [...this.document.querySelectorAll("[data-project-output-mount]")]
@@ -623,8 +654,10 @@ export class ResourcesOutputDevice {
     if (payload.iframe !== false) {
       output = new ProjectFrameOutput(mount, (frame, project, signal) =>
         this.connectFrame(frame, project, id, signal), storageScope);
+      this.pending.add(output);
       try { await output.load(project); }
       catch (error) { output.destroy(); throw error; }
+      finally { this.pending.delete(output); }
     }
     else {
       const storage = new ProjectOutputStorage(this.document.defaultView, storageScope);
@@ -638,6 +671,7 @@ export class ResourcesOutputDevice {
       const destroy = output.destroy;
       output = { ...output, destroy() { storage.destroy(); destroy(); } };
     }
+    if (generation !== this.generation) { output.destroy(); throw new Error("Project output closed during startup"); }
     this.outputs.set(id, output);
     return id;
   }
@@ -763,6 +797,9 @@ export class ResourcesOutputDevice {
     tree.forEach((node, index) => validate(node, String(index)));
   }
   destroy() {
+    this.generation++;
+    for (const output of this.pending) output.destroy();
+    this.pending.clear();
     for (const output of this.outputs.values()) output.destroy();
     this.outputs.clear();
   }
