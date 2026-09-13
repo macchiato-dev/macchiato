@@ -83,6 +83,24 @@ a controlled performance comparison.
 
 ## Initial mount uses the compiled application
 
+### Appearance through frontend startup
+
+The packaged first-paint regression now also runs the real frontend, rather
+than relying only on the intentionally script-disabled first-paint test. It
+samples animation frames before and after the outer guest becomes ready, through
+public home/blog/article navigation, reloads, signed-in home, and initial editor
+and output startup. Desktop and phone cases include both system appearances and
+explicit choices opposite to the system. Repeated System/Dark/Light button
+changes and emulated OS changes keep the editor and output identities intact;
+the resolved theme never reverts after a transition.
+
+On 2026-09-13 this passed against the `cc6c03e` export, as did the separate static
+first-paint/CSP suite. The latter also covers absent, invalid, and inaccessible
+preference storage and native iframe color-scheme inheritance. Screenshots of
+the hydrated desktop and phone workspaces were inspected. This is Chromium
+coverage, not evidence from Safari or Firefox. Test instrumentation stays outside
+the shipped controller and guests.
+
 The editor already has the compiled project when it mounts the output. It now
 passes that project into the first guest session, in either grant mode. The
 previous path created an empty session, acknowledged readiness, then replaced

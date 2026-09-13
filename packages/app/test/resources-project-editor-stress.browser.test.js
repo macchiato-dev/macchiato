@@ -17,6 +17,132 @@ import { createNodeSqliteClient } from "../../../packages/website/adapters/node-
 const root = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = join(root, "packages/app/src/index.js");
 
+test("Resources preserves first-paint appearance through frontend startup and navigation", { timeout: 180_000 }, async t => {
+  const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-hydration-theme-"))]);
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.ready;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const account = await createAccountStore(createNodeSqliteClient(db)).authenticateIdentity({
+    provider: "github", providerUserId: "hydration-theme", login: "hydration-theme",
+    name: "Theme Fixture", email: "theme@example.test", emailVerified: true,
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const origin = `http://resources-edge.localhost:${port}`;
+  for (const mobile of [false, true]) for (const [system, choice, expected] of [
+    ["light", "system", "light"], ["dark", "system", "dark"],
+    ["light", "dark", "dark"], ["dark", "light", "light"],
+  ]) await t.test(`${mobile ? "phone" : "desktop"}: ${choice}, system ${system}`, async () => {
+    const context = await browser.newContext({ colorScheme: system,
+      viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 } });
+    try {
+      if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
+        const directory = resolve(process.env.MACCHIATO_TEST_ASSETS_DIRECTORY);
+        await context.route("**/-/resources-site/**", async route => {
+          const name = new URL(route.request().url()).pathname.slice("/-/resources-site/".length);
+          await route.fulfill({ body: await readFile(join(directory, name)),
+            contentType: name.endsWith(".js") ? "text/javascript" : name.endsWith(".html") ? "text/html"
+              : name.endsWith(".wasm") ? "application/wasm" : "application/octet-stream" });
+        });
+      }
+      await context.addInitScript(choice => {
+        if (window !== top) return;
+        localStorage.setItem("macchiato-theme", choice);
+        window.themePaints = [];
+        const sample = () => {
+          if (document.body) {
+            const root = document.documentElement;
+            const style = getComputedStyle(root);
+            themePaints.push({ theme: root.dataset.theme, choice: root.dataset.themeChoice,
+              color: style.getPropertyValue("--bg-color").trim(),
+              state: root.dataset.resourcesFrontendMachineState || "before-guest" });
+          }
+          if (themePaints.length < 600) requestAnimationFrame(sample);
+        };
+        requestAnimationFrame(sample);
+      }, choice);
+      const page = await context.newPage(), errors = [];
+      page.on("pageerror", error => errors.push(error.message));
+      async function check() {
+        await page.waitForFunction(() => document.documentElement.dataset.resourcesFrontendMachineState === "ready");
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const paints = await page.evaluate(() => themePaints);
+        assert.ok(paints.length > 0);
+        assert.ok(paints.some(paint => paint.state === "ready"), "sampled the hydrated frontend");
+        const wrong = paints.filter(paint => paint.theme !== expected || paint.choice !== choice ||
+          paint.color !== (expected === "light" ? "#e7ecff" : "#1a1aa2"));
+        assert.deepEqual(wrong, [], `wrong appearance at ${page.url()}`);
+      }
+      await page.goto(origin + "/");
+      await check();
+      await page.locator('a[href="/blog"]').first().click();
+      await page.waitForURL(origin + "/blog");
+      await check();
+      const article = page.locator('a[href^="/blog/"]').first();
+      await article.click();
+      await page.waitForURL(/\/blog\/.+/);
+      await check();
+      await page.reload();
+      await check();
+      await context.addCookies([{ name: "resources_session", value: session,
+        domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+      await page.goto(origin + "/");
+      await check();
+      await page.goto(origin + "/projects/new");
+      await page.locator(".cm-content").waitFor({ state: mobile ? "attached" : "visible" });
+      await page.waitForFunction(() => document.querySelector('[data-project-editor]').dataset.outputMachineState === 'ready');
+      await check();
+      if (process.env.MACCHIATO_TEST_ARTIFACTS) {
+        await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
+        await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS,
+          `hydrated-theme-${mobile ? "phone" : "desktop"}-${system}-${choice}.png`) });
+      }
+      if (choice === "system" && system === "light") {
+        const identity = await page.locator('[data-project-editor]').getAttribute('data-editor-machine-id');
+        const output = await page.locator('iframe.project-editor__output-frame').elementHandle();
+        const editorColors = new Map();
+        let previous = expected;
+        async function transition(next, action) {
+          await page.evaluate(() => { themePaints.length = 0; });
+          await action();
+          await page.waitForFunction(next => document.documentElement.dataset.theme === next, next);
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+          const paints = await page.evaluate(() => themePaints);
+          let changed = false;
+          for (const paint of paints) {
+            if (paint.theme === next) changed = true;
+            else assert.ok(!changed && paint.theme === previous, 'appearance must not revert after switching');
+          }
+          assert.ok(changed);
+          const color = await page.locator('.cm-content').evaluate(node => getComputedStyle(node).color);
+          if (editorColors.has(next)) assert.equal(color, editorColors.get(next), 'editor theme survives repeated switches');
+          else editorColors.set(next, color);
+          previous = next;
+        }
+        for (let cycle = 0; cycle < 2; cycle++) {
+          for (const [nextChoice, nextTheme] of [["dark", "dark"], ["light", "light"], ["system", "light"]]) {
+            const menu = page.locator('.edge-user-menu:has(> summary[aria-label="Account menu"])');
+            if (await menu.getAttribute('open') === null) await menu.locator('summary').click();
+            await transition(nextTheme, () => page.locator(`button[data-theme-choice="${nextChoice}"]`).click());
+            assert.equal(await page.locator('html').getAttribute('data-theme-choice'), nextChoice);
+          }
+          await transition('dark', () => page.emulateMedia({ colorScheme: 'dark' }));
+          await transition('light', () => page.emulateMedia({ colorScheme: 'light' }));
+        }
+        assert.notEqual(editorColors.get('light'), editorColors.get('dark'));
+        assert.equal(await page.locator('[data-project-editor]').getAttribute('data-editor-machine-id'), identity);
+        assert.equal(await output.evaluate(node => node.isConnected), true, 'appearance does not restart the output');
+        await output.dispose();
+      }
+      assert.deepEqual(errors, []);
+    } finally { await context.close(); }
+  });
+});
+
 function freePort() {
   return new Promise((resolvePort, reject) => {
     const server = createServer();
