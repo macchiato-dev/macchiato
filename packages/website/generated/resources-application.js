@@ -384,7 +384,7 @@
         files.set(path, content2.slice(0, start) + operation.insert + content2.slice(start + operation.remove.length));
       } else throw new Error(`Unsupported project file operation: ${operation.op}`);
     }
-    const config = structuredClone(snapshot.config);
+    const config = jsonValue(snapshot.config, "Project configuration");
     for (const operation of patch.config) {
       if (!Array.isArray(operation.path) || operation.path.length === 0 || operation.path.some((key2) => typeof key2 !== "string" || !key2)) throw new Error("Invalid configuration patch path");
       const { parent, key } = configParent(config, operation.path);
@@ -394,7 +394,7 @@
         delete parent[key];
       } else if (operation.op === "set") {
         if (operation.absent ? own(parent, key) : !own(parent, key) || !same(parent[key], operation.before)) throw new Error(`Configuration patch set mismatch: ${operation.path.join(".")}`);
-        parent[key] = structuredClone(operation.value);
+        parent[key] = jsonValue(operation.value, "Project configuration");
       } else throw new Error(`Unsupported configuration operation: ${operation.op}`);
     }
     return normalizeProjectSnapshot({ files: [...files].map(([path, content2]) => ({ path, content: content2 })), config });
@@ -872,7 +872,7 @@
               LEFT JOIN resource_project_version_labels l ON l.project_id = v.project_id AND l.sequence = v.sequence
               JOIN resource_projects p ON p.id = v.project_id
               WHERE v.project_id = ? AND p.owner_user_id = ?
-              ORDER BY v.sequence DESC`,
+              ORDER BY latest DESC, v.created_at DESC, v.sequence DESC`,
     latestVersion: `SELECT s.last_version_sequence, s.checkpoint_snapshot_json
               FROM resource_project_state s
               JOIN resource_projects p ON p.id = s.project_id
@@ -944,10 +944,20 @@
               WHERE project_id = ?
                 AND EXISTS (SELECT 1 FROM resource_projects p WHERE p.id = ? AND p.owner_user_id = ?)`,
     labelVersion: `INSERT INTO resource_project_version_labels (project_id, sequence, title, saved_at)
-              SELECT s.project_id, s.last_version_sequence, ?, ? FROM resource_project_state s
+              SELECT s.project_id, s.last_version_sequence, ?, MAX(?, COALESCE(
+                (SELECT MAX(saved_at) FROM resource_project_version_labels WHERE project_id = s.project_id), 0) + 1)
+              FROM resource_project_state s
               JOIN resource_projects p ON p.id = s.project_id
               WHERE s.project_id = ? AND p.owner_user_id = ?
               ON CONFLICT(project_id, sequence) DO UPDATE SET title = excluded.title, saved_at = excluded.saved_at`,
+    labelSelectedVersion: `INSERT INTO resource_project_version_labels (project_id, sequence, title, saved_at)
+              SELECT v.project_id, v.sequence, ?, MAX(?, COALESCE(
+                (SELECT MAX(saved_at) FROM resource_project_version_labels WHERE project_id = v.project_id), 0) + 1)
+              FROM resource_project_versions v JOIN resource_projects p ON p.id = v.project_id
+              WHERE v.project_id = ? AND p.owner_user_id = ? AND v.sequence = ?
+              ON CONFLICT(project_id, sequence) DO UPDATE SET
+                title = CASE WHEN excluded.title = '' THEN title ELSE excluded.title END,
+                saved_at = excluded.saved_at`,
     deleteProject: "DELETE FROM resource_projects WHERE id = ? AND owner_user_id = ?",
     publishedSnapshot: `SELECT pub.snapshot_json FROM resource_project_publications pub
               JOIN resource_projects p ON p.id = pub.project_id
@@ -1440,18 +1450,60 @@
         if (!snapshot) return null;
         return this.saveProjectSnapshot(userId, projectId, snapshot, { reason: "restore", destructive: true });
       },
-      async publishProject(userId, projectId, { title = "" } = {}) {
+      async publishProject(userId, projectId, { title = "", sequence = null } = {}) {
         await initialize2();
         const timestamp = now();
         const versionTitle = text(title, "version title", { max: 80 });
-        const result = await client.batch([{
+        const queries = [];
+        if (sequence !== null) {
+          const target = await this.getProjectVersion(projectId, sequence, userId);
+          if (!target) return false;
+          await snapshotValidator(target);
+          let found = await client.execute({
+            sql: CONTENT_QUERIES.projectState,
+            args: [String(projectId), String(userId)]
+          });
+          let row = found.rows[0];
+          const published = await client.execute({
+            sql: CONTENT_QUERIES.publishedSnapshot,
+            args: [String(projectId), String(userId)]
+          });
+          if (String(row.snapshot_json) !== String(published.rows[0]?.snapshot_json)) {
+            await this.saveProjectSnapshot(userId, projectId, parsedSnapshot(row.snapshot_json), { reason: "manual" });
+            found = await client.execute({
+              sql: CONTENT_QUERIES.projectState,
+              args: [String(projectId), String(userId)]
+            });
+            row = found.rows[0];
+          }
+          queries.push({
+            sql: CONTENT_QUERIES.updateState,
+            args: [
+              snapshotJson(target),
+              String(row.checkpoint_snapshot_json),
+              Number(row.last_version_sequence),
+              Number(row.last_version_at),
+              timestamp,
+              String(projectId)
+            ]
+          }, {
+            sql: CONTENT_QUERIES.touchProject,
+            args: [
+              timestamp,
+              TEMPLATES.has(String(target.config?.template || "")) ? String(target.config.template) : "",
+              TEMPLATES.has(String(target.config?.template || "")) ? String(target.config.template) : "",
+              String(projectId)
+            ]
+          });
+        }
+        const result = await client.batch([...queries, {
           sql: CONTENT_QUERIES.publish,
           args: [String(projectId), String(userId), timestamp, String(projectId), String(projectId), String(userId)]
         }, {
-          sql: CONTENT_QUERIES.labelVersion,
-          args: [versionTitle, timestamp, String(projectId), String(userId)]
+          sql: sequence === null ? CONTENT_QUERIES.labelVersion : CONTENT_QUERIES.labelSelectedVersion,
+          args: [versionTitle, timestamp, String(projectId), String(userId), ...sequence === null ? [] : [Number(sequence)]]
         }]);
-        return Number(result[0].rowsAffected) > 0;
+        return Number(result[queries.length].rowsAffected) > 0;
       },
       async deleteProject(userId, projectId) {
         await initialize2();

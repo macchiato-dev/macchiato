@@ -27125,7 +27125,7 @@ function applyProjectPatch(snapshotValue, patch) {
       files.set(path, content2.slice(0, start) + operation.insert + content2.slice(start + operation.remove.length));
     } else throw new Error(`Unsupported project file operation: ${operation.op}`);
   }
-  const config2 = structuredClone(snapshot.config);
+  const config2 = jsonValue(snapshot.config, "Project configuration");
   for (const operation of patch.config) {
     if (!Array.isArray(operation.path) || operation.path.length === 0 || operation.path.some((key2) => typeof key2 !== "string" || !key2)) throw new Error("Invalid configuration patch path");
     const { parent: parent2, key } = configParent(config2, operation.path);
@@ -27135,7 +27135,7 @@ function applyProjectPatch(snapshotValue, patch) {
       delete parent2[key];
     } else if (operation.op === "set") {
       if (operation.absent ? own(parent2, key) : !own(parent2, key) || !same(parent2[key], operation.before)) throw new Error(`Configuration patch set mismatch: ${operation.path.join(".")}`);
-      parent2[key] = structuredClone(operation.value);
+      parent2[key] = jsonValue(operation.value, "Project configuration");
     } else throw new Error(`Unsupported configuration operation: ${operation.op}`);
   }
   return normalizeProjectSnapshot({ files: [...files].map(([path, content2]) => ({ path, content: content2 })), config: config2 });
@@ -28068,6 +28068,12 @@ async function mountProjectRoot(root) {
   }
   let currentSnapshot = state;
   let viewingHistorical = false;
+  let selectedStoredSequence = null;
+  let latestStoredSequence = null;
+  const selectedVersionField = document.createElement("input");
+  selectedVersionField.setAttribute("type", "hidden");
+  selectedVersionField.setAttribute("name", "selectedVersion");
+  root.append(selectedVersionField);
   let selected = state.files.some((file) => file.path === state.config?.entry) ? state.config.entry : state.files[0]?.path || "config";
   const tabSessionKey = `resources_project_tabs_v1:${projectId || persistence}`;
   let openTabs = [];
@@ -28104,7 +28110,7 @@ async function mountProjectRoot(root) {
     const button = root.closest("form")?.querySelector("[data-project-submit]");
     if (!button || draft) return;
     button.textContent = button.dataset.defaultLabel;
-    const disabled = unsavedChangeCount === 0 && workspacePayload?.hasUnpublishedChanges !== true && !recoveredPendingSnapshot;
+    const disabled = unsavedChangeCount === 0 && workspacePayload?.hasUnpublishedChanges !== true && !recoveredPendingSnapshot && !(viewingHistorical && selectedStoredSequence !== latestStoredSequence);
     button.disabled = disabled;
     const menuTrigger = root.closest("form")?.querySelector("[data-save-menu-trigger]");
     if (disabled) menuTrigger?.setAttribute("disabled", "");
@@ -28502,12 +28508,14 @@ async function mountProjectRoot(root) {
     const normalized = normalizeProjectSnapshot(next);
     if (projectSnapshotsEqual(state, normalized)) return false;
     const branchedFromHistory = viewingHistorical;
-    showCurrentVersion();
     viewingHistorical = false;
+    selectedStoredSequence = null;
+    selectedVersionField.value = "";
     state = normalized;
     recoveryFailure = "";
     editorController?.setSnapshot(state);
     currentUpdatedAt = Date.now();
+    showCurrentVersion();
     currentSnapshot = state;
     const serialized = JSON.stringify(state);
     snapshotField.value = serialized;
@@ -28531,6 +28539,7 @@ async function mountProjectRoot(root) {
     return true;
   }
   function checkpointDraft({ destructive = false } = {}) {
+    if (viewingHistorical) return true;
     if (recoveryFailure) return false;
     const now = Date.now();
     if (editorController && historyInEditorMachine) {
@@ -28625,12 +28634,13 @@ async function mountProjectRoot(root) {
   }
   function renderDraftVersions() {
     versionList.replaceChildren();
-    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: !viewingHistorical });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
       state = currentSnapshot;
       viewingHistorical = false;
+      selectedStoredSequence = null;
       snapshotField.value = JSON.stringify(state);
       historyPanel.hidden = true;
       versionButton.setAttribute("aria-expanded", "false");
@@ -28643,7 +28653,10 @@ async function mountProjectRoot(root) {
     versionList.append(current);
     [...localHistory.patches].reverse().forEach((_, reverseIndex) => {
       const sequence = localHistory.patches.length - reverseIndex;
-      const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], { sequence });
+      const button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], {
+        sequence,
+        current: viewingHistorical && selectedStoredSequence === sequence
+      });
       button.addEventListener("click", () => {
         clearNotice();
         if (pending2) checkpointDraft({ destructive: pendingDestructive });
@@ -28653,6 +28666,7 @@ async function mountProjectRoot(root) {
         const target = normalizeProjectSnapshot(localHistory.snapshots[sequence - 1] || rebuildDraft(localHistory.patches, sequence));
         state = target;
         viewingHistorical = true;
+        selectedStoredSequence = sequence;
         snapshotField.value = JSON.stringify(state);
         renderTabs();
         historyPanel.hidden = true;
@@ -28673,14 +28687,22 @@ async function mountProjectRoot(root) {
       return;
     }
     const { versions } = await response.json();
+    latestStoredSequence = versions.find((version) => version.latest)?.sequence ?? null;
     versionList.replaceChildren();
-    showCurrentVersion();
-    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: true });
+    if (!viewingHistorical) showCurrentVersion();
+    const hasCurrentDraft = workspacePayload?.hasUnpublishedChanges === true || unsavedChangeCount > 0 || recoveredPendingSnapshot;
+    if (!viewingHistorical && !hasCurrentDraft && latestStoredSequence !== null) {
+      selectedStoredSequence = latestStoredSequence;
+      selectedVersionField.value = String(latestStoredSequence);
+    }
+    const current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, { current: !viewingHistorical });
     current.addEventListener("click", () => {
       clearNotice();
       if (!viewingHistorical) return;
       state = currentSnapshot;
       viewingHistorical = false;
+      selectedStoredSequence = null;
+      selectedVersionField.value = "";
       snapshotField.value = JSON.stringify(state);
       historyPanel.hidden = true;
       versionButton.setAttribute("aria-expanded", "false");
@@ -28688,12 +28710,18 @@ async function mountProjectRoot(root) {
       sendContent();
       renderPreview();
       showCurrentVersion();
+      refreshSubmitLabel();
       setStatus("Current version");
     });
-    versionList.append(current);
+    if (hasCurrentDraft && latestStoredSequence === null) versionList.append(current);
     for (const version of versions) {
-      const timestamp = version.savedAt || version.createdAt;
-      const button = versionChoice(relativeVersionTime(timestamp), timestamp, { sequence: version.sequence, title: version.title, latest: version.latest });
+      const timestamp = version.latest ? version.savedAt || version.createdAt : version.createdAt;
+      const button = versionChoice(relativeVersionTime(timestamp), timestamp, {
+        sequence: version.sequence,
+        title: version.title,
+        latest: version.latest,
+        current: viewingHistorical ? selectedStoredSequence === version.sequence : !hasCurrentDraft && version.latest
+      });
       button.addEventListener("click", async () => {
         clearNotice();
         await save();
@@ -28706,6 +28734,8 @@ async function mountProjectRoot(root) {
         const result2 = await response2.json();
         state = normalizeProjectSnapshot(result2.snapshot);
         viewingHistorical = true;
+        selectedStoredSequence = version.sequence;
+        selectedVersionField.value = String(version.sequence);
         snapshotField.value = JSON.stringify(state);
         historyPanel.hidden = true;
         versionButton.setAttribute("aria-expanded", "false");
@@ -28713,9 +28743,11 @@ async function mountProjectRoot(root) {
         sendContent();
         renderPreview();
         showSelectedVersion(relativeVersionTime(timestamp), timestamp);
+        refreshSubmitLabel();
         setStatus(`Viewing ${button.textContent}`);
       });
       versionList.append(button);
+      if (hasCurrentDraft && version.latest) versionList.append(current);
     }
   }
   function receiveEditorChange(content2, { syntaxErrors = false } = {}) {

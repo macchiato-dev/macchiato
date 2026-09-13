@@ -254,7 +254,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         files.set(path, content.slice(0, start) + operation.insert + content.slice(start + operation.remove.length));
       } else throw new Error("Unsupported project file operation: " + operation.op);
     }
-    var config = structuredClone(snapshot.config);
+    var config = jsonValue(snapshot.config, "Project configuration");
     for (var _iterator5 = _createForOfIteratorHelperLoose(patch.config), _step5; !(_step5 = _iterator5()).done;) {
       var _operation = _step5.value;
       if (!Array.isArray(_operation.path) || _operation.path.length === 0 || _operation.path.some(function (key2) {
@@ -269,7 +269,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         delete parent[key];
       } else if (_operation.op === "set") {
         if (_operation.absent ? own(parent, key) : !own(parent, key) || !same(parent[key], _operation.before)) throw new Error("Configuration patch set mismatch: " + _operation.path.join("."));
-        parent[key] = structuredClone(_operation.value);
+        parent[key] = jsonValue(_operation.value, "Project configuration");
       } else throw new Error("Unsupported configuration operation: " + _operation.op);
     }
     return normalizeProjectSnapshot({
@@ -1574,7 +1574,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i3, _arr3, _arr3$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i4, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selectedStoredSequence, latestStoredSequence, selectedVersionField, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i3, _arr3, _arr3$_i, _button2, _label, text, syncTabOverflow, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i4, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context10) {
         while (1) switch (_context10.p = _context10.n) {
           case 0:
@@ -1813,7 +1813,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             };
             _renderStoredVersions = function _renderStoredVersions3() {
               _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee8() {
-                var response, _yield$response$json, versions, current, _loop8, _iterator28, _step28;
+                var _versions$find$sequen, _versions$find, _workspacePayload3;
+                var response, _yield$response$json, versions, hasCurrentDraft, current, _loop8, _iterator28, _step28;
                 return _regenerator().w(function (_context9) {
                   while (1) switch (_context9.n) {
                     case 0:
@@ -1834,16 +1835,26 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                     case 3:
                       _yield$response$json = _context9.v;
                       versions = _yield$response$json.versions;
+                      latestStoredSequence = (_versions$find$sequen = (_versions$find = versions.find(function (version) {
+                        return version.latest;
+                      })) == null ? void 0 : _versions$find.sequence) != null ? _versions$find$sequen : null;
                       versionList.replaceChildren();
-                      showCurrentVersion();
+                      if (!viewingHistorical) showCurrentVersion();
+                      hasCurrentDraft = ((_workspacePayload3 = workspacePayload) == null ? void 0 : _workspacePayload3.hasUnpublishedChanges) === true || unsavedChangeCount > 0 || recoveredPendingSnapshot;
+                      if (!viewingHistorical && !hasCurrentDraft && latestStoredSequence !== null) {
+                        selectedStoredSequence = latestStoredSequence;
+                        selectedVersionField.value = String(latestStoredSequence);
+                      }
                       current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, {
-                        current: true
+                        current: !viewingHistorical
                       });
                       current.addEventListener("click", function () {
                         clearNotice();
                         if (!viewingHistorical) return;
                         state = currentSnapshot;
                         viewingHistorical = false;
+                        selectedStoredSequence = null;
+                        selectedVersionField.value = "";
                         snapshotField.value = JSON.stringify(state);
                         historyPanel.hidden = true;
                         versionButton.setAttribute("aria-expanded", "false");
@@ -1851,20 +1862,22 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                         sendContent();
                         renderPreview();
                         showCurrentVersion();
+                        refreshSubmitLabel();
                         setStatus("Current version");
                       });
-                      versionList.append(current);
+                      if (hasCurrentDraft && latestStoredSequence === null) versionList.append(current);
                       _loop8 = _regenerator().m(function _loop8() {
                         var version, timestamp, button;
                         return _regenerator().w(function (_context8) {
                           while (1) switch (_context8.n) {
                             case 0:
                               version = _step28.value;
-                              timestamp = version.savedAt || version.createdAt;
+                              timestamp = version.latest ? version.savedAt || version.createdAt : version.createdAt;
                               button = versionChoice(relativeVersionTime(timestamp), timestamp, {
                                 sequence: version.sequence,
                                 title: version.title,
-                                latest: version.latest
+                                latest: version.latest,
+                                current: viewingHistorical ? selectedStoredSequence === version.sequence : !hasCurrentDraft && version.latest
                               });
                               button.addEventListener("click", _asyncToGenerator(_regenerator().m(function _callee7() {
                                 var response2, result2;
@@ -1893,6 +1906,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                                       result2 = _context7.v;
                                       state = normalizeProjectSnapshot(result2.snapshot);
                                       viewingHistorical = true;
+                                      selectedStoredSequence = version.sequence;
+                                      selectedVersionField.value = String(version.sequence);
                                       snapshotField.value = JSON.stringify(state);
                                       historyPanel.hidden = true;
                                       versionButton.setAttribute("aria-expanded", "false");
@@ -1900,6 +1915,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                                       sendContent();
                                       renderPreview();
                                       showSelectedVersion(relativeVersionTime(timestamp), timestamp);
+                                      refreshSubmitLabel();
                                       setStatus("Viewing " + button.textContent);
                                     case 5:
                                       return _context7.a(2);
@@ -1907,6 +1923,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                                 }, _callee7);
                               })));
                               versionList.append(button);
+                              if (hasCurrentDraft && version.latest) versionList.append(current);
                             case 1:
                               return _context8.a(2);
                           }
@@ -1935,13 +1952,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             renderDraftVersions = function _renderDraftVersions() {
               versionList.replaceChildren();
               var current = versionChoice(relativeVersionTime(currentUpdatedAt), currentUpdatedAt, {
-                current: true
+                current: !viewingHistorical
               });
               current.addEventListener("click", function () {
                 clearNotice();
                 if (!viewingHistorical) return;
                 state = currentSnapshot;
                 viewingHistorical = false;
+                selectedStoredSequence = null;
                 snapshotField.value = JSON.stringify(state);
                 historyPanel.hidden = true;
                 versionButton.setAttribute("aria-expanded", "false");
@@ -1955,7 +1973,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               _toConsumableArray(localHistory.patches).reverse().forEach(function (_, reverseIndex) {
                 var sequence = localHistory.patches.length - reverseIndex;
                 var button = versionChoice(relativeVersionTime(localHistory.versionTimes[sequence - 1]), localHistory.versionTimes[sequence - 1], {
-                  sequence: sequence
+                  sequence: sequence,
+                  current: viewingHistorical && selectedStoredSequence === sequence
                 });
                 button.addEventListener("click", function () {
                   clearNotice();
@@ -1968,6 +1987,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                   var target = normalizeProjectSnapshot(localHistory.snapshots[sequence - 1] || rebuildDraft(localHistory.patches, sequence));
                   state = target;
                   viewingHistorical = true;
+                  selectedStoredSequence = sequence;
                   snapshotField.value = JSON.stringify(state);
                   renderTabs();
                   historyPanel.hidden = true;
@@ -2131,6 +2151,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               var _ref8 = _temp5 === void 0 ? {} : _temp5,
                 _ref8$destructive = _ref8.destructive,
                 destructive = _ref8$destructive === void 0 ? false : _ref8$destructive;
+              if (viewingHistorical) return true;
               if (recoveryFailure) return false;
               var now = Date.now();
               if (editorController && historyInEditorMachine) {
@@ -2161,12 +2182,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               var normalized = normalizeProjectSnapshot(next);
               if (projectSnapshotsEqual(state, normalized)) return false;
               var branchedFromHistory = viewingHistorical;
-              showCurrentVersion();
               viewingHistorical = false;
+              selectedStoredSequence = null;
+              selectedVersionField.value = "";
               state = normalized;
               recoveryFailure = "";
               (_editorController4 = editorController) == null || _editorController4.setSnapshot(state);
               currentUpdatedAt = Date.now();
+              showCurrentVersion();
               currentSnapshot = state;
               var serialized = JSON.stringify(state);
               snapshotField.value = serialized;
@@ -2657,7 +2680,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               var button = (_root$closest4 = root.closest("form")) == null ? void 0 : _root$closest4.querySelector("[data-project-submit]");
               if (!button || draft) return;
               button.textContent = __resourcesDatasetGet(button, "data-default-label");
-              var disabled = unsavedChangeCount === 0 && ((_workspacePayload2 = workspacePayload) == null ? void 0 : _workspacePayload2.hasUnpublishedChanges) !== true && !recoveredPendingSnapshot;
+              var disabled = unsavedChangeCount === 0 && ((_workspacePayload2 = workspacePayload) == null ? void 0 : _workspacePayload2.hasUnpublishedChanges) !== true && !recoveredPendingSnapshot && !(viewingHistorical && selectedStoredSequence !== latestStoredSequence);
               button.disabled = disabled;
               var menuTrigger = (_root$closest5 = root.closest("form")) == null ? void 0 : _root$closest5.querySelector("[data-save-menu-trigger]");
               if (disabled) menuTrigger == null || menuTrigger.setAttribute("disabled", "");else menuTrigger == null || menuTrigger.removeAttribute("disabled");
@@ -2804,6 +2827,12 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             }
             currentSnapshot = state;
             viewingHistorical = false;
+            selectedStoredSequence = null;
+            latestStoredSequence = null;
+            selectedVersionField = document.createElement("input");
+            selectedVersionField.setAttribute("type", "hidden");
+            selectedVersionField.setAttribute("name", "selectedVersion");
+            root.append(selectedVersionField);
             selected = state.files.some(function (file) {
               var _state$config3;
               return file.path === ((_state$config3 = state.config) == null ? void 0 : _state$config3.entry);
