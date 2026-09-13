@@ -802,6 +802,8 @@ test("Resources loads language bytecode on demand without replacing the editing 
     "TypeScript and JavaScript share one downloaded package");
   await openFile("main.py");
   await page.getByText("Syntax highlighting unavailable for python.", { exact: false }).waitFor();
+  assert.equal(await page.locator("[data-editor-machine-error]").count(), 0,
+    "the parser failure is not reported as a machine failure to the outer page");
   await content.click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type("# still editable");
@@ -813,8 +815,8 @@ test("Resources loads language bytecode on demand without replacing the editing 
   assert.match(await content.innerText(), /still editable/);
   assert.doesNotMatch(await page.locator("body").innerText(), /Editor stopped:/);
   assert.equal(await page.getByText("Syntax highlighting unavailable for python.", { exact: false }).isVisible(), false);
-  for (const [path, token] of [["style.css", "red"], ["data.json", "true"], ["README.md", "# "],
-    ["query.sql", "SELECT"], ["config.yaml", "true"], ["main.cpp", "int"],
+  for (const [path, token] of [["style.css", "red"], ["data.json", "true"], ["README.md", "Answer"],
+    ["query.sql", "SELECT"], ["config.yaml", "answer"], ["main.cpp", "int"],
     ["App.vue", "h1"], ["App.svelte", "h1"]]) {
     await openFile(path);
     await highlighted(token);

@@ -26526,13 +26526,28 @@ var editorHighlightStyle = cacheHighlightStyle(HighlightStyle.define([
   { tag: tags.keyword, color: "var(--resources-editor-keyword)" },
   { tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: "var(--resources-editor-name)" },
   { tag: [tags.function(tags.variableName), tags.labelName], color: "var(--resources-editor-function)" },
-  { tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: "var(--resources-editor-constant)" },
+  { tag: [
+    tags.color,
+    tags.atom,
+    tags.bool,
+    tags.null,
+    tags.contentSeparator,
+    tags.constant(tags.name),
+    tags.standard(tags.name)
+  ], color: "var(--resources-editor-constant)" },
   { tag: [tags.definition(tags.name), tags.separator], color: "var(--resources-editor-definition)" },
   { tag: [tags.typeName, tags.className, tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace], color: "var(--resources-editor-type)" },
-  { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp, tags.link], color: "var(--resources-editor-operator)" },
+  { tag: [tags.operator, tags.operatorKeyword, tags.url, tags.escape, tags.regexp], color: "var(--resources-editor-operator)" },
   { tag: [tags.meta, tags.comment], color: "var(--resources-editor-comment)", fontStyle: "italic" },
   { tag: tags.string, color: "var(--resources-editor-string)" },
-  { tag: tags.invalid, color: "var(--resources-editor-invalid)" }
+  { tag: tags.invalid, color: "var(--resources-editor-invalid)" },
+  // Style common prose tags as CodeMirror's default highlighter does, while
+  // retaining the site's light/dark palette rather than fallback fixed colors.
+  { tag: tags.link, color: "var(--resources-editor-operator)", textDecoration: "underline" },
+  { tag: tags.heading, color: "var(--resources-editor-function)", fontWeight: "bold" },
+  { tag: tags.strong, fontWeight: "bold" },
+  { tag: tags.emphasis, fontStyle: "italic" },
+  { tag: tags.strikethrough, textDecoration: "line-through" }
 ]));
 var currentTheme = "dark";
 var applyingHostContent = false;

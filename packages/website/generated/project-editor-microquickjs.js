@@ -27546,7 +27546,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     tag: [_tags.function(_tags.variableName), _tags.labelName],
     color: "var(--resources-editor-function)"
   }, {
-    tag: [_tags.color, _tags.constant(_tags.name), _tags.standard(_tags.name)],
+    tag: [_tags.color, _tags.atom, _tags.bool, _tags.null, _tags.contentSeparator, _tags.constant(_tags.name), _tags.standard(_tags.name)],
     color: "var(--resources-editor-constant)"
   }, {
     tag: [_tags.definition(_tags.name), _tags.separator],
@@ -27555,7 +27555,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     tag: [_tags.typeName, _tags.className, _tags.number, _tags.changed, _tags.annotation, _tags.modifier, _tags.self, _tags.namespace],
     color: "var(--resources-editor-type)"
   }, {
-    tag: [_tags.operator, _tags.operatorKeyword, _tags.url, _tags.escape, _tags.regexp, _tags.link],
+    tag: [_tags.operator, _tags.operatorKeyword, _tags.url, _tags.escape, _tags.regexp],
     color: "var(--resources-editor-operator)"
   }, {
     tag: [_tags.meta, _tags.comment],
@@ -27567,6 +27567,23 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   }, {
     tag: _tags.invalid,
     color: "var(--resources-editor-invalid)"
+  }, {
+    tag: _tags.link,
+    color: "var(--resources-editor-operator)",
+    textDecoration: "underline"
+  }, {
+    tag: _tags.heading,
+    color: "var(--resources-editor-function)",
+    fontWeight: "bold"
+  }, {
+    tag: _tags.strong,
+    fontWeight: "bold"
+  }, {
+    tag: _tags.emphasis,
+    fontStyle: "italic"
+  }, {
+    tag: _tags.strikethrough,
+    textDecoration: "line-through"
   }]));
   var currentTheme = "dark";
   var applyingHostContent = false;
