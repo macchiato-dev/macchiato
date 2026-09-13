@@ -4622,3 +4622,27 @@ were inspected. Evidence is under `/root/macchiato-work/history-release-*`;
 the module-only run is `history-module-regression.log`. Large native insertion
 still takes 20.6 seconds in this fixture; these changes are not a claim to have
 finished the broader performance goal.
+
+Read-only checks pass against both the export and restarted local server for
+full-height Mahjong (798px surface in a 798px viewport), Cat Memory's eight
+pairs and reset, 50 successive tour slides, and SQLite fragments. The helper's
+obsolete nested-body selector was corrected to the actual Document body before
+rerunning; the first export attempt timed out on that selector. No owner project
+contents or notes were saved. Seven principal live assets match the export:
+
+| Asset | Bytes |
+| --- | ---: |
+| `machine.js` | 128,033 |
+| `controller.js` | 76,435 |
+| `resources-frontend-microquickjs.wasm` | 399,548 |
+| `project-editor-quickjs-runtime.wasm` | 1,580,704 |
+| `project-quickjs-runtime.wasm` | 816,722 |
+| `project-output-frame.html` | 27,338 |
+| `project-builder-quickjs-runtime.wasm` | 5,010,038 |
+
+The extracted archive passes all 152 manifest checks.
+`/root/resources-bunny.tar.gz` has SHA-256
+`4d873a599564a7031da53b8c64f1f98500db15cb35f05fbe7ed324e27b2535b7`.
+Its predecessor is preserved at
+`/root/archive/2026/09/13/resources-bunny-7dd7649-before-history.tar.gz`.
+Nothing was deployed to Bunny.

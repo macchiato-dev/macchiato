@@ -29,14 +29,17 @@ The document viewport comparison now passes its root-unit and canvas-color
 assertions. The following sections preserve the earlier investigation and
 experimental requirements; their claims about pending production assertions
 and retaining the old guest after every failed startup describe that earlier
-design, not the current Document replacement contract. Production rebuild and
-live-site verification of this new path remain pending.
+design, not the current Document replacement contract. The rebuilt export and
+local live site now pass the verification recorded below.
 
 The rebuilt-site stress test also passes with the direct Document grant:
 expanded output works before the editor finishes downloading, document
 attributes survive initial loading and edits, repeated invalid CSS edits
 recover, and no additional rendering frames are introduced. The light-theme
-editing screenshot was inspected. This does not yet claim a live deployment.
+editing screenshot was inspected. Read-only exported and local live checks also
+pass for full-height Mahjong, Cat Memory's eight pairs and reset, 50 tour slides,
+and SQLite fragments. Seven principal served assets match the export after
+restart. This is a local deployment, not a Bunny staging deployment.
 
 The focused Chromium run passes 14 tests, including real QuickJS stateful
 updates in both grant modes without frames, fresh-state replacement, retired
