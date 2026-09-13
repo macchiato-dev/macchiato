@@ -1,6 +1,6 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-f9ce237`.
+Current local verification: 2026-09-13, export `resources-co-9fdadc5`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
@@ -18,6 +18,11 @@ sibling order for adopted nodes, tab replacement disposes tooltip listeners,
 and guest event dispatch decodes the full unsigned callback word. No host
 capability or limit was widened. The regression now performs eight complete
 open/close cycles across narrow and wide layouts.
+
+History uses one persistent delegated click listener instead of retaining new
+row listeners on every opening. A 64-version fixture now passes 80 openings,
+selection through nested row text, and continued editing. This fixes another
+callback-slot exhaustion without changing the host or widening its limits.
 
 The editor Configuration view now formats JSON in the guest application.
 MicroQuickJS ignores the indentation argument to `JSON.stringify`; the display
@@ -58,10 +63,11 @@ their existing session. This is separate from the typing/build debounce.
   compressed backend artifact runs its routing, rendering, and policy guests
   in Deno. Nothing has been deployed to Bunny.
 
-Current evidence is in `/root/macchiato-work/tab-lifetime-packaged.log`,
-`tab-lifetime-modules.log`, `tab-lifetime-bunny-backend.log`,
-`tab-lifetime-boundaries.log`, `tab-lifetime-live.log`, and their screenshot
-directories. The earlier broader
+Current evidence is in `/root/macchiato-work/history-lifetime-packaged-final.log`,
+`history-lifetime-modules.log`, `history-lifetime-bunny-backend.log`, and
+`history-lifetime-live.log`, with their screenshot directories. The unchanged
+callback/surface boundary tests remain recorded in `tab-lifetime-boundaries.log`.
+The earlier broader
 app checks remain in `current-resources-browser-suite.log` and
 `account-current-flow-final.log`.
 The latter app test waits for native form navigation and guest readiness, uses
@@ -69,6 +75,14 @@ the actual output Document, and explicitly selects a draft/history checkpoint
 instead of treating `aria-current` as an alias for newest.
 
 ## Still open
+
+An initial packaged rerun failed an unchanged-pane-size assertion after a
+phone/desktop switch and bulk paste. It did not repeat in the focused rerun or
+the final full packaged suite; the cause is not established. Rectangle/status
+diagnostics and a failure screenshot are now retained. A separate test race
+was removed by creating recovery data through a real editor change rather than
+overwriting session storage behind an in-flight save. See the
+[history checkpoint](project-editor-typing-performance.md#history-list-callback-lifetime).
 
 The native bulk-insertion stress path took 14,070 ms for 106,458 characters;
 the ordinary paste-handler path took 123 ms for 106,432 characters. Native
@@ -121,11 +135,11 @@ the local 3030 server now serves those rebuilt assets.
 
 ## Deployment artifact
 
-`/root/resources-bunny.tar.gz` contains the verified `f9ce237` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `9fdadc5` export. SHA-256:
 
-`21acb0ebecb12cecaf2c3575964e3867eec4f3ceb00538e9e8814b61c1b2f0a8`
+`723e2e340268381159253c159c5d6cb2ab2a7bf2a14d85aa5246b1ae049ecc10`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-c671ef9-before-tab-lifetime.tar.gz`.
+`/root/archive/2026/09/13/resources-bunny-f9ce237-before-history-lifetime.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.

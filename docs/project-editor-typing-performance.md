@@ -1065,3 +1065,20 @@ checks. The original size mismatch has not been independently explained;
 the assertion remains intact with rectangle/status diagnostics and a failure
 screenshot. Logs: `history-lifetime-packaged.log`, `history-lifetime-layout.log`,
 and `history-lifetime-layout-recovery.log`.
+
+The final full packaged run passes all 12 checks, including the unchanged size
+assertion, 80 history openings, eight appearance combinations, and language/tab
+cycling. Its ordinary paste took 122 ms for 99,199 characters; native insertion
+took 5,562 ms for 99,225 characters. All 112 non-browser checks and the Deno
+compressed-backend test pass too. The recovered-draft change and diagnostics
+are in test-only commit `1c7fda10`; deployed source remains `9fdadc5`.
+
+The local server now serves this export: eight principal assets match by
+digest, and read-only owner checks passed Mahjong, all Cat Memory pairs/reset,
+50 tour slides and keyboard navigation, and SQLite fragments. History, light
+editing, and desktop Mahjong screenshots were inspected. No owner project or
+notes were saved. All 153 deployment files verify after tar extraction.
+`/root/resources-bunny.tar.gz` contains this export, with its predecessor under
+`/root/archive/2026/09/13/`; nothing was deployed to Bunny. Evidence uses the
+`history-lifetime-packaged-final`, `history-lifetime-modules`,
+`history-lifetime-live`, and `history-lifetime-bunny-backend` log prefixes.
