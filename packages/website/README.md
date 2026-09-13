@@ -801,32 +801,24 @@ from the `benatkin`, `resources`, and `macchiato` namespaces. This does not make
 other public projects private: their direct namespace/project URLs continue to
 work, and account project lists remain complete.
 
-The manual GitHub Actions workflow
-`.github/workflows/deploy-resources-bunny.yml` takes a `staging` (default) or
-`production` target, builds the Edge entry, server machine, and site; uploads
-the revisioned Storage artifacts with the manifest last; deploys the
-matching standalone script, and smoke-tests English and Spanish pages. Before
-uploading, `scripts/verify-resources-bunny-build.js` re-hashes the complete
+Deployment is manual; this repository does not contain a Bunny deployment
+workflow. Build and package without deployment credentials. Before uploading,
+`scripts/verify-resources-bunny-build.js` re-hashes the complete
 deployment inventory, verifies the revision embedded in the Edge controller,
 requires both private machines, and proves that neither machine entered the
-public site manifest. The official Bunny deploy action is pinned to the
-reviewed `deploy-script@0.5.1` commit rather than following its mutable branch.
-Create
-separate `resources-staging` and `resources-production` GitHub environments;
-give each environment its own values for:
+public site manifest. Upload the revisioned Storage artifacts with the manifest
+last, then deploy the matching standalone script. Keep staging and production
+credentials separate. The existing Storage upload script uses:
 
 | Kind | Name |
 | --- | --- |
-| GitHub secret | `BUNNY_STORAGE_UPLOAD_KEY` |
-| GitHub secret | `BUNNY_SCRIPT_ID` |
-| GitHub secret | `BUNNY_DEPLOY_KEY` |
-| GitHub variable | `BUNNY_STORAGE_UPLOAD_ORIGIN` |
-| GitHub variable | `PUBLIC_ORIGIN` |
-| GitHub variable | `BLOG_EXAMPLES_ORIGIN` |
+| Upload credential | `BUNNY_STORAGE_UPLOAD_KEY` |
+| Upload destination | `BUNNY_STORAGE_UPLOAD_ORIGIN` |
 
-The upload key is CI-only. The Edge Script receives a separate read-only
-`STORAGE_API_KEY` through Bunny. Use environment protection/approval for the
-production workflow.
+The upload key belongs only in the deployment step. The Edge Script receives
+a separate read-only `STORAGE_API_KEY` through Bunny. A deployment container
+must remain a narrow, Fedora-based, Podman-compatible client: builds, packaging,
+and development servers stay outside it and do not receive its credentials.
 
 For staging, create a separate Storage prefix, Edge Script, and Bunny Database;
 do not point the staging script at production state. In the staging script set
@@ -842,7 +834,7 @@ boundary is implemented.
 Attach two hostnames to the same validated export and Edge Script. Production
 uses `https://blog-examples.resources.co`; staging uses
 `https://staging-blog-examples.resources.co`. Set `BLOG_EXAMPLES_ORIGIN` to the
-matching value in each GitHub environment. Locally, the development plugin
+matching value in each deployment environment. Locally, the development plugin
 installs `blog-examples.localhost` as its own declarative app. The example host
 serves only `/-/blog-examples/` artifacts; iframe CSP names these origins
 explicitly and does not grant `allow-same-origin`.
@@ -854,10 +846,10 @@ https://staging.resources.co/auth/github/callback
 https://staging.resources.co/auth/gitlab/callback
 ```
 
-Once the GitHub environment is configured, run **Deploy Resources.co to
-Bunny**, leave the target at `staging`, and verify `/blog` in addition to the
-workflow smoke tests. Production remains an explicit second choice and should
-have an environment approval rule.
+Deploy to staging first and check the English and Spanish home pages, `/blog`,
+sign-in, and project loading/editing before considering production. Local build
+and browser checks do not establish that the Bunny deployment has succeeded.
+Production deployment remains a separate explicit action.
 
 `BUNNY_ORIGIN` remains accepted as a compatibility alias, but new deployments
 should use the less ambiguous `BUNNY_STORAGE_ORIGIN` name.
