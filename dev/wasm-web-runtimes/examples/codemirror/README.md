@@ -11,6 +11,12 @@ target possible.
 `babel-microquickjs.js` contains that narrow compatibility layer. It currently
 renames catch bindings that MicroQuickJS rejects when they shadow a function
 binding, without changing the application or either full-engine target.
+It also preallocates Babel's private `finally` record slots: writing slot 5
+before slot 4 would create a sparse array, which MicroQuickJS rejects. Only
+records passed to Babel's generated helper are changed. The compatibility test
+compares generator cleanup/return/throw behavior with native JavaScript and
+reproduces the unfixed failure. It requires the native `mqjs` compiler built by
+the sibling MicroQuickJS guest-runtime build.
 
 The Babel output compiles to MicroQuickJS bytecode. Four ISC-licensed ungap
 collection fallbacks are vendored by source file and installed only when the

@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node build.js && node build-wasm.js",
-    "test": "node --test test/collections.test.js test/virtual-dom.test.js",
+    "test": "node --test test/collections.test.js test/virtual-dom.test.js test/babel-microquickjs.test.js",
     "test:quickjs": "npm run build && node --test test/quickjs-wasm.test.js",
     "test:browser": "npm run test:quickjs && node --test test/browser-visual.test.js test/multi-browser.test.js",
     "benchmark:runtimes": "npm run build && node test/runtime-benchmark.js",

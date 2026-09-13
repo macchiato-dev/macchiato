@@ -1231,3 +1231,38 @@ match the export after HTTP decompression. The 171-file archive verifies after
 extraction and is installed at `/root/resources-bunny.tar.gz`; the previous
 archive is preserved under `/root/archive/2026/09/13`. Nothing was deployed to
 Bunny, and no owner project or notes were saved.
+
+### Dense Babel exception records (2026-09-13)
+
+The intermittent machine-error marker is reproduced, rather than dismissed as
+a grammar-recovery flake. Five additional normal-speed language runs passed;
+Chromium's 4x CPU slowdown then failed before opening TypeScript, *before* the
+intentional Python download failure. The message was an unhandled rejection:
+`TypeError: invalid array subscript` in Babel's generated regenerator helper.
+
+The project UI's autosave and ZIP import use async `try/catch/finally` blocks.
+Babel creates four-element exception records, then its finally helper assigns
+`record[4] = record[5] = undefined`. MicroQuickJS rejects writing slot 5 first
+because that creates a hole. The guest build now preallocates the helper's two
+private state slots. It uses Babel's helper binding, not a blanket rewrite of
+application arrays. It also replaces empty entries within those private records
+with explicit undefined values. The host, protocol, and interpreter are unchanged.
+
+The native MicroQuickJS control fails with the original subscript error. After
+adaptation, 21 generator cases match native JavaScript: completion, early return,
+exceptions, nested finally blocks, suspension within cleanup, explicit iterator
+return/throw, and helper-name collisions. These run in the example's test command.
+The rebuilt editor changes two table literals and grows by eight bytes.
+
+The browser regression now checks machine health before and after file switches
+and explicitly awaits completed autosave. With this checkpoint, the pre-fix
+artifact fails at normal speed in 7.8 seconds. The fixed export `4042e11` passes
+the complete language lifecycle at 4x slowdown in 70.4 seconds, including parser
+failure/retry, all languages, undo/redo, and eight tab open/close cycles. Test
+timeouts accommodate the intentional slowdown; assertions remain unchanged or
+stronger. All 115 website/editor non-browser tests also pass.
+
+Evidence under `/root/macchiato-work`: `language-recovery-investigation-1` through
+`-5`, `language-recovery-slow`, `babel-dense-finally`, `dense-finally-before`,
+`dense-finally-slow`, and `dense-finally-modules` logs. The build is undergoing
+the full packaged browser check before local activation.
