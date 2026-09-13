@@ -1170,6 +1170,153 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
   assert.doesNotMatch(runtime, /code-editor-use|packages\/code-editor-use/i);
 });
 
+test("Resources edits substantial highlighted source at both ends of the document", { timeout: 180_000 }, async t => {
+  const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-real-source-"))]);
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopApp(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.ready;
+  // Tracked, real source rather than repeated filler or executable project
+  // scripts. These files are opened in the editor, not imported by the output.
+  const sourcePaths = ["packages/website/resources-server-machine.js",
+    "dev/evm/src/word.rs", "dev/wasm-web-machine/src/wasm-web-machine.ts"];
+  const sources = await Promise.all(sourcePaths.map(async path => ({
+    path: path.split("/").pop(), content: await readFile(join(root, path), "utf8"),
+  })));
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const client = createNodeSqliteClient(db);
+  const account = await createAccountStore(client).authenticateIdentity({
+    provider: "github", providerUserId: "real-source", login: "real-source",
+    name: "Real Source", email: "source@example.test", emailVerified: true,
+  });
+  await createContentStore(client).createProject(account.id, {
+    namespace: "user", userSlug: account.login, slug: "source", name: "Source",
+    description: "", visibility: "private", template: "html",
+    snapshot: { files: [{ path: "index.html", content: "<h1>Source fixture</h1>" }, ...sources],
+      config: { entry: "index.html" } },
+  });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, colorScheme: "light" });
+  await page.context().addCookies([{ name: "resources_session", value: session,
+    domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  if (process.env.MACCHIATO_TEST_ASSETS_DIRECTORY) {
+    const directory = resolve(process.env.MACCHIATO_TEST_ASSETS_DIRECTORY);
+    await page.route("**/-/resources-site/**", async route => {
+      const name = new URL(route.request().url()).pathname.slice("/-/resources-site/".length);
+      await route.fulfill({ body: await readFile(join(directory, name)),
+        contentType: name.endsWith(".js") ? "text/javascript" : name.endsWith(".html") ? "text/html"
+          : name.endsWith(".wasm") ? "application/wasm" : "application/octet-stream" });
+    });
+  }
+  const errors = [], timings = [], downloads = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => {
+    const name = new URL(request.url()).pathname.split("/").pop();
+    if (/^project-editor-language-.*\.bin$/.test(name)) downloads.push(name);
+  });
+  const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS || join(root, "../macchiato-work/real-source");
+  await mkdir(artifacts, { recursive: true });
+  await page.goto(`http://resources-edge.localhost:${port}/${account.login}/source`);
+  const surface = editorSurface(page), content = surface.locator(".cm-content");
+  await content.waitFor();
+  const snapshot = async path => JSON.parse(await page.locator("[data-project-snapshot]").inputValue())
+    .files.find(file => file.path === path).content;
+  try {
+    for (const source of sources) {
+      await page.locator("[data-project-file-trigger]").click();
+      await page.locator(`[data-project-file-options] [data-project-file="${source.path}"]`).click();
+      await content.locator(".cm-line span[class]").first().waitFor();
+      await content.focus();
+      await page.keyboard.press("Control+Home");
+      // Unedited large files can remain opaque resource handles in this
+      // field. Folding must preserve that representation, not materialize it.
+      const beforeFold = await snapshot(source.path);
+      const fold = surface.locator('.cm-foldGutter span[title="Fold line"]:visible').first();
+      await fold.click();
+      await surface.locator(".cm-foldPlaceholder").first().waitFor();
+      assert.equal(await snapshot(source.path), beforeFold, "folding only changes the view");
+      await page.screenshot({ path: join(artifacts, `real-source-${source.path}-folded.png`) });
+      await surface.locator('.cm-foldGutter span[title="Unfold line"]:visible').first().click();
+      assert.equal(await surface.locator(".cm-foldPlaceholder").count(), 0);
+      assert.equal(await snapshot(source.path), beforeFold, "unfolding preserves the source");
+      await content.focus();
+      await page.keyboard.press("Control+Home");
+      let expected = source.content;
+      for (const position of ["top", "bottom"]) {
+        await page.keyboard.press(position === "top" ? "Control+Home" : "Control+End");
+        const keys = [];
+        for (const character of `// ${position} edit cafe`) {
+          const start = performance.now();
+          await page.keyboard.type(character);
+          keys.push(performance.now() - start);
+        }
+        // Correct a small typo, then insert non-ASCII text through the normal
+        // input path. This catches UTF-8/UTF-16 selection offsets at the bridge.
+        await page.keyboard.press("Backspace");
+        await page.keyboard.insertText("é 🐈");
+        if (position === "top") {
+          await page.keyboard.press("Enter");
+          expected = "// top edit café 🐈\n" + expected;
+        } else expected += "// bottom edit café 🐈";
+        assert.equal(await snapshot(source.path), expected, `${source.path} ${position}: no lost or misplaced text`);
+        await page.keyboard.press("Control+z");
+        assert.notEqual(await snapshot(source.path), expected, "normal undo changes the current document");
+        await page.keyboard.press("Control+y");
+        assert.equal(await snapshot(source.path), expected, "redo restores the exact Unicode edit");
+        await content.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        const visible = await surface.locator(".cm-editor").evaluate(editor => {
+          const bounds = editor.getBoundingClientRect();
+          const rows = selector => [...editor.querySelectorAll(selector)].map(node => ({
+            text: node.textContent, top: node.getBoundingClientRect().top,
+            bottom: node.getBoundingClientRect().bottom,
+          })).filter(row => row.bottom > bounds.top && row.top < bounds.bottom);
+          return { lines: rows(".cm-line"), numbers: rows(".cm-lineNumbers .cm-gutterElement").filter(row => /^\d+$/.test(row.text)) };
+        });
+        if (position === "bottom") {
+          const last = visible.numbers.at(-1), line = visible.lines.at(-1);
+          assert.equal(Number(last?.text), expected.split("\n").length, "last gutter number follows the actual document");
+          assert.ok(Math.abs(last.top - line.top) < 2, "last gutter and text row align after typing");
+        } else assert.ok(visible.numbers.some(row => row.text === "1"), "first gutter row is still rendered");
+        keys.sort((a, b) => a - b);
+        timings.push({ file: source.path, position, lines: expected.split("\n").length, characters: expected.length,
+          medianKeyMs: keys[Math.floor(keys.length / 2)], p95KeyMs: keys[Math.floor(keys.length * .95)], maxKeyMs: keys.at(-1) });
+        await page.screenshot({ path: join(artifacts, `real-source-${source.path}-${position}.png`) });
+        if (position === "top") {
+          await surface.locator(".cm-scroller").hover();
+          await page.mouse.wheel(0, 1600);
+          // No click or keypress to prompt layout: wheel scrolling itself
+          // must materialize the newly visible text and gutter rows.
+          await surface.locator(".cm-lineNumbers").evaluate(async gutter => {
+            const deadline = performance.now() + 5000;
+            while (performance.now() < deadline) {
+              const top = gutter.closest(".cm-editor").getBoundingClientRect().top;
+              const row = [...gutter.querySelectorAll(".cm-gutterElement")].find(node =>
+                node.getBoundingClientRect().bottom > top && Number(node.textContent) > 50);
+              if (row) return;
+              await new Promise(resolve => requestAnimationFrame(resolve));
+            }
+            throw new Error("Wheel scrolling did not render later gutter rows");
+          });
+          assert.ok(await content.locator(".cm-line span[class]").count() > 0, "scrolled source remains highlighted");
+        }
+      }
+      await page.waitForFunction(() => document.querySelector("[data-project-editor]").dataset.draftState === "saved");
+      assert.equal(await page.locator("[data-editor-machine-error]").count(), 0);
+      assert.deepEqual(errors, []);
+    }
+    assert.deepEqual(downloads, ["project-editor-language-html.bin", "project-editor-language-javascript.bin", "project-editor-language-rust.bin"],
+      "real JavaScript and TypeScript files share one grammar; unused grammars stay unloaded");
+  } catch (error) {
+    await page.screenshot({ path: join(artifacts, "real-source-failure.png") });
+    t.diagnostic(JSON.stringify({ errors, timings, downloads }));
+    throw error;
+  }
+  t.diagnostic(JSON.stringify({ timings, note: "Playwright per-key round trips, not isolated interpreter timings" }));
+});
+
 test("Resources loads language bytecode on demand without replacing the editing session", { timeout: 360_000 }, async (t) => {
   const [port, dataDir] = await Promise.all([freePort(), mkdtemp(join(tmpdir(), "resources-editor-languages-"))]);
   const app = startApp(port, dataDir);
