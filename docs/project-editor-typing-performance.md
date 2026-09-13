@@ -639,3 +639,53 @@ the remaining sampled frames loses those spans. This is one selected line,
 not a universal flicker assertion. Videos, frame samples, and screenshots are
 under `/root/macchiato-work/shipped-runtime-visual/`. Recording/sampling adds
 overhead, so its timings are not mixed with the preceding comparison.
+
+## Rendering-document comparison: 2026-09-13
+
+`MACCHIATO_TEST_RENDER_FRAME=1` now runs the same bulk-input benchmark inside
+an iframe document. Both native CodeMirror and MicroQuickJS use that document;
+only trusted fixture/runtime code executes there, while inserted source remains
+editor text. The default still uses the original top-level document. Geometry
+records include `renderFrame`, and input/checkpoint reads use the actual editor
+realm. This is test support, not a production editor-frame integration.
+
+The first experiment uses the retained 106,432-character HTML-comment fixture,
+a 585 × 844 editor, and the same `13px / 18.2px monospace` font. Each condition
+runs native/guest/guest/native with warmup, without video or profiling. A direct
+control, iframe condition, then repeated direct control give these ranges:
+
+| Chromium bulk replacement | Native | MicroQuickJS |
+| --- | --- | --- |
+| Direct control | 8.99–9.24 s | 9.67–10.58 s |
+| Iframe document | 6.73–9.79 s | 8.77–10.60 s |
+| Repeated direct control | 6.58–6.63 s | 7.48–7.59 s |
+
+Every case delivers one beforeinput event, 3,874 input events, and one change
+notification. Exact source, paste, undo/redo, and typo/correction all pass.
+The variation does not establish a frame speedup. This isolated fixture also
+does not reproduce the surrounding Resources workspace, so it cannot rule out
+benefits from isolating that page's larger layout/style dependencies. There is
+no basis here for changing native input semantics or silently adopting a new
+production frame hierarchy.
+
+A second recorded comparison uses the 106,402-character raw JavaScript source,
+the JavaScript language module, paste, and keys 100ms apart. Guest paste takes
+83–93ms in the frame and 86–91ms directly; individual guest keys take 22–54ms
+and 22–59ms respectively. Native keys are 6–20ms and 5–22ms. These include
+Playwright/recording overhead and are not latency guarantees. The unchanged
+second import line reaches its final spans at 131–138ms in the iframe and
+132–138ms directly, measured from the start of sampled input. It never loses
+those spans in the remaining samples; native samples already have them.
+
+Ending native/guest screenshots match in wrapping, gutters, highlighting, and
+completion placement. Directly decoded video frames also show the edits. A
+browser-based video-seeking helper initially returned a stale frame; that image
+is explicitly named `stale-seek-not-evidence.png`, and was not used as evidence
+of editor behavior. Playwright's bundled FFmpeg decoded the actual recording
+correctly at 0.8, 1.4, 2.0, and 2.8 seconds.
+
+Evidence is in `/root/macchiato-work/editor-frame-{control,isolated,control-repeat}`
+and `editor-frame-real-js{,-control}`, with matching sibling logs. The test and
+documentation are committed; the live site and verified Bunny archive are
+unchanged. Application-scale layout costs and the broader completion audit
+remain open.
