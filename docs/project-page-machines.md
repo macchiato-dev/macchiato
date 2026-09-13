@@ -4590,3 +4590,35 @@ Its predecessor is preserved at
 Nothing was deployed to Bunny. The four known production native-layout TODOs,
 the rendering-document decision, and remaining performance work keep the
 broader goal open.
+
+### Selected history and whole-document refresh: 2026-09-13
+
+History browsing now retains its selected checkpoint until a real snapshot
+change. Saving a historical selection publishes that exact checkpoint, pins it
+first with the sole `LATEST` marker, and leaves all other checkpoints in reverse
+creation order. No duplicate version is created merely by publishing an older
+one. Unpublished work is checkpointed before promotion; the chronological patch
+chain remains intact. Tests include repeated saves with an unchanged clock,
+preserved version titles, later edits, and rejection of mismatched submissions.
+
+Browser testing caught two integration issues before release: hidden form-field
+`name` and `type` need native attribute calls through the guest DOM, and historical
+configuration replay used `structuredClone`, which the backend guest lacks.
+Replay now uses the existing validated JSON-value copy, not a new host API.
+
+The final `site/resources-co-ad2363e` export passes all 152 manifest checks and
+the compressed-backend Deno test. All 479 regression checks pass, including the
+module suite updated for the real Document refresh contract. An Element grant
+retains its old application on failed preparation; a Document grant retires it,
+clears failed startup, and recovers on a later load. Containment checks place
+private host content outside the granted root in both cases.
+
+The packaged editing stress test passes in 94.1 seconds, including selection,
+dropdown reopening, saving version 2 then version 1, reloading, one `LATEST`,
+no duplicate checkpoint, and a disabled Save button for the clean saved state.
+It also covers repeated invalid-font recovery, themes, undo/redo, scrolling,
+phone output, and large insertion. The selected/promoted history screenshots
+were inspected. Evidence is under `/root/macchiato-work/history-release-*`;
+the module-only run is `history-module-regression.log`. Large native insertion
+still takes 20.6 seconds in this fixture; these changes are not a claim to have
+finished the broader performance goal.
