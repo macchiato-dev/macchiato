@@ -152,6 +152,33 @@ test("editor surface keeps commands, input, themes and languages in its document
     assert.deepEqual(await page.evaluate(() => failures), [], `${language} parser loads`);
     await content.locator(".cm-line span").first().waitFor();
   }
+  // These bytes belong to the document being edited, never the trusted shell.
+  // Cover initial content, native insertion, and a rich clipboard paste.
+  const hostileSource = '<script>globalThis.editorEscaped = true; top.location = "https://escape.invalid/";</script>\n' +
+    '<img src="https://escape.invalid/image" onerror="globalThis.editorEscaped=true">\n' +
+    '<iframe src="https://escape.invalid/frame"></iframe>\n' +
+    '<style>@import "https://escape.invalid/style"; body { background: url(https://escape.invalid/bg) }</style>\n' +
+    '<meta http-equiv="refresh" content="0;url=https://escape.invalid/refresh">';
+  for (const input of ["initial", "typing", "paste"]) {
+    await page.evaluate(({ input, source }) => surface.call("SetContent", {
+      content: input === "initial" ? source : "", language: "html",
+    }), { input, source: hostileSource });
+    await page.waitForFunction(() => surface.call("Inspect").languageLoaded);
+    await content.click();
+    if (input === "typing") await page.keyboard.insertText(hostileSource);
+    if (input === "paste") await content.evaluate((node, source) => {
+      const clipboardData = new DataTransfer();
+      clipboardData.setData("text/plain", source);
+      clipboardData.setData("text/html", source);
+      node.dispatchEvent(new ClipboardEvent("paste", { clipboardData, bubbles: true, cancelable: true }));
+    }, hostileSource);
+    assert.equal(await page.evaluate(() => surface.call("Inspect").document), hostileSource);
+    await content.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await content.evaluate(() => globalThis.editorEscaped), undefined);
+    assert.equal(await frame.locator("#editor script, #editor img, #editor iframe, #editor meta").count(), 0);
+    assert.equal(page.url(), "http://editor-surface.localhost/");
+    assert.deepEqual(unexpected, [], `${input} cannot load resources from editor source`);
+  }
   await assert.rejects(page.evaluate(() => surface.call("Eval", { source: "alert(1)" })), /not granted/);
   assert.equal(await page.locator("#outside").textContent(), "Outside grant");
   assert.deepEqual(await page.evaluate(() => failures), []);

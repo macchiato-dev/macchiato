@@ -1162,6 +1162,8 @@ test("Resources loads language bytecode on demand without replacing the editing 
   const tabs = page.locator("[data-project-tabs]");
   const back = page.getByRole("button", { name: "Scroll tabs left" });
   const forward = page.getByRole("button", { name: "Scroll tabs right" });
+  assert.equal(await tabs.evaluate(list => list.nextElementSibling?.getAttribute("aria-label")),
+    "Scroll tabs right", "guest after() inserts before the existing toolbar controls");
   async function selectedTabVisible() {
     await page.waitForFunction(() => {
       const list = document.querySelector("[data-project-tabs]");
@@ -1195,9 +1197,20 @@ test("Resources loads language bytecode on demand without replacing the editing 
   }
   // Closing the active end of the strip eventually removes the arrows. The
   // controls must not keep themselves visible by consuming the available room.
-  while (await tabs.locator('[role="tab"]').count() > 1) {
-    await tabs.locator("[data-close-tab]").click();
-    await selectedTabVisible();
+  for (let cycle = 0; cycle < 3; cycle++) {
+    while (await tabs.locator('[role="tab"]').count() > 1) {
+      await tabs.locator("[data-close-tab]").click();
+      await selectedTabVisible();
+    }
+    assert.equal(await back.isVisible(), false);
+    assert.equal(await forward.isVisible(), false);
+    if (cycle < 2) {
+      await page.setViewportSize({ width: cycle === 0 ? 1000 : 1440, height: 900 });
+      for (const file of files.slice(1)) {
+        await openFile(file.path);
+        await selectedTabVisible();
+      }
+    }
   }
   assert.equal(await back.isVisible(), false);
   assert.equal(await forward.isVisible(), false);
