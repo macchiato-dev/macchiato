@@ -161,6 +161,8 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.deepEqual(await withTimeout(application.request(["store", "content",
     "publishProject", ["user-1", "project-1", { title: "Ready" }]])),
     ["ok", true]);
+  assert.deepEqual(await withTimeout(application.request(["store", "content",
+    "publishProject", ["user-1", "project-1", { sequence: 1 }]])), ["ok", true]);
   // The real tour has a current and a published snapshot around 6 MiB each.
   // Exercise normalization and the response encoder, not just SQL transport.
   const largeSource = "<p>猫</p>\n".repeat(550_000);

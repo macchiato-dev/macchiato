@@ -441,8 +441,16 @@ test("Resources creates and heavily edits a project without code-editor-use", { 
     const submittedSequence = await page.locator('input[name="selectedVersion"]').inputValue();
     assert.match(submittedSequence, /^[1-9][0-9]*$/);
     await page.locator('[data-project-submit]').click();
-    await page.waitForFunction(() => document.querySelector('[data-project-editor]')?.dataset.editorMachineState === 'ready' &&
-      document.querySelector('[data-project-editor]')?.dataset.outputMachineState === 'ready');
+    try {
+      await page.waitForFunction(() => document.querySelector('[data-project-editor]')?.dataset.editorMachineState === 'ready' &&
+        document.querySelector('[data-project-editor]')?.dataset.outputMachineState === 'ready');
+    } catch (error) {
+      await page.screenshot({ path: join(artifacts, 'history-save-failed.png') });
+      t.diagnostic(JSON.stringify({ submittedSequence, url: page.url(), errors,
+        state: await editor.evaluate(node => ({ ...node.dataset })).catch(() => null),
+        text: (await page.locator('body').innerText()).slice(-1500) }));
+      throw error;
+    }
     await content.waitFor();
   }
   await publishSelection();

@@ -191,7 +191,9 @@ export function applyProjectPatch(snapshotValue, patch) {
       files.set(path, content.slice(0, start) + operation.insert + content.slice(start + operation.remove.length));
     } else throw new Error(`Unsupported project file operation: ${operation.op}`);
   }
-  const config = structuredClone(snapshot.config);
+  // Configuration is JSON data. Reuse its validating deep copy instead of
+  // requiring the browser's structuredClone API in interpreter guests.
+  const config = jsonValue(snapshot.config, "Project configuration");
   for (const operation of patch.config) {
     if (!Array.isArray(operation.path) || operation.path.length === 0 || operation.path.some((key) => typeof key !== "string" || !key)) throw new Error("Invalid configuration patch path");
     const { parent, key } = configParent(config, operation.path);
@@ -201,7 +203,7 @@ export function applyProjectPatch(snapshotValue, patch) {
       delete parent[key];
     } else if (operation.op === "set") {
       if (operation.absent ? own(parent, key) : !own(parent, key) || !same(parent[key], operation.before)) throw new Error(`Configuration patch set mismatch: ${operation.path.join(".")}`);
-      parent[key] = structuredClone(operation.value);
+      parent[key] = jsonValue(operation.value, "Project configuration");
     } else throw new Error(`Unsupported configuration operation: ${operation.op}`);
   }
   return normalizeProjectSnapshot({ files: [...files].map(([path, content]) => ({ path, content })), config });
