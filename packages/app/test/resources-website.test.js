@@ -22,6 +22,19 @@ const repoRoot = resolve(new URL("../../..", import.meta.url).pathname);
 const appCli = resolve(repoRoot, "packages", "app", "src", "index.js");
 const resourcesSiteDir = resolve(repoRoot, "examples", "resources-site");
 
+// Project controls live in the outer document; CodeMirror owns a separate
+// rendering document. Keep selectors explicit rather than flattening frames.
+function codeSurface(page) {
+  return page.frameLocator("iframe.project-editor__code-frame");
+}
+
+async function codeDocument(page) {
+  const element = await page.locator("iframe.project-editor__code-frame").elementHandle();
+  const frame = await element.contentFrame();
+  assert.ok(frame, "editor rendering document is available");
+  return frame;
+}
+
 function getPort() {
   return new Promise((resolvePort, reject) => {
     const server = createServer();
@@ -200,7 +213,7 @@ test("Resources.co blog container examples render and surface schema errors in t
   for (const [template, container, previewSelector] of examples) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.goto(`http://resources-edge.localhost:${port}/try?template=${template}`, { waitUntil: "domcontentloaded" });
-    await page.locator(".cm-editor").waitFor();
+    await codeSurface(page).locator(".cm-editor").waitFor();
     const snapshot = JSON.parse(await page.locator("[data-project-snapshot]").inputValue());
     assert.equal(snapshot.config.container, container);
     assert.equal(await page.getByLabel("Template").inputValue(), template);
@@ -245,7 +258,7 @@ test("Resources.co blog container examples render and surface schema errors in t
       await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/template-clock.png") });
       await page.locator("[data-project-file-trigger]").click();
       await page.locator('[data-project-file="script.js"]').click();
-      const scriptEditor = page.locator(".cm-content");
+      const scriptEditor = codeSurface(page).locator(".cm-content");
       await scriptEditor.press("Control+A");
       await scriptEditor.fill(snapshot.files.find((file) => file.path === "script.js").content.replace("1000", "5000") +
         '\ndocument.getElementById("time").setAttribute("data-tick-delay", "5000");');
@@ -273,7 +286,7 @@ test("Resources.co blog container examples render and surface schema errors in t
       await frame.waitForFunction(fillsViewport);
     }
     if (template === "article") {
-      const sourceEditor = page.locator(".cm-content");
+      const sourceEditor = codeSurface(page).locator(".cm-content");
       await sourceEditor.press("Control+A");
       await sourceEditor.fill(snapshot.files.find((file) => file.path === "index.html").content.replace("A small article</h1>", "A changed article</h1>"));
       await surface.locator("h1", { hasText: "A changed article" }).waitFor();
@@ -326,7 +339,7 @@ test("Resources.co rejected documents retain the last output and recover on edit
 
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   await page.goto(`http://resources-edge.localhost:${port}/try?template=article`, { waitUntil: "domcontentloaded" });
-  const editor = page.locator(".cm-content");
+  const editor = codeSurface(page).locator(".cm-content");
   await editor.waitFor();
   const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
   const surface = output.locator("body");
@@ -655,7 +668,7 @@ test("Resources project workspace adapts to mobile without changing desktop", as
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
-  await page.locator(".project-editor .cm-content").waitFor({ state: "attached" });
+  await codeSurface(page).locator(".cm-content").waitFor({ state: "attached" });
   assert.equal(await page.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
   assert.equal(await page.getByRole("button", { name: "Output View" }).isVisible(), true);
   assert.equal(await page.locator(".project-editor__tabs").isVisible(), false);
@@ -725,7 +738,7 @@ test("Resources project ZIP import accepts legacy container metadata", async (t)
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
-  await page.locator(".project-editor .cm-content").waitFor({ state: "attached" });
+  await codeSurface(page).locator(".cm-content").waitFor({ state: "attached" });
   const archive = encodeProjectArchive({
     files: [{ path: "index.html", content: "<!doctype html><title>Imported Mahjong</title><main>Mahjong</main>" }],
     config: {
@@ -764,7 +777,7 @@ test("every Resources starting point exports and imports without losing files or
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
-  await page.locator(".project-editor .cm-content").waitFor({ state: "attached" });
+  await codeSurface(page).locator(".cm-content").waitFor({ state: "attached" });
   const templateOptions = await page.getByLabel("Template").locator("option").evaluateAll((options) =>
     options.map((option) => option.value).filter(Boolean));
   async function exportSnapshot() {
@@ -875,7 +888,7 @@ test("Vue and Svelte starting points build and remain interactive in the output 
 
   for (const framework of ["vue", "svelte"]) {
     await page.getByLabel("Template").selectOption(framework);
-    await page.locator(".cm-content span").first().waitFor({ timeout: 10_000 });
+    await codeSurface(page).locator(".cm-content span").first().waitFor({ timeout: 10_000 });
     const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])")
       .locator("body");
     const button = output.getByRole("button", { name: "Count 0", exact: true });
@@ -906,10 +919,10 @@ test("Markdown fenced code loads its matching CodeMirror language", async (t) =>
   await page.locator("[data-project-archive-file]").setInputFiles({
     name: "markdown-languages.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
   });
-  await page.waitForFunction(() => [...document.querySelectorAll(".cm-content span")]
+  await (await codeDocument(page)).waitForFunction(() => [...document.querySelectorAll(".cm-content span")]
     .some((node) => node.textContent === "const"), null, { timeout: 10_000 }).catch(async () => assert.fail(
-      `fenced JavaScript did not load:\n${await page.locator(".cm-content").innerHTML()}`));
-  assert.ok(await page.locator(".cm-content span", { hasText: "answer" }).count() > 0);
+      `fenced JavaScript did not load:\n${await codeSurface(page).locator(".cm-content").innerHTML()}`));
+  assert.ok(await codeSurface(page).locator(".cm-content span", { hasText: "answer" }).count() > 0);
 });
 
 test("Resources editor does not enforce the example line or line-length conventions", async (t) => {
@@ -931,7 +944,7 @@ test("Resources editor does not enforce the example line or line-length conventi
   await page.locator("[data-project-archive-file]").setInputFiles({
     name: "large.zip", mimeType: "application/zip", buffer: Buffer.from(archive),
   });
-  const editor = page.locator(".project-editor .cm-content");
+  const editor = codeSurface(page).locator(".cm-content");
   await editor.waitFor();
   assert.equal(await page.locator(".project-editor__asset-view").count(), 0);
   await editor.click();
@@ -1109,7 +1122,8 @@ test("saved project output keeps its backing while the editor is still loading",
         const output = page.frameLocator(".project-editor__output-frame");
         await output.getByRole("heading", { name: "Paint fixture", exact: true }).waitFor();
         await output.locator("#scheme").filter({ hasText: expected }).waitFor();
-        assert.equal(await page.locator(".cm-editor").count(), 0, "output paints before CodeMirror loads");
+        assert.equal(await page.evaluate(() => document.querySelector("iframe.project-editor__code-frame")
+          ?.contentDocument?.querySelectorAll(".cm-editor").length || 0), 0, "output paints before CodeMirror loads");
         const before = await backing(page);
         if (artifacts) await page.screenshot({ path: join(artifacts, `${label}-${reload ? "reload" : "first"}-waiting.png`) });
         release();
@@ -1173,16 +1187,18 @@ test("Resources project CodeMirror follows repeated explicit and system theme ch
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
-  await page.locator(".project-editor .cm-editor").waitFor({ state: "visible" });
+  await codeSurface(page).locator(".cm-editor").waitFor({ state: "visible" });
   const choose = async (choice) => {
     await page.locator(`[data-theme-choice="${choice}"]`).first().evaluate((button) => button.click());
   };
-  const colors = () => page.evaluate(() => ({
-    choice: document.documentElement.dataset.themeChoice,
-    theme: document.documentElement.dataset.theme,
-    editor: getComputedStyle(document.querySelector(".cm-editor")).backgroundColor,
-    gutter: getComputedStyle(document.querySelector(".cm-gutters")).backgroundColor,
-  }));
+  const colors = async () => ({
+    ...await page.evaluate(() => ({ choice: document.documentElement.dataset.themeChoice,
+      theme: document.documentElement.dataset.theme })),
+    ...await codeSurface(page).locator(".cm-editor").evaluate(editor => ({
+      editor: getComputedStyle(editor).backgroundColor,
+      gutter: getComputedStyle(editor.querySelector(".cm-gutters")).backgroundColor,
+    })),
+  });
   // Match the shared --resources-editor-* palette, not CodeMirror One Dark's
   // default gutter. Resources intentionally uses a slightly darker gutter.
   const dark = { choice: "dark", theme: "dark", editor: "rgb(29, 32, 32)", gutter: "rgb(25, 28, 28)" };
@@ -1262,7 +1278,7 @@ test("project guests catch storage failures without escaping their namespace", {
       } else if (window === top) localStorage.setItem("website-only", "not a project resource");
     }, denied);
     await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
-    await page.locator(".cm-content").waitFor();
+    await codeSurface(page).locator(".cm-content").waitFor();
     const source = `<h1 id="result">Waiting</h1><button id="again">Continue</button><script>
 const results = [];
 function attempt(action) {
@@ -1293,7 +1309,7 @@ document.getElementById("again").addEventListener("click", () => {
   catch (error) { document.getElementById("result").textContent = "Still running: " + error.name; }
 });
 </script>`;
-    await page.locator(".cm-content").fill(source);
+    await codeSurface(page).locator(".cm-content").fill(source);
     const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
     await output.locator("#result").waitFor({ timeout: 10000 });
     assert.equal(await output.locator("#result").textContent(), denied
@@ -1345,7 +1361,7 @@ document.getElementById("change").addEventListener("click", () => {
   };
   const expected = await native.locator("#sample").evaluate(appearance);
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
-  await page.locator(".cm-content").fill(source);
+  await codeSurface(page).locator(".cm-content").fill(source);
   const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
   await output.locator("#sample").waitFor({ timeout: 10000 }).catch(async error => {
     throw new Error(JSON.stringify({ errors,
@@ -1361,7 +1377,7 @@ document.getElementById("change").addEventListener("click", () => {
   assert.deepEqual(await output.locator("#sample").evaluate(appearance),
     await native.locator("#sample").evaluate(appearance));
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/project-inline-styles.png") });
-  await page.locator(".cm-content").fill(source.replace("color: red !important;",
+  await codeSurface(page).locator(".cm-content").fill(source.replace("color: red !important;",
     "background: url('https://inline-style.example/pixel'); color: red !important;"));
   await page.waitForFunction(() => document.querySelector("[data-project-status]").textContent.includes("external URLs"),
     null, { timeout: 15000 });
@@ -1382,7 +1398,7 @@ test("project focus options preserve native scroll behavior", { timeout: 60000 }
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
-  await page.locator(".cm-content").fill(`<style>#destination { display: block; margin-top: 1200px; }</style>
+  await codeSurface(page).locator(".cm-content").fill(`<style>#destination { display: block; margin-top: 1200px; }</style>
 <button id="still">Keep position</button>
 <button id="scroll">Scroll to input</button><button id="default">Default focus</button>
 <input id="destination">
@@ -1429,7 +1445,7 @@ test("Resources editor remains usable when browser storage access is denied", { 
     }
   });
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "domcontentloaded" });
-  try { await page.locator(".cm-content").waitFor({ timeout: 10000 }); }
+  try { await codeSurface(page).locator(".cm-content").waitFor({ timeout: 10000 }); }
   catch (error) {
     const state = await page.evaluate(() => ({
       frontend: document.documentElement.dataset.resourcesFrontendMachineState,
@@ -1440,25 +1456,25 @@ test("Resources editor remains usable when browser storage access is denied", { 
     }));
     throw new Error(`Editor failed with storage denied: ${JSON.stringify({ errors, state })}`, { cause: error });
   }
-  await page.locator(".cm-content").fill("<h1>Editing without storage</h1>");
+  await codeSurface(page).locator(".cm-content").fill("<h1>Editing without storage</h1>");
   await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
     name: "Editing without storage", exact: true,
   }).waitFor();
   await page.getByRole("button", { name: "Select a file or view" }).click();
   await page.getByRole("menuitemradio", { name: "style.css", exact: true }).click();
   await page.getByRole("tab", { name: "index.html", exact: true }).click();
-  assert.match(await page.locator(".cm-content").innerText(), /Editing without storage/);
+  assert.match(await codeSurface(page).locator(".cm-content").innerText(), /Editing without storage/);
   for (const choice of ["dark", "light"]) {
     const button = page.locator(`button[data-theme-choice="${choice}"]`);
     if (!await button.isVisible()) await page.getByLabel("Account menu", { exact: true }).click();
     await button.click();
     assert.equal(await page.locator("html").getAttribute("data-theme"), choice);
     const expected = choice === "dark" ? "rgb(29, 32, 32)" : "rgb(217, 225, 227)";
-    await page.waitForFunction(expected => getComputedStyle(document.querySelector(".cm-editor")).backgroundColor === expected, expected);
+    await (await codeDocument(page)).waitForFunction(expected => getComputedStyle(document.querySelector(".cm-editor")).backgroundColor === expected, expected);
   }
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
-  await page.locator(".cm-content").waitFor();
-  await page.locator(".cm-content").fill("<h1>Unsaved without storage</h1>");
+  await codeSurface(page).locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").fill("<h1>Unsaved without storage</h1>");
   await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
     name: "Unsaved without storage", exact: true,
   }).waitFor();
@@ -1473,15 +1489,15 @@ test("Resources editor remains usable when browser storage access is denied", { 
   // Reload takes the outer guest's recovery-presence path as well. It must
   // still open, without claiming the unavailable recovery record was read.
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").waitFor();
   await page.locator("[data-project-status]").getByText(/Draft recovery failed/).waitFor();
   await page.getByLabel("Title", { exact: true }).fill("Storage test");
   await page.getByRole("button", { name: "Create project", exact: true }).click();
   await page.getByRole("button", { name: "Save project", exact: true }).waitFor();
-  await page.locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").waitFor();
   const saved = page.waitForResponse(response => response.request().method() === "POST" &&
     /\/api\/projects\/[^/]+\/snapshot$/.test(new URL(response.url()).pathname));
-  await page.locator(".cm-content").fill("<h1>Saved without storage</h1>");
+  await codeSurface(page).locator(".cm-content").fill("<h1>Saved without storage</h1>");
   assert.equal((await saved).status(), 200);
   await page.locator("[data-project-status]").getByText(/Draft saved on server, but local recovery could not be cleared/).waitFor();
   assert.equal(await page.locator("[data-project-editor]").getAttribute("data-draft-state"), "saved");
@@ -1649,22 +1665,22 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await page.getByLabel(/One pattern per line/).hover();
   await assert.doesNotReject(page.getByRole("tooltip").waitFor({ state: "visible" }));
   assert.match(await page.getByRole("tooltip").textContent(), /specific path.*backquotes.*regular expression.*forward slashes/i);
-  assert.equal(await page.locator(".project-editor__source iframe").count(), 0);
+  assert.equal(await page.locator(".project-editor__source iframe.project-editor__code-frame").count(), 1);
   assert.equal(await page.locator("[data-project-output-mount] iframe:not([inert])").count(), 1);
   assert.equal(await page.locator("script[src^='/\-/resources-site/content-form.js?v=']").count(), 0);
   assert.equal(await page.locator("script[src^='/\-/resources-site/controller.js?v=']").count(), 1);
-  await assert.doesNotReject(newEditor.locator(".cm-content").waitFor());
-  assert.ok(await newEditor.locator(".cm-content span").count() > 10, "HTML syntax should be tokenized");
-  const selectionStart = await newEditor.locator(".cm-line").nth(1).boundingBox();
-  const selectionEnd = await newEditor.locator(".cm-line").nth(4).boundingBox();
+  await assert.doesNotReject(codeSurface(page).locator(".cm-content").waitFor());
+  assert.ok(await codeSurface(page).locator(".cm-content span").count() > 10, "HTML syntax should be tokenized");
+  const selectionStart = await codeSurface(page).locator(".cm-line").nth(1).boundingBox();
+  const selectionEnd = await codeSurface(page).locator(".cm-line").nth(4).boundingBox();
   await page.mouse.move(selectionStart.x + 25, selectionStart.y + selectionStart.height / 2);
   await page.mouse.down();
   await page.mouse.move(selectionEnd.x + 110, selectionEnd.y + selectionEnd.height / 2, { steps: 10 });
   await page.mouse.up();
-  const selectionLayers = await newEditor.locator(".cm-selectionBackground").count();
-  const nativeSelection = await page.evaluate(() => String(getSelection()));
+  const selectionLayers = await codeSurface(page).locator(".cm-selectionBackground").count();
+  const nativeSelection = await codeSurface(page).locator("html").evaluate(() => String(getSelection()));
   assert.ok(selectionLayers >= 2 || nativeSelection.includes("\n"), "multiline selection should remain visible after mouseup");
-  assert.notEqual(await newEditor.locator(".cm-line").nth(2).evaluate((element) => getComputedStyle(element.firstElementChild, "::selection").backgroundColor), "rgba(0, 0, 0, 0)");
+  assert.notEqual(await codeSurface(page).locator(".cm-line").nth(2).evaluate((element) => getComputedStyle(element.firstElementChild, "::selection").backgroundColor), "rgba(0, 0, 0, 0)");
   await assert.doesNotReject(newEditor.getByRole("button", { name: "Split view" }).waitFor());
   await page.waitForTimeout(500);
   const projectOutput = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
@@ -1705,8 +1721,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
     sourceOverflow: getComputedStyle(document.querySelector(".project-editor__source")).overflow,
     previewOverflow: getComputedStyle(document.querySelector(".project-editor__preview")).overflow,
     outputOverflow: getComputedStyle(document.querySelector("[data-project-preview]")).overflow,
-    codeOverflow: getComputedStyle(document.querySelector(".cm-scroller")).overflow,
   }));
+  editorScrollModel.codeOverflow = await codeSurface(page).locator(".cm-scroller")
+    .evaluate(node => getComputedStyle(node).overflow);
   assert.equal(editorScrollModel.documentHeight, editorScrollModel.viewportHeight);
   assert.equal(editorScrollModel.sourceOverflow, "hidden");
   assert.equal(editorScrollModel.previewOverflow, "hidden");
@@ -1759,7 +1776,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".project-editor").evaluate((element) => element.getBoundingClientRect().height >= 600), true);
   await selectProjectFile("script.js");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  await assert.doesNotReject(newEditor.locator(".cm-content").getByText("getContext", { exact: false }).waitFor());
+  await assert.doesNotReject(codeSurface(page).locator(".cm-content").getByText("getContext", { exact: false }).waitFor());
   await page.waitForFunction(() => {
     const preview = document.querySelector("[data-project-preview]");
     const canvas = preview?.querySelector("iframe:not([inert])")?.contentDocument?.querySelector("canvas");
@@ -1767,16 +1784,16 @@ test("Resources.co edge account creates organizations and projects in a real bro
     return canvas.getContext("2d").getImageData(0, 0, canvas.width, canvas.height)
       .data.some((value, index) => index % 4 === 3 && value > 0);
   });
-  assert.equal(await newEditor.locator(".cm-gutterElement").count() > 1, true);
-  assert.equal(await newEditor.locator(".cm-scroller").evaluate((element) => parseFloat(getComputedStyle(element).paddingLeft) <= 4), true);
-  await newEditor.locator(".cm-content").click();
+  assert.equal(await codeSurface(page).locator(".cm-gutterElement").count() > 1, true);
+  assert.equal(await codeSurface(page).locator(".cm-scroller").evaluate((element) => parseFloat(getComputedStyle(element).paddingLeft) <= 4), true);
+  await codeSurface(page).locator(".cm-content").click();
   await page.keyboard.press("Control+f");
-  await newEditor.locator(".cm-search input[name='search']").fill("getContext");
+  await codeSurface(page).locator(".cm-search input[name='search']").fill("getContext");
   await page.keyboard.press("Escape");
-  assert.equal(await newEditor.locator(".cm-search").count(), 0);
+  assert.equal(await codeSurface(page).locator(".cm-search").count(), 0);
   await page.keyboard.press("Control+End");
   await page.keyboard.type("\n{");
-  assert.match(await newEditor.locator(".cm-content").innerText(), /\{\}$/);
+  assert.match(await codeSurface(page).locator(".cm-content").innerText(), /\{\}$/);
   assert.equal(await newEditor.getAttribute("data-draft-state"), "dirty");
   assert.notEqual(await newEditor.locator("[data-project-save]").textContent(), "Unsaved changes");
   await page.getByRole("button", { name: "Project menu" }).click();
@@ -1793,7 +1810,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.ok(Number(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent()) > 0, "edits are retained in session history");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
   await assert.doesNotReject(newEditor.locator('[data-open-tab="image.svg"][aria-selected="true"]').waitFor());
-  await assert.doesNotReject(newEditor.locator(".cm-content").getByText("circle", { exact: false }).waitFor());
+  await assert.doesNotReject(codeSurface(page).locator(".cm-content").getByText("circle", { exact: false }).waitFor());
   await assert.doesNotReject(projectOutput.locator("circle").waitFor());
   await template.selectOption("chart");
   await assert.doesNotReject(projectOutput.locator("rect").nth(2).waitFor());
@@ -1818,9 +1835,9 @@ test("Resources.co edge account creates organizations and projects in a real bro
   await template.selectOption("hello");
   assert.ok(Number(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent()) > 0, "edits are retained in session history");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  await assert.doesNotReject(newEditor.locator(".cm-content").getByText("This small page is made from familiar HTML elements", { exact: false }).waitFor());
-  await newEditor.locator(".cm-content").click();
-  await assert.doesNotReject(newEditor.locator(".cm-cursor").waitFor({ state: "visible" }));
+  await assert.doesNotReject(codeSurface(page).locator(".cm-content").getByText("This small page is made from familiar HTML elements", { exact: false }).waitFor());
+  await codeSurface(page).locator(".cm-content").click();
+  await assert.doesNotReject(codeSurface(page).locator(".cm-cursor").waitFor({ state: "visible" }));
   await newEditor.getByRole("button", { name: "Output View" }).click();
   assert.equal(await newEditor.locator(".project-editor__workspace").getAttribute("data-view"), "preview");
   await newEditor.getByRole("button", { name: "Editor" }).click();
@@ -1829,18 +1846,18 @@ test("Resources.co edge account creates organizations and projects in a real bro
   const splitter = newEditor.getByRole("separator", { name: "Resize editor and preview" });
   await splitter.press("ArrowRight");
   assert.equal(await splitter.getAttribute("aria-valuenow"), "55");
-  await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
+  await codeSurface(page).locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
   await selectProjectFile("Configuration");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  assert.equal(await newEditor.locator(".cm-content").getAttribute("aria-readonly"), "true");
-  const visibleConfiguration = await newEditor.locator(".cm-content").innerText();
+  assert.equal(await codeSurface(page).locator(".cm-content").getAttribute("aria-readonly"), "true");
+  const visibleConfiguration = await codeSurface(page).locator(".cm-content").innerText();
   assert.doesNotMatch(visibleConfiguration, /allowedElements/);
   assert.match(visibleConfiguration, /"container": "page"/);
   assert.match(visibleConfiguration, /\n  "sandbox": \{\n    "network": false,/);
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/project-configuration-formatted.png") });
-  await newEditor.locator(".cm-content").focus();
+  await codeSurface(page).locator(".cm-content").focus();
   await page.keyboard.type("not editable");
-  assert.equal(await newEditor.locator(".cm-content").innerText(), visibleConfiguration);
+  assert.equal(await codeSurface(page).locator(".cm-content").innerText(), visibleConfiguration);
   await page.waitForFunction(() => document.querySelector("[data-project-save]")?.textContent === "Draft saved in this session");
   await page.reload({ waitUntil: "networkidle" });
   await page.locator("[data-project-editor][data-editor-machine-state='ready']").waitFor();
@@ -1868,7 +1885,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), restoredDraftVersionCount);
   await selectProjectFile("index.html");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.editorLoading);
-  await newEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
+  await codeSurface(page).locator(".cm-content").fill("<h1>Digital Clock</h1>\n");
   assert.match(await page.locator("[data-current-version]").textContent(), /^\d+ seconds? ago$/);
   await page.waitForFunction(() => document.querySelector("[data-project-snapshot]")?.value.includes("Digital Clock"));
   await page.getByRole("button", { name: "Create project" }).click();
@@ -1881,14 +1898,14 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator(".layout.focused-view > .footer").isHidden(), true);
   await page.waitForFunction(() => document.querySelector("[data-project-versions-proxy] .project-editor__version-count")?.textContent === "1");
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
-  await assert.doesNotReject(page.locator(".project-editor [data-project-editor-mount] .cm-content").waitFor());
+  await assert.doesNotReject(codeSurface(page).locator(".cm-content").waitFor());
   const projectEditor = page.locator(".project-editor");
-  await assert.doesNotReject(projectEditor.locator(".cm-content").getByText("Digital Clock", { exact: false }).first().waitFor());
+  await assert.doesNotReject(codeSurface(page).locator(".cm-content").getByText("Digital Clock", { exact: false }).first().waitFor());
   const outputFrame = projectEditor.locator("iframe.project-editor__output-frame:not([inert])");
   await projectOutput.getByText("Digital Clock", { exact: true }).waitFor();
   assert.equal(await outputFrame.getAttribute("allow"), "fullscreen");
   await outputFrame.evaluate((frame) => { frame.contentWindow.__projectOutputIdentity = "preserved"; });
-  await projectEditor.locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
+  await codeSurface(page).locator(".cm-content").fill("<h1>Digital Clock</h1>\n<p>Updated.</p>\n");
   await page.waitForTimeout(250);
   assert.equal(
     await outputFrame.evaluate(frame => frame.contentWindow.__projectOutputIdentity),
@@ -1925,7 +1942,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await page.locator("[data-project-versions-proxy] .project-editor__version-count").textContent(), "1");
   await versionsButton.click();
   await page.locator("[data-project-version-list] [data-version-sequence='1']").click();
-  await projectEditor.locator(".cm-content").fill("<h1>Forked from history</h1>");
+  await codeSurface(page).locator(".cm-content").fill("<h1>Forked from history</h1>");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   await page.waitForFunction(() => !document.querySelector("[data-project-editor]")?.dataset.draftDirty && document.querySelector("[data-project-save]")?.textContent === "Saved");
   await page.goto(`http://resources-edge.localhost:${port}/projects`, { waitUntil: "networkidle" });
@@ -2012,7 +2029,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
   assert.equal(await guest.getByLabel("Namespace").count(), 0);
   assert.equal(await guest.getByText("Visibility", { exact: true }).count(), 0);
   assert.equal(await guest.getByRole("button", { name: "Save project" }).count(), 0);
-  const guestEditor = guest.locator(".project-editor .cm-content");
+  const guestEditor = codeSurface(guest).locator(".cm-content");
   await assert.doesNotReject(guestEditor.waitFor());
   await guestEditor.fill("<h1>Visitor experiment</h1>");
   await assert.doesNotReject(guest.frameLocator("[data-project-output-mount] iframe:not([inert])")
@@ -2088,7 +2105,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   page.on("pageerror", error => errors.push(error.message));
   await page.context().addCookies([{ name: "resources_session", value: session, domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
-  await page.locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").waitFor();
   await page.getByLabel("Title", { exact: true }).fill("Save controls");
   await page.getByRole("button", { name: "Create project" }).click();
   await page.locator("[data-project-submit]").waitFor();
@@ -2212,11 +2229,11 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(await page.locator(".project-editor__toolbar-split").evaluate((element) => getComputedStyle(element).display), "none");
   assert.equal(await page.getByRole("button", { name: "Expanded view", exact: true }).isHidden(), true);
   await page.getByRole("button", { name: "Split view" }).click();
-  const editor = page.locator(".cm-content");
+  const editor = codeSurface(page).locator(".cm-content");
   await editor.click();
   await page.keyboard.press("Control+f");
-  await page.locator(".cm-search input[name='search']").waitFor();
-  const searchLayout = await page.locator(".cm-panel.cm-search").evaluate((panel) => {
+  await codeSurface(page).locator(".cm-search input[name='search']").waitFor();
+  const searchLayout = await codeSurface(page).locator(".cm-panel.cm-search").evaluate((panel) => {
     const panelRect = panel.getBoundingClientRect();
     const controls = [...panel.querySelectorAll("input, button")].map((element) => {
       const rect = element.getBoundingClientRect();
@@ -2235,16 +2252,16 @@ test("Resources project save controls publish titled latest versions", async (t)
   const beforeReplace = JSON.parse(await page.locator("[data-project-snapshot]").inputValue())
     .files.find(file => file.path === "index.html").content;
   assert.ok(beforeReplace.includes("Hypertext"));
-  await page.locator('.cm-search input[name="search"]').pressSequentially("Hypertext");
-  await page.locator(".cm-searchMatch").first().waitFor();
-  await page.locator('.cm-search input[name="replace"]').pressSequentially("Hyperlink");
-  await page.locator('.cm-search button[name="replaceAll"]').click();
+  await codeSurface(page).locator('.cm-search input[name="search"]').pressSequentially("Hypertext");
+  await codeSurface(page).locator(".cm-searchMatch").first().waitFor();
+  await codeSurface(page).locator('.cm-search input[name="replace"]').pressSequentially("Hyperlink");
+  await codeSurface(page).locator('.cm-search button[name="replaceAll"]').click();
   await page.waitForFunction(expected => JSON.parse(document.querySelector("[data-project-snapshot]").value)
     .files.find(file => file.path === "index.html").content === expected,
     beforeReplace.replaceAll("Hypertext", "Hyperlink"));
   await page.keyboard.press("Escape");
-  assert.equal(await page.locator(".cm-search").count(), 0);
-  assert.equal(await page.locator(".cm-content").evaluate((element) => element.contains(document.activeElement) || element === document.activeElement), true);
+  assert.equal(await codeSurface(page).locator(".cm-search").count(), 0);
+  assert.equal(await codeSurface(page).locator(".cm-content").evaluate((element) => element.contains(document.activeElement) || element === document.activeElement), true);
   await editor.fill("<h1>First edit</h1>");
   await page.waitForFunction(() => document.querySelector("[data-project-submit]")?.disabled === false);
   assert.equal(await page.locator("[data-project-submit]").textContent(), "Save project");
@@ -2299,7 +2316,7 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.screenshot({ path: join(dataDir, "resources-version-history.png") });
   await page.locator("[data-project-versions-proxy]").click();
   assert.equal(await page.locator("[data-project-history]").isHidden(), true);
-  await page.locator(".cm-content").fill("<h1>Reload recovery marker</h1>");
+  await codeSurface(page).locator(".cm-content").fill("<h1>Reload recovery marker</h1>");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftDirty === "true");
   assert.match(await page.locator("[data-project-snapshot]").inputValue(), /Reload recovery marker/);
   assert.match(await page.evaluate(() => sessionStorage.getItem(`resources_project_pending_v1:${document.querySelector("[data-project-editor]").dataset.projectId}`)), /Reload recovery marker/);
@@ -2334,9 +2351,9 @@ test("Resources project save controls publish titled latest versions", async (t)
   assert.equal(unloadDialogs, 0, "recoverable project edits should not trigger a browser unload warning");
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
   assert.match(await page.locator("[data-project-snapshot]").inputValue(), /Reload recovery marker/);
-  await page.locator(".cm-content").waitFor();
-  assert.match(await page.locator(".cm-content").innerText(), /Reload recovery marker/);
-  assert.deepEqual(await page.evaluate(() => window.editorStartupContents), ["<h1>Reload recovery marker</h1>"],
+  await codeSurface(page).locator(".cm-content").waitFor();
+  assert.match(await codeSurface(page).locator(".cm-content").innerText(), /Reload recovery marker/);
+  assert.deepEqual(await codeSurface(page).locator("html").evaluate(() => window.editorStartupContents), ["<h1>Reload recovery marker</h1>"],
     "reload must not first render the superseded server snapshot");
   await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByRole("heading", {
     name: "Reload recovery marker", exact: true,
@@ -2402,7 +2419,7 @@ test("large project files remain readable without exceeding the editor service b
     { path: "many-lines.txt", content: "line\n".repeat(6000) },
   ], config: { entry: "index.html", template: "html" } };
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
-  await page.locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").waitFor();
   const image = await page.evaluate(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 1024; canvas.height = 768;
@@ -2491,8 +2508,8 @@ test("large project files remain readable without exceeding the editor service b
       `reading never rewrites the exported bytes of ${file.path}`);
   }
   await page.locator('[data-tab-path="index.html"] [role="tab"]').click();
-  await page.locator(".cm-content").click();
-  await page.locator(".cm-content").press("Control+End");
+  await codeSurface(page).locator(".cm-content").click();
+  await codeSurface(page).locator(".cm-content").press("Control+End");
   await page.keyboard.insertText("<p>Still editable</p>");
   await page.frameLocator("[data-project-output-mount] iframe:not([inert])").getByText("Still editable").waitFor();
   assert.deepEqual(errors, []);
@@ -2581,7 +2598,7 @@ test("project resources survive session recovery, API saves, native publication,
     return filesOf(await decodeProjectArchive(await readFile(await (await downloading).path())));
   }
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
-  await page.locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").waitFor();
   await importSnapshot(original);
   await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
   checkpoint("initial import and output");
@@ -2608,13 +2625,13 @@ test("project resources survive session recovery, API saves, native publication,
     return record.length;
   }, key);
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator(".cm-content").waitFor({ timeout: 10000 });
+  await codeSurface(page).locator(".cm-content").waitFor({ timeout: 10000 });
   await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
   await page.locator("[data-project-status]").getByText(/Draft recovery failed.*Storage response exceeds its text limit/).waitFor();
   assert.equal(await page.evaluate(key => sessionStorage.getItem(key)?.length, key), oversizedLength);
   await page.evaluate(key => sessionStorage.removeItem(key), key);
   await page.reload({ waitUntil: "networkidle" });
-  await page.locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").waitFor();
   await output.getByRole("heading", { name: "Original resource", exact: true }).waitFor();
 
   checkpoint("created project and oversized recovery rejection");
@@ -2642,9 +2659,9 @@ test("project resources survive session recovery, API saves, native publication,
 
   await page.locator("[data-project-file-trigger]").click();
   await page.locator('[data-project-file="data.js"]').click();
-  await page.locator(".cm-content").press("Control+End");
-  await page.locator(".cm-content").getByText(/Recovered resource/).waitFor();
-  assert.doesNotMatch(await page.locator(".cm-content").textContent(), /resources-project-resource:/);
+  await codeSurface(page).locator(".cm-content").press("Control+End");
+  await codeSurface(page).locator(".cm-content").getByText(/Recovered resource/).waitFor();
+  assert.doesNotMatch(await codeSurface(page).locator(".cm-content").textContent(), /resources-project-resource:/);
   const publishing = page.waitForResponse(response => response.request().method() === "POST" &&
     new URL(response.url()).pathname.startsWith("/projects/"));
   await page.getByRole("button", { name: "Save project", exact: true }).click();
@@ -2661,8 +2678,8 @@ test("project resources survive session recovery, API saves, native publication,
   checkpoint("saved project storage filled");
   const savedUnderQuota = structuredClone(changed);
   savedUnderQuota.files.find(file => file.path === "index.html").content += '<!--' + "x".repeat(4096) + '-->';
-  await page.locator(".cm-content").click();
-  await page.locator(".cm-content").press("Control+a");
+  await codeSurface(page).locator(".cm-content").click();
+  await codeSurface(page).locator(".cm-content").press("Control+a");
   await page.keyboard.insertText(savedUnderQuota.files.find(file => file.path === "index.html").content);
   await page.getByText(/Draft recovery could not be saved/).waitFor();
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftState === "saved");
@@ -2671,7 +2688,7 @@ test("project resources survive session recovery, API saves, native publication,
   assert.deepEqual(filesOf(autosavedUnderQuota.snapshot),
     filesOf(savedUnderQuota), "server autosave continues when the local recovery write fails");
   await page.evaluate(() => sessionStorage.removeItem("quota-fixture"));
-  await page.locator(".cm-content").press("Control+a");
+  await codeSurface(page).locator(".cm-content").press("Control+a");
   await page.keyboard.insertText(changed.files.find(file => file.path === "index.html").content);
   await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftState === "saved");
 
@@ -2695,7 +2712,7 @@ test("project resources survive session recovery, API saves, native publication,
   // Unsaved-project history uses the same transport without flattening its
   // patches or copying all resource bytes into the MicroQuickJS application.
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
-  await page.locator(".cm-content").waitFor();
+  await codeSurface(page).locator(".cm-content").waitFor();
   for (const snapshot of [original, changed]) {
     await importSnapshot(snapshot);
     await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.draftState === "saved");
@@ -2710,7 +2727,7 @@ test("project resources survive session recovery, API saves, native publication,
   await fillSessionStorage();
   checkpoint("unsaved project storage filled");
   const unsaved = '<h1>After quota</h1><!--' + "x".repeat(4096) + '-->';
-  const content = page.locator(".cm-content");
+  const content = codeSurface(page).locator(".cm-content");
   await content.click();
   await content.press("Control+a");
   await page.keyboard.insertText(unsaved);
@@ -2779,9 +2796,9 @@ test("CodeMirror Find/Replace remains usable in both themes and narrow workspace
     await page.goto(`http://resources-edge.localhost:${port}/try`);
     await page.waitForFunction(() => document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
     if (width < 760) await page.getByRole("button", { name: "Editor", exact: true }).click();
-    await page.locator(".cm-content").click();
+    await codeSurface(page).locator(".cm-content").click();
     await page.keyboard.press("Control+f");
-    const search = page.locator(".cm-panel.cm-search");
+    const search = codeSurface(page).locator(".cm-panel.cm-search");
     await search.waitFor();
     const layout = await search.evaluate(panel => {
       const rect = panel.getBoundingClientRect();
@@ -2802,7 +2819,7 @@ test("CodeMirror Find/Replace remains usable in both themes and narrow workspace
     const before = JSON.parse(await page.locator("[data-project-snapshot]").inputValue())
       .files.find(file => file.path === "index.html").content;
     await search.locator('[name="search"]').pressSequentially("Hypertext");
-    await page.locator(".cm-searchMatch").first().waitFor();
+    await codeSurface(page).locator(".cm-searchMatch").first().waitFor();
     await search.locator('input[name="replace"]').pressSequentially("Hyperlink");
     await search.locator('[name="replaceAll"]').click();
     await page.waitForFunction(expected => JSON.parse(document.querySelector("[data-project-snapshot]").value)
