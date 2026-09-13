@@ -2211,7 +2211,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                     case 16:
                       return _context6.a(2);
                   }
-                }, _callee6, null, [[4, 14, 15, 16]]);
+                }, _callee6, null, [[4, 14, 15, 16, void 0, void 0]]);
               }));
               return _save.apply(this, arguments);
             };
@@ -3191,7 +3191,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                   case 4:
                     return _context2.a(2);
                 }
-              }, _callee2, null, [[0, 2, 3, 4]]);
+              }, _callee2, null, [[0, 2, 3, 4, void 0, void 0]]);
             })));
             workspace = root.querySelector(".project-editor__workspace");
             outputOverflow = root.querySelector("[data-output-overflow]");

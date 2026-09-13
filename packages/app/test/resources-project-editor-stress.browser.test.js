@@ -1261,6 +1261,11 @@ test("Resources loads language bytecode on demand without replacing the editing 
   assert.doesNotMatch(await content.innerText(), /kept while loading/);
   await page.keyboard.press("Control+y");
   assert.equal(await content.innerText(), editedRust, "loading the parser preserves undo/redo");
+  // A completed autosave takes the normal path through the UI's async finally
+  // block. Don't let fast file switches postpone it beyond the error checks.
+  await page.waitForFunction(() =>
+    document.querySelector("[data-project-editor]").dataset.draftState === "saved");
+  await healthy("after autosave completes");
   await openFile("types.ts");
   await highlighted("interface");
   assert.equal(downloads.filter(name => name.includes("javascript")).length, 1,
