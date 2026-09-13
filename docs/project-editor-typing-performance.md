@@ -1,5 +1,57 @@
 # CodeMirror typing: parser readiness and view updates
 
+## Packaged language-loading audit: 2026-09-13
+
+The project-page regression now creates a disposable multi-file project and
+opens all twelve shipped parser packages through the real file chooser. It
+checks one initial HTML download, no download for plain text, a shared
+JavaScript/TypeScript download, and Python retry after an injected HTTP 503.
+Rust is held back while typing and switching to JavaScript; its eventual
+arrival must preserve edits, undo/redo, the active language, and editor identity.
+The allowed grammar names and bytecode installation boundary are unchanged.
+
+The audit found two omissions, fixed in the `96ec43a` export:
+
+- Language-download failures escaped to the outer page instead of reaching the
+  editor's notice area. The notice now stays in the editor guest and describes
+  unavailable highlighting rather than a stopped machine. Editing still works.
+- The custom theme omitted boolean/null/atom tags and Markdown formatting.
+  Those use the existing palette and ordinary CodeMirror highlighting rules,
+  not a new parser or host-side coloring. The test checks actual computed token
+  styles in light and dark mode. Screenshots were visually inspected.
+
+The packaged language scenario passes in 9.3 seconds; the broader editing
+workflow passes in 106.6 seconds. Its 106,432-character paste took 157 ms and
+the artificial native insertion took 28.9 seconds. These measurements do not
+establish a speedup and leave the large-insertion/layout investigation open.
+Both stamped/downloaded runtime language tests and the four light/dark initial
+output grant cases pass (seven checks including the parent case).
+
+The screenshots also expose an outstanding UI issue: after opening many files
+from the chooser, the selected tab can be offscreen and the scroll arrows do
+not appear. `renderTabs()` does not update overflow after that path; observing
+the strip's size alone does not observe growing scroll content. Keep this in
+the release audit rather than treating the successful grammar tests as a
+complete project-page UI check.
+
+Evidence lives under `/root/macchiato-work/language-theme-*`, with the failure
+notice baseline in `language-notice-before.log` and the missing JSON boolean
+style captured in `language-recovery-browser.log` before the theme fix.
+
+Read-only exported and live project checks pass for full-height Mahjong, Cat
+Memory's eight pairs/reset, 50 successive tour slides, and SQLite fragments.
+Seven principal assets served on port 3030 match the export byte-for-byte.
+Only the editor guest changed among those assets (1,581,624 bytes, 920 larger);
+the machine host, controller, and output runtime are unchanged. Both the export
+and extracted archive pass all 152 manifest checks, and the compressed backend
+artifact executes its routing, document, and SQL-policy guests in Deno.
+
+The locally installed `/root/resources-bunny.tar.gz` has SHA-256
+`71f6ec2a58efe3863c65b0ba33995b88d4f8c13fd1bb34e5b2a33823502d2c7c`.
+Its predecessor is preserved at
+`/root/archive/2026/09/13/resources-bunny-9236700-before-language-theme.tar.gz`.
+No owner project was saved and nothing was deployed to Bunny.
+
 ## Reproducible diagnostic
 
 `packages/project-editor/test/bulk-input.browser.test.js` compares the same

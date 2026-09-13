@@ -344,6 +344,13 @@ GC-marked, but their canonical entries must remain valid for the context's
 lifetime. The patch retains those entries without retaining unused atom-table
 slots or unreachable heap strings.
 
+The Resources theme styles boolean/null/atom tokens and Markdown headings,
+emphasis, strong text, links, and strike-through explicitly. A successfully
+loaded parser alone does not prove visible highlighting: the project-page test
+checks actual token styles and screenshots in light and dark mode. YAML plain
+values intentionally use the grammar's ordinary content tag, not an invented
+boolean classification; the test checks its styled mapping keys.
+
 ## Runtime build transformations
 
 The Resources editor build adapts CodeMirror view 6.43.9's mutation scan with
