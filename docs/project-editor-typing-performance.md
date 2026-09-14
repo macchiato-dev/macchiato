@@ -1313,3 +1313,38 @@ runs passed; screenshots of Rust's beginning and TypeScript's end were inspected
 Evidence: `/root/macchiato-work/real-source-current.log`,
 `real-source-interactions.log` (the resource-handle assertion failure), and
 `real-source-interactions-final.log`, with matching screenshot directories.
+
+### Framework build tooling no longer delays ordinary output (2026-09-14)
+
+The first Mahjong render used the general build guest, including Vue/Svelte
+compilers and bundled framework runtimes. Ordinary HTML/CSS/JS compilation now
+uses `project-builder-quickjs-runtime.wasm`; explicit project builds request
+`project-framework-builder-quickjs-runtime.wasm` separately. Both remain guest
+code in QuickJS, and document/CSS policy validation is unchanged. A dependency
+graph test prevents framework code from returning to the ordinary compiler.
+
+The ordinary artifact fell from 5,010,038 to 778,275 bytes, or from 1,179,422 to
+291,056 bytes gzipped. The separate framework artifact is 4,906,022 bytes
+(1,141,887 gzipped), requested only by `build.run`. A browser regression opens
+ordinary HTML first, verifies no framework request, then switches to Vue and
+Svelte and verifies their counters work and the shared framework artifact loads
+once. Canvas/WebGL/WebGPU/Three examples also pass.
+
+Four read-only live Mahjong runs before and after the change sampled output
+stage transitions. The compile phase dropped from 1,048–1,409 ms to 206–327 ms.
+The whole page's output readiness did not consistently improve in these runs:
+workspace response and output startup varied substantially. These measurements
+are local, not Bunny timings or a controlled end-to-end speedup claim. Two runs
+per set withheld the editor download until output readiness; neither depended
+on CodeMirror to render. No framework artifact was requested by Mahjong.
+
+Evidence: `/root/macchiato-work/mahjong-startup-diagnosis.log`,
+`mahjong-startup-light-compiler.log`, `lazy-framework-compiler.log` (five passes),
+and `lazy-framework-browser.log` (framework and graphics passes).
+
+Saved-build-output-first is the next requested behavior, not implemented by
+this split. It must be a guest-level choice using persisted output, with a
+future configuration seam; rebuilding must not be the only way to open a
+saved project. Retention of the latest successful build versus per-version
+outputs is awaiting the user's choice. Derived output must not silently change
+the source's undo/history or unsaved-change accounting.
