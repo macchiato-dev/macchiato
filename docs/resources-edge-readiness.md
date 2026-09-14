@@ -1,6 +1,6 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-14, export `resources-co-1070383`.
+Current local verification: 2026-09-14, export `resources-co-4b20760`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
@@ -22,11 +22,29 @@ See the [verification and bounds](project-editor-typing-performance.md#latest-su
 
 Current archive: `/root/resources-bunny.tar.gz`, root `resources-bunny`, 173
 verified files, SHA-256
-`9d37ab6b8abeeba178c7510ce621fd9730f881ff4bfe7ecd7674f79666a3ae92`.
+`c2797002ccd25055551d1697ab27b0fc131115fabc82f00230de725ea89b7f69`.
 The previous framework-only archive is retained at
 `/root/archive/2026/09/14/resources-bunny-83cbe1b-before-saved-output.tar.gz`.
 No Bunny deployment was performed.
 The final audit below records the preceding scope, before this new request.
+
+ZIP import now has a drop/file-picker dialog, with native host file activation
+and guest-owned import application. Invalid/multiple-file drops preserve the
+draft, and successful retries clear the previous import error. Font, WASM, and
+binary-resource bytes survive import instead of being decoded as text. The
+site stylesheet allowance is 96 KB to accommodate the dialog; guest output
+CSS limits are unchanged.
+
+Verification: 21 archive/device unit tests, three browser regressions (including
+all starting points and Mahjong's signed-in export into a new project), and
+three exact Bunny-entry tests pass. Screenshots cover desktop/light and
+mobile/dark, and the native file chooser is exercised rather than only setting
+the hidden input. The live `benatkin/classic-chinese-mahjong` project was also
+exported, imported into a fresh session-only `/try` draft, and exported again:
+identical files/configuration, 144 rendered tiles, no errors or source changes
+to the original project. Logs are `archive-browser-verified.log`,
+`archive-unit-final.log`, `archive-live-roundtrip.log`, and
+`bunny-zip-import-tests.log` under `/root/macchiato-work`.
 
 ## Low-cold-start design
 
