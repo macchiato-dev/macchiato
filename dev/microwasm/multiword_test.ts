@@ -38,6 +38,7 @@ async function arithmetic() {
     | "shr"
     | "cmp"
     | "sub"
+    | "add"
     | "bits"
     | "divrem",
     (...args: number[]) => number
@@ -123,6 +124,43 @@ Deno.test("Multiword: set, carry accumulation, bit lengths and native arithmetic
     m.ops.set(slot, 0);
     equal(m.get(slot), 0n);
   }
+});
+
+Deno.test("Multiword: addition with unequal lengths, aliasing, carries and overflow", async () => {
+  const m = await arithmetic();
+  const values = [
+    0n,
+    1n,
+    0xffffffffn,
+    1n << 32n,
+    (1n << 512n) - 1n,
+    1n << 8191n,
+  ];
+  for (const a of values) {
+    for (const b of values) {
+      m.put(0, a);
+      m.put(1, b);
+      if (a + b >= 1n << 8192n) {
+        traps(() => m.ops.add(0, 1));
+        m.ops.set(0, 7);
+        equal(m.get(0), 7n);
+      } else {
+        m.ops.add(0, 1);
+        equal(m.get(0), a + b);
+      }
+      equal(m.get(1), b);
+    }
+  }
+  for (const value of values.slice(0, -1)) {
+    m.put(2, value);
+    m.ops.add(2, 2);
+    equal(m.get(2), value * 2n);
+  }
+  m.put(0, (1n << 8192n) - 1n);
+  m.put(1, 1n);
+  traps(() => m.ops.add(0, 1));
+  m.ops.set(0, 0);
+  traps(() => m.ops.add(0, 4));
 });
 
 Deno.test("Multiword: unsigned small-divisor quotient, remainder and zero-divisor isolation", async () => {
