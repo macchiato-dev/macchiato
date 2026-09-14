@@ -19,7 +19,7 @@ deno task test:browser
 
 Verified with Deno 2.7.13 and Playwright 1.60.0 / Chromium, on 2026-09-14:
 
-- 31 Deno tests passed, including all twenty programs and the supplied app4
+- 32 Deno tests passed, including all twenty programs and the supplied app4
   externref module instantiated with a non-DOM tree-building host.
 - All twenty browser examples loaded, ran their default input, and displayed
   resolved Markdown with no remaining placeholders and valid executable hex.
@@ -46,13 +46,16 @@ does not claim cross-browser certification or exhaustive formal validation.
 
 ## The self-rendering documentation
 
-The reader now uses a 1,513-byte Markdown renderer assembled from six linked
+The reader now uses a 1,532-byte Markdown renderer assembled from six linked
 Microwasm pages. It renders all twenty example documents and those six pages
 itself. No host Markdown parser, imports, or remote rendering service is used.
 
 - Wasm tests check exact HTML, nested lists and wrapped items, fences, CRLF,
   HTML escaping, inert link destinations, reset between calls, and recovery
   after input/output limits trap.
+- Literal strings use a single unsigned 8-bit length. Tests check the table's
+  recorded lengths, empty and 255-byte strings, the 127/128 boundary, embedded
+  zero bytes, and not reading past the given length.
 - Long malformed delimiters exercise bounded forward progress rather than
   repeatedly rescanning the remaining input. The timing assertion is only a
   generous regression smoke test, not a benchmark claim.

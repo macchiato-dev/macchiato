@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 31 tests covering all twenty examples and the supplied
+`deno task test` runs 32 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -88,9 +88,11 @@ The Markdown renderer is itself handwritten Microwasm across
 [six linked pages](renderer/00-module.md), including a page about
 [repeated scanning patterns](renderer/02-scanning.md). It produces HTML in
 linear memory without host imports or a JavaScript Markdown parser. Its
-1,513-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
+1,532-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
 768 KiB of output. Scans keep offsets rather than building an AST. Input and
 output overflow trap; the viewer discards incomplete output.
+Literal strings have one unsigned 8-bit length followed by their bytes, with
+no terminator or variable-length decoding.
 
 Only the subset used here is supported: headings, paragraphs, nested hyphen
 lists and their indented continuations, fences, inline code, strong emphasis,

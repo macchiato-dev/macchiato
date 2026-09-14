@@ -149,3 +149,23 @@ Deno.test("Renderer bounded scans, output overflow and repeated-call recovery", 
   }
   equal(trapped, true);
 });
+
+Deno.test("Literal records use one unsigned length byte, including zero and 255", async () => {
+  const { render, memory, built } = await renderer();
+  for (
+    const record of built.map.filter((item) => item.id.startsWith("html-"))
+  ) {
+    equal(built.bytes[record.offset], record.length - 1);
+  }
+  // Probe the literal primitive through its existing quote-escape call.
+  // This edits test memory, not the document input or production templates.
+  const at = 0x100000 + 133;
+  for (const length of [0, 1, 127, 128, 255]) {
+    memory[at] = length;
+    memory.fill(0x78, at + 1, at + 1 + length);
+    memory[at + 1 + length] = 0x21; // Must not read beyond the given length.
+    equal(render('"'), "<p>" + "x".repeat(length) + "</p>\n");
+  }
+  memory.set([3, 0x61, 0, 0x62, 0x21], at);
+  equal(render('"'), "<p>a\0b</p>\n"); // Zero bytes are data, not terminators.
+});

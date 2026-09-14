@@ -19,7 +19,9 @@ text(c):
     else: emit(c)
 literal(offset):
     p = 0x100000 + offset
-    while memory[p] != 0: emit(memory[p++])
+    remaining = memory[p++]
+    while remaining > 0:
+        emit(memory[p++]); remaining -= 1
 ```
 
 ```mermaid
@@ -62,17 +64,20 @@ Escaping quotes here also makes this same primitive safe inside attributes.
 
 ## Function 2: fixed literal
 
-Locals p=1 and c=2 walk a NUL-terminated literal. Only internal fixed offsets
-call this function. The document's byte text is never used as a literal offset.
+Locals p=1 and remaining=2 walk a length-prefixed literal: one unsigned 8-bit
+length, then exactly that many bytes. No terminator or variable-length number
+decoding is needed. Only internal fixed offsets call this function. The
+document's byte text is never used as a literal offset.
 
 `[microwasm]`
 
 - literal-record: `{{size:literal-body}}`
   - literal-body: `01 02 7f`
     - literal-start: `41 8080c000 20 00 6a 21 01`
+    - literal-length: `20 01 2d 00 00 21 02 20 01 41 01 6a 21 01`
     - literal-exit: `02 40`
       - literal-loop: `03 40`
-        - literal-read: `20 01 2d 00 00 22 02 45 0d 01`
-        - literal-emit: `20 02 10 00`
-        - literal-next: `20 01 41 01 6a 21 01 0c 00 0b`
+        - literal-bound: `20 02 45 0d 01`
+        - literal-emit: `20 01 2d 00 00 10 00`
+        - literal-next: `20 01 41 01 6a 21 01 20 02 41 01 6b 21 02 0c 00 0b`
       - literal-done: `0b 0b`
