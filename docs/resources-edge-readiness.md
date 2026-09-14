@@ -1,6 +1,6 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-14, export `resources-co-83cbe1b`.
+Current local verification: 2026-09-14, export `resources-co-1070383`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
@@ -12,9 +12,20 @@ pass. Evidence is in `lazy-framework-compiler.log`, `lazy-framework-browser.log`
 `lazy-framework-bunny.log`, and `lazy-framework-live.log` in the work directory.
 The 173-file export verifies before and after archive extraction.
 
-The newly requested guest-level saved-build-output-first behavior is pending;
-the framework split does not implement persistence of compiled output. See the
-[follow-up](project-editor-typing-performance.md#framework-build-tooling-no-longer-delays-ordinary-output-2026-09-14).
+Saved-output-first now keeps only the latest successful build in its own SQL
+row, selected by the frontend guest on opening. Failed builds and stale writes
+do not displace it; derived writes do not create source versions. All five live
+owner projects reopen with both compilers blocked, with their interaction,
+mobile, and theme checks passing. Public responses cannot include unpublished
+output. The migration and persistence routes pass the exact Bunny-entry tests.
+See the [verification and bounds](project-editor-typing-performance.md#latest-successful-output-on-opening-2026-09-14).
+
+Current archive: `/root/resources-bunny.tar.gz`, root `resources-bunny`, 173
+verified files, SHA-256
+`9d37ab6b8abeeba178c7510ce621fd9730f881ff4bfe7ecd7674f79666a3ae92`.
+The previous framework-only archive is retained at
+`/root/archive/2026/09/14/resources-bunny-83cbe1b-before-saved-output.tar.gz`.
+No Bunny deployment was performed.
 The final audit below records the preceding scope, before this new request.
 
 ## Low-cold-start design

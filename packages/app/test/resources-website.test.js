@@ -1067,7 +1067,20 @@ test("a project opens its persisted successful output without loading a compiler
         assert.fail(`${error.message}\n${errors.join("\n")}\n${await page.locator("body").innerText()}`);
       });
       assert.deepEqual(await response.json(), { saved: true });
+      const updated = page.waitForResponse(async response =>
+        response.url().endsWith(`/api/projects/${project.id}/output`) &&
+        response.request().method() === "POST" && response.request().postData().includes("Updated build") &&
+        response.status() === 200 && (await response.json()).saved).catch(error => ({ error }));
+      await codeSurface(page).locator(".cm-content").press("ControlOrMeta+End");
+      await page.keyboard.insertText("<p>Updated build</p>");
+      await output.getByText("Updated build", { exact: true }).waitFor().catch(async error => {
+        assert.fail(`${error.message}\n${errors.join("\n")}\n${await page.locator("body").innerText()}`);
+      });
+      const updateReply = await updated;
+      assert.ok(!updateReply.error, `Updated output was not persisted: ${await page.locator("body").innerText()}`);
+      assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_build_output WHERE project_id = ?").get(project.id).n, 1);
     }
+    await output.getByText("Updated build", { exact: true }).waitFor();
     assert.deepEqual(compilers, [], "saved output starts without either compiler artifact");
     assert.deepEqual(errors, []);
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {

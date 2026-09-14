@@ -1370,5 +1370,26 @@ building. The source plus derived payload is bounded to 70 MiB for workspace
 transport; later source growth can cause the optional cache to be omitted rather
 than prevent opening. This is not an offline resource cache or an archive.
 
-Store and SQL-policy regressions pass. Browser and rebuilt Bunny artifact
-verification are in progress; do not infer deployment from the source changes.
+Compiled documents travel through the backend as JSON text within the output
+record. Large CSS/SVG trees otherwise exhaust the generic wire's item budget;
+the output runtime still decodes and validates the same semantic pieces. Legacy
+snapshots are compared after normalization, with the actual stored JSON used
+for the atomic write guard. Older file/key ordering is not a content change.
+
+Verification: 28 store/device/SQL-policy checks, application-machine and route
+checks (including a 70,000-piece transport fixture), a fresh-browser saved-output
+regression, and all three exact Bunny-entry tests pass. A fresh-browser live
+pass opens all five owner projects with both compiler downloads blocked. Cat's
+eight pairs/reset, 50 tour slides and keyboard navigation, SQLite fragments,
+Mahjong's 144 tiles, desktop/mobile layouts, and theme switches pass. Screenshots
+were captured and inspected. Initial population wrote only derived-output rows;
+the compiler-blocked pass made no writes. No source, history, or notes changed.
+
+Evidence in `/root/macchiato-work`: `saved-output-unit-final.log`,
+`saved-output-application-final.log`, `saved-output-consistent-browser.log`,
+`saved-output-edits-diagnosis.log` (valid edit, autosave/build ordering, reopening,
+and retaining the successful output after invalid source),
+`saved-output-live-complete.log`, `saved-output-no-compilers.log`, and
+`saved-output-ready-bunny-final.log`. Export `resources-co-1070383` verifies all
+173 files before and after archive extraction. No real Bunny deployment or
+end-to-end latency improvement is claimed by these local checks.
