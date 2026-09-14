@@ -65,8 +65,12 @@ resets state, and only a successful return publishes the output.
 
 ## Module
 
-Functions: run 0, emit 1, cell-byte 2, finish-row 3. Globals: output cursor 0,
-header width 1, current width 2. Helpers are private. The first row establishes
+Functions: convert 0, emit 1, cell-byte 2, finish-row 3, CSV entry 4, TSV entry
+5. Globals: output cursor 0, header width 1, current width 2, TSV mode 3.
+The exported `run` selects CSV; `tsv` selects the tab-separated dialect used
+by [TSV to table](06-tsv-to-table.md). Both entries reset mode before calling
+the shared converter. TSV never enters quoted-field state: quotes are data,
+tabs are delimiters and LF/CRLF end records. The first row establishes
 the width, so a separate first-row flag is unnecessary.
 
 `[microwasm]`
@@ -75,15 +79,15 @@ the width, so a separate first-row flag is unnecessary.
 - ct-type-section: `01 {{size:ct-types}}`
   - ct-types: `03 60 01 7f 01 7f 60 01 7f 00 60 00 00`
 - ct-function-section: `03 {{size:ct-functions}}`
-  - ct-functions: `04 00 01 01 02`
+  - ct-functions: `06 00 01 01 02 00 00`
 - ct-memory-section: `05 {{size:ct-memories}}`
   - ct-memories: `01 01 04 04`
 - ct-global-section: `06 {{size:ct-globals}}`
-  - ct-globals: `03 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
+  - ct-globals: `04 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - ct-export-section: `07 {{size:ct-exports}}`
-  - ct-exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
+  - ct-exports: `03 03 72756e 00 04 03 747376 00 05 06 6d656d6f7279 02 00`
 - ct-code-section: `0a {{size:ct-code}}`
-  - ct-code: `04`
+  - ct-code: `06`
     - ct-run-record: `{{size:ct-run-body}}`
       - ct-run-body: `01 07 7f`
         - ct-bound: `20 00 41 808004 4b 20 00 41 0b 49 72 04 40 00 0b`
@@ -109,7 +113,7 @@ the width, so a separate first-row flag is unnecessary.
           - ct-close-byte: `20 05 20 07 6a 2d 00 00 41 e000 47 04 40 00 0b`
           - ct-close-next: `20 07 41 01 6a 22 07 20 06 49 0d 00 0b`
         - ct-close-newline: `20 05 41 01 6b 2d 00 00 41 0a 47 04 40 00 0b`
-        - ct-open-label: `20 01 2d 00 00 41 e300 47 20 01 2d 00 01 41 f300 47 72 20 01 2d 00 02 41 f600 47 72 04 40 00 0b 20 01 41 03 6a 21 01`
+        - ct-open-label: `20 01 2d 00 00 23 03 04 7f 41 f400 05 41 e300 0b 47 20 01 2d 00 01 41 f300 47 72 20 01 2d 00 02 41 f600 47 72 04 40 00 0b 20 01 41 03 6a 21 01`
         - ct-open-ending: `20 01 2d 00 00 41 0d 46 04 40 20 01 41 01 6a 21 01 0b`
         - ct-open-lf: `20 01 2d 00 00 41 0a 47 04 40 00 0b 20 01 41 01 6a 21 01`
         - ct-empty-input: `20 01 20 05 4f 04 40 00 0b`
@@ -126,9 +130,9 @@ the width, so a separate first-row flag is unnecessary.
                 - ct-delimiter: `05`
                 - ct-after-quote: `20 03 41 03 46 04 40`
                   - ct-after-valid: `20 02 41 2c 46 20 02 41 0a 46 72 20 02 41 0d 46 72 45 04 40 00 0b 0b`
-                - ct-opening: `20 02 41 22 46 04 40 20 03 04 40 00 0b 41 02 21 03`
+                - ct-opening: `20 02 41 22 46 23 03 45 71 04 40 20 03 04 40 00 0b 41 02 21 03`
                   - ct-other: `05`
-                  - ct-comma: `20 02 41 2c 46 04 40`
+                  - ct-comma: `20 02 23 03 04 7f 41 09 05 41 2c 0b 46 04 40`
                     - ct-next-field: `41 20 10 01 41 fc00 10 01 41 20 10 01 23 02 41 01 6a 24 02 41 00 21 03`
                     - ct-not-comma: `05`
                     - ct-newline: `20 02 41 0a 46 20 02 41 0d 46 72 04 40`
@@ -167,6 +171,10 @@ the width, so a separate first-row flag is unnecessary.
           - ct-rule-end: `41 fc00 10 01 41 0a 10 01`
           - ct-row-width: `05 23 01 23 02 47 04 40 00 0b 0b`
         - ct-row-reset: `41 01 24 02 0b`
+    - ct-csv-record: `{{size:ct-csv-body}}`
+      - ct-csv-body: `00 41 00 24 03 20 00 10 00 0b`
+    - ct-tsv-record: `{{size:ct-tsv-body}}`
+      - ct-tsv-body: `00 41 01 24 03 20 00 10 00 0b`
 Run locals: input length 0, position 1, byte 2, field state 3, ended-row flag
 4, content end 5, fence length 6, fence scan 7. Cell escaping computes decimal
 digits directly. The CSV label is three byte comparisons; no string table or

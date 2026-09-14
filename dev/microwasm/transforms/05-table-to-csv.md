@@ -58,9 +58,13 @@ write opening fence, then closing fence after the body
 
 ## Module
 
-Functions: run 0, emit 1, CSV byte 2, cell 3, Unicode scalar 4, row 5,
-decimal reference 6. Globals: output cursor 0, longest backtick run 1,
-current backtick run 2. Memory has four fixed pages and no imports.
+Functions: convert 0, emit 1, field byte 2, cell 3, Unicode scalar 4, row 5,
+decimal reference 6, CSV entry 7, TSV entry 8. Globals: output cursor 0,
+longest backtick run 1, current backtick run 2, TSV mode 3. Memory has four
+fixed pages and no imports. `run` selects CSV; `tsv` selects the dialect used
+by [table to TSV](07-table-to-tsv.md). TSV omits CSV quoting, uses tabs between
+cells and rejects decoded tab/CR/LF field data. Mode is reset at each entry,
+so callers can alternate formats on one instance, including after a trap.
 
 `[microwasm]`
 
@@ -68,15 +72,15 @@ current backtick run 2. Memory has four fixed pages and no imports.
 - tc-type-section: `01 {{size:tc-types}}`
   - tc-types: `05 60 01 7f 01 7f 60 01 7f 00 60 02 7f 7f 00 60 03 7f 7f 7f 01 7f 60 02 7f 7f 01 7f`
 - tc-function-section: `03 {{size:tc-functions}}`
-  - tc-functions: `07 00 01 01 02 01 03 04`
+  - tc-functions: `09 00 01 01 02 01 03 04 00 00`
 - tc-memory-section: `05 {{size:tc-memories}}`
   - tc-memories: `01 01 04 04`
 - tc-global-section: `06 {{size:tc-globals}}`
-  - tc-globals: `03 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
+  - tc-globals: `04 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - tc-export-section: `07 {{size:tc-exports}}`
-  - tc-exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
+  - tc-exports: `03 03 72756e 00 07 03 747376 00 08 06 6d656d6f7279 02 00`
 - tc-code-section: `0a {{size:tc-code}}`
-  - tc-code: `07`
+  - tc-code: `09`
     - tc-run-record: `{{size:tc-run-body}}`
       - tc-run-body: `01 08 7f`
         - tc-bound: `20 00 41 808004 4b 04 40 00 0b`
@@ -111,7 +115,7 @@ current backtick run 2. Memory has four fixed pages and no imports.
         - tc-shift-body: `41 808004 20 08 6a 41 808004 20 06 fc 0a 00 00`
         - tc-prefix-reset: `41 808004 24 00 20 07 21 03`
         - tc-open-loop: `03 40 41 e000 10 01 20 03 41 01 6b 22 03 0d 00 0b`
-        - tc-open-label: `41 e300 10 01 41 f300 10 01 41 f600 10 01 41 0a 10 01`
+        - tc-open-label: `23 03 04 7f 41 f400 05 41 e300 0b 10 01 41 f300 10 01 41 f600 10 01 41 0a 10 01`
         - tc-close-position: `41 808004 20 08 6a 20 06 6a 24 00 20 07 21 03`
         - tc-close-loop: `03 40 41 e000 10 01 20 03 41 01 6b 22 03 0d 00 0b`
         - tc-result: `41 0a 10 01 23 00 41 808004 6b 0b`
@@ -126,10 +130,11 @@ current backtick run 2. Memory has four fixed pages and no imports.
     - tc-byte-record: `{{size:tc-byte-body}}`
       - tc-byte-body: `00`
         - tc-byte-control: `20 00 41 20 49 20 00 41 09 47 71 20 00 41 0a 47 71 20 00 41 0d 47 71 04 40 00 0b`
-        - tc-byte-copy: `20 00 10 01 20 00 41 22 46 04 40 20 00 10 01 0b 0b`
+        - tc-byte-tsv-control: `23 03 20 00 41 09 46 20 00 41 0a 46 72 20 00 41 0d 46 72 71 04 40 00 0b`
+        - tc-byte-copy: `20 00 10 01 20 00 41 22 46 23 03 45 71 04 40 20 00 10 01 0b 0b`
     - tc-cell-record: `{{size:tc-cell-body}}`
       - tc-cell-body: `01 03 7f`
-        - tc-cell-open: `41 22 10 01`
+        - tc-cell-open: `23 03 45 04 40 41 22 10 01 0b`
         - tc-cell-exit: `02 40`
           - tc-cell-loop: `03 40`
             - tc-cell-bound: `20 00 20 01 4f 0d 01`
@@ -142,7 +147,7 @@ current backtick run 2. Memory has four fixed pages and no imports.
               - tc-cell-decoded: `20 00 20 01 10 06 22 04 04 40 20 04 21 00 0c 02 0b 0b`
             - tc-cell-ordinary: `20 02 10 02 20 00 41 01 6a 21 00 0c 00 0b`
           - tc-cell-end: `0b`
-        - tc-cell-close: `41 22 10 01 0b`
+        - tc-cell-close: `23 03 45 04 40 41 22 10 01 0b 0b`
     - tc-unicode-record: `{{size:tc-unicode-body}}`
       - tc-unicode-body: `00`
         - tc-unicode-ascii: `20 00 41 8001 49 04 40 20 00 10 02 0f 0b`
@@ -188,7 +193,7 @@ current backtick run 2. Memory has four fixed pages and no imports.
                 - tc-trailing-next: `20 06 41 01 6b 21 06 0c 00 0b`
               - tc-trailing-end: `0b`
             - tc-row-data: `20 02 04 40`
-              - tc-row-comma: `20 07 04 40 41 2c 10 01 0b`
+              - tc-row-comma: `20 07 04 40 23 03 04 7f 41 09 05 41 2c 0b 10 01 0b`
               - tc-row-cell: `20 05 20 06 10 03`
               - tc-row-rule: `05`
               - tc-rule-leading-room: `20 05 20 06 49 04 40`
@@ -219,6 +224,10 @@ current backtick run 2. Memory has four fixed pages and no imports.
           - tc-reference-end: `0b`
         - tc-reference-range: `20 04 45 20 04 41 ffffc300 4b 72 20 04 41 80b003 6b 41 ff0f 4d 72 04 40 41 00 0f 0b`
         - tc-reference-output: `20 04 10 04 20 02 41 01 6a 0b`
+    - tc-csv-record: `{{size:tc-csv-body}}`
+      - tc-csv-body: `00 41 00 24 03 20 00 10 00 0b`
+    - tc-tsv-record: `{{size:tc-tsv-body}}`
+      - tc-tsv-body: `00 41 01 24 03 20 00 10 00 0b`
 
 Run locals: length 0, line start/end 1/2, temporary/countdown 3, row index 4,
 width 5, CSV byte length 6, fence length 7, prefix length 8. Row locals:
