@@ -33,7 +33,8 @@ The type's result vector is `02 7f 7f`. Both values must be on the operand
 stack in that order at every return. Memory and its exported name are the
 same as in the sum example.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 02 7f 7f`
@@ -43,7 +44,6 @@ same as in the sum example.
   - memories: `01 01 01 01`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Compare signed values, preserve the first tie
 
@@ -51,7 +51,8 @@ Locals are count 0, i 1, minimum 2, index 3, value 4. `48` is signed less
 than, whereas the count bounds use unsigned comparisons. `41 7f` pushes -1:
 constant immediates use signed LEB128, not the section-length encoding.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 04 7f`
@@ -69,6 +70,5 @@ constant immediates use signed LEB128, not the section-length encoding.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - result: `20 02 20 03 0b`
-<!-- microwasm:end -->
 
 Tests include repeated minima, signed extremes, empty and singleton arrays.

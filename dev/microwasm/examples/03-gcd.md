@@ -28,7 +28,8 @@ flowchart TD
 `60 02 7f 7f 01 7f` describes two i32 inputs and one i32 output. Local
 indices 0 and 1 therefore already belong to the parameters.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 02 7f 7f 01 7f`
@@ -36,14 +37,14 @@ indices 0 and 1 therefore already belong to the parameters.
   - functions: `01 00`
 - export-section: `07 {{size:exports}}`
   - exports: `01 03 72756e 00 00`
-<!-- microwasm:end -->
 
 ## Remainders and reassignment
 
 Local 2 holds r while a is overwritten. `70` is `i32.rem_u`. The outer
 block provides the loop's exit target at depth one.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 01 7f`
@@ -55,7 +56,6 @@ block provides the loop's exit target at depth one.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - result: `20 00 0b`
-<!-- microwasm:end -->
 
 Check zeros, coprime pairs, equal inputs, and values above signed i32 max.
 For example, `(48, 18)` yields 6 and `(4294967295, 15)` yields 15.

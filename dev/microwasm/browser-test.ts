@@ -53,7 +53,7 @@ try {
       .click();
     await page.waitForFunction(() => {
       const text = document.getElementById("source")?.textContent ?? "";
-      return text.includes("microwasm:start") && !text.includes("{{");
+      return text.includes("`[microwasm]`") && !text.includes("{{");
     });
     await page.getByRole("button", { name: "Hex", exact: true }).click();
     await page.waitForFunction(() =>

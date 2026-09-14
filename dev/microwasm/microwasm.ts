@@ -41,17 +41,42 @@ export function assemble(markdown: string): Assembly {
   const labels = new Map<string, Item>();
   const stack: Item[] = [];
   let inside = false;
+  let markerLine = 0;
+  let fence = "";
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
-    if (line === "<!-- microwasm:start -->") {
-      if (inside) throw new Error(`Line ${index + 1}: nested byte region`);
-      inside = true;
-      stack.length = 0;
+    // A marker labels the following Markdown list, like a filename labels
+    // a following code block. Fenced examples of the DSL are not executable.
+    if (fence) {
+      if (new RegExp(`^ {0,3}${fence[0]}{${fence.length},}\\s*$`).test(line)) {
+        fence = "";
+      }
       continue;
     }
-    if (line === "<!-- microwasm:end -->") {
-      if (!inside) throw new Error(`Line ${index + 1}: unmatched region end`);
+    if (inside && line.trim() && !/^\s*- /.test(line)) {
+      if (!stack.length) {
+        throw new Error(
+          `Line ${markerLine}: expected a byte list after [microwasm]`,
+        );
+      }
+      if (/^\s/.test(line)) {
+        throw new Error(
+          `Line ${index + 1}: expected an annotated byte-list item`,
+        );
+      }
       inside = false;
+    }
+    if (!inside) {
+      const opening = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+      if (opening) {
+        fence = opening[1];
+        continue;
+      }
+    }
+    if (/^`\[microwasm\]`(?:[ \t]+.*)?$/.test(line)) {
+      inside = true;
+      markerLine = index + 1;
+      stack.length = 0;
       continue;
     }
     if (!inside || !line.trim()) continue;
@@ -81,7 +106,11 @@ export function assemble(markdown: string): Assembly {
     stack[depth] = item;
     stack.length = depth + 1;
   }
-  if (inside) throw new Error("Unclosed byte region");
+  if (inside && !stack.length) {
+    throw new Error(
+      `Line ${markerLine}: expected a byte list after [microwasm]`,
+    );
+  }
   if (!roots.length) throw new Error("No executable byte lists");
 
   const encoded = new Map<Item, number[]>();

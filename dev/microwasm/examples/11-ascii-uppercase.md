@@ -32,7 +32,8 @@ flowchart TD
 The memory limits are now `01 02 02`. The input is immutable; using a
 separate output makes this convention reusable for expanding filters later.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -42,7 +43,6 @@ separate output makes this convention reusable for expanding filters later.
   - memories: `01 01 02 02`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Unsigned byte loads
 
@@ -50,7 +50,8 @@ Local 1 is i, 2 is c. `2d 00 00` loads an unsigned byte; `3a 00 00` stores
 the low byte of an i32. Constants 97 and 122 need two signed-LEB bytes:
 `e1 00` and `fa 00`, since a one-byte encoding would look negative.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 02 7f`
@@ -66,7 +67,6 @@ the low byte of an i32. Constants 97 and 122 need two signed-LEB bytes:
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - result: `20 00 0b`
-<!-- microwasm:end -->
 
 Test all 256 possible byte values, an empty input, a full input page, and
 repeated calls with shorter data. Returned lengths exclude stale output.

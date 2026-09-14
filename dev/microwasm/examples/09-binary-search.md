@@ -33,7 +33,8 @@ flowchart TD
 The search range is half-open: high may equal count but is never loaded.
 Keeping indices bounded also makes the middle calculation safe.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 02 7f 7f 01 7f`
@@ -43,7 +44,6 @@ Keeping indices bounded also makes the middle calculation safe.
   - memories: `01 01 01 01`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Halve the interval
 
@@ -51,7 +51,8 @@ Parameters count and target occupy 0 and 1; low, high, middle, value occupy
 2 through 5. `05` separates the two arms of an if. Every non-returning arm
 makes the interval strictly smaller, including when it contains one item.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 04 7f`
@@ -70,6 +71,5 @@ makes the interval strictly smaller, including when it contains one item.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - missing: `41 7f 0b`
-<!-- microwasm:end -->
 
 Check both ends, misses inside and outside the range, duplicates, and emptiness.

@@ -37,7 +37,8 @@ flowchart TD
 `i32.store` is opcode `36`. The host does not perform swaps or comparisons;
 all mutation takes place in the module's memory.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -47,7 +48,6 @@ all mutation takes place in the module's memory.
   - memories: `01 01 01 01`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Nested loops have separate exit targets
 
@@ -55,7 +55,8 @@ Locals 1..4 are i, j, key, previous. The inner loop checks j before loading
 j-1. Each loop has its own enclosing block: `br_if 1` exits the nearest
 pair, not the entire function. End bytes are written explicitly, too.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 04 7f`
@@ -80,7 +81,6 @@ pair, not the entire function. End bytes are written explicitly, too.
           - outer-repeat: `0c 00 0b`
         - outer-end: `0b`
       - result: `20 00 0b`
-<!-- microwasm:end -->
 
 Compare the resulting bytes with a signed numeric sort, including empty,
 reverse-sorted and duplicate-rich arrays. A sentinel after the array must stay

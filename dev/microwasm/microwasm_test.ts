@@ -17,7 +17,7 @@ function rejects(fn: () => unknown, pattern: RegExp) {
   throw new Error(`Expected failure matching ${pattern}`);
 }
 function region(body: string) {
-  return `<!-- microwasm:start -->\n${body}\n<!-- microwasm:end -->`;
+  return `\`[microwasm]\`\n\n${body}\n`;
 }
 
 Deno.test("counts use unsigned LEB128, including the multi-byte boundaries", () => {
@@ -72,12 +72,36 @@ Deno.test("bad syntax and ambiguous bookkeeping fail closed", () => {
       [" - one: `00`", /expected an annotated/],
     ] as const
   ) rejects(() => assemble(region(body)), pattern);
-  rejects(() => assemble("<!-- microwasm:start -->\n- one: `00`"), /Unclosed/);
-  rejects(() => assemble("<!-- microwasm:end -->"), /unmatched/);
+  rejects(() => assemble("`[microwasm]`"), /expected a byte list/);
+  rejects(
+    () => assemble("`[microwasm]`\n\n## No list"),
+    /expected a byte list/,
+  );
+  rejects(
+    () =>
+      assemble("<!-- microwasm:start -->\n- one: `00`\n<!-- microwasm:end -->"),
+    /No executable/,
+  );
   rejects(() => assemble("just prose"), /No executable/);
   for (const value of ["", "0", "000", "0x00", "00 gg", "00 # comment"]) {
     rejects(() => fromHex(value), /only whitespace-separated bytes/);
   }
+});
+
+Deno.test("visible marker captures only its following list, with no closing directive", () => {
+  const source = "`file.txt`\n\n```text\nnot bytecode\n```\n\n" +
+    "```md\n" + region("- illustrative: `ff`") + "```\n\n" +
+    "`[microwasm]` — First bytes\n\n- first: `aa`\n\n  - nested: `bb`\n\n" +
+    "## Explanation\n\n- ordinary: `ff`\n\n" + region("- last: `cc`");
+  const built = assemble(source);
+  equal([...built.bytes], [0xaa, 0xbb, 0xcc]);
+  equal(built.resolved.includes("`[microwasm]` — First bytes"), true);
+  equal(
+    built.map.map((item) =>
+      source.split("\n")[item.line - 1].trim().split(":")[0]
+    ),
+    ["- first", "- nested", "- last"],
+  );
 });
 
 Deno.test("grouping hexadecimal bytes does not change their order", () => {

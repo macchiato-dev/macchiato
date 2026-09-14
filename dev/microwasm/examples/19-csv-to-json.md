@@ -75,7 +75,8 @@ are ordinary Wasm functions, not JavaScript imports. No JSON library is used
 by the transformation. escape is the previous example's algorithm factored
 into a byte-at-a-time helper.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `02 60 01 7f 01 7f 60 01 7f 00`
@@ -87,7 +88,6 @@ into a byte-at-a-time helper.
   - globals: `01 7f 01 41 808004 0b`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Parse and render in one pass
 
@@ -96,7 +96,8 @@ a second parsed representation. There can still be partial output before a
 syntax error, so a successful return is the only commit signal to the host.
 The ASCII constants `[` and `]` require signed-LEB `db 00` and `dd 00`.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `{{count:bodies}}`
     - bodies:
@@ -166,7 +167,6 @@ The ASCII constants `[` and `]` require signed-LEB `db 00` and `dd 00`.
               - plain: `05 20 00 10 01 0b`
             - pair-end: `0b`
           - escape-end: `0b`
-<!-- microwasm:end -->
 
 The code vector contains three bodies; its placeholder counts these sibling
 records, not their nested instruction groups. The emitter bounds each byte

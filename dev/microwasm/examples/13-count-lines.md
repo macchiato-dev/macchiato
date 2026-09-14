@@ -31,7 +31,8 @@ flowchart TD
 
 The result needs no output buffer, so memory can stay at one page.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -41,14 +42,14 @@ The result needs no output buffer, so memory can stay at one page.
   - memories: `01 01 01 01`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Keep the final byte in a local
 
 Locals i, count, c are 1..3. Early return on emptiness makes c meaningful at
 the end. `i32.eq` produces 0 or 1, which can be added directly to count.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 03 7f`
@@ -63,6 +64,5 @@ the end. `i32.eq` produces 0 or 1, which can be added directly to count.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - final-line: `20 02 20 03 41 0a 47 6a 0b`
-<!-- microwasm:end -->
 
 Check emptiness, final LF, consecutive LFs, CRLF, and a full page of LFs.

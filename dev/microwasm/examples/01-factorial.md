@@ -38,7 +38,8 @@ The file begins with the Wasm magic and version. The type section describes
 one function taking and returning an `i32` (`7f`). The function section assigns
 that type to function zero. Neither section contains executable instructions.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `00 61 73 6d 01 00 00 00` — Magic and binary version 1.
 - type-section: `01 {{size:type-payload}}` — Section ID and payload byte length.
   - type-payload: `{{count:types}}` — Number of function types.
@@ -48,19 +49,18 @@ that type to function zero. Neither section contains executable instructions.
   - function-payload: `{{count:function-types}}`
     - function-types:
       - factorial-type: `00` — Function zero uses type zero.
-<!-- microwasm:end -->
 
 ## Give the host a name to call
 
 The export name is nine UTF-8 bytes: `factorial`. The trailing `00 00` means
 “function export, function index zero.” It does not execute the function.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - export-section: `07 {{size:export-payload}}`
   - export-payload: `{{count:exports}}`
     - exports:
       - factorial-export: `09 66 61 63 74 6f 72 69 61 6c 00 00`
-<!-- microwasm:end -->
 
 ## Implement the loop
 
@@ -73,7 +73,8 @@ The outer `block` is an exit target. Inside it, `loop` is the repetition target.
 At the zero test, branch depth one exits the outer block; at the bottom,
 branch depth zero goes back to the loop. `40` gives each block no result type.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code-payload}}`
   - code-payload: `{{count:bodies}}`
     - bodies:
@@ -94,7 +95,6 @@ branch depth zero goes back to the loop. `40` gives each block no result type.
             - block-end: `0b`
           - result: `20 01` — Leave product on the operand stack.
           - function-end: `0b`
-<!-- microwasm:end -->
 
 ## Check the result
 

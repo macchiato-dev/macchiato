@@ -31,7 +31,8 @@ flowchart TD
 The single type is `i32 -> i32`. Function zero uses it and is exported as
 `run`. The type count and section sizes are bookkeeping, not instructions.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - types-section: `01 {{size:types}}`
   - types: `{{count:type-items}}`
@@ -41,14 +42,14 @@ The single type is `i32 -> i32`. Function zero uses it and is exported as
   - functions: `01 00`
 - exports-section: `07 {{size:exports}}`
   - exports: `01 03 72756e 00 00`
-<!-- microwasm:end -->
 
 ## Advance a pair on the operand stack
 
 Parameter 0 is n; locals 1, 2, 3 are a, b, next. Locals start at zero.
 `select` (`1b`) consumes b, a, and n, choosing b when n is nonzero.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 03 7f` — Three i32 locals.
@@ -63,7 +64,6 @@ Parameter 0 is n; locals 1, 2, 3 are a, b, next. Locals start at zero.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - result: `20 02 20 01 20 00 1b 0b`
-<!-- microwasm:end -->
 
 Check every input from 0 through 46 against a pair-based oracle. In particular,
 0 gives 0, 2 gives 1, and 46 gives 1836311903. Negative inputs and 47 trap.

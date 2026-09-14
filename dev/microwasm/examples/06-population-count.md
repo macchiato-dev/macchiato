@@ -28,7 +28,8 @@ flowchart TD
 The accumulator is local 1. i32 subtraction wraps, but is only performed on
 a nonzero input here. Bitwise operations do not depend on signedness.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -36,14 +37,14 @@ a nonzero input here. Bitwise operations do not depend on signedness.
   - functions: `01 00`
 - export-section: `07 {{size:exports}}`
   - exports: `01 03 72756e 00 00`
-<!-- microwasm:end -->
 
 ## Bit-clearing loop
 
 `local.tee` is unnecessary here: n is stored for the next iteration, then
 tested at its top. Two gets of n put the operands for AND on the stack.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 01 7f`
@@ -55,7 +56,6 @@ tested at its top. Two gets of n put the operands for AND on the stack.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - result: `20 01 0b`
-<!-- microwasm:end -->
 
 Check zero, each single bit, alternating bit patterns, and all bits set.
 The maximum result is 32; tests compare against a separate shift-based count.

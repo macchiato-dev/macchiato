@@ -19,7 +19,7 @@ deno task test:browser
 
 Verified with Deno 2.7.13 and Playwright 1.60.0 / Chromium, on 2026-09-14:
 
-- 25 Deno tests passed, including all twenty programs and the supplied app4
+- 26 Deno tests passed, including all twenty programs and the supplied app4
   externref module instantiated with a non-DOM tree-building host.
 - All twenty browser examples loaded, ran their default input, and displayed
   resolved Markdown with no remaining placeholders and valid executable hex.
@@ -34,6 +34,12 @@ Verified with Deno 2.7.13 and Playwright 1.60.0 / Chromium, on 2026-09-14:
   local; the browser does not fetch fonts, renderers or other CDN assets.
 - The browser suite also passed through the existing declarative directory
   app at `http://microwasm.localhost:3030/`, without restarting that server.
+- Replacing hidden start/end comments with visible `[microwasm]` labels left
+  all twenty compiled Wasm SHA-256 hashes unchanged. Each label captures one
+  ordinary Markdown list, with no closing marker.
+- A generic CommonMark 0.31.2 renderer was also checked independently: all 41
+  markers across the twenty documents render as visible inline code followed
+  by a bullet list (`<ul>`). No Microwasm rendering extension was used.
 
 Screenshots are generated in `dist/browser/`, not committed. This checkpoint
 does not claim cross-browser certification or exhaustive formal validation.

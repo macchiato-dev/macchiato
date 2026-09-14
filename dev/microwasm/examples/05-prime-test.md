@@ -31,7 +31,8 @@ flowchart TD
 The result is an ordinary i32 used as a Boolean. No new type encoding is
 needed. Only local 1, the candidate divisor, is allocated.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -39,7 +40,6 @@ needed. Only local 1, the candidate divisor, is allocated.
   - functions: `01 00`
 - export-section: `07 {{size:exports}}`
   - exports: `01 03 72756e 00 00`
-<!-- microwasm:end -->
 
 ## Early returns and a safe cutoff
 
@@ -47,7 +47,8 @@ needed. Only local 1, the candidate divisor, is allocated.
 loop's block. `6e` divides unsigned and `70` takes the unsigned remainder.
 The divisor starts at 2 and cannot reach zero, so both operations are safe.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 01 7f`
@@ -62,7 +63,6 @@ The divisor starts at 2 and cannot reach zero, so both operations are safe.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - prime: `41 01 0b`
-<!-- microwasm:end -->
 
 Check small primes, 0 and 1, perfect squares, and the prime 4294967291 near
 the unsigned limit. Perfect squares catch an incorrect strict cutoff.

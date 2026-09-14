@@ -70,7 +70,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 25 tests covering all twenty examples and the supplied
+`deno task test` runs 26 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -92,9 +92,31 @@ code. Module byte sizes exclude host UI and allocated linear memory.
 
 ## Provisional byte-list notation
 
-`<!-- microwasm:start -->` and `<!-- microwasm:end -->` mark executable lists.
-A document may have several such regions, separated by ordinary explanations,
-pseudocode, or flowcharts. Their bytes are concatenated in document order.
+A line beginning with the inline code span `[microwasm]` labels the following
+nested Markdown list as executable bytes. It may have an explanation after
+the inline code. The marker and list are both visible with a generic Markdown
+renderer; there are no HTML comments or other hidden assembly directives.
+In rendered terms, the marker captures the next `<ul>`, including its nested
+lists. A separate `<ul>` needs another `[microwasm]` marker.
+
+`[microwasm]`
+
+- header: `00 61 73 6d 01 00 00 00` — Magic and version.
+
+That is the actual notation, not a custom rendering extension. As with a
+`file.txt` label before a code block, only this recognized label captures the
+following block. Ordinary inline code elsewhere has no assembly meaning.
+The list ends at the next unindented prose, heading, or other block; blank
+lines within a list are fine. There is no closing directive. A marker without
+a following list is an error. Markers inside fenced code examples are ignored.
+
+A document may contain several labeled lists, separated by explanations,
+pseudocode or flowcharts. Their bytes are concatenated in document order.
+
+A future Microwasm renderer will recognize these labeled blocks and render
+them differently. That is separate from the source format: a generic Markdown
+renderer still presents the full label and ordinary byte list. No custom
+renderer is required to see which blocks participate in the program.
 
 - Each list item has a unique identifier, a colon, an optional inline code
   span, and an optional explanation after an em dash.

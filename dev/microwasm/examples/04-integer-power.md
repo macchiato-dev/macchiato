@@ -30,7 +30,8 @@ flowchart TD
 Two parameters occupy locals 0 and 1; product will be local 2. The host sees
 the same `run` export as in the other numeric examples.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 02 7f 7f 01 7f`
@@ -38,14 +39,14 @@ the same `run` export as in the other numeric examples.
   - functions: `01 00`
 - export-section: `07 {{size:exports}}`
   - exports: `01 03 72756e 00 00`
-<!-- microwasm:end -->
 
 ## Consume one exponent bit per loop
 
 `71` is bitwise AND; `76` is unsigned right shift. Multiplication (`6c`)
 discards high bits. No divide, recursion, or temporary memory is necessary.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 01 7f`
@@ -61,7 +62,6 @@ discards high bits. No divide, recursion, or temporary memory is necessary.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - result: `20 02 0b`
-<!-- microwasm:end -->
 
 Check powers that fit, powers that wrap, and exponents 0 and `0xffffffff`.
 The tests use BigInt arithmetic as an independent modulo-32-bit oracle.

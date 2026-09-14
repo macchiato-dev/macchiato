@@ -44,7 +44,8 @@ The decoder need not construct a Unicode scalar: restricting the first
 continuation byte excludes the invalid scalar ranges. Locals 1..5 hold i,
 remaining, low, high, c. No data section or host text decoder is involved.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -54,7 +55,6 @@ remaining, low, high, c. No data section or host text decoder is involved.
   - memories: `01 01 01 01`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Nested decisions become nested ifs
 
@@ -63,7 +63,8 @@ comparisons joined with AND (`71`), or an out-of-range pair joined with OR
 (`72`). The nesting below mirrors the state diagram and makes each else
 (`05`) and end (`0b`) visible.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 05 7f`
@@ -99,7 +100,6 @@ comparisons joined with AND (`71`), or an out-of-range pair joined with OR
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - complete: `20 02 45 0b`
-<!-- microwasm:end -->
 
 Tests compare boundary sequences and deterministic random byte strings with
 a fatal UTF-8 TextDecoder. That decoder is a test oracle, not an import.

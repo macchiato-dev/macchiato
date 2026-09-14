@@ -35,7 +35,8 @@ flowchart TD
 The host writes only input; stale stack bytes from earlier calls are harmless
 because depth starts at zero. The call returns a Boolean, not the stack.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -45,7 +46,6 @@ because depth starts at zero. The call returns a Boolean, not the stack.
   - memories: `01 01 02 02`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Three kinds, one-byte entries
 
@@ -53,7 +53,8 @@ Locals 1..3 are i, depth, c. For an opening byte, `select` chooses a delta
 of 1 or 2, based on whether c is `(`. Closing checks happen before a stack
 load, preventing underflow even for a first byte of `)`.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 03 7f`
@@ -76,7 +77,6 @@ load, preventing underflow even for a first byte of `)`.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - empty-stack: `20 02 45 0b`
-<!-- microwasm:end -->
 
 Check `([{}])`, `([)]`, unmatched openings and closings, and deep nesting.
 Depth is a runtime value, not a fixed number of statically nested blocks.

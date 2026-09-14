@@ -30,7 +30,8 @@ Memory section 5 contains a vector of one memory. `01 01 01` is a limits
 record with minimum and maximum both one page; it does not mean one byte.
 Export kind `02` selects memory rather than a function.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -40,7 +41,6 @@ Export kind `02` selects memory rather than a function.
   - memories: `01 01 01 01`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Addressing is byte-based
 
@@ -49,7 +49,8 @@ is i32.load with alignment exponent 2 and offset 0. The alignment is a hint,
 not a check that would reject an unaligned address. The count check prevents
 address arithmetic from wrapping around and reading unrelated positions.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 02 7f`
@@ -62,7 +63,6 @@ address arithmetic from wrapping around and reading unrelated positions.
           - repeat: `0c 00 0b`
         - exit-end: `0b`
       - result: `20 02 0b`
-<!-- microwasm:end -->
 
 Check the empty sum, signed values, wrapping sums, and a completely full page.
 The function does not modify the input memory.

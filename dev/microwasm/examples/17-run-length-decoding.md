@@ -32,7 +32,8 @@ flowchart TD
 The maximum input size alone cannot bound decoded output. Capacity is checked
 per run, using bounded nonnegative integers so addition cannot wrap.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 01 7f 01 7f`
@@ -42,14 +43,14 @@ per run, using bounded nonnegative integers so addition cannot wrap.
   - memories: `01 01 02 02`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Countdown inside an input loop
 
 Locals 1..4 are i, out, count, value. The inner loop decrements count and
 advances out. There is no need for a separate repetition index.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 04 7f`
@@ -68,7 +69,6 @@ advances out. There is no need for a separate repetition index.
           - outer-repeat: `0c 00 0b`
         - outer-end: `0b`
       - result: `20 02 0b`
-<!-- microwasm:end -->
 
 Check exact-capacity output, one-byte overflow, odd input and zero count.
 Round-trip mixed inputs through the encoder and decoder, not a JS decoder.

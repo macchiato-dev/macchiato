@@ -19,7 +19,7 @@ its instructions or replacing its loop with host code.
 - Keep the host small; prove that the module itself drives the calls.
 - Use real Wasm validation and execution to check the assembled result.
 
-Only designated byte-list regions emit bytes in the new documents. Earlier
+Only lists labeled `[microwasm]` emit bytes in the new documents. Earlier
 expansions can therefore stay in prose/lists without accidentally being emitted
 twice. The count/size tool is bookkeeping, not a compiler from pseudocode.
 

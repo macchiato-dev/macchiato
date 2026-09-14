@@ -46,7 +46,8 @@ flowchart TD
 The function type has an empty parameter vector and one i32 result. Every
 local is therefore declared explicitly; there are no parameter-local slots.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `01 60 00 01 7f`
@@ -56,7 +57,6 @@ local is therefore declared explicitly; there are no parameter-local slots.
   - memories: `01 01 01 01`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Count, decide, then commit
 
@@ -68,7 +68,8 @@ The offset in `2d 00 8002` or `3a 00 8002` is unsigned LEB128 for 256;
 unlike `i32.const` it is an unsigned memory immediate. `eqz; eqz` normalizes
 any nonzero input cell to 1 before counting it.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `01 {{size:body}}`
     - body: `01 0a 7f`
@@ -98,7 +99,6 @@ any nonzero input cell to 1 before counting it.
         - copy-byte: `20 00 20 00 2d 00 8002 3a 00 00`
         - copy-next: `20 00 41 01 6a 22 00 41 8002 49 0d 00 0b`
       - result: `20 09 0b`
-<!-- microwasm:end -->
 
 Check a still-life block, a blinker over two generations, a glider over four,
 edge cells, and randomized boards over several generations. Compare all 256

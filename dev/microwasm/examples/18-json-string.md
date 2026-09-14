@@ -44,7 +44,8 @@ Global 0 is the output cursor, initialized to 65536 and reset on every call.
 Only run and memory are exported. Capacity failure traps; partial output must
 be discarded, and a subsequent call can still succeed.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - header: `0061736d 01000000`
 - type-section: `01 {{size:types}}`
   - types: `02 60 01 7f 01 7f 60 01 7f 00`
@@ -56,7 +57,6 @@ be discarded, and a subsequent call can still succeed.
   - globals: `01 7f 01 41 808004 0b`
 - export-section: `07 {{size:exports}}`
   - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
-<!-- microwasm:end -->
 
 ## Rendering escapes
 
@@ -65,7 +65,8 @@ escape branch, so the high nibble is 0 or 1. The low nibble needs a decimal
 or hexadecimal letter: add 48 below 10, otherwise 87. Even fixed characters
 are real `i32.const` instructions followed by calls to emit.
 
-<!-- microwasm:start -->
+`[microwasm]`
+
 - code-section: `0a {{size:code}}`
   - code: `{{count:bodies}}`
     - bodies:
@@ -96,7 +97,6 @@ are real `i32.const` instructions followed by calls to emit.
           - capacity: `23 00 41 808008 4f 04 40 00 0b`
           - store: `23 00 20 00 3a 00 00`
           - advance-cursor: `23 00 41 01 6a 24 00 0b`
-<!-- microwasm:end -->
 
 Parse the produced JSON in tests and compare the decoded value with the input.
 Also check exact output bytes for controls, an exact-size output, overflow,
