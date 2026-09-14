@@ -106,6 +106,9 @@ try {
     nodes,
   ) => nodes.map((node) => (node as HTMLAnchorElement).href));
   check(rendererLinks.length === 6, "Expected six renderer pages");
+  const libraryLinks = await page.locator("#library-pages a").evaluateAll((
+    nodes,
+  ) => nodes.map((node) => (node as HTMLAnchorElement).href));
   await screenshot("index-light");
   for (let i = 0; i < links.length; i++) {
     await page.goto(links[i]);
@@ -159,6 +162,58 @@ try {
       "./markdown-renderer.hex",
     );
   }
+  for (const link of libraryLinks) {
+    await page.goto(link);
+    await page.waitForSelector("#rendered h1");
+    await checkDocumentViews(
+      `./${new URL(link).searchParams.get("doc")!.slice(0, -3)}`,
+    );
+  }
+  const shortestPage = libraryLinks.find((link) =>
+    link.includes("06-shortest-decimal")
+  );
+  check(shortestPage, "Missing shortest-decimal documentation link");
+  await page.goto(shortestPage!);
+  await page.waitForSelector("#rendered h1");
+  await screenshot("shortest-decimal-light");
+  // Execute the shipped dependency graph in Chromium, with no host numeric
+  // callbacks. Native expected strings below are assertions, not imports.
+  const conversions = await page.evaluate(async () => {
+    async function load(name: string, imports: WebAssembly.Imports = {}) {
+      const response = await fetch(`./numbers/${name}.wasm`);
+      if (!response.ok) throw new Error(`Missing ${name}`);
+      return (await WebAssembly.instantiateStreaming(response, imports))
+        .instance.exports;
+    }
+    const n = await load("02-json-number");
+    const b = await load("03-multiword", { n });
+    const f = await load("04-json-binary64", { n, b });
+    const d = await load("05-exact-decimal", { b });
+    const s = await load("06-shortest-decimal", { f, d });
+    const memory = new Uint8Array((s.memory as WebAssembly.Memory).buffer);
+    return ["0.1", "-0", "1e-7", "1e21", "5e-324", "1.7976931348623157e308"]
+      .map((text) => {
+        const input = new TextEncoder().encode(text);
+        memory.set(input);
+        const number = (f.parse as (start: number, end: number) => number)(
+          0,
+          input.length,
+        );
+        const length = (s.format as (number: number) => number)(number);
+        return new TextDecoder().decode(memory.subarray(65536, 65536 + length));
+      });
+  });
+  check(
+    JSON.stringify(conversions) === JSON.stringify([
+      "0.1",
+      "0",
+      "1e-7",
+      "1e+21",
+      "5e-324",
+      "1.7976931348623157e+308",
+    ]),
+    `Browser numeric conversions differ: ${conversions}`,
+  );
   await page.goto(rendererLinks[0]);
   await page.waitForSelector("#rendered h1");
   await screenshot("renderer-module-light");

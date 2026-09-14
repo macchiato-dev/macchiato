@@ -72,6 +72,7 @@ for (
     "numbers/03-multiword",
     "numbers/04-json-binary64",
     "numbers/05-exact-decimal",
+    "numbers/06-shortest-decimal",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {

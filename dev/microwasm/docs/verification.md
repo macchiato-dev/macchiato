@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 50 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 52 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -97,8 +97,19 @@ memory is fixed at 256 KiB; input and scratch occupy separate regions.
 Three further tests cover multiword small-divisor quotient/remainder and exact
 decimal expansion. Complete decimal strings are compared with a test-only
 rational oracle and read back through both the Wasm and native JSON parsers.
-The formatter covers finite binary64, not shortest or precision-controlled
-strings yet; JavaScript's other parsing interfaces also remain pending.
+Two tests cover shortest finite decimal output, matching native spelling on
+more than 13,000 cases: every normal power-of-two boundary and both neighbors,
+decimal powers and their neighbors, small subnormals and random bit patterns.
+The results also round-trip through the Wasm parser. This formatter deliberately
+reuses exact expansion and up to 34 parser calls; it is not a native-throughput
+claim. Precision-controlled strings and other radix/JavaScript parsing
+interfaces remain pending.
+
+The browser suite checks all library documents in the six independent
+content/display combinations, as well as the original examples and renderer
+pages. It instantiates the built numeric dependency graph in Chromium and
+checks parse/shortest-format results across ordinary/scientific notation,
+signed zero and extreme finite values, with no host numeric callbacks.
 
 The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.

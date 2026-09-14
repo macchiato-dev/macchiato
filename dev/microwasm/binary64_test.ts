@@ -34,12 +34,18 @@ async function parser() {
   const b = await load("03-multiword", { n });
   const f = await load("04-json-binary64", { n, b });
   const d = await load("05-exact-decimal", { b });
+  const s = await load("06-shortest-decimal", { f, d });
   const memory = new Uint8Array((f.memory as WebAssembly.Memory).buffer);
   const run = f.parse as (start: number, end: number) => number;
   const encoder = new TextEncoder();
   return {
     memory,
     run,
+    shortest(value: number) {
+      const length = (s.format as (value: number) => number)(value);
+      if (length < 1 || length > 25) throw new Error("Invalid output length");
+      return new TextDecoder().decode(memory.subarray(65536, 65536 + length));
+    },
     format(value: number) {
       const length = (d.format as (value: number) => number)(value);
       if (length < 1 || length > 1077) throw new Error("Invalid output length");
@@ -135,6 +141,77 @@ Deno.test("Binary64 JSON parsing: ordinary values, range boundaries and signed z
   for (const text of cases) {
     same(p.parse(text), JSON.parse(text), text);
     same(p.parse(text, 65536 - text.length), JSON.parse(text), text);
+  }
+});
+
+Deno.test("Shortest binary64 decimal formatting: notation, carry and native spelling", async () => {
+  const p = await parser();
+  const cases = [
+    0,
+    -0,
+    0.1,
+    -0.1,
+    1,
+    -1,
+    12.5,
+    1e-6,
+    1e-7,
+    1e20,
+    1e21,
+    1000000000000000128,
+    1000000000000000256,
+    1000000000000000384,
+    1.2345678901234567,
+    Number.MIN_VALUE,
+    Number.MAX_VALUE,
+    Number.MAX_SAFE_INTEGER,
+    Number.MAX_SAFE_INTEGER + 1,
+  ];
+  for (const number of cases) {
+    const result = p.shortest(number);
+    if (result !== String(number)) throw new Error(`${number}: ${result}`);
+    same(p.parse(result), number === 0 ? 0 : number, result);
+  }
+  for (const number of [NaN, Infinity, -Infinity]) {
+    let trapped = false;
+    try {
+      p.shortest(number);
+    } catch (error) {
+      if (!(error instanceof WebAssembly.RuntimeError)) throw error;
+      trapped = true;
+    }
+    if (!trapped) throw new Error("Expected a nonfinite trap");
+    if (p.shortest(-0.125) !== "-0.125") throw new Error("Did not recover");
+  }
+});
+
+Deno.test("Shortest binary64 decimal formatting: power boundaries and random bit patterns", async () => {
+  const p = await parser();
+  const cases: bigint[] = [];
+  // At binary powers the adjacent rounding intervals are asymmetric.
+  for (let exponent = 1n; exponent < 2047n; exponent++) {
+    const center = exponent << 52n;
+    cases.push(center - 1n, center, center + 1n);
+  }
+  // Decimal powers exercise carry chains and scientific/ordinary transitions.
+  for (let exponent = -323; exponent <= 308; exponent++) {
+    const center = bits(Number(`1e${exponent}`));
+    cases.push(center - 1n, center, center + 1n);
+  }
+  for (let raw = 1n; raw < 128n; raw++) cases.push(raw);
+  let seed = 0xfacade;
+  const random = () => seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+  for (let i = 0; i < 5000; i++) {
+    cases.push((BigInt(random()) << 32n) | BigInt(random()));
+  }
+  for (const raw of cases) {
+    const number = value(raw);
+    if (!Number.isFinite(number)) continue;
+    const result = p.shortest(number);
+    if (result !== String(number)) {
+      throw new Error(`0x${raw.toString(16)}: ${result} != ${number}`);
+    }
+    same(p.parse(result), number === 0 ? 0 : number, result);
   }
 });
 

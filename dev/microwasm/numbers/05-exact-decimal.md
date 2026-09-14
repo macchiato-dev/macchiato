@@ -8,8 +8,9 @@ rounding, host string conversion, or parser is needed in this primitive.
 This is deliberately **not** JavaScript's shortest `Number.toString()` yet.
 For example, binary64 `0.1` becomes
 `0.1000000000000000055511151231257827021181583404541015625`.
-The exact digits provide a reference and a starting point for shortest-string
-selection and explicit-precision formatting, which remain separate work.
+The exact digits provide a reference and a starting point for
+[shortest-string selection](06-shortest-decimal.md). Explicit-precision
+formatting remains future work.
 
 The only dependency is [multiword arithmetic](03-multiword.md), imported as
 `b`, including its memory. Slot 0 is scratch. Reversed digits occupy at most
