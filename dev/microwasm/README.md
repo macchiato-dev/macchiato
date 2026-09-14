@@ -46,10 +46,11 @@ All generated output is gitignored. Neither the build nor the unit tests needs
 network access.
 
 Open [the local browser demo](http://localhost:8766/) after starting `serve`.
-It lists the twenty programs and lets you run them, switch between source
-Markdown, filled counts and hex, or download the Wasm. The viewer instantiates
-the saved hex itself. It shows Markdown as source text; Mermaid flowcharts are
-in the documents for readers that render Mermaid. Life has an editable 16×16
+It lists the twenty programs and six pages defining the Markdown renderer.
+Two independent selectors choose rendered versus source Markdown, and original
+versus filled counts versus hex. Hex is a fenced Markdown code block, rendered
+like any other fence. The runnable demos instantiate the saved hex themselves.
+Mermaid fences show their source, not diagrams. Life has an editable 16×16
 board, a step button and a play/pause control. Rebuilding needs no server restart.
 The static `dist/pages/` directory can also be served under a path prefix;
 its asset links are relative. The preview server binds all interfaces for use
@@ -76,15 +77,32 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 26 tests covering all twenty examples and the supplied
+`deno task test` runs 31 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
 then compiled and executed by WebAssembly. Test oracles do not replace the
 Wasm implementations.
 
+The Markdown renderer is itself handwritten Microwasm across
+[six linked pages](renderer/00-module.md), including a page about
+[repeated scanning patterns](renderer/02-scanning.md). It produces HTML in
+linear memory without host imports or a JavaScript Markdown parser. Its
+1,513-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
+768 KiB of output. Scans keep offsets rather than building an AST. Input and
+output overflow trap; the viewer discards incomplete output.
+
+Only the subset used here is supported: headings, paragraphs, nested hyphen
+lists and their indented continuations, fences, inline code, strong emphasis,
+and simple links. Raw HTML is escaped. Links contain only `data-href`; the
+small browser adapter enables `href` only for same-origin documents present
+in the local build manifest. External links remain inert. This policy also
+works beneath a deployment path prefix.
+
 With the preview running, `deno task test:browser` checks all twenty examples
-in Chromium, interacts with the forms and Life board, and saves screenshots in
+and six renderer pages in Chromium, tests all six content/display combinations,
+checks local navigation and blocked links, interacts with forms and Life, and
+saves screenshots in
 `dist/browser/`. This optional test uses pinned Playwright tooling and requires
 its Chromium installation; it is not shipped in the demo or required to build.
 It has broader permissions because it launches a browser process. The test
@@ -119,8 +137,9 @@ a following list is an error. Markers inside fenced code examples are ignored.
 A document may contain several labeled lists, separated by explanations,
 pseudocode or flowcharts. Their bytes are concatenated in document order.
 
-A future Microwasm renderer will recognize these labeled blocks and render
-them differently. That is separate from the source format: a generic Markdown
+A future specialized Microwasm display can recognize these labeled blocks and
+render them differently. The partial renderer currently displays ordinary
+lists. That is separate from the source format: a generic Markdown
 renderer still presents the full label and ordinary byte list. No custom
 renderer is required to see which blocks participate in the program.
 
@@ -132,6 +151,9 @@ renderer is required to see which blocks participate in the program.
   and `41 80 10` emit the same bytes, in the written order.
 - `{{size:label}}` emits the byte length of that item's complete subtree.
 - `{{count:label}}` emits the number of that item's immediate children.
+- `{{size:a+b}}` and `{{count:a+b}}` sum the respective values for several
+  labels. This lets a section span separate pages without moving its code
+  into the header page or generating hidden bytes.
 - Both placeholders emit unsigned LEB128, not a fixed one-byte number.
 - Forward references are allowed. Missing references, duplicate labels,
   malformed rows, and recursive size dependencies are errors.

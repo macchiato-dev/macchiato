@@ -1,4 +1,5 @@
 // The host owns input/output only. Algorithms are the handwritten Wasm bytes.
+import { createReader } from "./reader.js";
 const $ = (id) => document.getElementById(id);
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -58,8 +59,10 @@ function hex(bytes) {
 
 async function start() {
   const manifest = JSON.parse(await textFile("./examples.json"));
+  const documents = JSON.parse(await textFile("./documents.json"));
   const selected = new URL(location.href).searchParams.get("example");
-  if (!selected) {
+  const selectedDoc = new URL(location.href).searchParams.get("doc");
+  if (!selected && !selectedDoc) {
     for (const entry of manifest) {
       const li = document.createElement("li");
       const link = document.createElement("a");
@@ -70,6 +73,36 @@ async function start() {
       li.append(link, size);
       $("examples").append(li);
     }
+    for (const entry of documents.filter((entry) => !entry.example)) {
+      const li = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = `?doc=${encodeURIComponent(entry.path)}`;
+      link.textContent = entry.title;
+      li.append(link);
+      $("renderer-pages").append(li);
+    }
+    return;
+  }
+  const reader = createReader(documents);
+  if (selectedDoc) {
+    const entry = documents.find((entry) =>
+      !entry.example && entry.path === selectedDoc
+    );
+    if (!entry) throw new Error("Unknown document.");
+    $("index").hidden = true;
+    $("example").hidden = false;
+    document.querySelector(".demo").hidden = true;
+    document.querySelector(".panels").classList.add("reading-only");
+    $("title").textContent = entry.title;
+    document.title = `${entry.title} — Microwasm`;
+    $("size").textContent =
+      "Rendered by the handwritten Wasm module defined across these pages. Hex and download contain the complete module.";
+    $("download").href = "./markdown-renderer.wasm";
+    await configureSource(
+      `./${entry.path.slice(0, -3)}`,
+      reader,
+      "./markdown-renderer.hex",
+    );
     return;
   }
   const entry = manifest.find((item) => item.id === selected);
@@ -83,21 +116,7 @@ async function start() {
   $("size").textContent =
     `${entry.bytes} bytes • assembled from the Markdown lists`;
   $("download").href = `${prefix}.wasm`;
-  let sourceRequest = 0;
-  async function showSource(extension) {
-    const request = ++sourceRequest;
-    const text = await textFile(`${prefix}.${extension}`);
-    if (request === sourceRequest) $("source").textContent = text;
-  }
-  for (const button of document.querySelectorAll("[data-extension]")) {
-    button.addEventListener("click", () => {
-      for (const item of document.querySelectorAll("[data-extension]")) {
-        item.setAttribute("aria-pressed", String(item === button));
-      }
-      showSource(button.dataset.extension).catch(showError);
-    });
-  }
-  await showSource("md");
+  await configureSource(prefix, reader);
   // Deliberately instantiate from the saved hex, as in the command-line path.
   const module = await WebAssembly.compile(
     parseHex(await textFile(`${prefix}.hex`)),
@@ -187,6 +206,49 @@ async function start() {
   }
   $("form").addEventListener("submit", run);
   await run();
+}
+
+async function configureSource(prefix, reader, hexPath = `${prefix}.hex`) {
+  let request = 0;
+  let extension = "md", view = "rendered";
+  const cache = new Map();
+  async function show() {
+    const current = ++request;
+    const path = extension === "hex" ? hexPath : `${prefix}.${extension}`;
+    if (!cache.has(path)) cache.set(path, textFile(path));
+    let text = await cache.get(path);
+    if (current !== request) return;
+    // Hex is also a Markdown document, not a separate display mode.
+    if (extension === "hex") text = "```hex\n" + text.trimEnd() + "\n```\n";
+    if (view === "rendered") {
+      // Render off-DOM, then swap only if this is still the selected view.
+      const container = document.createElement("div");
+      await reader.render(text, container, `${prefix}.md`);
+      if (current !== request) return;
+      $("rendered").replaceChildren(...container.childNodes);
+    } else $("source").textContent = text;
+    $("source").hidden = view === "rendered";
+    $("rendered").hidden = view !== "rendered";
+  }
+  for (const button of document.querySelectorAll("[data-extension]")) {
+    button.addEventListener("click", () => {
+      for (const item of document.querySelectorAll("[data-extension]")) {
+        item.setAttribute("aria-pressed", String(item === button));
+      }
+      extension = button.dataset.extension;
+      show().catch(showError);
+    });
+  }
+  for (const button of document.querySelectorAll("[data-view]")) {
+    button.addEventListener("click", () => {
+      for (const item of document.querySelectorAll("[data-view]")) {
+        item.setAttribute("aria-pressed", String(item === button));
+      }
+      view = button.dataset.view;
+      show().catch(showError);
+    });
+  }
+  await show();
 }
 
 async function life(module) {

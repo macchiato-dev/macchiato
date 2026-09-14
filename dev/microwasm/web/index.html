@@ -18,6 +18,9 @@
       <p>Pseudocode → flowchart → annotated byte lists → filled counts → hex → WebAssembly.</p>
       <p>No instruction compiler. The bytes in each Markdown document are the program.</p>
       <ol id="examples"></ol>
+      <h2>The renderer, written in Microwasm</h2>
+      <p>Read the linked source pages using the renderer they define.</p>
+      <ul id="renderer-pages"></ul>
     </section>
     <section id="example" hidden>
       <a href="./">← All examples</a>
@@ -47,13 +50,18 @@
         </section>
         <section class="source">
           <h2>Follow the derivation</h2>
-          <nav id="formats" aria-label="Source format">
-            <button data-extension="md" aria-pressed="true">Markdown</button>
+          <nav id="views" aria-label="Document display">
+            <button data-view="rendered" aria-pressed="true">Rendered</button>
+            <button data-view="source" aria-pressed="false">Markdown source</button>
+          </nav>
+          <nav id="formats" aria-label="Document content">
+            <button data-extension="md" aria-pressed="true">Original</button>
             <button data-extension="resolved.md" aria-pressed="false">Filled counts</button>
             <button data-extension="hex" aria-pressed="false">Hex</button>
             <a id="download" download>Download Wasm</a>
           </nav>
-          <pre id="source" tabindex="0" aria-label="Program source"></pre>
+          <article id="rendered" aria-label="Rendered program document"></article>
+          <pre id="source" tabindex="0" aria-label="Program source" hidden></pre>
         </section>
       </div>
     </section>

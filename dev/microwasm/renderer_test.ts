@@ -49,6 +49,10 @@ Deno.test("Markdown Wasm: paragraphs, headings, lists, code and literal HTML", a
     "<p><code>a &lt; b</code> and <strong>strong</strong></p>\n",
   );
   equal(
+    render("- one\n  continued\n  - nested\n    continued\n- two\n\nprose"),
+    "<ul><li>one continued<ul><li>nested continued</li>\n</ul>\n</li>\n<li>two</li>\n</ul>\n<p>prose</p>\n",
+  );
+  equal(
     render("```mermaid\r\nflowchart LR\r\n  A --> B\r\n```\r\n"),
     "<pre><code>flowchart LR\n  A --&gt; B\n</code></pre>",
   );

@@ -50,6 +50,8 @@ for each line [pos, end):
         close other blocks; emit heading with inline contents
     else if even indentation followed by '- ':
         close paragraph; adjust list depth; emit inline item
+    else if list_depth > 0 and indent >= 2 * list_depth:
+        emit(' '); emit inline continuation of the current item
     else:
         close lists; open or continue paragraph; emit inline span
 close paragraph, lists and any unterminated fence
@@ -142,6 +144,10 @@ or an extra argument/result convention. The larger repeated scans use the
             - run-list-text: `20 03 41 02 6a 20 02 10 05`
             - run-list-next: `20 0a 21 01 0c 02 0b`
           - run-list-room-end: `0b`
+        - run-item-continuation: `23 01 04 40`
+          - run-item-indent: `20 05 23 01 41 01 74 4f 04 40`
+            - run-item-text: `41 20 10 00 20 03 20 02 10 05`
+            - run-item-next: `20 0a 21 01 0c 02 0b 0b`
         - run-prose-close-lists: `41 00 10 06`
         - run-paragraph: `20 08 04 40 41 20 10 00 05 41 00 10 02 41 01 21 08 0b`
         - run-prose: `20 01 20 02 10 05`

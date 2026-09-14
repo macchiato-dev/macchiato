@@ -41,9 +41,23 @@ label { display: block; font-weight: 600; margin-bottom: 8px; }
 textarea { width: 100%; padding: 10px; resize: vertical; margin-bottom: 12px; font-family: ui-monospace, monospace; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.55 ui-monospace, monospace; }
 #source { max-height: 68vh; overflow: auto; padding: 12px; background: var(--background); border-radius: 4px; }
+#rendered { max-height: 68vh; overflow: auto; padding: 0 12px; margin-top: 16px; overflow-wrap: anywhere; }
+#rendered h1 { font-size: 26px; }
+#rendered h2 { font-size: 21px; margin-top: 28px; }
+#rendered h3 { font-size: 18px; }
+#rendered code { font: .88em/1.5 ui-monospace, monospace; background: var(--background); border-radius: 3px; padding: 1px 3px; }
+#rendered pre { padding: 12px; background: var(--background); overflow: auto; }
+#rendered pre code { padding: 0; font-size: inherit; }
+#rendered ul { padding-left: 22px; }
+#rendered li { margin: 5px 0; }
+#rendered a:not([href]) { color: var(--muted); text-decoration: none; }
+.panels.reading-only { grid-template-columns: minmax(0, 1fr); max-width: 1050px; }
+.reading-only #rendered { max-height: none; }
+#renderer-pages li { padding: 5px 0; }
 #output { min-height: 50px; padding: 14px; background: var(--background); border-radius: 4px; font-size: 15px; }
 #output.failure, #error { color: #d34949; }
 nav, .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#views { margin-bottom: 10px; }
 nav a { font-size: 13px; }
 .note { font-size: 13px; }
 #board { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; aspect-ratio: 1; margin: 20px 0; max-width: 440px; }

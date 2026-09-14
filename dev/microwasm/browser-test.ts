@@ -23,6 +23,75 @@ function check(condition: unknown, message: string) {
 async function screenshot(name: string) {
   await page.screenshot({ path: `${artifacts}/${name}.png`, fullPage: true });
 }
+async function checkDocumentViews(prefix: string, hexPath = `${prefix}.hex`) {
+  // Check all six combinations. Content selection never selects a display.
+  for (
+    const [label, extension] of [["Original", "md"], [
+      "Filled counts",
+      "resolved.md",
+    ], ["Hex", "hex"]]
+  ) {
+    const response = await context.request.get(
+      new URL(extension === "hex" ? hexPath : `${prefix}.${extension}`, base)
+        .href,
+    );
+    check(response.ok(), `Missing source ${prefix}.${extension}`);
+    const original = await response.text();
+    const expected = extension === "hex"
+      ? "```hex\n" + original.trimEnd() + "\n```\n"
+      : original;
+    await page.getByRole("button", { name: label, exact: true }).click();
+    check(
+      await page.locator('[data-view="rendered"]').getAttribute(
+        "aria-pressed",
+      ) === "true",
+      "Content changed display mode",
+    );
+    await page.getByRole("button", { name: "Markdown source", exact: true })
+      .click();
+    await page.waitForFunction((expected) => {
+      const source = document.getElementById("source");
+      return !source?.hidden && source?.textContent === expected;
+    }, expected);
+    await page.getByRole("button", { name: "Rendered", exact: true }).click();
+    await page.waitForSelector("#rendered:visible");
+    check(
+      await page.locator(`[data-extension="${extension}"]`).getAttribute(
+        "aria-pressed",
+      ) === "true",
+      "Display changed content selection",
+    );
+    if (extension === "hex") {
+      check(
+        await page.locator("#rendered pre code").textContent() ===
+          original.trimEnd() + "\n",
+        "Hex fence rendered differently",
+      );
+      const valid = await page.locator("#rendered pre code").evaluate((node) =>
+        WebAssembly.validate(
+          Uint8Array.from(
+            node.textContent!.trim().split(/\s+/),
+            (part) => parseInt(part, 16),
+          ),
+        )
+      );
+      check(valid, "Rendered hex is not valid Wasm");
+    } else {
+      check(
+        await page.locator("#rendered h1").count() === 1,
+        "Missing heading",
+      );
+      if (extension === "resolved.md") {
+        check(
+          !(await page.locator("#rendered li code").allTextContents()).some(
+            (text) => text.includes("{{"),
+          ),
+          "Rendered counts unresolved",
+        );
+      }
+    }
+  }
+}
 try {
   await page.goto(base);
   await page.waitForSelector("#examples li:nth-child(20)");
@@ -33,6 +102,10 @@ try {
   const links = await page.locator("#examples a").evaluateAll((nodes) =>
     nodes.map((node) => (node as HTMLAnchorElement).href)
   );
+  const rendererLinks = await page.locator("#renderer-pages a").evaluateAll((
+    nodes,
+  ) => nodes.map((node) => (node as HTMLAnchorElement).href));
+  check(rendererLinks.length === 6, "Expected six renderer pages");
   await screenshot("index-light");
   for (let i = 0; i < links.length; i++) {
     await page.goto(links[i]);
@@ -49,24 +122,23 @@ try {
       ),
       `Example ${i + 1}: default input failed`,
     );
-    await page.getByRole("button", { name: "Filled counts", exact: true })
-      .click();
-    await page.waitForFunction(() => {
-      const text = document.getElementById("source")?.textContent ?? "";
-      return text.includes("`[microwasm]`") && !text.includes("{{");
-    });
-    await page.getByRole("button", { name: "Hex", exact: true }).click();
-    await page.waitForFunction(() =>
-      document.getElementById("source")?.textContent?.startsWith("00 61 73 6d")
+    check(
+      await page.locator("#rendered h1").count() === 1,
+      "Missing rendered heading",
     );
-    const valid = await page.locator("#source").evaluate((node) => {
-      const bytes = Uint8Array.from(
-        node.textContent!.trim().split(/\s+/),
-        (part) => parseInt(part, 16),
-      );
-      return WebAssembly.validate(bytes);
-    });
-    check(valid, `Example ${i + 1}: displayed hex not valid Wasm`);
+    check(
+      (await page.locator("#rendered pre").allTextContents()).some((text) =>
+        text.startsWith("flowchart")
+      ),
+      "Mermaid must remain readable source",
+    );
+    check(
+      await page.locator("#rendered ul ul").count() > 0,
+      "Missing nested byte lists",
+    );
+    await checkDocumentViews(
+      `./examples/${new URL(links[i]).searchParams.get("example")}`,
+    );
     check(
       await page.evaluate(() =>
         document.documentElement.scrollWidth <= innerWidth
@@ -75,6 +147,121 @@ try {
     );
     console.log(`${i + 1}/20 browser example passed`);
   }
+  for (const link of rendererLinks) {
+    await page.goto(link);
+    await page.waitForSelector("#rendered h1");
+    check(
+      await page.locator("#rendered a[href]").count() > 0,
+      "Page needs local navigation",
+    );
+    await checkDocumentViews(
+      `./${new URL(link).searchParams.get("doc")!.slice(0, -3)}`,
+      "./markdown-renderer.hex",
+    );
+  }
+  await page.goto(rendererLinks[0]);
+  await page.waitForSelector("#rendered h1");
+  await screenshot("renderer-module-light");
+  await page.getByRole("link", { name: "Scanning patterns", exact: true })
+    .click();
+  await page.waitForSelector("#rendered h1");
+  check(
+    new URL(page.url()).searchParams.get("doc") === "renderer/02-scanning.md",
+    "Local page navigation failed",
+  );
+  await screenshot("renderer-patterns-light");
+  await page.goto(rendererLinks[3]);
+  await page.waitForSelector("#rendered h1");
+  check(
+    await page.locator('#rendered a[data-href="https://example.com/"]')
+      .getAttribute("href") === null,
+    "External link became active",
+  );
+  check(
+    await page.locator('#rendered a[data-href="javascript:evil"]').getAttribute(
+      "href",
+    ) === null,
+    "Script link became active",
+  );
+  // Exercise policy and escaping in the real browser DOM, including a
+  // GitHub-Pages-style prefix. No mock HTML parser or URL implementation.
+  const linkPolicy = await page.evaluate(async () => {
+    const { enableLocalLinks, createReader } = await import(
+      new URL("./reader.js", location.href).href
+    );
+    const documents = [{ path: "renderer/02-scanning.md" }];
+    const root = document.createElement("div");
+    const targets = [
+      "02-scanning.md",
+      "../renderer/02-scanning.md",
+      "https://evil.test/renderer/02-scanning.md",
+      "//evil.test/a",
+      "javascript:evil",
+      "data:text/html,evil",
+      "missing.md",
+      "../../renderer/02-scanning.md",
+      "02-scanning.md?track=1",
+      "02-scanning.md#section",
+      '02-scanning.md" onclick="evil',
+    ];
+    for (const target of targets) {
+      const a = document.createElement("a");
+      a.dataset.href = target;
+      root.append(a);
+    }
+    enableLocalLinks(
+      root,
+      "renderer/00-module.md",
+      documents,
+      "https://site.test/project/?doc=x",
+    );
+    const actual = Array.from(root.children, (a) => a.getAttribute("href"));
+    await createReader([]).render(
+      '<img src="https://evil.test/x"> [<img>](x" onmouseover="evil&foo)',
+      root,
+      "renderer/00-module.md",
+    );
+    return {
+      actual,
+      tags: [...root.querySelectorAll("*")].map((el) => el.tagName),
+      attrs: [...root.querySelectorAll("a")].flatMap((el) =>
+        el.getAttributeNames()
+      ),
+    };
+  });
+  check(
+    JSON.stringify(linkPolicy.actual.map(Boolean)) ===
+      JSON.stringify([
+        true,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+      ]),
+    "Local-link allowlist differs",
+  );
+  check(
+    linkPolicy.actual[0] ===
+      "https://site.test/project/?doc=renderer%2F02-scanning.md",
+    "Prefix not preserved",
+  );
+  check(
+    JSON.stringify(linkPolicy.tags) === '["P","A"]',
+    "Raw HTML created elements",
+  );
+  check(
+    JSON.stringify(linkPolicy.attrs) === '["data-href"]',
+    "Injected link attribute survived",
+  );
+  console.log(
+    "Six renderer pages, local navigation, escaping and link policy passed",
+  );
   await page.goto(links[0]);
   await page.waitForFunction(() =>
     document.getElementById("output")?.textContent === "120"
@@ -161,12 +348,12 @@ try {
   );
   // Visit the lower panel too: a full-page capture alone can leave an
   // offscreen overflow scroller unrasterized in Chromium.
-  await page.locator("#source").scrollIntoViewIfNeeded();
+  await page.locator("#rendered").scrollIntoViewIfNeeded();
   check(
-    (await page.locator("#source").textContent())!.includes("neighbors"),
+    (await page.locator("#rendered").textContent())!.includes("neighbors"),
     "Mobile source missing",
   );
-  await page.locator("#source").screenshot({
+  await page.locator("#rendered").screenshot({
     path: `${artifacts}/life-mobile-source.png`,
   });
   await page.evaluate(() => scrollTo(0, 0));
