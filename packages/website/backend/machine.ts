@@ -192,6 +192,8 @@ export function createResourcesApplicationHandler(env, { fetchImpl = fetch } = {
       "content", "getProjectVersion", args),
     saveProjectSnapshot: (...args) => applicationStoreCall(
       "content", "saveProjectSnapshot", args),
+    saveProjectBuildOutput: (...args) => applicationStoreCall(
+      "content", "saveProjectBuildOutput", args),
     restoreProjectVersion: (...args) => applicationStoreCall(
       "content", "restoreProjectVersion", args),
     revertProjectToPublished: (...args) => applicationStoreCall(

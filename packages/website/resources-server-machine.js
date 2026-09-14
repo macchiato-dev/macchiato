@@ -6,6 +6,7 @@ import { ServerMachineController } from "../server-use/src/machine-controller.js
 import { ServerUse } from "../server-use/src/index.js";
 
 const projectSnapshotPath = /^\/api\/projects\/([A-Za-z0-9-]+)\/snapshot$/;
+const projectOutputPath = /^\/api\/projects\/([A-Za-z0-9-]+)\/output$/;
 const projectRestorePath = /^\/api\/projects\/([A-Za-z0-9-]+)\/restore\/([1-9][0-9]*)$/;
 const projectVersionsPath = /^\/api\/projects\/([A-Za-z0-9-]+)\/versions$/;
 const projectVersionPath = /^\/api\/projects\/([A-Za-z0-9-]+)\/versions\/([1-9][0-9]*)$/;
@@ -170,6 +171,11 @@ export function createResourcesServerMachine(module, {
         maxRequestBytes: maximumProjectTransportBytes, maxResponseBytes: maximumProjectRequestBytes,
         requestHeaders: ["cookie", "content-length", "content-type", "origin", "x-resources-csrf"],
         responseHeaders: ["cache-control", "content-type"] },
+      { name: "project.output", method: "POST",
+        pathPattern: projectOutputPath, requestBody: "resource",
+        maxRequestBytes: maximumProjectTransportBytes, maxResponseBytes: maximumProjectRequestBytes,
+        requestHeaders: ["cookie", "content-length", "content-type", "origin", "x-resources-csrf"],
+        responseHeaders: ["cache-control", "content-type"] },
       { name: "project.restore", method: "POST",
         pathPattern: projectRestorePath, requestBody: "resource",
         maxRequestBytes: maximumProjectTransportBytes, maxResponseBytes: maximumProjectRequestBytes,
@@ -212,7 +218,7 @@ export function createResourcesServerMachine(module, {
     dispatch: async ({ route, request, resources, context }) => {
       let projectResponse = null;
       let documentResponse = null;
-      const projectApiRoute = route === "project.snapshot" || route === "project.restore";
+      const projectApiRoute = route === "project.snapshot" || route === "project.restore" || route === "project.output";
       const projectFormRoute = route === "project.create" || route === "project.action";
       const projectWorkspaceRoute = route === "project.workspace";
       let projectForm = null;
@@ -253,6 +259,7 @@ export function createResourcesServerMachine(module, {
             if (!workspace) return [true, false];
             projectResponse = JSON.stringify({
               snapshot: workspace.snapshot, versionCount: workspace.versionCount,
+              savedOutput: workspace.savedOutput || null,
               updatedAt: workspace.updatedAt,
               hasUnpublishedChanges: Boolean(workspace.hasUnpublishedChanges),
             });
@@ -271,6 +278,9 @@ export function createResourcesServerMachine(module, {
                     reason: decoded.value?.manual ? "manual" : "periodic",
                     destructive: decoded.value?.destructive === true,
                   });
+              } else if (operation === "output" && input.length === 2 && route === "project.output") {
+                result = await contentStore.saveProjectBuildOutput(userId, projectId,
+                  decoded.value?.snapshot, decoded.value?.output);
               } else if (operation === "restore" && input.length === 3) {
                 result = await contentStore.restoreProjectVersion(userId, projectId,
                   Number(input[2]));

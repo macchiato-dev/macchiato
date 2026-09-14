@@ -32,6 +32,35 @@ test("content schema caps the site at 50,000 projects", () => {
   assert.match(CONTENT_SCHEMA.join("\n"), /COUNT\(\*\) FROM resource_projects\) >= 50000/);
 });
 
+test("only the latest successful output is retained, apart from source history", async () => {
+  const { content, account, db } = await stores();
+  const source = text => ({ files: [{ path: "index.html", content: text }], config: {} });
+  const first = source("first"), second = source("second"), broken = source("<unfinished");
+  const output = project => ({ format: "resources-project-output-v1", project,
+    compiled: { tree: [], document: {}, stylesheets: [], scripts: [] } });
+  const project = await content.createProject(account.id, { namespace: "user", userSlug: "latte",
+    slug: "cached", name: "Cached", description: "", visibility: "public", template: "html", snapshot: first });
+  assert.equal(await content.getProjectBuildOutput(project.id, account.id), null);
+  const before = db.prepare("SELECT * FROM resource_project_state").get();
+  assert.deepEqual(await content.saveProjectBuildOutput(account.id, project.id, first, output(first)), { saved: true });
+  assert.deepEqual(db.prepare("SELECT * FROM resource_project_state").get(), before);
+  assert.equal((await content.listProjectVersions(project.id, account.id)).length, 1);
+  assert.deepEqual((await content.getPublicProjectWorkspace("latte", "cached")).savedOutput, output(first));
+  assert.equal(await content.saveProjectBuildOutput("other", project.id, second, output(second)), null);
+  await content.saveProjectSnapshot(account.id, project.id, second);
+  await content.saveProjectBuildOutput(account.id, project.id, second, output(second));
+  assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_build_output").get().n, 1);
+  assert.equal((await content.getPublicProjectWorkspace("latte", "cached")).savedOutput, null,
+    "an unpublished successful build is never returned to public visitors");
+  assert.deepEqual(await content.saveProjectBuildOutput(account.id, project.id, first, output(first)), { saved: false });
+  await content.saveProjectSnapshot(account.id, project.id, broken);
+  assert.deepEqual((await content.getProjectWorkspace("latte", "cached", account.id)).savedOutput, output(second));
+  await assert.rejects(content.saveProjectBuildOutput(account.id, project.id, broken, {}), /Build output is invalid/);
+  assert.deepEqual(await content.getProjectBuildOutput(project.id, account.id), output(second));
+  await content.deleteProject(account.id, project.id);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_build_output").get().n, 0);
+});
+
 test("content store creates organizations and namespaced projects", async () => {
   const { account, content } = await stores();
   const organization = await content.createOrganization(account.id, {

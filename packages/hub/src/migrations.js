@@ -9,11 +9,15 @@ export const MIGRATION_LEDGER_SCHEMA = `CREATE TABLE IF NOT EXISTS resource_sche
 ) STRICT`;
 
 export const HUB_MIGRATIONS = Object.freeze([
+  // New installations also get this table through CONTENT_SCHEMA below.
   Object.freeze({ version: 1, name: "accounts-and-content", statements: Object.freeze([...ACCOUNT_SCHEMA, ...CONTENT_SCHEMA]) }),
   Object.freeze({ version: 2, name: "organization-memberships-and-notifications", statements: ORGANIZATION_SCHEMA }),
   Object.freeze({ version: 3, name: "project-version-labels", statements: Object.freeze([
     CONTENT_SCHEMA.find((statement) => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_version_labels")),
     CONTENT_SCHEMA.find((statement) => statement.includes("INSERT OR IGNORE INTO resource_project_version_labels")),
+  ]) }),
+  Object.freeze({ version: 4, name: "latest-successful-project-output", statements: Object.freeze([
+    CONTENT_SCHEMA.find(statement => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_build_output")),
   ]) }),
 ]);
 

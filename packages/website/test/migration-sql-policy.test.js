@@ -12,7 +12,7 @@ test("migration runner reaches the current schema through fixed sql-use operatio
   const runner = createMigrationRunner(client, { now: () => 123 });
   const result = await runner.ready();
   assert.equal(result.current, true);
-  assert.deepEqual(result.appliedVersions, [1, 2, 3]);
+  assert.deepEqual(result.appliedVersions, [1, 2, 3, 4]);
   assert.ok(Object.keys(MIGRATION_SQL_OPERATIONS).length > 4);
   await assert.rejects(client.execute({ sql: "DROP TABLE users", args: [] }),
     /not in the build-time policy/);

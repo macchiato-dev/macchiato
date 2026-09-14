@@ -3,6 +3,8 @@ import { ORGANIZATION_SCHEMA } from "@macchiato-dev/hub/organizations";
 import { createSqlUseClient } from "../sql-use/src/client.js";
 
 const definitions = [
+  ["content.build-output", "buildOutput", "read", 2],
+  ["content.save-build-output", "saveBuildOutput", "write", 5],
   ["content.project-by-namespace", "projectByNamespace", "read", 2],
   ["content.owned-workspace", "ownedWorkspace", "read", 3],
   ["content.public-workspace", "publicWorkspace", "read", 2],

@@ -199,7 +199,7 @@ function serverHandle(input) {
       namespace: input[4][0], slug: input[4][1] };
     return [2, "session", "current", [input[5]]];
   }
-  if (input[0] === "project.snapshot" || input[0] === "project.restore") {
+  if (input[0] === "project.snapshot" || input[0] === "project.restore" || input[0] === "project.output") {
     if (input[6].split(";", 1)[0] !== "application/json") {
       return projectError("request_encoding", "JSON is required");
     }
@@ -377,7 +377,7 @@ function serverResume(ok, result) {
         userId: result[0] };
       return [2, "session", "csrf", [pending.csrf, pending.userId, "/organizations"]];
     }
-    if (pending.operation === "project.snapshot" || pending.operation === "project.restore") {
+    if (pending.operation === "project.snapshot" || pending.operation === "project.restore" || pending.operation === "project.output") {
       pending = { kind: "project-csrf", operation: pending.operation,
         projectId: pending.projectId, sequence: pending.sequence, csrf: pending.csrf,
         userId: result[0] };
@@ -503,8 +503,9 @@ function serverResume(ok, result) {
       return projectError("request_token",
         "save authorization expired; reload the page and try again");
     }
-    var projectOperation = pending.operation === "project.snapshot" ? "save" : "restore";
-    var projectInput = projectOperation === "save" ? [pending.userId, pending.projectId] :
+    var projectOperation = pending.operation === "project.snapshot" ? "save" :
+      pending.operation === "project.output" ? "output" : "restore";
+    var projectInput = projectOperation !== "restore" ? [pending.userId, pending.projectId] :
       [pending.userId, pending.projectId, pending.sequence];
     pending = { kind: "project-result" };
     return [2, "project", projectOperation, projectInput];

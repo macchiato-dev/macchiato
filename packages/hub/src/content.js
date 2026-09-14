@@ -10,6 +10,13 @@ import { namespaceName } from "./names.js";
 import { ORGANIZATION_SCHEMA } from "./organizations.js";
 
 export const CONTENT_SCHEMA = Object.freeze([
+  // Derived output has one replaceable slot, not a second version history.
+  `CREATE TABLE IF NOT EXISTS resource_project_build_output (
+    project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
+    source_json TEXT NOT NULL,
+    output_json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT`,
   `CREATE TABLE IF NOT EXISTS resource_organizations (
     id TEXT PRIMARY KEY,
     owner_user_id TEXT NOT NULL REFERENCES users(id),
@@ -98,6 +105,18 @@ export const CONTENT_SCHEMA = Object.freeze([
 ]);
 
 export const CONTENT_QUERIES = Object.freeze({
+  buildOutput: `SELECT b.output_json FROM resource_project_build_output b
+    JOIN resource_projects p ON p.id = b.project_id
+    JOIN resource_project_publications pub ON pub.project_id = p.id
+    WHERE p.id = ? AND (p.owner_user_id = ? OR
+      (p.visibility = 'public' AND b.source_json = pub.snapshot_json))`,
+  saveBuildOutput: `INSERT INTO resource_project_build_output
+      (project_id, source_json, output_json, updated_at)
+    SELECT p.id, s.snapshot_json, ?, ? FROM resource_projects p
+      JOIN resource_project_state s ON s.project_id = p.id
+    WHERE p.id = ? AND p.owner_user_id = ? AND s.snapshot_json = ?
+    ON CONFLICT(project_id) DO UPDATE SET source_json = excluded.source_json,
+      output_json = excluded.output_json, updated_at = excluded.updated_at`,
   projectByNamespace: `SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
                      description, visibility, template, created_at
               FROM resource_projects
@@ -381,6 +400,7 @@ export function createContentStore(client, {
       return Object.freeze({
         project: project(row),
         snapshot: parsedSnapshot(row.snapshot_json),
+        savedOutput: await this.getProjectBuildOutput(row.id, userId),
         publishedSnapshot: parsedSnapshot(row.published_snapshot_json),
         hasUnpublishedChanges: String(row.snapshot_json) !== String(row.published_snapshot_json),
         versionCount: Number(row.last_version_sequence),
@@ -396,7 +416,43 @@ export function createContentStore(client, {
       });
       const row = found.rows[0];
       if (!row) return null;
-      return Object.freeze({ project: project(row), snapshot: parsedSnapshot(row.snapshot_json), versionCount: Number(row.last_version_sequence), updatedAt: Number(row.updated_at) });
+      return Object.freeze({ project: project(row), snapshot: parsedSnapshot(row.snapshot_json),
+        savedOutput: await this.getProjectBuildOutput(row.id),
+        versionCount: Number(row.last_version_sequence), updatedAt: Number(row.updated_at) });
+    },
+
+    async getProjectBuildOutput(projectId, userId = "") {
+      await initialize();
+      const result = await client.execute({ sql: CONTENT_QUERIES.buildOutput,
+        args: [String(projectId), String(userId)] });
+      return result.rows[0] ? JSON.parse(result.rows[0].output_json) : null;
+    },
+
+    async saveProjectBuildOutput(userId, projectId, source, output) {
+      await initialize();
+      const owned = await client.execute({ sql: CONTENT_QUERIES.projectState,
+        args: [String(projectId), String(userId)] });
+      if (!owned.rows[0]) return null;
+      const snapshot = validatedSnapshot(source);
+      if (output?.format !== "resources-project-output-v1" ||
+          !output.project || !output.compiled || !Array.isArray(output.compiled.scripts) ||
+          !Array.isArray(output.compiled.stylesheets)) {
+        throw new ContentValidationError("snapshot", "Build output is invalid");
+      }
+      const project = validatedSnapshot(output.project);
+      await snapshotValidator(project);
+      const sourceJson = JSON.stringify(snapshot);
+      const outputJson = JSON.stringify({ format: output.format, project, compiled: output.compiled });
+      // Bound this derived slot independently of the source/history budget.
+      if (new TextEncoder().encode(outputJson).byteLength +
+          new TextEncoder().encode(sourceJson).byteLength > 70 * 1024 * 1024) {
+        throw new ContentValidationError("snapshot", "Build output is too large");
+      }
+      // A slow build from another tab must not overwrite a newer source's
+      // successful output. The source check and replacement are one statement.
+      const result = await client.execute({ sql: CONTENT_QUERIES.saveBuildOutput,
+        args: [outputJson, now(), String(projectId), String(userId), sourceJson] });
+      return { saved: Number(result.rowsAffected) > 0 };
     },
 
     async listPublicProjects({ limit = 24, namespaces } = {}) {
