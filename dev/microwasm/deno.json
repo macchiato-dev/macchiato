@@ -1,0 +1,7 @@
+{
+  "tasks": {
+    "test": "deno test --allow-read=.",
+    "factorial": "deno run --allow-read=. --allow-write=dist microwasm.ts examples/01-factorial.md factorial 5"
+  },
+  "fmt": { "lineWidth": 80 }
+}
