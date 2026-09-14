@@ -1497,7 +1497,6 @@ async function mountProjectRoot(root) {
     importModal.hidden = false;
     importChoose.focus();
   });
-  importChoose.addEventListener("click", () => archiveInput.click());
   importClose.addEventListener("click", closeImport);
   importModal.addEventListener("pointerdown", (event) => { if (event.target === importModal) closeImport(); });
   importModal.addEventListener("keydown", (event) => {

@@ -852,6 +852,15 @@ test("Mahjong ZIP drops round-trip a signed-in project's files and recover from 
   await openImport();
   await page.locator("[data-project-import-modal]").click({ position: { x: 5, y: 5 } });
   assert.equal(await page.locator("[data-project-import-modal]").isHidden(), true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.getByRole("button", { name: "Editor", exact: true }).click();
+  await openImport();
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/mahjong-import-mobile.png") });
+  const choosing = page.waitForEvent("filechooser");
+  await page.locator("[data-project-import-choose]").click();
+  await (await choosing).setFiles({ name: "mahjong.zip", mimeType: "application/zip", buffer: exported.bytes });
+  await page.locator("[data-project-import-modal]").waitFor({ state: "hidden" });
   assert.deepEqual(errors, []);
 });
 

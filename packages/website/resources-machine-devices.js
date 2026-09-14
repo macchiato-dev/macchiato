@@ -235,24 +235,29 @@ export class ResourcesArchiveDevice {
   connect() {
     // File acquisition belongs to the host. The guest receives the same change
     // event and decoded snapshot for a drop as for the browser's file picker.
-    this.dropListener = (event) => {
+    this.fileListener = (event) => {
       const modal = event.target.closest?.("[data-project-import-modal]");
       if (!modal || modal.hidden) return;
+      if (event.type === "click" && !event.target.closest("[data-project-import-choose]")) return;
       event.preventDefault();
+      const input = modal.closest("[data-project-editor]").querySelector("[data-project-archive-file]");
+      if (event.type === "click") {
+        // A guest's synthetic click is not the input's browser activation.
+        // Open the picker synchronously within this real user event instead.
+        input.click();
+        return;
+      }
       if (event.type === "dragover") {
         if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
       } else if (event.dataTransfer?.files.length) {
-        const input = modal.closest("[data-project-editor]").querySelector("[data-project-archive-file]");
         input.files = event.dataTransfer.files;
         input.dispatchEvent(new this.document.defaultView.Event("change", { bubbles: true }));
       }
     };
-    this.document.addEventListener("dragover", this.dropListener);
-    this.document.addEventListener("drop", this.dropListener);
+    for (const type of ["click", "dragover", "drop"]) this.document.addEventListener(type, this.fileListener);
   }
   destroy() {
-    this.document.removeEventListener("dragover", this.dropListener);
-    this.document.removeEventListener("drop", this.dropListener);
+    for (const type of ["click", "dragover", "drop"]) this.document.removeEventListener(type, this.fileListener);
   }
   async import() {
     const input = this.document.querySelector("[data-project-archive-file]");
