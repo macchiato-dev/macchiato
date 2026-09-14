@@ -12,9 +12,10 @@ documents rather than CommonMark compliance.
 - [Scanning patterns](02-scanning.md): reusable searches and escaped spans.
 - [Inline constructs](03-inline.md): code, strong emphasis and links.
 - [Block structure](04-blocks.md): paragraphs, headings, fences and nested lists.
+- [Tables and character references](06-tables.md): pipe rows and escaped cells.
 - [Literal data](05-data.md): the exact HTML strings used by the code.
 
-The build concatenates this page and those five pages in that order before
+The build concatenates this page and those six pages in that order before
 assembly. Labels are module-wide. A sum such as `{{size:a+b}}` counts two
 separately documented records; it does not copy their bytes or compile code.
 This keeps the code-section length correct across page boundaries.
@@ -22,7 +23,8 @@ This keeps the code-section length correct across page boundaries.
 ## Deliberate limits
 
 Support ATX headings, paragraphs, hyphen lists indented in two-space steps,
-triple-backtick fences, inline backticks, `**strong**`, and `[label](target)`.
+triple-backtick fences, pipe tables, decimal character references, inline
+backticks, `**strong**`, and `[label](target)`.
 Mermaid fences display their source exactly like other fences. Inline nesting
 inside links or strong emphasis is not implemented; those spans are escaped
 text. Raw HTML and unsupported syntax remain text, never executable markup.
@@ -59,25 +61,26 @@ flowchart LR
 - Type 1: `(i32) -> ()`, emit, text, literal, close-lists.
 - Type 2: `(i32, i32) -> ()`, escaped span, inline span.
 - Type 3: `(i32, i32, i32) -> i32`, find a byte.
+- Type 4: `(i32, i32) -> i32`, character-reference recognition.
 - Functions: emit 0, text 1, literal 2, find 3, escaped 4, inline 5,
-  close-lists 6, run 7.
+  close-lists 6, run 7, table-row 8, table 9, character-reference 10.
 - Globals: output cursor 0, open-list depth 1.
 
 `[microwasm]`
 
 - md-header: `0061736d 01000000`
 - md-type-section: `01 {{size:md-types}}`
-  - md-types: `04 60 01 7f 01 7f 60 01 7f 00 60 02 7f 7f 00 60 03 7f 7f 7f 01 7f`
+  - md-types: `05 60 01 7f 01 7f 60 01 7f 00 60 02 7f 7f 00 60 03 7f 7f 7f 01 7f 60 02 7f 7f 01 7f`
 - md-function-section: `03 {{size:md-functions}}`
-  - md-functions: `08 01 01 01 03 02 02 01 00`
+  - md-functions: `0b 01 01 01 03 02 02 01 00 03 03 04`
 - md-memory-section: `05 {{size:md-memories}}`
   - md-memories: `01 01 14 14`
 - md-global-section: `06 {{size:md-globals}}`
   - md-globals: `02 7f 01 41 808010 0b 7f 01 41 00 0b`
 - md-export-section: `07 {{size:md-exports}}`
   - md-exports: `02 03 72756e 00 07 06 6d656d6f7279 02 00`
-- md-code-section: `0a {{size:md-code-count+emit-record+text-record+literal-record+find-record+escaped-record+inline-record+close-record+run-record}}`
-- md-code-count: `08`
+- md-code-section: `0a {{size:md-code-count+emit-record+text-record+literal-record+find-record+escaped-record+inline-record+close-record+run-record+row-record+table-record+entity-record}}`
+- md-code-count: `0b`
 
 The following page starts the first function body, continuing the same code
 section. [Next: output primitives](01-output.md).

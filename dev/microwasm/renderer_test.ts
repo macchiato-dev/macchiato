@@ -85,6 +85,102 @@ Deno.test("Markdown links have only escaped data-href, never active URLs", async
   );
 });
 
+Deno.test("Markdown tables: header recognition, row widths and block transitions", async () => {
+  const { render } = await renderer();
+  const table = "<table><thead><tr><th>a</th><th>b</th></tr>\n" +
+    "</thead><tbody><tr><td>x</td><td>y</td></tr>\n</tbody></table>\n";
+  equal(render("| a | b |\n| --- | --- |\n| x | y |"), table);
+  equal(render("| a | b |\r\n| :--- | ---: |\r\n| x | y |\r\n"), table);
+  equal(
+    render("before\n| a | b |\n| --- | :---: |\n| x | y |\nafter"),
+    "<p>before</p>\n" + table + "<p>after</p>\n",
+  );
+  equal(
+    render("- list\n| a | b |\n| --- | --- |\n| x | y |\n# End"),
+    "<ul><li>list</li>\n</ul>\n" + table + "<h1>End</h1>\n",
+  );
+  equal(
+    render("| a | b |\n| --- | --- |\n| x | y |\n| short |"),
+    table + "<p>| short |</p>\n",
+  );
+  equal(
+    render("||\n|---|"),
+    "<table><thead><tr><th></th></tr>\n</thead><tbody></tbody></table>\n",
+  );
+  for (
+    const source of [
+      "| a |\n| -- |",
+      "| a |\n| --- | --- |",
+      "| a |\n| a--- |",
+      "| a |\n| -- -- |",
+      "| a\n| --- |",
+      "|\n|---|",
+      "|a|\n|:|",
+      "|a|\n| |",
+      "|a|\n|::|",
+    ]
+  ) {
+    equal(render(source).includes("<table>"), false);
+  }
+  equal(
+    render("| **a** | `b` |\n|---|---|\n|[x](https://example.com)|<img>|"),
+    "<table><thead><tr><th><strong>a</strong></th><th><code>b</code></th></tr>\n" +
+      '</thead><tbody><tr><td><a data-href="https://example.com">x</a></td><td>&lt;img&gt;</td></tr>\n</tbody></table>\n',
+  );
+});
+
+Deno.test("Markdown character references: bounded parsing and no raw HTML", async () => {
+  const { render } = await renderer();
+  for (
+    const token of [
+      "&#9;",
+      "&#10;",
+      "&#13;",
+      "&#32;",
+      "&#60;",
+      "&#128008;",
+      "&#1114111;",
+      "&#0000032;",
+    ]
+  ) {
+    equal(render(token), "<p>" + token + "</p>\n");
+  }
+  for (
+    const token of [
+      "&",
+      "&#",
+      "&#;",
+      "&#0;",
+      "&#x3c;",
+      "&#-1;",
+      "&#1114112;",
+      "&#00000032;",
+      "&#12x;",
+      "&#32",
+      "&amp;",
+      "&#999999999999999999;",
+    ]
+  ) {
+    equal(render(token), "<p>&amp;" + token.slice(1) + "</p>\n");
+  }
+  equal(
+    render("&#60;script&#62;evil&#60;/script&#62;"),
+    "<p>&#60;script&#62;evil&#60;/script&#62;</p>\n",
+  );
+  equal(
+    render("`&#60;`\n\n```html\n&#60;\n```"),
+    "<p><code>&amp;#60;</code></p>\n<pre><code>&amp;#60;\n</code></pre>",
+  );
+  equal(
+    render("| x |\n| --- |\n| &#91;link&#93;(https://example.com) |"),
+    "<table><thead><tr><th>x</th></tr>\n</thead><tbody><tr><td>&#91;link&#93;(https://example.com)</td></tr>\n</tbody></table>\n",
+  );
+  const long = "&#00000000000000000000;".repeat(5000);
+  const start = performance.now();
+  equal(render(long), "<p>" + long.replaceAll("&", "&amp;") + "</p>\n");
+  equal(performance.now() - start < 2000, true);
+});
+
 Deno.test("Renderer renders all example pages and its own multi-page source", async () => {
   const { render, built } = await renderer();
   const pages = built.pages.map((page) => page.source);
@@ -103,16 +199,27 @@ Deno.test("Renderer renders all example pages and its own multi-page source", as
     const html = render(source);
     equal(html.startsWith("<h1>"), true);
     equal(html.includes("<code>[microwasm]</code>"), true);
-    equal(html.includes("<pre><code>flowchart"), true);
+    if (source.includes("```mermaid")) {
+      equal(html.includes("<pre><code>flowchart"), true);
+    }
     equal(/<(script|style|img|iframe)\b|<a href=/.test(html), false);
   }
   // Check the handwritten offsets against the actual data bytes.
   const base = built.map.find((item) => item.id === "md-literals")!.offset;
   for (
-    const [id, offset] of [["html-code-open", 60], ["html-a-open", 94], [
-      "html-amp",
-      117,
-    ], ["html-quote", 133]] as const
+    const [id, offset] of [
+      ["html-code-open", 60],
+      ["html-a-open", 94],
+      [
+        "html-amp",
+        117,
+      ],
+      ["html-quote", 133],
+      ["html-table-open", 140],
+      ["html-table-body", 155],
+      ["html-table-close", 171],
+      ["html-td-close", 217],
+    ] as const
   ) {
     equal(built.map.find((item) => item.id === id)!.offset - base, offset);
   }

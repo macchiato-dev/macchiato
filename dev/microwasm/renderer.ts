@@ -7,6 +7,7 @@ export const rendererPages = [
   "02-scanning.md",
   "03-inline.md",
   "04-blocks.md",
+  "06-tables.md",
   "05-data.md",
 ];
 

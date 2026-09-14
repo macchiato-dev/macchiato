@@ -58,6 +58,8 @@ allowlist is a separate step. These examples stay inert without that step:
       - inline-loop: `03 40`
         - inline-bound: `20 02 20 01 4f 0d 01`
         - inline-read: `20 02 2d 00 00 21 03`
+        - inline-entity: `20 03 41 26 46 04 40`
+          - inline-entity-read: `20 02 20 01 10 0a 22 04 04 40 20 04 21 02 0c 02 0b 0b`
         - inline-code: `20 03 41 e000 46 04 40`
           - inline-code-find: `20 02 41 01 6a 20 01 41 e000 10 03 21 04`
           - inline-code-missing: `20 04 20 01 46 04 40 20 02 20 01 10 04 0f 0b`

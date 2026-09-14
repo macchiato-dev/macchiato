@@ -46,7 +46,7 @@ All generated output is gitignored. Neither the build nor the unit tests needs
 network access.
 
 Open [the local browser demo](http://localhost:8766/) after starting `serve`.
-It lists the twenty programs and six pages defining the Markdown renderer.
+It lists the twenty programs and seven pages defining the Markdown renderer.
 Two independent selectors choose rendered versus source Markdown, and original
 versus filled counts versus hex. Hex is a fenced Markdown code block, rendered
 like any other fence. The runnable demos instantiate the saved hex themselves.
@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 74 tests covering all twenty examples and the supplied
+`deno task test` runs 80 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -85,24 +85,25 @@ then compiled and executed by WebAssembly. Test oracles do not replace the
 Wasm implementations.
 
 The Markdown renderer is itself handwritten Microwasm across
-[six linked pages](renderer/00-module.md), including a page about
+[seven linked pages](renderer/00-module.md), including a page about
 [repeated scanning patterns](renderer/02-scanning.md). It produces HTML in
 linear memory without host imports or a JavaScript Markdown parser. Its
-1,532-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
+2,478-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
 768 KiB of output. Scans keep offsets rather than building an AST. Input and
 output overflow trap; the viewer discards incomplete output.
 Literal strings have one unsigned 8-bit length followed by their bytes, with
 no terminator or variable-length decoding.
 
 Only the subset used here is supported: headings, paragraphs, nested hyphen
-lists and their indented continuations, fences, inline code, strong emphasis,
-and simple links. Raw HTML is escaped. Links contain only `data-href`; the
+lists and their indented continuations, fences, pipe tables, decimal character
+references, inline code, strong emphasis, and simple links. Raw HTML is escaped.
+Links contain only `data-href`; the
 small browser adapter enables `href` only for same-origin documents present
 in the local build manifest. External links remain inert. This policy also
 works beneath a deployment path prefix.
 
 With the preview running, `deno task test:browser` checks all twenty examples
-and six renderer pages in Chromium, tests all six content/display combinations,
+and seven renderer pages in Chromium, tests all six content/display combinations,
 checks local navigation and blocked links, interacts with forms and Life, and
 saves screenshots in
 `dist/browser/`. This optional test uses pinned Playwright tooling and requires
@@ -191,7 +192,13 @@ Try [the local list converter](http://microwasm.localhost:3030/?tool=01-list-to-
 reverse tool. It checks the complete JSON grammar and preserves duplicate
 keys, string escapes and number spellings while emitting the list directly,
 without an intermediate object tree. Its module is 1,031 bytes, plus the
-shared JSON number scanner. The remaining 47 transformations are pending.
+shared JSON number scanner.
+
+[Fenced CSV to a Markdown table](transforms/04-csv-to-table.md) handles quoted
+fields, escaped quotes, embedded line breaks and matching row widths. Its
+917-byte module emits Markdown-safe cell text. The Wasm reader now renders
+pipe tables and decimal character references, so the tool's Rendered view
+shows an actual table. The remaining 46 transformations are pending.
 
 ## Provisional byte-list notation
 

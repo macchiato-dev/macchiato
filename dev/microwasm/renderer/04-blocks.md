@@ -1,6 +1,6 @@
 # Block structure and line state
 
-[Inline constructs](03-inline.md) · [Next: literal data](05-data.md)
+[Inline constructs](03-inline.md) · [Next: tables](06-tables.md)
 
 The block parser scans the input once, keeping only byte offsets and small
 state values. It joins paragraph lines with spaces. Fences preserve line
@@ -107,6 +107,11 @@ or an extra argument/result convention. The larger repeated scans use the
           - run-open-close-p: `20 08 04 40 41 04 10 02 41 00 21 08 0b`
           - run-open-pre: `41 00 10 06 41 22 10 02 41 01 21 09`
           - run-open-next: `20 0a 21 01 0c 01 0b`
+        - run-table-test: `20 01 2d 00 00 41 fc00 46 04 40`
+          - run-table-probe: `20 01 20 00 41 00 10 09 04 40`
+            - run-table-close-p: `20 08 04 40 41 04 10 02 41 00 21 08 0b`
+            - run-table-close-lists: `41 00 10 06`
+            - run-table-render: `20 01 20 00 41 01 10 09 21 01 0c 02 0b 0b`
         - run-heading-reset: `41 00 21 07`
         - run-hash-exit: `02 40`
           - run-hash-loop: `03 40`

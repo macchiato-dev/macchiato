@@ -1,6 +1,6 @@
 # Fixed HTML literals
 
-[Block structure](04-blocks.md) · [Back to the module](00-module.md)
+[Tables](06-tables.md) · [Back to the module](00-module.md)
 
 The literal writer takes an offset into this length-prefixed string table.
 Each record starts with one unsigned 8-bit byte length, followed by its bytes.
@@ -54,6 +54,15 @@ resolved from visible lists. Decimal offsets below match the calls on the
       - html-lt: `04 266c743b` — 123: `&lt;`.
       - html-gt: `04 2667743b` — 128: `&gt;`.
       - html-quote: `06 2671756f743b` — 133: `&quot;`.
+      - html-table-open: `0e 3c7461626c653e3c74686561643e` — 140: `<table><thead>`.
+      - html-table-body: `0f 3c2f74686561643e3c74626f64793e` — 155: `</thead><tbody>`.
+      - html-table-close: `11 3c2f74626f64793e3c2f7461626c653e0a` — 171: `</tbody></table>` and newline.
+      - html-row-open: `04 3c74723e` — 189: `<tr>`.
+      - html-row-close: `06 3c2f74723e0a` — 194: `</tr>` and newline.
+      - html-th-open: `04 3c74683e` — 201: `<th>`.
+      - html-th-close: `05 3c2f74683e` — 206: `</th>`.
+      - html-td-open: `04 3c74643e` — 212: `<td>`.
+      - html-td-close: `05 3c2f74643e` — 217: `</td>`.
 
 Keeping this table separate makes repeated output patterns easy to audit.
 The renderer does not pass through raw HTML found in a Markdown document.

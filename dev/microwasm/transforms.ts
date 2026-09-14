@@ -21,4 +21,11 @@ export const transforms = [{
   input:
     "My [pet] went to the [place] [time]!\n\n- pet: dog\n- place: park\n- time: yesterday",
   expected: "My dog went to the park yesterday!",
+}, {
+  id: "04-csv-to-table",
+  title: "CSV to Markdown table",
+  input:
+    '```csv\nname,city,note\nBen,Phoenix,"hello, world"\nAda,London,"said ""hi"""\n```\n',
+  expected:
+    '| name | city | note |\n| --- | --- | --- |\n| Ben | Phoenix | hello,&#32;world |\n| Ada | London | said&#32;"hi" |\n',
 }];

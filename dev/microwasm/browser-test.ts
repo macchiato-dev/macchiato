@@ -105,7 +105,7 @@ try {
   const rendererLinks = await page.locator("#renderer-pages a").evaluateAll((
     nodes,
   ) => nodes.map((node) => (node as HTMLAnchorElement).href));
-  check(rendererLinks.length === 6, "Expected six renderer pages");
+  check(rendererLinks.length === 7, "Expected seven renderer pages");
   const libraryLinks = await page.locator("#library-pages a").evaluateAll((
     nodes,
   ) => nodes.map((node) => (node as HTMLAnchorElement).href));
@@ -438,7 +438,7 @@ try {
     "Injected link attribute survived",
   );
   console.log(
-    "Six renderer pages, local navigation, escaping and link policy passed",
+    "Seven renderer pages, local navigation, escaping and link policy passed",
   );
   await page.goto(links[0]);
   await page.waitForFunction(() =>

@@ -239,6 +239,106 @@ try {
     ),
     "JSON to list mobile overflow",
   );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(new URL("?tool=04-csv-to-table", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered th").allTextContents()
+      .then((values) =>
+        JSON.stringify(values) === JSON.stringify(["name", "city", "note"])
+      ),
+    "CSV headers differ",
+  );
+  check(
+    await page.locator("#transform-output-rendered td").allTextContents()
+      .then((values) =>
+        JSON.stringify(values) ===
+          JSON.stringify([
+            "Ben",
+            "Phoenix",
+            "hello, world",
+            "Ada",
+            "London",
+            'said "hi"',
+          ])
+      ),
+    "CSV cell rendering differs",
+  );
+  await page.screenshot({
+    path: `${artifacts}/csv-to-table-light.png`,
+    fullPage: true,
+  });
+  await page.locator("#transform-input").fill(
+    '```csv\nname,note\n"<img src=https://evil.invalid/x>","[link](https://evil.invalid/) **plain** &amp; |"\n" multiline ","first\nsecond"\n```',
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.querySelector("#transform-output-rendered td")?.textContent
+      ?.startsWith("<img")
+  );
+  const csvCells = await page.locator("#transform-output-rendered td")
+    .allTextContents();
+  check(
+    JSON.stringify(csvCells) === JSON.stringify([
+      "<img src=https://evil.invalid/x>",
+      "[link](https://evil.invalid/) **plain** &amp; |",
+      " multiline ",
+      "first\nsecond",
+    ]),
+    "Escaped CSV cell data changed",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered img, #transform-output-rendered a, #transform-output-rendered strong, #transform-output-rendered script",
+    ).count() === 0,
+    "CSV cells introduced markup",
+  );
+  check(
+    await page.locator("#transform-output-rendered td").last().evaluate((
+      node,
+    ) => getComputedStyle(node).whiteSpace) === "pre-wrap",
+    "CSV embedded line breaks do not display",
+  );
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.screenshot({
+    path: `${artifacts}/csv-to-table-dark.png`,
+    fullPage: true,
+  });
+  await side("output", "Code");
+  const csvGood = await page.locator("#transform-output").inputValue();
+  await page.locator("#transform-input").fill("```csv\na,b\nx\n```");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === csvGood,
+    "Invalid CSV width replaced successful output",
+  );
+  await page.locator("#transform-input").fill("```csv\na,b\nx,y\n```");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "| a | b |\n| --- | --- |\n| x | y |\n"
+  );
+  await side("output", "Rendered");
+  await page.setViewportSize({ width: 390, height: 844 });
+  check(
+    await page.evaluate(() =>
+      document.documentElement.scrollWidth <= innerWidth
+    ),
+    "CSV mobile overflow",
+  );
+  await page.screenshot({
+    path: `${artifacts}/csv-to-table-mobile.png`,
+    fullPage: true,
+  });
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
