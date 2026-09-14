@@ -130,6 +130,7 @@ export async function mountResourcesProjectEditor(options) {
     },
     setSnapshot(snapshot) { return callGuest("__resourcesProjectSetSnapshot", { snapshot }); },
     renderSnapshot() { return callGuest("__resourcesProjectRenderSnapshot"); },
+    successfulOutput() { return callGuest("__resourcesProjectSuccessfulOutput"); },
     command(payload) { return callGuest("__codeEditorCommand", payload); },
     inspect() { return callGuest("__codeEditorInspect"); },
     focus() { return callGuest("__codeEditorFocus"); },

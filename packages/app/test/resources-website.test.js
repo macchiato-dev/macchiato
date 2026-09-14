@@ -1024,6 +1024,65 @@ test("Canvas, WebGL, WebGPU, and Three.js starting points draw through the proje
       `WebGPU did not render: ${await canvas.getAttribute("data-webgpu-status")}\n${errors.join("\n")}`));
 });
 
+test("a project opens its persisted successful output without loading a compiler", { timeout: 180_000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir(), app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  t.after(() => db.close());
+  const client = createNodeSqliteClient(db);
+  const account = await createAccountStore(client).authenticateIdentity({ provider: "github",
+    providerUserId: "output-test", login: "output-test", name: "Output Test",
+    email: "output-test@example.test", emailVerified: true });
+  const store = createContentStore(client);
+  const project = await store.createProject(account.id, { userSlug: account.login,
+    name: "Saved output", slug: "saved-output", template: "article",
+    snapshot: { files: [{ path: "index.html", content:
+      '<style>body {background:#e8f2ff;color:#17243a;padding:24px}</style>' +
+      '<h1>Saved output</h1><button id="counter">Count 0</button>' +
+      '<script>var n=0;document.getElementById("counter").onclick=function(){this.textContent="Count "+(++n)};</script>' }], config: {} } });
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  async function open(blockCompiler) {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await page.context().addCookies([{ name: "resources_session", value: session,
+      domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+    const errors = [], compilers = [];
+    page.on("pageerror", error => errors.push(error.message));
+    if (blockCompiler) await page.route(/project-(?:framework-)?builder-quickjs-runtime\.wasm/, route => {
+      compilers.push(route.request().url()); return route.abort();
+    });
+    const saved = blockCompiler ? null : page.waitForResponse(response =>
+      response.url().endsWith(`/api/projects/${project.id}/output`) && response.request().method() === "POST");
+    await page.goto(`http://resources-edge.localhost:${port}/output-test/saved-output`);
+    const output = page.frameLocator("[data-project-output-mount] iframe:not([inert])");
+    await output.getByRole("heading", { name: "Saved output" }).waitFor({ timeout: 30_000 });
+    await output.getByRole("button", { name: "Count 0" }).click();
+    await output.getByRole("button", { name: "Count 1" }).waitFor();
+    await codeSurface(page).locator(".cm-content").waitFor();
+    if (saved) assert.deepEqual(await (await saved).json(), { saved: true });
+    assert.deepEqual(compilers, [], "saved output starts without either compiler artifact");
+    assert.deepEqual(errors, []);
+    if (process.env.MACCHIATO_TEST_ARTIFACTS) {
+      await mkdir(process.env.MACCHIATO_TEST_ARTIFACTS, { recursive: true });
+      await page.screenshot({ path: join(process.env.MACCHIATO_TEST_ARTIFACTS,
+        blockCompiler ? "saved-output-reopen.png" : "saved-output-first-build.png") });
+    }
+    await page.context().close();
+  }
+  await open(false);
+  const initial = db.prepare("SELECT * FROM resource_project_state WHERE project_id = ?").get(project.id);
+  await open(true);
+  assert.deepEqual(db.prepare("SELECT * FROM resource_project_state WHERE project_id = ?").get(project.id), initial);
+  // A later unsuccessful source need not destroy the one working output.
+  await store.saveProjectSnapshot(account.id, project.id, {
+    files: [{ path: "index.html", content: '<script>var incomplete = </script>' }], config: {} });
+  await open(true);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_build_output WHERE project_id = ?").get(project.id).n, 1);
+});
+
 test("saved project output keeps its backing while the editor is still loading", { timeout: 180_000 }, async t => {
   const artifacts = process.env.MACCHIATO_TEST_ARTIFACTS;
   if (artifacts) await mkdir(artifacts, { recursive: true });

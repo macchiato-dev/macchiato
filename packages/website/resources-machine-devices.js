@@ -84,12 +84,14 @@ export class ResourcesProjectResourceDevice {
   }
   compactText(text) {
     const value = JSON.parse(text);
+    if (value?.savedOutput?.project) value.savedOutput.project = this.compactSnapshot(value.savedOutput.project);
     if (value?.snapshot) value.snapshot = this.compactSnapshot(value.snapshot);
     else if (Array.isArray(value?.files)) return JSON.stringify(this.compactSnapshot(value));
     return JSON.stringify(value);
   }
   hydrateText(text) {
     const value = JSON.parse(text);
+    if (value?.output?.project) value.output.project = this.hydrateSnapshot(value.output.project);
     if (value?.snapshot) value.snapshot = this.hydrateSnapshot(value.snapshot);
     else if (Array.isArray(value?.files)) return JSON.stringify(this.hydrateSnapshot(value));
     return JSON.stringify(value);
@@ -321,7 +323,7 @@ export class ResourcesEditorDevice {
     });
     return this.mounting;
   }
-  async mountOnce({ deferOutput = false, editorFrame = false }, generation) {
+  async mountOnce({ deferOutput = false, editorFrame = false, workspace, savedOutput = null }, generation) {
     const check = () => {
       if (generation !== this.mountGeneration) throw new Error("Project editor closed during startup");
     };
@@ -330,7 +332,8 @@ export class ResourcesEditorDevice {
     const snapshotField = root.querySelector("[data-project-snapshot]");
     if (!snapshotField) throw new Error("Project snapshot field is unavailable");
     const snapshotUrl = root.querySelector("[data-project-snapshot-url]")?.dataset.projectSnapshotUrl;
-    if (snapshotUrl) {
+    if (workspace?.snapshot) snapshotField.value = JSON.stringify(workspace.snapshot);
+    else if (snapshotUrl) {
       const response = await this.request("fetch", {
         url: snapshotUrl, method: "GET", headers: { Accept: "application/json" },
       });
@@ -345,6 +348,10 @@ export class ResourcesEditorDevice {
       snapshotField.value = JSON.stringify(workspace.snapshot);
     }
     this.initialSnapshot = this.projectResources.compactSnapshot(JSON.parse(snapshotField.value));
+    this.initialWorkspaceMetadata = workspace ? {
+      versionCount: workspace.versionCount, updatedAt: workspace.updatedAt,
+      hasUnpublishedChanges: workspace.hasUnpublishedChanges,
+    } : null;
     // The snapshot may contain large embedded resources. Keep that opaque
     // payload out of the DOM tree mirrored into the editor guest; the guest
     // requests it explicitly after its browser facade has started.
@@ -364,7 +371,7 @@ export class ResourcesEditorDevice {
     if (this.deferInitialOutput) {
       root.querySelector("[data-project-editor]").dataset.outputMachineState = "waiting";
     } else {
-      await this.mountInitialOutput(root, check, preloadEditor);
+      await this.mountInitialOutput(root, check, preloadEditor, savedOutput);
       check();
       // Paint useful output before CodeMirror evaluates on the same thread.
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -446,6 +453,8 @@ export class ResourcesEditorDevice {
   getInitialSnapshot() {
     if (!this.initialSnapshot) throw new Error("Initial project snapshot is unavailable");
     return { snapshot: this.initialSnapshot, outputId: this.initialOutputId,
+      successfulOutput: this.initialSuccessfulOutput || null,
+      metadata: this.initialWorkspaceMetadata,
       deferOutput: this.deferInitialOutput, editorSurface: !!this.editorSurface };
   }
   prepareSubmission() {
@@ -456,7 +465,7 @@ export class ResourcesEditorDevice {
     field.value = this.projectResources.hydrateText(field.value);
     return null;
   }
-  async mountInitialOutput(root, check = () => {}, onCompiled = () => {}) {
+  async mountInitialOutput(root, check = () => {}, onCompiled = () => {}, savedOutput = null) {
     // The workspace also contains the details form; output state belongs on
     // the editor section, where subsequent guest updates and loaders read it.
     root = root.querySelector("[data-project-editor]");
@@ -473,10 +482,11 @@ export class ResourcesEditorDevice {
     try {
       root.dataset.outputMachineStage = "build";
       const source = { files: snapshot.files, config: snapshot.config || {} };
-      const project = source.config.build ? await this.buildDevice.run(source) : source;
+      const project = savedOutput ? savedOutput.project :
+        source.config.build ? await this.buildDevice.run(source) : source;
       check();
       root.dataset.outputMachineStage = "compile";
-      const compiled = await this.buildDevice.compile(project);
+      const compiled = savedOutput ? savedOutput.compiled : await this.buildDevice.compile(project);
       check();
       onCompiled();
       const options = project.config?.containerOptions || {};
@@ -495,6 +505,9 @@ export class ResourcesEditorDevice {
       catch (error) { this.outputDevice.destroyOutput(outputId); throw error; }
       this.outputIds.add(outputId);
       this.initialOutputId = outputId;
+      this.initialSuccessfulOutput = savedOutput ? null : {
+        snapshot: source, output: { format: "resources-project-output-v1", project, compiled },
+      };
       root.dataset.outputMachineStage = "ready";
       root.dataset.outputMachineState = "ready";
     } catch (error) {
@@ -536,6 +549,7 @@ export class ResourcesEditorDevice {
     this.editor?.destroy();
     this.editor = null;
     this.initialSnapshot = null;
+    this.initialSuccessfulOutput = null;
     this.initialOutputId = null;
     this.deferInitialOutput = false;
   }

@@ -50,6 +50,12 @@
     });
   }
   var initialSnapshot = initialWorkspace.snapshot;
+  globalThis.__resourcesProjectWorkspace = function () {
+    if (!initialWorkspace.metadata) return null;
+    return { snapshot: initialSnapshot, versionCount: initialWorkspace.metadata.versionCount,
+      updatedAt: initialWorkspace.metadata.updatedAt,
+      hasUnpublishedChanges: initialWorkspace.metadata.hasUnpublishedChanges };
+  };
   var projectUiLoaded = false;
   function loadProjectUi() {
     if (projectUiLoaded) return;
@@ -121,6 +127,7 @@
   }
 
   function startOutput(snapshot) {
+    var successfulOutput = null;
     var preview = root.querySelector("[data-project-preview]");
     var files = snapshot.files || [];
     var config = snapshot.config || {};
@@ -146,6 +153,8 @@
       root.setAttribute("data-output-machine-stage", "compile");
       return requestStage("build.compile", { files: project.files, config: project.config }).then(function (compiled) {
         if (generation !== outputGeneration) return null;
+        successfulOutput = { snapshot: sourceSnapshot,
+          output: { format: "resources-project-output-v1", project: project, compiled: compiled } };
         var mounted = outputId ? new Promise(function (resolve) { resolve(outputId); }) :
           requestStage("output.mount", {
             rootKey: "1", scripts: [], violations: [], tags: [],
@@ -177,6 +186,7 @@
       });
     }).then(function () {
       if (generation !== outputGeneration) return;
+      initialWorkspace.successfulOutput = successfulOutput;
       root.removeAttribute("data-output-machine-error");
       root.setAttribute("data-output-machine-stage", "ready");
       root.setAttribute("data-output-machine-state", "ready");
@@ -250,6 +260,9 @@
     // scheduling here too rebuilt each edit twice and ignored its delay.
     if (refreshTimer) clearTimeout(refreshTimer);
     return JSON.stringify({ accepted: true });
+  };
+  globalThis.__resourcesProjectSuccessfulOutput = function () {
+    return JSON.stringify(initialWorkspace.successfulOutput || null);
   };
   globalThis.__resourcesProjectRenderSnapshot = function () {
     if (refreshTimer) clearTimeout(refreshTimer);
