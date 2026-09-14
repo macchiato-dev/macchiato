@@ -70,9 +70,22 @@ deliberately general before introducing short-decimal fast paths.
 ## Module and imports
 
 Function imports are valid 0, set 1, copy 2, muladd 3, shl 4, shr 5, cmp 6,
-sub 7, bits 8. Defined functions are special 9, round 10, parse 11.
+sub 7, bits 8. Defined functions are special 9, round 10, decimal 11, parse 12.
 Types 0..4 describe the existing integer helper signatures; type 5 is
 `(i32, i32) -> f64` and is shared by the three local functions.
+
+The shared `round(sign, sticky)` helper is also exported for other numeric
+parsers. Its caller supplies positive normalized numerator/denominator values
+in multiword slots 0/1; sign and sticky are Boolean i32 values. It consumes
+slots 0..2. Zero must be handled by the caller, before this positive-ratio
+operation. This is an arithmetic interface, not another text parser.
+
+`decimal(start, end)` is the low-level conversion step, after a caller has
+validated the decimal grammar. It checks span bounds but assumes its contents
+are an optional minus, decimal coefficient and optional complete exponent.
+It permits leading zeros, `.5` and `1.` so that `parseFloat` can reuse it
+without rewriting or copying a token. Public `parse` still enforces strict
+JSON syntax before calling it. Do not pass unvalidated text to `decimal`.
 
 `[microwasm]`
 
@@ -92,11 +105,11 @@ Types 0..4 describe the existing integer helper signatures; type 5 is
     - jf-import-sub: `01 62 03 737562 00 01`
     - jf-import-bits: `01 62 04 62697473 00 04`
 - jf-function-section: `03 {{size:jf-functions}}`
-  - jf-functions: `03 05 05 05`
+  - jf-functions: `04 05 05 05 05`
 - jf-export-section: `07 {{size:jf-exports}}`
-  - jf-exports: `02 05 7061727365 00 0b 06 6d656d6f7279 02 00`
+  - jf-exports: `04 05 7061727365 00 0c 05 726f756e64 00 0a 07 646563696d616c 00 0b 06 6d656d6f7279 02 00`
 - jf-code-section: `0a {{size:jf-code}}`
-  - jf-code: `03`
+  - jf-code: `04`
     - jf-special-record: `{{size:jf-special-body}}`
       - jf-special-body: `00`
         - jf-special-bits: `20 00 ad 42 3f 86 20 01 ad 42 34 86 84 bf 0b`
@@ -131,7 +144,7 @@ Types 0..4 describe the existing integer helper signatures; type 5 is
         - jf-round-normal-result: `20 07 20 02 41 ff07 6a ad 42 34 86 84 20 06 42 01 42 34 86 7d 84 bf 0b`
     - jf-parse-record: `{{size:jf-parse-body}}`
       - jf-parse-body: `01 0c 7f`
-        - jf-parse-validate: `20 00 20 01 10 00 45 04 40 00 0b`
+        - jf-decimal-bounds: `20 00 20 01 4f 20 01 41 808004 4b 72 04 40 00 0b`
         - jf-parse-clear: `41 00 41 00 10 01`
         - jf-parse-position: `20 00 21 02`
         - jf-parse-sign: `20 02 2d 00 00 41 2d 46 04 40 41 01 21 03 20 02 41 01 6a 21 02 0b`
@@ -174,6 +187,10 @@ Types 0..4 describe the existing integer helper signatures; type 5 is
             - jf-power-next: `20 0c 41 01 6b 21 0c 0c 00 0b`
           - jf-power-end: `0b`
         - jf-parse-round: `20 03 20 08 10 0a 0b`
+    - jf-strict-record: `{{size:jf-strict-body}}`
+      - jf-strict-body: `00`
+        - jf-strict-validate: `20 00 20 01 10 00 45 04 40 00 0b`
+        - jf-strict-convert: `20 00 20 01 10 0b 0b`
 
 Round locals: sign/sticky 0/1; exponent 2, scale 3, comparison 4, bit index 5;
 u64 quotient 6 and result bits 7. Parse locals: start/end 0/1, position 2,

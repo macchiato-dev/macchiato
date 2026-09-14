@@ -58,8 +58,10 @@ flowchart LR
 
 ## The module
 
-Both functions have type `(i32, i32) -> i32`. Only valid, function 1, is
-exported. Function 0 is the reusable digit scanner.
+Both functions have type `(i32, i32) -> i32`. Function 1 is `valid`; function 0
+is also exported as `digits` for other parsers. `digits` is a low-level scan:
+its caller must provide `0 <= start <= end <= 0x10000`. Unlike `valid`, it
+does not check that precondition itself.
 
 `[microwasm]`
 
@@ -71,7 +73,7 @@ exported. Function 0 is the reusable digit scanner.
 - jn-memory-section: `05 {{size:jn-memories}}`
   - jn-memories: `01 01 04 04`
 - jn-export-section: `07 {{size:jn-exports}}`
-  - jn-exports: `02 05 76616c6964 00 01 06 6d656d6f7279 02 00`
+  - jn-exports: `03 05 76616c6964 00 01 06 646967697473 00 00 06 6d656d6f7279 02 00`
 - jn-code-section: `0a {{size:jn-code}}`
   - jn-code: `02`
     - jn-digits-record: `{{size:jn-digits-body}}`
