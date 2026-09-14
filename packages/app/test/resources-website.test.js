@@ -880,11 +880,20 @@ test("Vue and Svelte starting points build and remain interactive in the output 
   t.after(async () => browser.close());
   const page = await browser.newPage();
   const errors = [];
+  const builderRequests = [];
+  page.on("request", request => {
+    if (/project-(?:framework-)?builder-quickjs-runtime\.wasm/.test(request.url())) {
+      builderRequests.push(new URL(request.url()).pathname);
+    }
+  });
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") errors.push(`console: ${message.text()}`);
   });
   await page.goto(`http://resources-edge.localhost:${port}/try`, { waitUntil: "networkidle" });
+  await codeSurface(page).locator(".cm-content").waitFor();
+  assert.deepEqual(builderRequests, ["/-/resources-site/project-builder-quickjs-runtime.wasm"],
+    "ordinary HTML must not load framework tooling");
 
   for (const framework of ["vue", "svelte"]) {
     await page.getByLabel("Template").selectOption(framework);
@@ -899,6 +908,8 @@ test("Vue and Svelte starting points build and remain interactive in the output 
       .waitFor({ timeout: 10_000 }).catch(async () => assert.fail(
         `${framework} did not react: ${await page.locator("body").innerText()}\n${errors.join("\n")}`));
   }
+  assert.equal(builderRequests.filter(path => path.includes("framework-builder")).length, 1,
+    "explicit builds lazily share the framework artifact");
   assert.deepEqual(errors, []);
 });
 

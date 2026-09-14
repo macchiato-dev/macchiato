@@ -111,8 +111,9 @@ export async function createProjectOutputMachine({ root, scripts = [], project, 
     inspect: () => ({ ...output.inspect(), machine: { machineId } }),
   });
 }
-export async function createProjectBuildMachine() {
-  const module = await moduleFor("/-/resources-site/project-builder-quickjs-runtime.wasm");
+export async function createProjectBuildMachine({ frameworkBuild = false } = {}) {
+  const name = frameworkBuild ? "project-framework-builder" : "project-builder";
+  const module = await moduleFor(`/-/resources-site/${name}-quickjs-runtime.wasm`);
   let response, machineError;
   const machine = new WasmWebMachine(module, null, { onMessage(text) {
     if (text.startsWith("__wwcResponse:")) response = text.slice(14);

@@ -264,7 +264,7 @@ export class ResourcesBuildDevice {
     finally { machine.destroy(); }
   }
   async run(payload) {
-    const machine = await createProjectBuildMachine();
+    const machine = await createProjectBuildMachine({ frameworkBuild: true });
     try {
       return this.projectResources.compactSnapshot(
         machine.build(this.projectResources.hydrateFiles(payload.files), payload.config));

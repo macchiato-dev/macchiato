@@ -68,6 +68,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   }
   const projectRuntime = bytes(readFileSync(join(generatedDirectory, "project-quickjs-runtime.wasm")));
   const projectBuilder = bytes(readFileSync(join(generatedDirectory, "project-builder-quickjs-runtime.wasm")));
+  const frameworkBuilder = bytes(readFileSync(join(generatedDirectory, "project-framework-builder-quickjs-runtime.wasm")));
   const editorMachine = bytes(readFileSync(join(generatedDirectory, "project-editor-quickjs-runtime.wasm")));
   const frontendMachine = bytes(readFileSync(join(generatedDirectory, "resources-frontend-microquickjs.wasm")));
   const browserMachine = bytes(readFileSync(join(directory, "frontend", "machine.js")));
@@ -87,6 +88,7 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
         readFileSync(join(generatedDirectory, "project-editor-frame-controller.js"), "utf8"))));
   files.set("/-/resources-site/project-quickjs-runtime.wasm", projectRuntime);
   files.set("/-/resources-site/project-builder-quickjs-runtime.wasm", projectBuilder);
+  files.set("/-/resources-site/project-framework-builder-quickjs-runtime.wasm", frameworkBuilder);
   files.set("/-/resources-site/THIRD-PARTY-NOTICES.txt",
     bytes(readFileSync(join(directory, "THIRD-PARTY-NOTICES.txt"))));
   files.set("/-/resources-site/project-editor-quickjs-runtime.wasm", editorMachine);

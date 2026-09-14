@@ -148,17 +148,18 @@ const runtime = await build({
   platform: "browser",
   write: false,
 }).then((result) => result.outputFiles[0].text);
-const builder = await build({
-  entryPoints: [join(directory, "project-builder-bootstrap.js")],
-  bundle: true,
-  format: "iife",
-  mainFields: ["browser", "module", "main"],
-  platform: "neutral",
-  write: false,
-}).then((result) => result.outputFiles[0].text);
+for (const name of ["project-builder", "project-framework-builder"]) {
+  await build({
+    entryPoints: [join(directory, `${name}-bootstrap.js`)],
+    bundle: true,
+    format: "iife",
+    mainFields: ["browser", "module", "main"],
+    platform: "neutral",
+    outfile: join(outputDirectory, `${name}-guest.js`),
+  });
+}
 await writeFile(join(outputDirectory, "project-editor-runtime.js"), runtime);
 await writeFile(join(outputDirectory, "project-editor-guest.js"), guest);
-await writeFile(join(outputDirectory, "project-builder-guest.js"), builder);
 
 // The output bootstrap shares the application's storage-error adapter. Its
 // imports are compiled into guest code, never loaded into the browser realm.
@@ -168,20 +169,22 @@ await build({
   outfile: join(outputDirectory, "project-output-bootstrap.js"),
 });
 
-execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
-  cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
-  env: {
-    ...process.env,
-    WWC_CANONICAL_HOST: "1",
-    WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "quickjs", "src", "message-guest.js"),
-    WWC_APPLICATION_SOURCE: join(outputDirectory, "project-builder-guest.js"),
-  },
-  stdio: "inherit",
-});
-await copyFile(
-  join(workspace, "dev", "wasm-web-runtimes", "quickjs", "target", "wasm32-unknown-unknown", "release", "wasm_web_container_quickjs_runtime.wasm"),
-  join(outputDirectory, "project-builder-quickjs-runtime.wasm"),
-);
+for (const name of ["project-builder", "project-framework-builder"]) {
+  execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
+    cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
+    env: {
+      ...process.env,
+      WWC_CANONICAL_HOST: "1",
+      WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "quickjs", "src", "message-guest.js"),
+      WWC_APPLICATION_SOURCE: join(outputDirectory, `${name}-guest.js`),
+    },
+    stdio: "inherit",
+  });
+  await copyFile(
+    join(workspace, "dev", "wasm-web-runtimes", "quickjs", "target", "wasm32-unknown-unknown", "release", "wasm_web_container_quickjs_runtime.wasm"),
+    join(outputDirectory, `${name}-quickjs-runtime.wasm`),
+  );
+}
 
 execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
   cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
