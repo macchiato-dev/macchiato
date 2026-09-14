@@ -38,6 +38,19 @@ Deno.test("counts use unsigned LEB128, including the multi-byte boundaries", () 
   }
 });
 
+Deno.test("sizes and counts can sum records on separately captured pages", () => {
+  const source = region(
+    "- size: `{{size:first+second}}`\n- count: `{{count:first+second}}`",
+  ) +
+    "\n# Next page\n\n" + region("- first:\n  - a: `aa bb`") +
+    "\n# Last page\n\n" + region("- second:\n  - b: `cc`\n  - c: `dd`");
+  equal([...assemble(source).bytes], [4, 3, 0xaa, 0xbb, 0xcc, 0xdd]);
+  rejects(
+    () => assemble(region("- a: `{{size:a+b}}`\n- b: `00`")),
+    /cyclic size/,
+  );
+});
+
 Deno.test("forward lengths count resolved nested placeholders, not source characters", () => {
   const source = region(
     "- outer: `{{size:payload}}`\n  - payload: `{{size:data}}`\n    - data: `" +

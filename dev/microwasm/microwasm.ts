@@ -127,21 +127,30 @@ export function assemble(markdown: string): Assembly {
         }
         continue;
       }
-      const placeholder = /^\{\{(size|count):([a-z][a-z0-9-]*)\}\}$/.exec(
-        token,
-      );
+      const placeholder =
+        /^\{\{(size|count):([a-z][a-z0-9-]*(?:\+[a-z][a-z0-9-]*)*)\}\}$/.exec(
+          token,
+        );
       if (!placeholder) {
         throw new Error(
           `Line ${item.line}: invalid byte or placeholder ${token}`,
         );
       }
-      const target = labels.get(placeholder[2]);
-      if (!target) {
-        throw new Error(`Line ${item.line}: unknown label ${placeholder[2]}`);
-      }
+      const targets = placeholder[2].split("+").map((id) => {
+        const target = labels.get(id);
+        if (!target) throw new Error(`Line ${item.line}: unknown label ${id}`);
+        return target;
+      });
       result.push(
         ...uleb(
-          placeholder[1] === "size" ? size(target) : target.children.length,
+          targets.reduce(
+            (total, target) =>
+              total +
+              (placeholder[1] === "size"
+                ? size(target)
+                : target.children.length),
+            0,
+          ),
         ),
       );
     }
