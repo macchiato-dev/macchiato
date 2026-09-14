@@ -1,0 +1,82 @@
+# Balanced brackets with a memory stack
+
+Recognize balanced `()`, `[]`, and `{}`; ignore all other bytes. This is not a
+JavaScript parser: brackets in quotes or comments still count. The input is
+at zero, maximum 65536 bytes; a stack of expected closing bytes occupies the
+second page. Maximum depth cannot exceed input length, so the stack fits.
+
+```text
+depth = 0
+for each byte c:
+    if c is an opening bracket:
+        expected = c + (1 if c == '(' else 2)
+        stack[depth++] = expected
+    else if c is a closing bracket:
+        if depth == 0: return 0
+        if stack[--depth] != c: return 0
+return depth == 0
+```
+
+```mermaid
+flowchart TD
+    A[depth = 0] --> B{More bytes?}
+    B -- No --> R[Accept if stack empty]
+    B -- Yes --> C{Opening bracket?}
+    C -- Yes --> P[Push expected closer]
+    C -- No --> D{Closing bracket?}
+    D -- No --> B
+    D -- Yes --> E[Pop and compare, reject underflow or mismatch]
+    P --> B
+    E -- Match --> B
+```
+
+## Expose the input and scratch memory
+
+The host writes only input; stale stack bytes from earlier calls are harmless
+because depth starts at zero. The call returns a Boolean, not the stack.
+
+<!-- microwasm:start -->
+- header: `0061736d 01000000`
+- type-section: `01 {{size:types}}`
+  - types: `01 60 01 7f 01 7f`
+- function-section: `03 {{size:functions}}`
+  - functions: `01 00`
+- memory-section: `05 {{size:memories}}`
+  - memories: `01 01 02 02`
+- export-section: `07 {{size:exports}}`
+  - exports: `02 03 72756e 00 00 06 6d656d6f7279 02 00`
+<!-- microwasm:end -->
+
+## Three kinds, one-byte entries
+
+Locals 1..3 are i, depth, c. For an opening byte, `select` chooses a delta
+of 1 or 2, based on whether c is `(`. Closing checks happen before a stack
+load, preventing underflow even for a first byte of `)`.
+
+<!-- microwasm:start -->
+- code-section: `0a {{size:code}}`
+  - code: `01 {{size:body}}`
+    - body: `01 03 7f`
+      - bounds: `20 00 41 808004 4b 04 40 00 0b`
+      - exit: `02 40`
+        - loop: `03 40`
+          - finished: `20 01 20 00 4f 0d 01`
+          - read: `20 01 2d 00 00 21 03`
+          - opening: `20 03 41 28 46 20 03 41 db00 46 72 20 03 41 fb00 46 72 04 40`
+            - push: `41 808004 20 02 6a 20 03 41 01 41 02 20 03 41 28 46 1b 6a 3a 00 00`
+            - deeper: `20 02 41 01 6a 21 02`
+            - closing-else: `05`
+            - closing: `20 03 41 29 46 20 03 41 dd00 46 72 20 03 41 fd00 46 72 04 40`
+              - underflow: `20 02 45 04 40 41 00 0f 0b`
+              - pop: `20 02 41 01 6b 21 02`
+              - mismatch: `41 808004 20 02 6a 2d 00 00 20 03 47 04 40 41 00 0f 0b`
+              - closing-end: `0b`
+            - opening-end: `0b`
+          - advance: `20 01 41 01 6a 21 01`
+          - repeat: `0c 00 0b`
+        - exit-end: `0b`
+      - empty-stack: `20 02 45 0b`
+<!-- microwasm:end -->
+
+Check `([{}])`, `([)]`, unmatched openings and closings, and deep nesting.
+Depth is a runtime value, not a fixed number of statically nested blocks.
