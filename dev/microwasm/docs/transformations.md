@@ -11,8 +11,8 @@ editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
-every radix 2..36 and whole-string numeric conversion. Precision formatting and
-the other 48 tools remain.
+every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
+significant-digit formatting are implemented too. The other 48 tools remain.
 This is not goal completion.
 
 ## Shared number conversion

@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 66 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 70 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -102,7 +102,7 @@ more than 13,000 cases: every normal power-of-two boundary and both neighbors,
 decimal powers and their neighbors, small subnormals and random bit patterns.
 The results also round-trip through the Wasm parser. This formatter deliberately
 reuses exact expansion and up to 34 parser calls; it is not a native-throughput
-claim. Precision-controlled strings remain pending.
+claim.
 
 Six additional tests cover JavaScript-style `parseInt` and `parseFloat` text
 interfaces. They check radix prefixes, all byte values in every radix,
@@ -137,6 +137,15 @@ compares bytes rather than using a decoder that consumes a leading BOM.
 JSON scalar formatting is checked against `JSON.stringify` on explicit
 boundaries and 1000 generated binary64 bit patterns. Nonfinite values become
 `null`; finite values and negative zero use their JSON numeric spellings.
+
+Four precision-formatting tests compare all supported counts on explicit
+boundary values, exact dyadic ties and carry chains, plus 4000 deterministic
+binary64 bit patterns and decimal-power neighbors. Native `toFixed`,
+`toExponential` and `toPrecision` are the oracles. Tests check negative rounded
+zero, retained trailing zeros, method-specific nonfinite/error ordering,
+invalid counts, trap recovery and scratch-region sentinels. The shipped
+module also runs in Chromium through the browser test's numeric dependency
+graph, without host formatting imports.
 
 The browser suite checks all library documents in the six independent
 content/display combinations, as well as the original examples and renderer

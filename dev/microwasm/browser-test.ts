@@ -191,10 +191,30 @@ try {
     const d = await load("05-exact-decimal", { b });
     const s = await load("06-shortest-decimal", { f, d });
     const r = await load("09-radix-format", { b, s });
+    const pf = await load("11-precision-format", { d, r });
     const p = await load("07-parse-integer", { f, b });
     const w = await load("10-whole-number", { f, p, n });
     const prefix = await load("08-parse-float", { f, p, n });
     const memory = new Uint8Array((s.memory as WebAssembly.Memory).buffer);
+    for (
+      const [method, value, digits, expected] of [
+        ["fixed", 1.005, 2, "1.00"],
+        ["fixed", 9.99, 1, "10.0"],
+        ["fixed", -0.001, 2, "-0.00"],
+        ["exponential", 12.5, 2, "1.25e+1"],
+        ["precision", 0.00000123, 2, "0.0000012"],
+        ["exponentialShortest", 1000, 0, "1e+3"],
+      ] as const
+    ) {
+      const length = (pf[method] as (v: number, k: number) => number)(
+        value,
+        digits,
+      );
+      const text = new TextDecoder().decode(
+        memory.subarray(65536, 65536 + length),
+      );
+      if (text !== expected) throw new Error(`Precision ${method}: ${text}`);
+    }
     for (
       const [value, expected] of [
         [NaN, "null"],

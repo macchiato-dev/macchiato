@@ -77,6 +77,7 @@ for (
     "numbers/08-parse-float",
     "numbers/09-radix-format",
     "numbers/10-whole-number",
+    "numbers/11-precision-format",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {

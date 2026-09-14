@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 66 tests covering all twenty examples and the supplied
+`deno task test` runs 70 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -156,8 +156,10 @@ bases 2..36, including fractions, signed infinities and NaN. It selects the
 shortest representation inside the exact rounding interval, with closest/even
 ties. [Whole-string numeric conversion](numbers/10-whole-number.md) covers the
 text part of `Number()`, requiring a complete decimal or unsigned prefixed
-integer and allowing surrounding whitespace. Precision-controlled formatting
-remains unfinished; this is not the complete number goal.
+integer and allowing surrounding whitespace.
+[Precision-controlled formatting](numbers/11-precision-format.md) implements
+`toFixed`, `toExponential` and `toPrecision` numeric behavior, including
+requested zeros, exact rounding ties and their different notation rules.
 
 Choose the numeric entry point by its text rules:
 
@@ -169,6 +171,10 @@ Choose the numeric entry point by its text rules:
 | 10 Whole number | `parse(start, end)` | `Number(text)` syntax; no junk suffix |
 | 09 Radix format | `format(value, radix)` | Number string, bases 2..36 |
 | 09 Radix format | `json(value)` | JSON scalar; nonfinite values become `null` |
+| 11 Precision format | `fixed(value, digits)` | Fixed decimal places, 0..100 |
+| 11 Precision format | `exponential(value, digits)` | Exponential notation, 0..100 fractional digits |
+| 11 Precision format | `exponentialShortest(value)` | Exponential notation, omitted precision |
+| 11 Precision format | `precision(value, digits)` | Significant decimal digits, 1..100 |
 
 The JavaScript-style parsers return NaN for invalid text, but invalid memory
 spans still trap. These byte interfaces do not perform object coercions.
