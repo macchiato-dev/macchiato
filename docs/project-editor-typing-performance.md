@@ -1342,9 +1342,33 @@ Evidence: `/root/macchiato-work/mahjong-startup-diagnosis.log`,
 `mahjong-startup-light-compiler.log`, `lazy-framework-compiler.log` (five passes),
 and `lazy-framework-browser.log` (framework and graphics passes).
 
-Saved-build-output-first is the next requested behavior, not implemented by
-this split. It must be a guest-level choice using persisted output, with a
-future configuration seam; rebuilding must not be the only way to open a
-saved project. Retention of the latest successful build versus per-version
-outputs is awaiting the user's choice. Derived output must not silently change
-the source's undo/history or unsaved-change accounting.
+The framework split alone did not persist output. The follow-up below addresses
+that separately.
+
+### Latest successful output on opening (2026-09-14)
+
+Retain one derived output per project, not one per source version. A successful
+build includes the compiled document, CSS data, scripts, and its own resource
+files. The editor guest submits it after output startup succeeds. Failed builds
+leave the previous slot alone. SQL replaces it only while the submitted source
+still matches current stored source, so late builds cannot displace newer work.
+Source autosave retries the derived write when a build finishes before autosave.
+Cache persistence does not touch source versions, project timestamps, undo, or
+unsaved-change accounting.
+
+The frontend guest chooses saved output before asking the controller to mount
+the workspace. This is the policy seam for future configurable opening modes.
+Recovery can render over the saved output afterward; it need not block the
+first working view. Changed navigation/fetch permissions or environment prevent
+reuse of an older configuration. Public readers only receive a cached build
+whose source matches the publication; private unpublished output never leaks
+through this shortcut. There is deliberately no extra public-output cache.
+
+Saved output still enters the same sandboxed output runtime and host renderers.
+It is not trusted HTML injected into the host. Missing output falls back to
+building. The source plus derived payload is bounded to 70 MiB for workspace
+transport; later source growth can cause the optional cache to be omitted rather
+than prevent opening. This is not an offline resource cache or an archive.
+
+Store and SQL-policy regressions pass. Browser and rebuilt Bunny artifact
+verification are in progress; do not infer deployment from the source changes.

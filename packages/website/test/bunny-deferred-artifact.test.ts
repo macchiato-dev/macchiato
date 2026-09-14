@@ -221,6 +221,20 @@ for (const interrupted of [false, true]) Deno.test(`exported Bunny deferred rout
     assert(JSON.stringify((await saved.json()).snapshot) === JSON.stringify(edited), "Save returned a different snapshot");
     const workspace = await authenticated("/-/projects/artifact-user/artifact-project/workspace");
     assert(workspace.status === 200 && JSON.stringify((await workspace.json()).snapshot) === JSON.stringify(edited), "Workspace did not retain the saved edit");
+    const output = { format: "resources-project-output-v1", project: edited,
+      compiled: { tree: [], document: {}, scripts: [], stylesheets: [] } };
+    const outputSaved = await authenticated(`/api/projects/${project.id}/output`, {
+      method: "POST", headers: { "content-type": "application/json", "x-resources-csrf": csrf },
+      body: JSON.stringify({ snapshot: edited, output }),
+    });
+    assert(outputSaved.status === 200 && (await outputSaved.json()).saved, "Bunny did not persist successful output");
+    const cached = await authenticated("/-/projects/artifact-user/artifact-project/workspace");
+    assert(JSON.stringify((await cached.json()).savedOutput) === JSON.stringify(output), "Bunny did not return saved output");
+    const deniedOutput = await authenticated(`/api/projects/${project.id}/output`, {
+      method: "POST", headers: { "content-type": "application/json", "x-resources-csrf": "invalid" },
+      body: JSON.stringify({ snapshot: edited, output }),
+    });
+    assert(deniedOutput.status === 403, "Derived output must use project-scoped CSRF authorization");
     const versions = await authenticated(`/api/projects/${project.id}/versions`);
     assert(versions.status === 200 && (await versions.json()).versions.length === 2, "Save did not create exactly one version");
     const denied = await authenticated(`/api/projects/${project.id}/snapshot`, {

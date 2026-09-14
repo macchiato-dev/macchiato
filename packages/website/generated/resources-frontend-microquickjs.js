@@ -11,10 +11,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (_n) { return void e(_n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 (function () {
-  var _resourcesFrontend = _asyncToGenerator(_regenerator().m(function _callee2() {
-    var storageRequest, _loop, _i, _arr, isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, openCommandPalette, closePalette, _loop2, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, call, hasSessionValue, navigationType, setProjectEditorTheme, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, DRAFT_KEY, PENDING_KEY_PREFIX, pendingProjectSnapshotKey, hasProjectRecovery, root3, deferOutput, root2, mountContentNameFields;
-    return _regenerator().w(function (_context4) {
-      while (1) switch (_context4.n) {
+  var _resourcesFrontend = _asyncToGenerator(_regenerator().m(function _callee3() {
+    var storageRequest, _loop, _i, _arr, isMac, shortcut, _iterator, _step, label, paletteFor, openPalette, openCommandPalette, closePalette, _loop2, _iterator3, _step3, root, choices, storageKey, media, storedTheme, resolved, apply, syncSystemTheme, menuSelector, closeMenus, pending, nextRequest, editorListeners, outputListeners, call, hasSessionValue, navigationType, setProjectEditorTheme, requestFrontendService, FrontendHeaders, FrontendResponse, mountProjectPresentation, DRAFT_KEY, PENDING_KEY_PREFIX, pendingProjectSnapshotKey, hasProjectRecovery, root3, deferOutput, openProject, _openProject, root2, mountContentNameFields;
+    return _regenerator().w(function (_context5) {
+      while (1) switch (_context5.n) {
         case 0:
           mountContentNameFields = function _mountContentNameFiel() {
             var generatedSlugs = new WeakMap();
@@ -272,13 +272,13 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           _i = 0, _arr = [["local", localStorage], ["session", sessionStorage]];
         case 1:
           if (!(_i < _arr.length)) {
-            _context4.n = 3;
+            _context5.n = 3;
             break;
           }
-          return _context4.d(_regeneratorValues(_loop()), 2);
+          return _context5.d(_regeneratorValues(_loop()), 2);
         case 2:
           _i++;
-          _context4.n = 1;
+          _context5.n = 1;
           break;
         case 3:
           globalThis.__resourcesDatasetGet = function (element, name) {
@@ -335,27 +335,27 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           });
           _loop2 = _regenerator().m(function _loop2() {
             var dialog;
-            return _regenerator().w(function (_context3) {
-              while (1) switch (_context3.n) {
+            return _regenerator().w(function (_context4) {
+              while (1) switch (_context4.n) {
                 case 0:
                   dialog = _step3.value;
                   dialog.addEventListener("click", function (event) {
                     if (event.target === dialog) closePalette(dialog);
                   });
                 case 1:
-                  return _context3.a(2);
+                  return _context4.a(2);
               }
             }, _loop2);
           });
           _iterator3 = _createForOfIteratorHelperLoose(document.querySelectorAll("[data-command-dialog]"));
         case 4:
           if ((_step3 = _iterator3()).done) {
-            _context4.n = 6;
+            _context5.n = 6;
             break;
           }
-          return _context4.d(_regeneratorValues(_loop2()), 5);
+          return _context5.d(_regeneratorValues(_loop2()), 5);
         case 5:
-          _context4.n = 4;
+          _context5.n = 4;
           break;
         case 6:
           root = document.documentElement;
@@ -493,6 +493,56 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           DRAFT_KEY = "resources_project_draft_v5";
           PENDING_KEY_PREFIX = "resources_project_pending_v1:";
           if (document.querySelector("[data-project-editor]")) {
+            _openProject = function _openProject3() {
+              _openProject = _asyncToGenerator(_regenerator().m(function _callee2() {
+                var _root3$querySelector2, _workspace, _workspace2, _saved$project;
+                var url, workspace, response, saved, config, savedConfig, useSaved;
+                return _regenerator().w(function (_context3) {
+                  while (1) switch (_context3.n) {
+                    case 0:
+                      url = (_root3$querySelector2 = root3.querySelector("[data-project-snapshot-url]")) == null ? void 0 : __resourcesDatasetGet(_root3$querySelector2, "data-project-snapshot-url");
+                      if (!url) {
+                        _context3.n = 3;
+                        break;
+                      }
+                      _context3.n = 1;
+                      return requestFrontendService("fetch", {
+                        url: url,
+                        method: "GET",
+                        headers: {
+                          Accept: "application/json"
+                        }
+                      });
+                    case 1:
+                      response = _context3.v;
+                      if (!(response.status !== 200)) {
+                        _context3.n = 2;
+                        break;
+                      }
+                      throw new Error("Project workspace response: " + response.status);
+                    case 2:
+                      workspace = JSON.parse(response.body);
+                    case 3:
+                      saved = (_workspace = workspace) == null ? void 0 : _workspace.savedOutput;
+                      config = ((_workspace2 = workspace) == null || (_workspace2 = _workspace2.snapshot) == null ? void 0 : _workspace2.config) || {};
+                      savedConfig = (saved == null || (_saved$project = saved.project) == null ? void 0 : _saved$project.config) || {};
+                      useSaved = (saved == null ? void 0 : saved.format) === "resources-project-output-v1" && JSON.stringify(savedConfig.containerOptions || {}) === JSON.stringify(config.containerOptions || {}) && JSON.stringify(savedConfig.environment || {}) === JSON.stringify(config.environment || {});
+                      _context3.n = 4;
+                      return requestFrontendService("editor.mount", {
+                        deferOutput: deferOutput && !useSaved,
+                        workspace: workspace,
+                        savedOutput: useSaved ? saved : null
+                      });
+                    case 4:
+                      return _context3.a(2);
+                  }
+                }, _callee2);
+              }));
+              return _openProject.apply(this, arguments);
+            };
+            openProject = function _openProject2() {
+              return _openProject.apply(this, arguments);
+            };
             document.addEventListener("themechange", function (event) {
               return setProjectEditorTheme(event.detail.theme);
             });
@@ -508,9 +558,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
                 return hasSessionValue(key) ? "" : null;
               }
             });
-            requestFrontendService("editor.mount", {
-              deferOutput: deferOutput
-            }).catch(function (error) {
+            openProject().catch(function (error) {
               var _document$querySelect;
               (_document$querySelect = document.querySelector("[data-project-editor]")) == null || _document$querySelect.setAttribute("data-editor-machine-state", "failed");
               globalThis.__wwcReportError((error == null ? void 0 : error.stack) || (error == null ? void 0 : error.message) || String(error));
@@ -552,9 +600,9 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
           }
           if (!document.querySelector("[data-project-editor]")) mountContentNameFields();
         case 7:
-          return _context4.a(2);
+          return _context5.a(2);
       }
-    }, _callee2);
+    }, _callee3);
   }));
   function resourcesFrontend() {
     return _resourcesFrontend.apply(this, arguments);

@@ -68,6 +68,7 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
       "content", "getPublicProjectWorkspace", args),
     getProjectVersion: (...args) => store("content", "getProjectVersion", args),
     saveProjectSnapshot: (...args) => store("content", "saveProjectSnapshot", args),
+    saveProjectBuildOutput: (...args) => store("content", "saveProjectBuildOutput", args),
     restoreProjectVersion: (...args) => store("content", "restoreProjectVersion", args),
     revertProjectToPublished: (...args) => store(
       "content", "revertProjectToPublished", args),

@@ -28,11 +28,11 @@ if (document.querySelector("[data-project-editor]")) {
     const saved = workspace?.savedOutput;
     const config = workspace?.snapshot?.config || {};
     const savedConfig = saved?.project?.config || {};
-    const useSaved = !deferOutput && saved?.format === "resources-project-output-v1" &&
+    const useSaved = saved?.format === "resources-project-output-v1" &&
       JSON.stringify(savedConfig.containerOptions || {}) === JSON.stringify(config.containerOptions || {}) &&
       JSON.stringify(savedConfig.environment || {}) === JSON.stringify(config.environment || {});
     await requestFrontendService("editor.mount", {
-      deferOutput, workspace, savedOutput: useSaved ? saved : null,
+      deferOutput: deferOutput && !useSaved, workspace, savedOutput: useSaved ? saved : null,
     });
   }
   openProject().catch((error) => {

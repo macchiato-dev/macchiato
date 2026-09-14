@@ -743,6 +743,13 @@
 
   // packages/hub/src/content.js
   var CONTENT_SCHEMA = Object.freeze([
+    // Derived output has one replaceable slot, not a second version history.
+    `CREATE TABLE IF NOT EXISTS resource_project_build_output (
+    project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
+    source_json TEXT NOT NULL,
+    output_json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT`,
     `CREATE TABLE IF NOT EXISTS resource_organizations (
     id TEXT PRIMARY KEY,
     owner_user_id TEXT NOT NULL REFERENCES users(id),
@@ -830,6 +837,18 @@
     FROM resource_project_publications p JOIN resource_project_state s ON s.project_id = p.project_id`
   ]);
   var CONTENT_QUERIES = Object.freeze({
+    buildOutput: `SELECT b.output_json FROM resource_project_build_output b
+    JOIN resource_projects p ON p.id = b.project_id
+    JOIN resource_project_publications pub ON pub.project_id = p.id
+    WHERE p.id = ? AND (p.owner_user_id = ? OR
+      (p.visibility = 'public' AND b.source_json = pub.snapshot_json))`,
+    saveBuildOutput: `INSERT INTO resource_project_build_output
+      (project_id, source_json, output_json, updated_at)
+    SELECT p.id, s.snapshot_json, ?, ? FROM resource_projects p
+      JOIN resource_project_state s ON s.project_id = p.id
+    WHERE p.id = ? AND p.owner_user_id = ? AND s.snapshot_json = ?
+    ON CONFLICT(project_id) DO UPDATE SET source_json = excluded.source_json,
+      output_json = excluded.output_json, updated_at = excluded.updated_at`,
     projectByNamespace: `SELECT id, owner_user_id, namespace_kind, namespace_slug, slug, name,
                      description, visibility, template, created_at
               FROM resource_projects
@@ -1099,6 +1118,7 @@
         return Object.freeze({
           project: project(row),
           snapshot: parsedSnapshot(row.snapshot_json),
+          savedOutput: await this.getProjectBuildOutput(row.id, userId, row.snapshot_json),
           publishedSnapshot: parsedSnapshot(row.published_snapshot_json),
           hasUnpublishedChanges: String(row.snapshot_json) !== String(row.published_snapshot_json),
           versionCount: Number(row.last_version_sequence),
@@ -1113,7 +1133,49 @@
         });
         const row = found.rows[0];
         if (!row) return null;
-        return Object.freeze({ project: project(row), snapshot: parsedSnapshot(row.snapshot_json), versionCount: Number(row.last_version_sequence), updatedAt: Number(row.updated_at) });
+        return Object.freeze({
+          project: project(row),
+          snapshot: parsedSnapshot(row.snapshot_json),
+          savedOutput: await this.getProjectBuildOutput(row.id, "", row.snapshot_json),
+          versionCount: Number(row.last_version_sequence),
+          updatedAt: Number(row.updated_at)
+        });
+      },
+      async getProjectBuildOutput(projectId, userId = "", workspaceJson = "") {
+        await initialize2();
+        const result = await client.execute({
+          sql: CONTENT_QUERIES.buildOutput,
+          args: [String(projectId), String(userId)]
+        });
+        const json = result.rows[0]?.output_json;
+        if (!json) return null;
+        const encoder = new TextEncoder();
+        if (encoder.encode(json).byteLength + encoder.encode(workspaceJson).byteLength > 70 * 1024 * 1024) return null;
+        return JSON.parse(json);
+      },
+      async saveProjectBuildOutput(userId, projectId, source, output) {
+        await initialize2();
+        const owned = await client.execute({
+          sql: CONTENT_QUERIES.projectState,
+          args: [String(projectId), String(userId)]
+        });
+        if (!owned.rows[0]) return null;
+        const snapshot = validatedSnapshot(source);
+        if (output?.format !== "resources-project-output-v1" || !output.project || !output.compiled || !Array.isArray(output.compiled.scripts) || !Array.isArray(output.compiled.stylesheets)) {
+          throw new ContentValidationError("snapshot", "Build output is invalid");
+        }
+        const project2 = validatedSnapshot(output.project);
+        await snapshotValidator(project2);
+        const sourceJson = JSON.stringify(snapshot);
+        const outputJson = JSON.stringify({ format: output.format, project: project2, compiled: output.compiled });
+        if (new TextEncoder().encode(outputJson).byteLength + new TextEncoder().encode(sourceJson).byteLength > 70 * 1024 * 1024) {
+          throw new ContentValidationError("snapshot", "Build output is too large");
+        }
+        const result = await client.execute({
+          sql: CONTENT_QUERIES.saveBuildOutput,
+          args: [outputJson, now(), String(projectId), String(userId), sourceJson]
+        });
+        return { saved: Number(result.rowsAffected) > 0 };
       },
       async listPublicProjects({ limit = 24, namespaces } = {}) {
         await initialize2();
@@ -1547,11 +1609,15 @@
   applied_at INTEGER NOT NULL
 ) STRICT`;
   var HUB_MIGRATIONS = Object.freeze([
+    // New installations also get this table through CONTENT_SCHEMA below.
     Object.freeze({ version: 1, name: "accounts-and-content", statements: Object.freeze([...ACCOUNT_SCHEMA, ...CONTENT_SCHEMA]) }),
     Object.freeze({ version: 2, name: "organization-memberships-and-notifications", statements: ORGANIZATION_SCHEMA }),
     Object.freeze({ version: 3, name: "project-version-labels", statements: Object.freeze([
       CONTENT_SCHEMA.find((statement) => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_version_labels")),
       CONTENT_SCHEMA.find((statement) => statement.includes("INSERT OR IGNORE INTO resource_project_version_labels"))
+    ]) }),
+    Object.freeze({ version: 4, name: "latest-successful-project-output", statements: Object.freeze([
+      CONTENT_SCHEMA.find((statement) => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_build_output"))
     ]) })
   ]);
   function createMigrationRunner(client, { migrations: migrations2 = HUB_MIGRATIONS, now = Date.now } = {}) {

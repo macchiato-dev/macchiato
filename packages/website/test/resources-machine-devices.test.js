@@ -6,6 +6,18 @@ import { compileProjectFiles } from "../../project-editor/src/single-file-compil
 import { DRAFT_KEY, pendingProjectSnapshotKey } from "../project-session.js";
 import { applyProjectPatch, diffProjectSnapshots, emptyProjectSnapshot } from "../../hub/src/project-history.js";
 
+test("saved output retains its own resource bytes independently of newer source", () => {
+  const resources = new ResourcesProjectResourceDevice();
+  const snapshot = { files: [{ path: "tile.png", content: "data:image/png;base64,NEW" }], config: {} };
+  const project = { files: [{ path: "tile.png", content: "data:image/png;base64,OLD" }], config: {} };
+  const savedOutput = { format: "resources-project-output-v1", project,
+    compiled: { tree: [], scripts: [], stylesheets: [] } };
+  const compact = JSON.parse(resources.compactText(JSON.stringify({ snapshot, savedOutput })));
+  assert.notEqual(compact.snapshot.files[0].content, compact.savedOutput.project.files[0].content);
+  assert.deepEqual(JSON.parse(resources.hydrateText(JSON.stringify({ snapshot: compact.snapshot,
+    output: compact.savedOutput }))), { snapshot, output: savedOutput });
+});
+
 test("editor startup coalesces callers and rejects a late workspace after disposal", async () => {
   let release, requests = 0;
   const reply = new Promise(resolve => { release = resolve; });

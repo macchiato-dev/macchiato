@@ -400,7 +400,7 @@ export function createContentStore(client, {
       return Object.freeze({
         project: project(row),
         snapshot: parsedSnapshot(row.snapshot_json),
-        savedOutput: await this.getProjectBuildOutput(row.id, userId),
+        savedOutput: await this.getProjectBuildOutput(row.id, userId, row.snapshot_json),
         publishedSnapshot: parsedSnapshot(row.published_snapshot_json),
         hasUnpublishedChanges: String(row.snapshot_json) !== String(row.published_snapshot_json),
         versionCount: Number(row.last_version_sequence),
@@ -417,15 +417,21 @@ export function createContentStore(client, {
       const row = found.rows[0];
       if (!row) return null;
       return Object.freeze({ project: project(row), snapshot: parsedSnapshot(row.snapshot_json),
-        savedOutput: await this.getProjectBuildOutput(row.id),
+        savedOutput: await this.getProjectBuildOutput(row.id, "", row.snapshot_json),
         versionCount: Number(row.last_version_sequence), updatedAt: Number(row.updated_at) });
     },
 
-    async getProjectBuildOutput(projectId, userId = "") {
+    async getProjectBuildOutput(projectId, userId = "", workspaceJson = "") {
       await initialize();
       const result = await client.execute({ sql: CONTENT_QUERIES.buildOutput,
         args: [String(projectId), String(userId)] });
-      return result.rows[0] ? JSON.parse(result.rows[0].output_json) : null;
+      const json = result.rows[0]?.output_json;
+      if (!json) return null;
+      // Later edits can grow independently of the retained build. An optional
+      // cache must never make the workspace exceed its transport budget.
+      const encoder = new TextEncoder();
+      if (encoder.encode(json).byteLength + encoder.encode(workspaceJson).byteLength > 70 * 1024 * 1024) return null;
+      return JSON.parse(json);
     },
 
     async saveProjectBuildOutput(userId, projectId, source, output) {

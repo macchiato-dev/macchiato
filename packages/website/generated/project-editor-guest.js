@@ -27480,6 +27480,9 @@ async function mountResourcesProjectEditor(options) {
     renderSnapshot() {
       return callGuest("__resourcesProjectRenderSnapshot");
     },
+    successfulOutput() {
+      return callGuest("__resourcesProjectSuccessfulOutput");
+    },
     command(payload) {
       return callGuest("__codeEditorCommand", payload);
     },
@@ -28059,9 +28062,12 @@ async function mountProjectRoot(root) {
   let workspacePayload = null;
   if (snapshotUrl) {
     try {
-      const response = await fetch(snapshotUrl, { headers: { Accept: "application/json" }, cache: "no-store" });
-      if (!response.ok) throw new Error(`Project workspace response: ${response.status}`);
-      workspacePayload = await response.json();
+      workspacePayload = globalThis.__resourcesProjectWorkspace?.();
+      if (!workspacePayload) {
+        const response = await fetch(snapshotUrl, { headers: { Accept: "application/json" }, cache: "no-store" });
+        if (!response.ok) throw new Error(`Project workspace response: ${response.status}`);
+        workspacePayload = await response.json();
+      }
       snapshotField.value = JSON.stringify(workspacePayload.snapshot);
       versionCount.textContent = String(workspacePayload.versionCount || 1);
       const draftFlash = root.closest(".project-create__layout")?.querySelector("[data-draft-flash]");
@@ -28351,6 +28357,7 @@ async function mountProjectRoot(root) {
           setStatus(`Output stopped: ${error.message}`, "error", null, "output");
         },
         onOutputReady() {
+          persistSuccessfulOutput();
           if (activeStatusSurface !== "output") return;
           activeError = "";
           activeErrorAction = null;
@@ -28377,6 +28384,7 @@ async function mountProjectRoot(root) {
       root.dataset.editorMachineStage = "content";
       sendContent();
       root.dataset.editorMachineStage = "ready";
+      persistSuccessfulOutput();
       if (root.dataset.outputMachineError) {
         setStatus(`Output stopped: ${root.dataset.outputMachineError}`, "error", null, "output");
       }
@@ -28393,6 +28401,28 @@ async function mountProjectRoot(root) {
       root.dataset.editorMachineError = error.stack || error.message;
       setStatus(`Editor failed to start: ${error.message}`, true, null, "editor");
     }
+  }
+  let persistedOutput = null;
+  let outputSaveChain = Promise.resolve();
+  function persistSuccessfulOutput() {
+    if (draft || memoryOnly || readOnly2 || !projectId || !editorController) return;
+    const candidate = editorController.successfulOutput?.();
+    if (!candidate) return;
+    const body = JSON.stringify(candidate);
+    if (body === persistedOutput) return;
+    outputSaveChain = outputSaveChain.then(async () => {
+      if (body === persistedOutput) return;
+      const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}/output`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-resources-csrf": root.dataset.csrf },
+        body
+      });
+      if (!response.ok) throw new Error(`Build output save failed (${response.status})`);
+      const result2 = await response.json();
+      if (result2.saved) persistedOutput = body;
+    }).catch((error) => {
+      setStatus(`${error.message}. The working output remains open.`, "warning", null, "output");
+    });
   }
   function rotateContainerMachines(reason = "container-change") {
     mountEditorMachine(reason);
@@ -28687,6 +28717,7 @@ async function mountProjectRoot(root) {
       }
       const result2 = await response.json();
       versionCount.textContent = String(result2.versionCount);
+      persistSuccessfulOutput();
       if (changeGeneration === savingGeneration) {
         pending2 = false;
         pendingDestructive = false;

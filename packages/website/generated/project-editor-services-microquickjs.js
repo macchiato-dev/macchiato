@@ -690,6 +690,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               renderSnapshot: function renderSnapshot() {
                 return callGuest("__resourcesProjectRenderSnapshot");
               },
+              successfulOutput: function successfulOutput() {
+                return callGuest("__resourcesProjectSuccessfulOutput");
+              },
               command: function command(payload) {
                 return callGuest("__codeEditorCommand", payload);
               },
@@ -1624,11 +1627,11 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
     return _mountProjectRoot.apply(this, arguments);
   }
   function _mountProjectRoot() {
-    _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee9(root) {
+    _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee0(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selectedStoredSequence, latestStoredSequence, selectedVersionField, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i5, _arr3, _arr3$_i, _button2, _label, text, tabLayoutFrame, syncTabOverflow, scheduleTabLayout, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i6, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
-      return _regenerator().w(function (_context10) {
-        while (1) switch (_context10.p = _context10.n) {
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selectedStoredSequence, latestStoredSequence, selectedVersionField, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, persistedOutput, outputSaveChain, persistSuccessfulOutput, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i5, _arr3, _arr3$_i, _button2, _label, text, tabLayoutFrame, syncTabOverflow, scheduleTabLayout, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i6, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      return _regenerator().w(function (_context11) {
+        while (1) switch (_context11.p = _context11.n) {
           case 0:
             positionHistory = function _positionHistory() {
               var _historyPanel$parentE;
@@ -1645,20 +1648,20 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               historyPanel.style.maxHeight = Math.max(120, innerHeight - buttonRect.bottom - gap - edge) + "px";
             };
             closeHistory = function _closeHistory(_temp1) {
-              var _ref15 = _temp1 === void 0 ? {} : _temp1,
-                _ref15$restoreFocus = _ref15.restoreFocus,
-                restoreFocus = _ref15$restoreFocus === void 0 ? false : _ref15$restoreFocus;
+              var _ref16 = _temp1 === void 0 ? {} : _temp1,
+                _ref16$restoreFocus = _ref16.restoreFocus,
+                restoreFocus = _ref16$restoreFocus === void 0 ? false : _ref16$restoreFocus;
               historyPanel.hidden = true;
               versionButton.setAttribute("aria-expanded", "false");
               if (restoreFocus) versionButton.focus();
             };
             applyTemplateSnapshot = function _applyTemplateSnapsho(next, _temp0) {
               var _next$config$containe, _next$config;
-              var _ref13 = _temp0 === void 0 ? {} : _temp0,
-                _ref13$notice = _ref13.notice,
-                notice = _ref13$notice === void 0 ? true : _ref13$notice,
-                _ref13$previousSnapsh = _ref13.previousSnapshot,
-                previousSnapshot = _ref13$previousSnapsh === void 0 ? state : _ref13$previousSnapsh;
+              var _ref14 = _temp0 === void 0 ? {} : _temp0,
+                _ref14$notice = _ref14.notice,
+                notice = _ref14$notice === void 0 ? true : _ref14$notice,
+                _ref14$previousSnapsh = _ref14.previousSnapshot,
+                previousSnapshot = _ref14$previousSnapsh === void 0 ? state : _ref14$previousSnapsh;
               if (linkPatterns) linkPatterns.value = (((_next$config$containe = next.config.containerOptions) == null ? void 0 : _next$config$containe.allowedLinkPatterns) || []).join("\n");
               if (template) template.value = next.config.template || "blank";
               growTextarea(linkPatterns);
@@ -1754,25 +1757,25 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               }
             };
             closeOutputOverflow = function _closeOutputOverflow(_temp9) {
-              var _ref11 = _temp9 === void 0 ? {} : _temp9,
-                _ref11$focus = _ref11.focus,
-                focus = _ref11$focus === void 0 ? false : _ref11$focus;
+              var _ref12 = _temp9 === void 0 ? {} : _temp9,
+                _ref12$focus = _ref12.focus,
+                focus = _ref12$focus === void 0 ? false : _ref12$focus;
               outputOverflowMenu.hidden = true;
               outputOverflowTrigger.setAttribute("aria-expanded", "false");
               if (focus) outputOverflowTrigger.focus();
             };
             closeEditorOverflow = function _closeEditorOverflow(_temp8) {
-              var _ref1 = _temp8 === void 0 ? {} : _temp8,
-                _ref1$focus = _ref1.focus,
-                focus = _ref1$focus === void 0 ? false : _ref1$focus;
+              var _ref10 = _temp8 === void 0 ? {} : _temp8,
+                _ref10$focus = _ref10.focus,
+                focus = _ref10$focus === void 0 ? false : _ref10$focus;
               editorOverflowMenu.hidden = true;
               editorOverflowTrigger.setAttribute("aria-expanded", "false");
               if (focus) editorOverflowTrigger.focus();
             };
             closeFileMenu = function _closeFileMenu(_temp7) {
-              var _ref0 = _temp7 === void 0 ? {} : _temp7,
-                _ref0$focus = _ref0.focus,
-                focus = _ref0$focus === void 0 ? false : _ref0$focus;
+              var _ref1 = _temp7 === void 0 ? {} : _temp7,
+                _ref1$focus = _ref1.focus,
+                focus = _ref1$focus === void 0 ? false : _ref1$focus;
               fileMenu.hidden = true;
               fileTrigger.setAttribute("aria-expanded", "false");
               if (focus) fileTrigger.focus();
@@ -1850,9 +1853,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               sendContent();
             };
             receiveEditorChange = function _receiveEditorChange(content, _temp6) {
-              var _ref9 = _temp6 === void 0 ? {} : _temp6,
-                _ref9$syntaxErrors = _ref9.syntaxErrors,
-                syntaxErrors = _ref9$syntaxErrors === void 0 ? false : _ref9$syntaxErrors;
+              var _ref0 = _temp6 === void 0 ? {} : _temp6,
+                _ref0$syntaxErrors = _ref0.syntaxErrors,
+                syntaxErrors = _ref0$syntaxErrors === void 0 ? false : _ref0$syntaxErrors;
               if (typeof content !== "string") return;
               if (readOnly || editorMount.hidden || selected === "config" || content === selectedContent()) return;
               try {
@@ -1883,28 +1886,28 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               }
             };
             _renderStoredVersions = function _renderStoredVersions3() {
-              _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee8() {
+              _renderStoredVersions = _asyncToGenerator(_regenerator().m(function _callee9() {
                 var _versions$find$sequen, _versions$find, _workspacePayload3;
                 var response, _yield$response$json, versions, hasCurrentDraft, current, _loop8, _iterator28, _step28;
-                return _regenerator().w(function (_context9) {
-                  while (1) switch (_context9.n) {
+                return _regenerator().w(function (_context0) {
+                  while (1) switch (_context0.n) {
                     case 0:
                       versionList.textContent = "Loading\u2026";
-                      _context9.n = 1;
+                      _context0.n = 1;
                       return fetch("/api/projects/" + encodeURIComponent(projectId) + "/versions");
                     case 1:
-                      response = _context9.v;
+                      response = _context0.v;
                       if (response.ok) {
-                        _context9.n = 2;
+                        _context0.n = 2;
                         break;
                       }
                       versionList.textContent = "Version history unavailable.";
-                      return _context9.a(2);
+                      return _context0.a(2);
                     case 2:
-                      _context9.n = 3;
+                      _context0.n = 3;
                       return response.json();
                     case 3:
-                      _yield$response$json = _context9.v;
+                      _yield$response$json = _context0.v;
                       versions = _yield$response$json.versions;
                       latestStoredSequence = (_versions$find$sequen = (_versions$find = versions.find(function (version) {
                         return version.latest;
@@ -1939,8 +1942,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       if (hasCurrentDraft && latestStoredSequence === null) versionList.append(current);
                       _loop8 = _regenerator().m(function _loop8() {
                         var version, timestamp, button;
-                        return _regenerator().w(function (_context8) {
-                          while (1) switch (_context8.n) {
+                        return _regenerator().w(function (_context9) {
+                          while (1) switch (_context9.n) {
                             case 0:
                               version = _step28.value;
                               timestamp = version.latest ? version.savedAt || version.createdAt : version.createdAt;
@@ -1950,31 +1953,31 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                                 latest: version.latest,
                                 current: viewingHistorical ? selectedStoredSequence === version.sequence : !hasCurrentDraft && version.latest
                               });
-                              button._selectVersion = _asyncToGenerator(_regenerator().m(function _callee7() {
+                              button._selectVersion = _asyncToGenerator(_regenerator().m(function _callee8() {
                                 var response2, result2;
-                                return _regenerator().w(function (_context7) {
-                                  while (1) switch (_context7.n) {
+                                return _regenerator().w(function (_context8) {
+                                  while (1) switch (_context8.n) {
                                     case 0:
                                       clearNotice();
-                                      _context7.n = 1;
+                                      _context8.n = 1;
                                       return save();
                                     case 1:
                                       if (!viewingHistorical) currentSnapshot = state;
-                                      _context7.n = 2;
+                                      _context8.n = 2;
                                       return fetch("/api/projects/" + encodeURIComponent(projectId) + "/versions/" + version.sequence);
                                     case 2:
-                                      response2 = _context7.v;
+                                      response2 = _context8.v;
                                       if (response2.ok) {
-                                        _context7.n = 3;
+                                        _context8.n = 3;
                                         break;
                                       }
                                       setStatus("Version unavailable", true);
-                                      return _context7.a(2);
+                                      return _context8.a(2);
                                     case 3:
-                                      _context7.n = 4;
+                                      _context8.n = 4;
                                       return response2.json();
                                     case 4:
-                                      result2 = _context7.v;
+                                      result2 = _context8.v;
                                       state = normalizeProjectSnapshot(result2.snapshot);
                                       viewingHistorical = true;
                                       selectedStoredSequence = version.sequence;
@@ -1989,31 +1992,31 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                                       refreshSubmitLabel();
                                       setStatus("Viewing " + button.textContent);
                                     case 5:
-                                      return _context7.a(2);
+                                      return _context8.a(2);
                                   }
-                                }, _callee7);
+                                }, _callee8);
                               }));
                               versionList.append(button);
                               if (hasCurrentDraft && version.latest) versionList.append(current);
                             case 1:
-                              return _context8.a(2);
+                              return _context9.a(2);
                           }
                         }, _loop8);
                       });
                       _iterator28 = _createForOfIteratorHelperLoose(versions);
                     case 4:
                       if ((_step28 = _iterator28()).done) {
-                        _context9.n = 6;
+                        _context0.n = 6;
                         break;
                       }
-                      return _context9.d(_regeneratorValues(_loop8()), 5);
+                      return _context0.d(_regeneratorValues(_loop8()), 5);
                     case 5:
-                      _context9.n = 4;
+                      _context0.n = 4;
                       break;
                     case 6:
-                      return _context9.a(2);
+                      return _context0.a(2);
                   }
-                }, _callee8);
+                }, _callee9);
               }));
               return _renderStoredVersions.apply(this, arguments);
             };
@@ -2072,29 +2075,29 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               });
             };
             _save = function _save3() {
-              _save = _asyncToGenerator(_regenerator().m(function _callee6() {
-                var savingGeneration, savingSnapshot, savingDestructive, requestSave, _response, failure, _find, page, documentCopy, fresh, _failure2, result2, cleared, _t5, _t6;
-                return _regenerator().w(function (_context6) {
-                  while (1) switch (_context6.p = _context6.n) {
+              _save = _asyncToGenerator(_regenerator().m(function _callee7() {
+                var savingGeneration, savingSnapshot, savingDestructive, requestSave, response, failure, _find, page, documentCopy, fresh, _failure2, result2, cleared, _t5, _t6;
+                return _regenerator().w(function (_context7) {
+                  while (1) switch (_context7.p = _context7.n) {
                     case 0:
                       if (!(!pending2 || saving)) {
-                        _context6.n = 1;
+                        _context7.n = 1;
                         break;
                       }
-                      return _context6.a(2);
+                      return _context7.a(2);
                     case 1:
                       if (!(draft || memoryOnly)) {
-                        _context6.n = 3;
+                        _context7.n = 3;
                         break;
                       }
                       if (!((!templateOnlyPending || recoveryWriteError) && !checkpointDraft({
                         destructive: pendingDestructive || selected === "config"
                       }))) {
-                        _context6.n = 2;
+                        _context7.n = 2;
                         break;
                       }
                       __resourcesDatasetSet(root, "data-draft-state", "warning");
-                      return _context6.a(2);
+                      return _context7.a(2);
                     case 2:
                       pending2 = false;
                       pendingDestructive = false;
@@ -2102,14 +2105,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       __resourcesDatasetDelete(root, "data-draft-dirty");
                       __resourcesDatasetSet(root, "data-draft-state", "saved");
                       setStatus(memoryOnly ? "" : "Draft saved in this session");
-                      return _context6.a(2);
+                      return _context7.a(2);
                     case 3:
                       savingGeneration = changeGeneration;
                       savingSnapshot = state;
                       savingDestructive = pendingDestructive && !templateOnlyPending;
                       saving = true;
                       setStatus("Saving\u2026");
-                      _context6.p = 4;
+                      _context7.p = 4;
                       requestSave = function requestSave() {
                         return fetch("/api/projects/" + encodeURIComponent(projectId) + "/snapshot", {
                           method: "POST",
@@ -2123,65 +2126,66 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                           })
                         });
                       };
-                      _context6.n = 5;
+                      _context7.n = 5;
                       return requestSave();
                     case 5:
-                      _response = _context6.v;
-                      if (!(_response.status === 403)) {
-                        _context6.n = 10;
+                      response = _context7.v;
+                      if (!(response.status === 403)) {
+                        _context7.n = 10;
                         break;
                       }
-                      _context6.n = 6;
-                      return _response.clone().json().catch(function () {
+                      _context7.n = 6;
+                      return response.clone().json().catch(function () {
                         return null;
                       });
                     case 6:
-                      failure = _context6.v;
+                      failure = _context7.v;
                       if (!((failure == null ? void 0 : failure.error) === "request_token")) {
-                        _context6.n = 10;
+                        _context7.n = 10;
                         break;
                       }
-                      _context6.n = 7;
+                      _context7.n = 7;
                       return fetch(location.href, {
                         cache: "no-store"
                       });
                     case 7:
-                      page = _context6.v;
+                      page = _context7.v;
                       _t5 = new DOMParser();
-                      _context6.n = 8;
+                      _context7.n = 8;
                       return page.text();
                     case 8:
-                      documentCopy = _t5.parseFromString.call(_t5, _context6.v, "text/html");
+                      documentCopy = _t5.parseFromString.call(_t5, _context7.v, "text/html");
                       fresh = (_find = _toConsumableArray(documentCopy.querySelectorAll("[data-project-editor]")).find(function (editor) {
                         return __resourcesDatasetGet(editor, "data-project-id") === projectId;
                       })) == null ? void 0 : __resourcesDatasetGet(_find, "data-csrf");
                       if (!fresh) {
-                        _context6.n = 10;
+                        _context7.n = 10;
                         break;
                       }
                       __resourcesDatasetSet(root, "data-csrf", fresh);
-                      _context6.n = 9;
+                      _context7.n = 9;
                       return requestSave();
                     case 9:
-                      _response = _context6.v;
+                      response = _context7.v;
                     case 10:
-                      if (_response.ok) {
-                        _context6.n = 12;
+                      if (response.ok) {
+                        _context7.n = 12;
                         break;
                       }
-                      _context6.n = 11;
-                      return _response.json().catch(function () {
+                      _context7.n = 11;
+                      return response.json().catch(function () {
                         return null;
                       });
                     case 11:
-                      _failure2 = _context6.v;
-                      throw new Error((_failure2 == null ? void 0 : _failure2.message) || "Save failed (" + _response.status + ")");
+                      _failure2 = _context7.v;
+                      throw new Error((_failure2 == null ? void 0 : _failure2.message) || "Save failed (" + response.status + ")");
                     case 12:
-                      _context6.n = 13;
-                      return _response.json();
+                      _context7.n = 13;
+                      return response.json();
                     case 13:
-                      result2 = _context6.v;
+                      result2 = _context7.v;
                       versionCount.textContent = String(result2.versionCount);
+                      persistSuccessfulOutput();
                       if (changeGeneration === savingGeneration) {
                         pending2 = false;
                         pendingDestructive = false;
@@ -2194,24 +2198,24 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       } else {
                         setStatus("Saving\u2026");
                       }
-                      _context6.n = 15;
+                      _context7.n = 15;
                       break;
                     case 14:
-                      _context6.p = 14;
-                      _t6 = _context6.v;
+                      _context7.p = 14;
+                      _t6 = _context7.v;
                       setStatus(_t6.message, true);
                     case 15:
-                      _context6.p = 15;
+                      _context7.p = 15;
                       saving = false;
                       if (pending2 && changeGeneration !== savingGeneration) {
                         clearTimeout(saveTimer);
                         saveTimer = setTimeout(save, 250);
                       }
-                      return _context6.f(15);
+                      return _context7.f(15);
                     case 16:
-                      return _context6.a(2);
+                      return _context7.a(2);
                   }
-                }, _callee6, null, [[4, 14, 15, 16, void 0, void 0]]);
+                }, _callee7, null, [[4, 14, 15, 16, void 0, void 0]]);
               }));
               return _save.apply(this, arguments);
             };
@@ -2219,9 +2223,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               return _save.apply(this, arguments);
             };
             checkpointDraft = function _checkpointDraft(_temp5) {
-              var _ref8 = _temp5 === void 0 ? {} : _temp5,
-                _ref8$destructive = _ref8.destructive,
-                destructive = _ref8$destructive === void 0 ? false : _ref8$destructive;
+              var _ref9 = _temp5 === void 0 ? {} : _temp5,
+                _ref9$destructive = _ref9.destructive,
+                destructive = _ref9$destructive === void 0 ? false : _ref9$destructive;
               if (viewingHistorical) return true;
               if (recoveryFailure) return false;
               var now = Date.now();
@@ -2247,9 +2251,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             };
             updateSnapshot = function _updateSnapshot(next, _temp4) {
               var _editorController4, _root$closest8;
-              var _ref7 = _temp4 === void 0 ? {} : _temp4,
-                _ref7$destructive = _ref7.destructive,
-                destructive = _ref7$destructive === void 0 ? false : _ref7$destructive;
+              var _ref8 = _temp4 === void 0 ? {} : _temp4,
+                _ref8$destructive = _ref8.destructive,
+                destructive = _ref8$destructive === void 0 ? false : _ref8$destructive;
               var normalized = normalizeProjectSnapshot(next);
               if (projectSnapshotsEqual(state, normalized)) return false;
               var branchedFromHistory = viewingHistorical;
@@ -2420,13 +2424,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               openChoices.setAttribute("aria-label", openHeading.textContent);
               openSection.append(openHeading, openChoices);
               menu.append(availableChoices, openSection);
-              function addChoice(_ref6) {
-                var path = _ref6.path,
-                  label = _ref6.label,
-                  _ref6$config = _ref6.config,
-                  config = _ref6$config === void 0 ? false : _ref6$config,
-                  _ref6$open = _ref6.open,
-                  open = _ref6$open === void 0 ? false : _ref6$open;
+              function addChoice(_ref7) {
+                var path = _ref7.path,
+                  label = _ref7.label,
+                  _ref7$config = _ref7.config,
+                  config = _ref7$config === void 0 ? false : _ref7$config,
+                  _ref7$open = _ref7.open,
+                  open = _ref7$open === void 0 ? false : _ref7$open;
                 var tabPath = config ? "config" : path;
                 var row = document.createElement("div");
                 row.className = "project-editor__file-option-row";
@@ -2521,12 +2525,59 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               }
               mountEditorMachine(reason);
             };
+            persistSuccessfulOutput = function _persistSuccessfulOut() {
+              if (draft || memoryOnly || readOnly || !projectId || !editorController) return;
+              var candidate = editorController.successfulOutput == null ? void 0 : editorController.successfulOutput();
+              if (!candidate) return;
+              var body = JSON.stringify(candidate);
+              if (body === persistedOutput) return;
+              outputSaveChain = outputSaveChain.then(_asyncToGenerator(_regenerator().m(function _callee2() {
+                var response, result2;
+                return _regenerator().w(function (_context2) {
+                  while (1) switch (_context2.n) {
+                    case 0:
+                      if (!(body === persistedOutput)) {
+                        _context2.n = 1;
+                        break;
+                      }
+                      return _context2.a(2);
+                    case 1:
+                      _context2.n = 2;
+                      return fetch("/api/projects/" + encodeURIComponent(projectId) + "/output", {
+                        method: "POST",
+                        headers: {
+                          "content-type": "application/json",
+                          "x-resources-csrf": __resourcesDatasetGet(root, "data-csrf")
+                        },
+                        body: body
+                      });
+                    case 2:
+                      response = _context2.v;
+                      if (response.ok) {
+                        _context2.n = 3;
+                        break;
+                      }
+                      throw new Error("Build output save failed (" + response.status + ")");
+                    case 3:
+                      _context2.n = 4;
+                      return response.json();
+                    case 4:
+                      result2 = _context2.v;
+                      if (result2.saved) persistedOutput = body;
+                    case 5:
+                      return _context2.a(2);
+                  }
+                }, _callee2);
+              }))).catch(function (error) {
+                setStatus(error.message + ". The working output remains open.", "warning", null, "output");
+              });
+            };
             _mountEditorMachine = function _mountEditorMachine3() {
-              _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee5(reason) {
+              _mountEditorMachine = _asyncToGenerator(_regenerator().m(function _callee6(reason) {
                 var _editorController7;
                 var generation, _inspection$machine, controller, inspection, _t4;
-                return _regenerator().w(function (_context5) {
-                  while (1) switch (_context5.p = _context5.n) {
+                return _regenerator().w(function (_context6) {
+                  while (1) switch (_context6.p = _context6.n) {
                     case 0:
                       if (reason === void 0) {
                         reason = "project-open";
@@ -2538,8 +2589,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       __resourcesDatasetDelete(root, "data-editor-machine-id");
                       __resourcesDatasetSet(root, "data-editor-machine-state", "starting");
                       __resourcesDatasetSet(root, "data-editor-machine-reason", reason);
-                      _context5.p = 1;
-                      _context5.n = 2;
+                      _context6.p = 1;
+                      _context6.n = 2;
                       return mountResourcesProjectEditor({
                         root: editorMount,
                         limits: false,
@@ -2556,6 +2607,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                           setStatus("Output stopped: " + error.message, "error", null, "output");
                         },
                         onOutputReady: function onOutputReady() {
+                          persistSuccessfulOutput();
                           if (activeStatusSurface !== "output") return;
                           activeError = "";
                           activeErrorAction = null;
@@ -2569,13 +2621,13 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                         }
                       });
                     case 2:
-                      controller = _context5.v;
+                      controller = _context6.v;
                       if (!(generation !== editorGeneration)) {
-                        _context5.n = 3;
+                        _context6.n = 3;
                         break;
                       }
                       controller.destroy();
-                      return _context5.a(2);
+                      return _context6.a(2);
                     case 3:
                       editorController = controller;
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "snapshot");
@@ -2590,29 +2642,30 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "content");
                       sendContent();
                       __resourcesDatasetSet(root, "data-editor-machine-stage", "ready");
+                      persistSuccessfulOutput();
                       if (__resourcesDatasetGet(root, "data-output-machine-error")) {
                         setStatus("Output stopped: " + __resourcesDatasetGet(root, "data-output-machine-error"), "error", null, "output");
                       }
                       if (__resourcesDatasetGet(root, "data-output-machine-state") === "waiting" || !projectSnapshotsEqual(initialOutputSnapshot, state)) renderPreview();
                       if (recoveryFailure) setStatus("Draft recovery failed: " + recoveryFailure + ". Stored recovery data was kept.", "warning", null, "editor");
-                      _context5.n = 6;
+                      _context6.n = 6;
                       break;
                     case 4:
-                      _context5.p = 4;
-                      _t4 = _context5.v;
+                      _context6.p = 4;
+                      _t4 = _context6.v;
                       if (!(generation !== editorGeneration)) {
-                        _context5.n = 5;
+                        _context6.n = 5;
                         break;
                       }
-                      return _context5.a(2);
+                      return _context6.a(2);
                     case 5:
                       __resourcesDatasetSet(root, "data-editor-machine-state", "failed");
                       __resourcesDatasetSet(root, "data-editor-machine-error", _t4.stack || _t4.message);
                       setStatus("Editor failed to start: " + _t4.message, true, null, "editor");
                     case 6:
-                      return _context5.a(2);
+                      return _context6.a(2);
                   }
-                }, _callee5, null, [[1, 4]]);
+                }, _callee6, null, [[1, 4]]);
               }));
               return _mountEditorMachine.apply(this, arguments);
             };
@@ -2820,11 +2873,16 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             snapshotUrl = (_root$querySelector = root.querySelector("[data-project-snapshot-url]")) == null ? void 0 : __resourcesDatasetGet(_root$querySelector, "data-project-snapshot-url");
             workspacePayload = null;
             if (!snapshotUrl) {
-              _context10.n = 6;
+              _context11.n = 7;
               break;
             }
-            _context10.p = 1;
-            _context10.n = 2;
+            _context11.p = 1;
+            workspacePayload = globalThis.__resourcesProjectWorkspace == null ? void 0 : globalThis.__resourcesProjectWorkspace();
+            if (workspacePayload) {
+              _context11.n = 5;
+              break;
+            }
+            _context11.n = 2;
             return fetch(snapshotUrl, {
               headers: {
                 Accept: "application/json"
@@ -2832,48 +2890,49 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               cache: "no-store"
             });
           case 2:
-            response = _context10.v;
+            response = _context11.v;
             if (response.ok) {
-              _context10.n = 3;
+              _context11.n = 3;
               break;
             }
             throw new Error("Project workspace response: " + response.status);
           case 3:
-            _context10.n = 4;
+            _context11.n = 4;
             return response.json();
           case 4:
-            workspacePayload = _context10.v;
+            workspacePayload = _context11.v;
+          case 5:
             snapshotField.value = JSON.stringify(workspacePayload.snapshot);
             versionCount.textContent = String(workspacePayload.versionCount || 1);
             draftFlash = (_root$closest2 = root.closest(".project-create__layout")) == null ? void 0 : _root$closest2.querySelector("[data-draft-flash]");
             if (draftFlash && workspacePayload.hasUnpublishedChanges) draftFlash.hidden = false;else draftFlash == null || draftFlash.remove();
-            _context10.n = 6;
+            _context11.n = 7;
             break;
-          case 5:
-            _context10.p = 5;
-            _t7 = _context10.v;
+          case 6:
+            _context11.p = 6;
+            _t7 = _context11.v;
             __resourcesDatasetSet(root, "data-editor-machine-state", "failed");
             __resourcesDatasetSet(status, "data-state", "error");
             status.hidden = false;
             statusError.hidden = false;
             statusError.textContent = "Project failed to load: " + _t7.message;
-            return _context10.a(2);
-          case 6:
+            return _context11.a(2);
+          case 7:
             if (!(typeof (snapshotField == null ? void 0 : snapshotField.value) !== "string")) {
-              _context10.n = 7;
+              _context11.n = 8;
               break;
             }
             throw new Error("Project snapshot field is unavailable");
-          case 7:
-            _context10.p = 7;
-            parsedSnapshot = JSON.parse(snapshotField.value);
-            _context10.n = 9;
-            break;
           case 8:
-            _context10.p = 8;
-            _t8 = _context10.v;
-            throw new Error("Project snapshot JSON is invalid: " + ((_t8 == null ? void 0 : _t8.message) || _t8));
+            _context11.p = 8;
+            parsedSnapshot = JSON.parse(snapshotField.value);
+            _context11.n = 10;
+            break;
           case 9:
+            _context11.p = 9;
+            _t8 = _context11.v;
+            throw new Error("Project snapshot JSON is invalid: " + ((_t8 == null ? void 0 : _t8.message) || _t8));
+          case 10:
             state = normalizeProjectSnapshot(parsedSnapshot);
             initialOutputSnapshot = state;
             historyInEditorMachine = snapshotField.value.length <= 256e3;
@@ -2977,6 +3036,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               (_root$closest7 = root.closest("form")) == null || (_root$closest7 = _root$closest7.querySelector("[data-new-draft-flash]")) == null || _root$closest7.removeAttribute("hidden");
             }
             editorDocumentLimits = null;
+            persistedOutput = null;
+            outputSaveChain = Promise.resolve();
             openTabList = root.querySelector("[data-project-tabs]");
             tabScrollBack = document.createElement("button");
             tabScrollForward = document.createElement("button");
@@ -3152,17 +3213,17 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                 setStatus(_error16.message, "error");
               }
             });
-            archiveInput.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee2() {
+            archiveInput.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee3() {
               var imported, _imported$config, _t, _t2;
-              return _regenerator().w(function (_context2) {
-                while (1) switch (_context2.p = _context2.n) {
+              return _regenerator().w(function (_context3) {
+                while (1) switch (_context3.p = _context3.n) {
                   case 0:
-                    _context2.p = 0;
+                    _context3.p = 0;
                     _t = normalizeProjectSnapshot;
-                    _context2.n = 1;
+                    _context3.n = 1;
                     return importProjectArchive();
                   case 1:
-                    imported = _t(_context2.v);
+                    imported = _t(_context3.v);
                     selected = imported.config.entry && imported.files.some(function (item) {
                       return item.path === imported.config.entry;
                     }) ? imported.config.entry : imported.files[0].path;
@@ -3178,20 +3239,20 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                     sendContent();
                     renderPreview();
                     setStatus("ZIP imported");
-                    _context2.n = 3;
+                    _context3.n = 3;
                     break;
                   case 2:
-                    _context2.p = 2;
-                    _t2 = _context2.v;
+                    _context3.p = 2;
+                    _t2 = _context3.v;
                     setStatus(_t2.message, "error");
                   case 3:
-                    _context2.p = 3;
+                    _context3.p = 3;
                     archiveInput.value = "";
-                    return _context2.f(3);
+                    return _context3.f(3);
                   case 4:
-                    return _context2.a(2);
+                    return _context3.a(2);
                 }
-              }, _callee2, null, [[0, 2, 3, 4, void 0, void 0]]);
+              }, _callee3, null, [[0, 2, 3, 4, void 0, void 0]]);
             })));
             workspace = root.querySelector(".project-editor__workspace");
             outputOverflow = root.querySelector("[data-output-overflow]");
@@ -3204,33 +3265,33 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               outputOverflowTrigger.setAttribute("aria-expanded", String(opening));
               if (opening) fullscreenButton.focus();
             });
-            fullscreenButton.addEventListener("click", _asyncToGenerator(_regenerator().m(function _callee3() {
+            fullscreenButton.addEventListener("click", _asyncToGenerator(_regenerator().m(function _callee4() {
               var frame, _t3;
-              return _regenerator().w(function (_context3) {
-                while (1) switch (_context3.p = _context3.n) {
+              return _regenerator().w(function (_context4) {
+                while (1) switch (_context4.p = _context4.n) {
                   case 0:
                     closeOutputOverflow();
                     frame = root.querySelector(".project-editor__output-frame");
                     if (frame) {
-                      _context3.n = 1;
+                      _context4.n = 1;
                       break;
                     }
-                    return _context3.a(2, setStatus("Output is not ready", "error"));
+                    return _context4.a(2, setStatus("Output is not ready", "error"));
                   case 1:
-                    _context3.p = 1;
-                    _context3.n = 2;
+                    _context4.p = 1;
+                    _context4.n = 2;
                     return frame.requestFullscreen();
                   case 2:
-                    _context3.n = 4;
+                    _context4.n = 4;
                     break;
                   case 3:
-                    _context3.p = 3;
-                    _t3 = _context3.v;
+                    _context4.p = 3;
+                    _t3 = _context4.v;
                     setStatus("Full screen failed: " + ((_t3 == null ? void 0 : _t3.message) || String(_t3)), "error");
                   case 4:
-                    return _context3.a(2);
+                    return _context4.a(2);
                 }
-              }, _callee3, null, [[1, 3]]);
+              }, _callee4, null, [[1, 3]]);
             })));
             outputOverflowMenu.addEventListener("keydown", function (event) {
               if (event.key !== "Escape") return;
@@ -3264,8 +3325,8 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             });
             _loop9 = _regenerator().m(function _loop9() {
               var button;
-              return _regenerator().w(function (_context0) {
-                while (1) switch (_context0.n) {
+              return _regenerator().w(function (_context1) {
+                while (1) switch (_context1.n) {
                   case 0:
                     button = _step23.value;
                     button.addEventListener("click", function () {
@@ -3299,21 +3360,21 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       if (__resourcesDatasetGet(button, "data-project-view") === "editor") (_editorController8 = editorController) == null || _editorController8.focus();
                     });
                   case 1:
-                    return _context0.a(2);
+                    return _context1.a(2);
                 }
               }, _loop9);
             });
             _iterator23 = _createForOfIteratorHelperLoose(root.querySelectorAll("[data-project-view]"));
-          case 10:
+          case 11:
             if ((_step23 = _iterator23()).done) {
-              _context10.n = 12;
+              _context11.n = 13;
               break;
             }
-            return _context10.d(_regeneratorValues(_loop9()), 11);
-          case 11:
-            _context10.n = 10;
-            break;
+            return _context11.d(_regeneratorValues(_loop9()), 12);
           case 12:
+            _context11.n = 11;
+            break;
+          case 13:
             narrowWorkspace = matchMedia("(max-width: 760px)");
             syncResponsiveWorkspace();
             narrowWorkspace.addEventListener == null || narrowWorkspace.addEventListener("change", syncResponsiveWorkspace);
@@ -3329,46 +3390,46 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             if (template && (_state$config6 = state.config) != null && _state$config6.template) template.value = state.config.template;
             if (linkPatterns) linkPatterns.value = (((_state$config7 = state.config) == null || (_state$config7 = _state$config7.containerOptions) == null ? void 0 : _state$config7.allowedLinkPatterns) || []).join("\n");
             growTextarea(linkPatterns);
-            template == null || template.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee4() {
+            template == null || template.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee5() {
               var next, previousSnapshot;
-              return _regenerator().w(function (_context4) {
-                while (1) switch (_context4.n) {
+              return _regenerator().w(function (_context5) {
+                while (1) switch (_context5.n) {
                   case 0:
                     next = STARTING_POINTS[template.value];
                     if (next) {
-                      _context4.n = 1;
+                      _context5.n = 1;
                       break;
                     }
-                    return _context4.a(2);
+                    return _context5.a(2);
                   case 1:
                     if (memoryOnly && (location.pathname === "/try" || location.pathname.startsWith("/try/"))) {
                       replaceFrontendPath("/try/" + encodeURIComponent(template.value));
                     }
                     if (!pending2) {
-                      _context4.n = 4;
+                      _context5.n = 4;
                       break;
                     }
                     if (!templateOnlyPending) {
-                      _context4.n = 2;
+                      _context5.n = 2;
                       break;
                     }
                     clearTimeout(saveTimer);
                     pending2 = false;
                     pendingDestructive = false;
-                    _context4.n = 4;
+                    _context5.n = 4;
                     break;
                   case 2:
                     if (!(draft || memoryOnly)) {
-                      _context4.n = 3;
+                      _context5.n = 3;
                       break;
                     }
                     checkpointDraft({
                       destructive: true
                     });
-                    _context4.n = 4;
+                    _context5.n = 4;
                     break;
                   case 3:
-                    _context4.n = 4;
+                    _context5.n = 4;
                     return save();
                   case 4:
                     previousSnapshot = state;
@@ -3376,14 +3437,14 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                       previousSnapshot: previousSnapshot
                     });
                   case 5:
-                    return _context4.a(2);
+                    return _context5.a(2);
                 }
-              }, _callee4);
+              }, _callee5);
             })));
             _loop0 = _regenerator().m(function _loop0() {
               var textarea;
-              return _regenerator().w(function (_context1) {
-                while (1) switch (_context1.n) {
+              return _regenerator().w(function (_context10) {
+                while (1) switch (_context10.n) {
                   case 0:
                     textarea = _step25.value;
                     textarea.addEventListener("input", function () {
@@ -3391,35 +3452,35 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                     });
                     growTextarea(textarea);
                   case 1:
-                    return _context1.a(2);
+                    return _context10.a(2);
                 }
               }, _loop0);
             });
             _iterator25 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("textarea[data-autogrow]")) || []);
-          case 13:
+          case 14:
             if ((_step25 = _iterator25()).done) {
-              _context10.n = 15;
+              _context11.n = 16;
               break;
             }
-            return _context10.d(_regeneratorValues(_loop0()), 14);
-          case 14:
-            _context10.n = 13;
-            break;
+            return _context11.d(_regeneratorValues(_loop0()), 15);
           case 15:
+            _context11.n = 14;
+            break;
+          case 16:
             linkPatterns == null || linkPatterns.addEventListener("input", updateContainer);
             _iterator26 = _createForOfIteratorHelperLoose((form == null ? void 0 : form.querySelectorAll("[data-project-fields] input:not([type=hidden]), [data-project-fields] textarea:not([data-project-snapshot]), [data-project-fields] select")) || []);
-          case 16:
+          case 17:
             if ((_step26 = _iterator26()).done) {
-              _context10.n = 19;
+              _context11.n = 20;
               break;
             }
             field = _step26.value;
             if (!field.matches("[data-project-template], #project-link-patterns, [data-version-title-input]")) {
-              _context10.n = 17;
+              _context11.n = 18;
               break;
             }
-            return _context10.a(3, 18);
-          case 17:
+            return _context11.a(3, 19);
+          case 18:
             field.addEventListener("input", function () {
               unsavedChangeCount += 1;
               refreshSubmitLabel();
@@ -3432,10 +3493,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                 refreshSubmitLabel();
               }
             });
-          case 18:
-            _context10.n = 16;
-            break;
           case 19:
+            _context11.n = 17;
+            break;
+          case 20:
             openVersionHistory = function openVersionHistory() {
               if (!historyPanel.hidden) {
                 closeHistory();
@@ -3499,10 +3560,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
             }, {
               once: true
             });
-          case 20:
-            return _context10.a(2);
+          case 21:
+            return _context11.a(2);
         }
-      }, _callee9, null, [[7, 8], [1, 5]]);
+      }, _callee0, null, [[8, 9], [1, 6]]);
     }));
     return _mountProjectRoot.apply(this, arguments);
   }
@@ -3526,9 +3587,9 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
         }, "*");
       },
       closeBlogPresentation = function closeBlogPresentation(_temp10) {
-        var _ref17 = _temp10 === void 0 ? {} : _temp10,
-          _ref17$focus = _ref17.focus,
-          focus = _ref17$focus === void 0 ? true : _ref17$focus;
+        var _ref18 = _temp10 === void 0 ? {} : _temp10,
+          _ref18$focus = _ref18.focus,
+          focus = _ref18$focus === void 0 ? true : _ref18$focus;
         if (!figure.classList.contains("blog-example-block--fullscreen")) return;
         figure.classList.remove("blog-example-block--fullscreen");
         blogContentBlock == null || blogContentBlock.style.removeProperty("animation");
