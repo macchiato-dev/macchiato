@@ -74,6 +74,8 @@ Functions 0, 1, 2 are run, emit, and escape. emit and escape share the
 are ordinary Wasm functions, not JavaScript imports. No JSON library is used
 by the transformation. escape is the previous example's algorithm factored
 into a byte-at-a-time helper.
+It emits `\b`, `\t`, `\n`, `\f`, and `\r` for their respective controls,
+reserving `\u00xx` for controls without a short JSON escape.
 
 `[microwasm]`
 
@@ -160,10 +162,21 @@ The ASCII constants `[` and `]` require signed-LEB `db 00` and `dd 00`.
             - escaped-pair: `41 dc00 10 01 20 00 10 01`
             - control-else: `05`
             - control: `20 00 41 20 49 04 40`
-              - prefix: `41 dc00 10 01 41 f500 10 01 41 30 10 01 41 30 10 01`
-              - high: `20 00 41 04 76 41 30 6a 10 01`
-              - low-nibble: `20 00 41 0f 71 21 01`
-              - low: `20 01 41 30 41 d700 20 01 41 0a 49 1b 6a 10 01`
+              - reset-short: `41 00 21 01`
+              - backspace: `20 00 41 08 46 04 40 41 e200 21 01 0b`
+              - tab: `20 00 41 09 46 04 40 41 f400 21 01 0b`
+              - newline-escape: `20 00 41 0a 46 04 40 41 ee00 21 01 0b`
+              - form-feed: `20 00 41 0c 46 04 40 41 e600 21 01 0b`
+              - carriage-return: `20 00 41 0d 46 04 40 41 f200 21 01 0b`
+              - backslash: `41 dc00 10 01`
+              - short: `20 01 04 40`
+                - letter: `20 01 10 01`
+                - unicode-else: `05`
+                - prefix: `41 f500 10 01 41 30 10 01 41 30 10 01`
+                - high: `20 00 41 04 76 41 30 6a 10 01`
+                - low-nibble: `20 00 41 0f 71 21 01`
+                - low: `20 01 41 30 41 d700 20 01 41 0a 49 1b 6a 10 01`
+                - short-end: `0b`
               - plain: `05 20 00 10 01 0b`
             - pair-end: `0b`
           - escape-end: `0b`

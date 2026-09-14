@@ -377,20 +377,23 @@ Deno.test("JSON escaping: controls, Unicode, capacity and recovery after trap", 
       "猫 😀 café",
       String.fromCharCode(...Array.from({ length: 32 }, (_, i) => i)),
       "a".repeat(65534),
+      "\n".repeat(32767),
     ]
   ) {
     const result = new TextDecoder().decode(
       output(memory, run(writeBytes(memory, text)) as number),
     );
     equal(JSON.parse(result), text);
+    equal(result, JSON.stringify(text));
   }
   equal(
     new TextDecoder().decode(
       output(memory, run(writeBytes(memory, "\0\n\u001f")) as number),
     ),
-    '"\\u0000\\u000a\\u001f"',
+    '"\\u0000\\n\\u001f"',
   );
   traps(() => run(writeBytes(memory, "a".repeat(65535))));
+  traps(() => run(writeBytes(memory, "\n".repeat(32768))));
   traps(() => run(writeBytes(memory, "\0".repeat(11000))));
   equal(
     new TextDecoder().decode(
@@ -415,12 +418,14 @@ Deno.test("CSV: quoting, rows, empty fields, malformed data and capacity", async
     ["x,\n", [["x", ""]]],
     ["猫,😀", [["猫", "😀"]]],
     ["a\0b,\\", [["a\0b", "\\"]]],
+    ['"\b\t\n\f\r\u001f"', [["\b\t\n\f\r\u001f"]]],
   ];
   for (const [text, expected] of cases) {
     const result = new TextDecoder().decode(
       output(memory, run(writeBytes(memory, text)) as number),
     );
     equal(JSON.parse(result), expected);
+    equal(result, JSON.stringify(expected));
   }
   for (
     const invalid of [

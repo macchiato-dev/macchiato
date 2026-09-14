@@ -114,6 +114,10 @@ try {
       ]]),
     "CSV browser result differs",
   );
+  check(
+    await page.locator("#output").textContent() === JSON.stringify(converted),
+    "CSV should use readable short JSON escapes, including \\n",
+  );
   await screenshot("csv-light");
   await page.emulateMedia({ colorScheme: "dark" });
   await screenshot("csv-dark");

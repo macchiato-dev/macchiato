@@ -2,6 +2,8 @@
 
 Turn UTF-8 input into one quoted JSON string at output offset 65536. Escape
 quotes, backslashes and all control bytes below 32; preserve other bytes.
+Use the short escapes `\b`, `\t`, `\n`, `\f`, and `\r` where available;
+only the other control bytes need `\u00xx`.
 Well-formed UTF-8 is a caller precondition (example 14 can validate it).
 This does not parse JSON or HTML, and does not make HTML embedding safe.
 
@@ -13,8 +15,12 @@ run(length):
     for each byte c:
         if c is '"' or '\\': emit('\\'); emit(c)
         else if c < 32:
-            emit('\\'); emit('u'); emit('0'); emit('0')
-            emit(hex(c >> 4)); emit(hex(c & 15))
+            short = {8: 'b', 9: 't', 10: 'n', 12: 'f', 13: 'r'}.get(c, 0)
+            emit('\\')
+            if short: emit(short)
+            else:
+                emit('u'); emit('0'); emit('0')
+                emit(hex(c >> 4)); emit(hex(c & 15))
         else: emit(c)
     emit('"')
     return output_cursor - 65536
@@ -30,10 +36,13 @@ flowchart TD
     B -- Yes --> C{Quote or backslash?}
     C -- Yes --> Q[Emit escaped pair]
     C -- No --> D{Control byte?}
-    D -- Yes --> U[Emit six-byte Unicode escape]
+    D -- Yes --> S{Has a short escape?}
+    S -- Yes --> T[Emit backslash and escape letter]
+    S -- No --> U[Emit six-byte Unicode escape]
     D -- No --> P[Emit unchanged byte]
     Q --> B
     U --> B
+    T --> B
     P --> B
 ```
 
@@ -60,7 +69,9 @@ be discarded, and a subsequent call can still succeed.
 
 ## Rendering escapes
 
-Locals 1..3 are i, c, and low nibble. Only control bytes reach the six-byte
+Locals 1..3 are i, c, and scratch (short-escape letter or low nibble).
+Five explicit comparisons select the familiar short escapes; there is no
+host-side escaping or hidden lookup table. Only control bytes reach the six-byte
 escape branch, so the high nibble is 0 or 1. The low nibble needs a decimal
 or hexadecimal letter: add 48 below 10, otherwise 87. Even fixed characters
 are real `i32.const` instructions followed by calls to emit.
@@ -82,10 +93,21 @@ are real `i32.const` instructions followed by calls to emit.
                 - escaped-pair: `41 dc00 10 01 20 02 10 01`
                 - control-else: `05`
                 - control: `20 02 41 20 49 04 40`
-                  - prefix: `41 dc00 10 01 41 f500 10 01 41 30 10 01 41 30 10 01`
-                  - high-digit: `20 02 41 04 76 41 30 6a 10 01`
-                  - low-nibble: `20 02 41 0f 71 21 03`
-                  - low-digit: `20 03 41 30 41 d700 20 03 41 0a 49 1b 6a 10 01`
+                  - reset-short: `41 00 21 03`
+                  - backspace: `20 02 41 08 46 04 40 41 e200 21 03 0b`
+                  - tab: `20 02 41 09 46 04 40 41 f400 21 03 0b`
+                  - newline: `20 02 41 0a 46 04 40 41 ee00 21 03 0b`
+                  - form-feed: `20 02 41 0c 46 04 40 41 e600 21 03 0b`
+                  - carriage-return: `20 02 41 0d 46 04 40 41 f200 21 03 0b`
+                  - backslash: `41 dc00 10 01`
+                  - short: `20 03 04 40`
+                    - letter: `20 03 10 01`
+                    - unicode-else: `05`
+                    - prefix: `41 f500 10 01 41 30 10 01 41 30 10 01`
+                    - high-digit: `20 02 41 04 76 41 30 6a 10 01`
+                    - low-nibble: `20 02 41 0f 71 21 03`
+                    - low-digit: `20 03 41 30 41 d700 20 03 41 0a 49 1b 6a 10 01`
+                    - short-end: `0b`
                   - plain: `05 20 02 10 01 0b`
                 - pair-end: `0b`
               - advance: `20 01 41 01 6a 21 01`

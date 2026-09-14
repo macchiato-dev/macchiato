@@ -66,8 +66,8 @@ The source viewer displays Markdown text, not a rendered documentation site.
 | Balanced brackets | 207 |
 | Run-length encoding | 178 |
 | Run-length decoding | 159 |
-| JSON string escaping | 247 |
-| CSV to JSON | 527 |
+| JSON string escaping | 326 |
+| CSV to JSON | 607 |
 | Game of Life | 255 |
 
 These measurements include each module's header, sections, exports and code.
