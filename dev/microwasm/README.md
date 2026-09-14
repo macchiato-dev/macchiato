@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 58 tests covering all twenty examples and the supplied
+`deno task test` runs 65 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -151,9 +151,13 @@ syntax in bases 2..36, with exact accumulation before binary64 rounding.
 [Decimal-prefix parsing](numbers/08-parse-float.md) implements `parseFloat`
 syntax, reusing Unicode whitespace and decimal conversion. Both preserve
 negative zero, return NaN for missing numeric prefixes, and allow ignored
-suffixes. Precision-controlled formatting, nondecimal binary64 formatting and
-whole-string `Number` conversion remain unfinished; this is not the complete
-number goal.
+suffixes. [Binary64 radix formatting](numbers/09-radix-format.md) now covers
+bases 2..36, including fractions, signed infinities and NaN. It selects the
+shortest representation inside the exact rounding interval, with closest/even
+ties. [Whole-string numeric conversion](numbers/10-whole-number.md) covers the
+text part of `Number()`, requiring a complete decimal or unsigned prefixed
+integer and allowing surrounding whitespace. Precision-controlled formatting
+remains unfinished; this is not the complete number goal.
 
 [Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
 working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed

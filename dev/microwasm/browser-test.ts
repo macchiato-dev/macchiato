@@ -190,9 +190,49 @@ try {
     const f = await load("04-json-binary64", { n, b });
     const d = await load("05-exact-decimal", { b });
     const s = await load("06-shortest-decimal", { f, d });
+    const r = await load("09-radix-format", { b, s });
     const p = await load("07-parse-integer", { f, b });
+    const w = await load("10-whole-number", { f, p, n });
     const prefix = await load("08-parse-float", { f, p, n });
     const memory = new Uint8Array((s.memory as WebAssembly.Memory).buffer);
+    for (const [text, expected] of [
+      ["\ufeff", 0], ["0b101", 5], ["0o77", 63], ["0xff", 255],
+      ["-0x10", NaN], ["1e+oops", NaN], [" +.5\u3000", .5], ["-0", -0],
+    ] as const) {
+      const input = new TextEncoder().encode(text);
+      memory.set(input);
+      const actual = (w.parse as (start: number, end: number) => number)(0, input.length);
+      if (!Object.is(actual, expected)) throw new Error(`Number: ${text}`);
+    }
+    for (
+      const [value, radix, expected] of [
+        [12.5, 16, "c.8"],
+        [-255, 2, "-11111111"],
+        [0.1, 36, "0.3lllllllllm"],
+        [NaN, 3, "NaN"],
+        [-Infinity, 36, "-Infinity"],
+        [-0, 8, "0"],
+      ] as const
+    ) {
+      const length = (r.format as (value: number, radix: number) => number)(
+        value,
+        radix,
+      );
+      const text = new TextDecoder().decode(
+        memory.subarray(65536, 65536 + length),
+      );
+      if (text !== expected) throw new Error(`Radix ${radix}: ${text}`);
+    }
+    const tinyLength = (r.format as (value: number, radix: number) => number)(
+      Number.MIN_VALUE,
+      2,
+    );
+    const tinyText = new TextDecoder().decode(
+      memory.subarray(65536, 65536 + tinyLength),
+    );
+    if (tinyText !== "0." + "0".repeat(1073) + "1") {
+      throw new Error("Binary subnormal output differs");
+    }
     for (
       const [text, radix, expected] of [
         [" \u1680-0xffrest", 0, -255],

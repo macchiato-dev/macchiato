@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 58 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 65 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -102,8 +102,7 @@ more than 13,000 cases: every normal power-of-two boundary and both neighbors,
 decimal powers and their neighbors, small subnormals and random bit patterns.
 The results also round-trip through the Wasm parser. This formatter deliberately
 reuses exact expansion and up to 34 parser calls; it is not a native-throughput
-claim. Precision-controlled strings, nondecimal binary64 formatting and
-whole-string numeric conversion remain pending.
+claim. Precision-controlled strings remain pending.
 
 Six additional tests cover JavaScript-style `parseInt` and `parseFloat` text
 interfaces. They check radix prefixes, all byte values in every radix,
@@ -115,13 +114,35 @@ as a space. Decimal-prefix parsing is compared with the native parser on
 Full 64 KiB tokens, output sentinels, invalid spans and subsequent recovery
 are tested. The public strict JSON parser still rejects looser decimal forms.
 
+Four more tests cover multiword addition and shortest binary64 formatting in
+all radixes 2..36. The test oracle reads the emitted text as an exact rational,
+compares it with the adjacent binary64 midpoints, searches every coarser radix
+grid to check minimal precision, and checks nearest/even candidate choice.
+The corpus includes random bit patterns, small fractions, smallest/largest
+finite values, binary boundaries, radix powers and their adjacent values.
+Power-of-two radix spellings are also compared to native output at the tested
+binary boundaries. Odd-radix native spellings are not the sole oracle.
+Invalid radix traps, recovery, digit/output sentinels and alternating decimal
+and nondecimal calls are covered. Significant-digit and positional-zero
+generation are separate; subnormal base-two output can exceed a thousand bytes.
+
+Three further tests cover whole-string `Number(text)` conversion. They compare
+10,000 generated syntax candidates and hundreds of large prefixed integers
+and decimals against native conversion. They exercise empty/all-space input,
+surrounding Unicode whitespace, signed decimal zero, forbidden signs on radix
+prefixes, invalid suffixes even after overflow, full 64 KiB input, buffer
+preservation and recovery after invalid spans. The input preservation check
+compares bytes rather than using a decoder that consumes a leading BOM.
+
 The browser suite checks all library documents in the six independent
 content/display combinations, as well as the original examples and renderer
 pages. It instantiates the built numeric dependency graph in Chromium and
 checks parse/shortest-format results across ordinary/scientific notation,
 signed zero and extreme finite values, with no host numeric callbacks. It also
 checks the shipped integer/decimal prefix parsers on signs, bases, whitespace,
-ignored suffixes, incomplete exponents, NaN and infinity.
+ignored suffixes, incomplete exponents, NaN and infinity. Browser checks also
+exercise fractional radix formatting, a long binary subnormal, and the
+whole-string parser's differing acceptance rules.
 
 The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.

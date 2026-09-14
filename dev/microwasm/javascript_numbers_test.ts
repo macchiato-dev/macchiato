@@ -23,6 +23,7 @@ async function numbers() {
   const f = await load("04-json-binary64", { n, b });
   const p = await load("07-parse-integer", { f, b });
   const d = await load("08-parse-float", { f, p, n });
+  const w = await load("10-whole-number", { f, p, n });
   const memory = new Uint8Array((p.memory as WebAssembly.Memory).buffer);
   const encoder = new TextEncoder();
   function put(text: string, offset = 0) {
@@ -38,6 +39,7 @@ async function numbers() {
   ) => number;
   const skip = p.skip as (start: number, end: number) => number;
   const parseFloat = d.parse as (start: number, end: number) => number;
+  const parseNumber = w.parse as (start: number, end: number) => number;
   return {
     memory,
     put,
@@ -50,6 +52,10 @@ async function numbers() {
       return parseFloat(offset, put(text, offset));
     },
     parseFloat,
+    whole(text: string, offset = 0) {
+      return parseNumber(offset, put(text, offset));
+    },
+    parseNumber,
   };
 }
 
@@ -102,6 +108,161 @@ Deno.test("JavaScript parseInt: signs, prefixes, stopping and all digit bytes", 
   }
   // The numeric ABI takes the result of ToInt32, not a generic JS value.
   same(p.integer("ff", 16 + 2 ** 32), 255, "i32 radix wrapping");
+});
+
+Deno.test("JavaScript Number text: complete decimal grammar, whitespace and unsigned radix prefixes", async () => {
+  const p = await numbers();
+  for (
+    const text of [
+      "",
+      " \ufeff\t",
+      "+",
+      "-",
+      ".",
+      "+.",
+      "-.0",
+      "-0",
+      "+.5",
+      "0001.50",
+      "1.",
+      "1.e2",
+      "1e",
+      "1e+",
+      "1e-+2",
+      "1e2junk",
+      "1_000",
+      "1 2",
+      "1\0",
+      "Infinity",
+      "+Infinity",
+      "-Infinity",
+      "infinity",
+      "Infinityjunk",
+      "NaN",
+      "0x10",
+      "0Xff",
+      "0o77",
+      "0O10",
+      "0b11",
+      "0B10",
+      "-0x10",
+      "+0x10",
+      "-0b0",
+      "+0o1",
+      "0x",
+      "0o",
+      "0b",
+      "0x 1",
+      "0xffg",
+      "0o8",
+      "0b2",
+      "0x1.2",
+      "0b1e2",
+      "\u2000-.5e+3\u3000",
+      "1e9999",
+      "-1e-9999",
+    ]
+  ) {
+    same(p.whole(text), Number(text), text);
+    const length = new TextEncoder().encode(text).length;
+    same(p.whole(text, 65536 - length), Number(text), `at end: ${text}`);
+  }
+  // Leading and trailing whitespace are accepted, but cannot split a token.
+  for (
+    const char of [
+      "\t",
+      "\r",
+      "\n",
+      " ",
+      "\u00a0",
+      "\u1680",
+      "\u200a",
+      "\u2028",
+      "\u2029",
+      "\u202f",
+      "\u205f",
+      "\u3000",
+      "\ufeff",
+    ]
+  ) {
+    same(p.whole(char + "-0.5" + char), -.5, "surrounding space");
+    same(p.whole("1" + char + "2"), NaN, "interior space");
+  }
+});
+
+Deno.test("JavaScript Number text: generated decimal and radix inputs against native conversion", async () => {
+  const p = await numbers();
+  let seed = 0x51ab123;
+  const random = () => seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+  const alphabet = "0123456789.eE+-xobABCDEF_ Infinity\t\n";
+  for (let i = 0; i < 10000; i++) {
+    let text = "";
+    const length = random() % 50;
+    for (let j = 0; j < length; j++) {
+      text += alphabet[random() % alphabet.length];
+    }
+    same(p.whole(text), Number(text), text);
+  }
+  for (let i = 0; i < 300; i++) {
+    let integer = 0n;
+    for (let word = 0; word <= i % 40; word++) {
+      integer = (integer << 32n) | BigInt(random());
+    }
+    for (const [radix, prefix] of [[2, "0b"], [8, "0o"], [16, "0x"]] as const) {
+      const text = prefix + integer.toString(radix);
+      same(p.whole(text), Number(text), text);
+      same(
+        p.whole("\ufeff" + text + "\u3000"),
+        Number(text),
+        "spaces: " + text,
+      );
+      same(
+        p.whole(text + "!"),
+        NaN,
+        "suffix after possibly overflowing integer",
+      );
+    }
+    const decimal = (random() & 1 ? "-" : "+") + String(random()) + "." +
+      String(random()) + "e" + (random() % 800 - 400);
+    same(p.whole(decimal), Number(decimal), decimal);
+  }
+});
+
+Deno.test("JavaScript Number text: full-size input, unchanged buffers and invalid-span recovery", async () => {
+  const p = await numbers();
+  for (
+    const text of [
+      ".1" + "0".repeat(65534),
+      "-.5" + "0".repeat(65533),
+      "0b" + "1".repeat(65534),
+      "0x" + "f".repeat(65533) + "!",
+      " ".repeat(65536),
+      "0".repeat(65535) + ".",
+      "1" + " ".repeat(65535),
+    ]
+  ) same(p.whole(text), Number(text), text.slice(0, 20));
+  p.memory.fill(0xa5, 65536, 196608);
+  const text = "\ufeff+0.125e-2\u3000";
+  const end = p.put(text);
+  same(p.parseNumber(0, end), Number(text), "preserved buffers");
+  // Compare bytes: TextDecoder normally consumes a leading BOM.
+  if (
+    !new TextEncoder().encode(text).every((byte, index) =>
+      p.memory[index] === byte
+    ) ||
+    !p.memory.subarray(65536, 196608).every((byte) => byte === 0xa5)
+  ) throw new Error("Number parser modified input or output");
+  for (const [start, end] of [[-1, 0], [1, 0], [0, 65537]]) {
+    let trapped = false;
+    try {
+      p.parseNumber(start, end);
+    } catch (error) {
+      if (!(error instanceof WebAssembly.RuntimeError)) throw error;
+      trapped = true;
+    }
+    if (!trapped) throw new Error("Expected invalid span trap");
+    same(p.whole("0x2a"), 42, "recovered");
+  }
 });
 
 Deno.test("JavaScript parseFloat: decimal prefixes, signs, Infinity and incomplete exponents", async () => {

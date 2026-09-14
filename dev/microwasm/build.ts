@@ -75,6 +75,8 @@ for (
     "numbers/06-shortest-decimal",
     "numbers/07-parse-integer",
     "numbers/08-parse-float",
+    "numbers/09-radix-format",
+    "numbers/10-whole-number",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {
