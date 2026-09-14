@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 70 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 74 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -147,6 +147,14 @@ invalid counts, trap recovery and scratch-region sentinels. The shipped
 module also runs in Chromium through the browser test's numeric dependency
 graph, without host formatting imports.
 
+Four JSON-to-list tests cover every value kind, verbatim numeric/string
+tokens, duplicate keys, 600 generated nested values and round trips through
+the list-to-JSON module. Truncated and perturbed documents are checked against
+native JSON acceptance. Invalid fences, escape syntax, the 128-container
+boundary, exact 64 KiB input, output overflow, input preservation and recovery
+are covered. Browser tests run the published module, edit both successful and
+invalid inputs, switch its display modes and preserve output on errors.
+
 The browser suite checks all library documents in the six independent
 content/display combinations, as well as the original examples and renderer
 pages. It instantiates the built numeric dependency graph in Chromium and
@@ -161,7 +169,7 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/six-renderer-page browser suite still passes.
-There are two implemented transformations out of the planned fifty.
+There are three implemented transformations out of the planned fifty.
 
 The JSON syntax scanner was compared with the native JSON parser on ten
 thousand generated candidate strings and explicit grammar boundaries. List

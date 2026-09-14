@@ -57,6 +57,10 @@ try {
   }
   // Edit both panes, then render them independently. Output edits survive view
   // switches; only another successful Run replaces them.
+  await page.goto(new URL("?tool=03-mad-libs", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
   await page.locator("#transform-input").fill(
     "# [name]\n\n[unknown]\n\n- name: **猫**",
   );
@@ -184,6 +188,56 @@ try {
   check(
     new URL(page.url()).searchParams.get("doc") === "numbers/02-json-number.md",
     "Numeric dependency documentation link failed",
+  );
+  await page.goto(new URL("?tool=02-json-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(
+    '```json\n{"x":-0,"x":1.2300e+40,"nested":[true,"猫"]}\n```',
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  const converted =
+    '- {}\n  - "x" = -0\n  - "x" = 1.2300e+40\n  - "nested" []\n    - = true\n    - "猫"\n';
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    converted,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered ul ul").count() > 0,
+    "JSON output did not render as nested lists",
+  );
+  await page.screenshot({
+    path: `${artifacts}/json-to-list-mixed.png`,
+    fullPage: true,
+  });
+  await page.locator("#transform-input").fill('```json\n{"x":[1,]}\n```');
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-output").inputValue() === converted,
+    "Invalid fenced JSON replaced output",
+  );
+  await page.locator("#transform-input").fill("```json\n[]\n```");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "- []\n"
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  check(
+    await page.evaluate(() =>
+      document.documentElement.scrollWidth <= innerWidth
+    ),
+    "JSON to list mobile overflow",
   );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(

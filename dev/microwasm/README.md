@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 70 tests covering all twenty examples and the supplied
+`deno task test` runs 74 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -187,7 +187,11 @@ scalars, escaping, and exact decimal spellings. Its 1,505-byte module imports
 the [JSON number validator](numbers/02-json-number.md) directly as
 Wasm, sharing its memory. The host performs no JSON conversion.
 Try [the local list converter](http://microwasm.localhost:3030/?tool=01-list-to-json).
-The remaining 48 transformations are still pending.
+[Fenced JSON to hierarchical Markdown](transforms/02-json-to-list.md) is the
+reverse tool. It checks the complete JSON grammar and preserves duplicate
+keys, string escapes and number spellings while emitting the list directly,
+without an intermediate object tree. Its module is 1,031 bytes, plus the
+shared JSON number scanner. The remaining 47 transformations are pending.
 
 ## Provisional byte-list notation
 

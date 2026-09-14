@@ -8,6 +8,14 @@ export const transforms = [{
   expected:
     '```json\n{"name":"Ben","location":{"city":"Phoenix","state":"AZ"}}\n```\n',
 }, {
+  id: "02-json-to-list",
+  title: "JSON to hierarchical list",
+  dependencies: [{ name: "n", path: "numbers/02-json-number" }],
+  input:
+    '```json\n{"name":"Ben","location":{"city":"Phoenix","state":"AZ"}}\n```\n',
+  expected:
+    '- {}\n  - "name" "Ben"\n  - "location" {}\n    - "city" "Phoenix"\n    - "state" "AZ"\n',
+}, {
   id: "03-mad-libs",
   title: "Mad libs",
   input:
