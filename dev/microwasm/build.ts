@@ -68,6 +68,7 @@ const extraDocuments = [];
 for (
   const path of [
     "numbers/01-unsigned-integers",
+    "numbers/02-json-number",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {

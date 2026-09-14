@@ -133,6 +133,58 @@ try {
     path: `${artifacts}/mad-libs-mobile.png`,
     fullPage: true,
   });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(new URL("?tool=01-list-to-json", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(
+    "- {}\n  - name Ben\n  - tags []\n    - wasm\n    - = 12.50e+2\n  - enabled = true",
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("12.50e+2")
+  );
+  const good = await page.locator("#transform-output").inputValue();
+  check(
+    JSON.stringify(JSON.parse(good.slice(8, -5))) ===
+      JSON.stringify({ name: "Ben", tags: ["wasm", 1250], enabled: true }),
+    "Edited JSON tree differs",
+  );
+  await side("output", "Rendered");
+  check(
+    (await page.locator("#transform-output-rendered pre code").textContent())
+      ?.includes("12.50e+2"),
+    "JSON decimal spelling changed",
+  );
+  await page.screenshot({
+    path: `${artifacts}/list-to-json-mixed.png`,
+    fullPage: true,
+  });
+  await page.locator("#transform-input").fill("- {}\n  - broken = 01");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-output").inputValue() === good,
+    "Invalid JSON number replaced output",
+  );
+  await page.getByRole("link", { name: "Read the Microwasm implementation" })
+    .click();
+  await page.waitForSelector("#rendered h1");
+  await page.getByRole("link", { name: "JSON number scanner", exact: true })
+    .click();
+  await page.waitForSelector("#rendered h1");
+  check(
+    new URL(page.url()).searchParams.get("doc") === "numbers/02-json-number.md",
+    "Numeric dependency documentation link failed",
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

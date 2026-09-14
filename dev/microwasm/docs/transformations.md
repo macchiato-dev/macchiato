@@ -5,9 +5,10 @@ all of these tools are already available. The transforms execute handwritten
 Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
-Current checkpoint: unsigned 64-bit radix primitives, tool 3 (Mad libs), and
-the side-by-side editor are implemented and tested. JSON/binary64 number
-handling and the other 49 tools remain. This is not goal completion.
+Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
+syntax validation, tools 1 and 3, and the side-by-side editor are implemented
+and tested. Binary64 number conversion and the other 48 tools remain. This
+is not goal completion.
 
 ## Shared number conversion
 
@@ -83,8 +84,10 @@ with different constants would not satisfy this list.
 50. Markdown operation/path/value list to validated fenced JSON Patch.
 
 The first tool uses `{}` and `[]` to identify object/array children. Ordinary
-unquoted leaf values are strings; typed values and ambiguous keys need an
-explicit documented representation so data can round-trip.
+unquoted leaf values are strings. `= ` introduces a JSON numeric, Boolean or
+null scalar. JSON-quoted strings represent ambiguous keys and string values,
+including keys with spaces, empty keys, and escaped newlines. Decimal spelling
+is preserved, not converted to binary64 and back during structural changes.
 
 Mad libs substitute exactly. A binding of `time: yesterdy` yields `yesterdy`;
 there is no implicit spellchecker. The demonstration uses `yesterday` to

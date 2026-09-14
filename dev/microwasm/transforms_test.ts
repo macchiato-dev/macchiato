@@ -92,3 +92,169 @@ Deno.test("Mad libs: record and output limits, malformed bindings, repeat recove
   equal(transform("[x]\n\n- x: y"), "y");
   equal(memory[0x2ffff], 0xa5);
 });
+
+async function listToJSON() {
+  const numericSource = await Deno.readTextFile(
+    new URL("numbers/02-json-number.md", import.meta.url),
+  );
+  const numeric = await WebAssembly.instantiate(assemble(numericSource).bytes);
+  const source = await Deno.readTextFile(
+    new URL("transforms/01-list-to-json.md", import.meta.url),
+  );
+  const built = assemble(source);
+  equal(toHex(assemble(built.resolved).bytes), toHex(built.bytes));
+  const module = await WebAssembly.compile(fromHex(toHex(built.bytes)));
+  equal(
+    JSON.stringify(WebAssembly.Module.imports(module)),
+    JSON.stringify([
+      { module: "n", name: "valid", kind: "function" },
+      { module: "n", name: "memory", kind: "memory" },
+    ]),
+  );
+  const instance = await WebAssembly.instantiate(module, {
+    n: numeric.instance.exports,
+  });
+  equal(instance.exports.memory, numeric.instance.exports.memory);
+  const memory = new Uint8Array(
+    (instance.exports.memory as WebAssembly.Memory).buffer,
+  );
+  const run = instance.exports.run as (length: number) => number;
+  return {
+    memory,
+    run,
+    transform(input: string) {
+      const bytes = new TextEncoder().encode(input);
+      memory.set(bytes);
+      const length = run(bytes.length);
+      return new TextDecoder().decode(
+        memory.subarray(0x10000, 0x10000 + length),
+      );
+    },
+  };
+}
+
+Deno.test("Hierarchical list to JSON: objects, arrays, keys, typed values and exact decimals", async () => {
+  const { transform } = await listToJSON();
+  for (
+    const [source, expected] of [
+      [
+        "- {}\n  - name Ben\n  - location {}\n    - city Phoenix\n    - state AZ",
+        '{"name":"Ben","location":{"city":"Phoenix","state":"AZ"}}',
+      ],
+      [
+        "- []\n  - = true\n  - = false\n  - = null\n  - = -0\n  - = 1.2300E+40",
+        "[true,false,null,-0,1.2300E+40]",
+      ],
+      [
+        '- {}\n  - "full name" "Ben Atkin"\n  - "" ""\n  - "x\\ny" "\\uD83D\\uDC08"',
+        '{"full name":"Ben Atkin","":"","x\\ny":"\\uD83D\\uDC08"}',
+      ],
+      [
+        '- []\n  - {}\n    - a []\n      - cat\n      - dog\n  - []\n  - "{}"',
+        '[{"a":["cat","dog"]},[],"{}"]',
+      ],
+      ["- {}\n  - x first\n  - x second", '{"x":"first","x":"second"}'],
+      ["- = 1e9999", "1e9999"],
+      ['- "x\\n\\t\\r\\b\\f\\/\\\\\\""', '"x\\n\\t\\r\\b\\f\\/\\\\\\""'],
+      [
+        "- {}\r\n  - a hello\r\n\r\n  - b world\r\n",
+        '{"a":"hello","b":"world"}',
+      ],
+      ["- []", "[]"],
+      ["- {}", "{}"],
+      ["- ", '""'],
+    ]
+  ) equal(transform(source), "```json\n" + expected + "\n```\n");
+});
+
+Deno.test("Hierarchical list to JSON: native differential, escaping and repeated trees", async () => {
+  const { transform } = await listToJSON();
+  type JSONValue = null | boolean | number | string | JSONValue[] | {
+    [key: string]: JSONValue;
+  };
+  function list(value: JSONValue, indent = 0, key?: string): string {
+    const prefix = " ".repeat(indent) + "- " +
+      (key === undefined ? "" : JSON.stringify(key) + " ");
+    if (Array.isArray(value)) {
+      return prefix + "[]\n" + value.map((v) => list(v, indent + 2)).join("");
+    }
+    if (value && typeof value === "object") {
+      return prefix + "{}\n" +
+        Object.entries(value).map(([k, v]) => list(v, indent + 2, k)).join("");
+    }
+    return prefix +
+      (typeof value === "string"
+        ? JSON.stringify(value)
+        : "= " + JSON.stringify(value)) +
+      "\n";
+  }
+  for (let i = 0; i < 100; i++) {
+    const value: JSONValue = {
+      index: i,
+      "spaced key": ["猫", i / 10, null, false, { 'q"\\': "a\nb\t" }],
+      empty: [],
+      nested: { a: { b: [true, ""] } },
+    };
+    equal(
+      JSON.stringify(JSON.parse(transform(list(value)).slice(8, -5))),
+      JSON.stringify(value),
+    );
+  }
+  for (let byte = 0; byte < 32; byte++) {
+    if (byte === 10 || byte === 13) continue; // Record delimiters require quoted escapes.
+    const text = "x" + String.fromCharCode(byte) + '"\\y';
+    equal(
+      transform("- " + text),
+      "```json\n" + JSON.stringify(text) + "\n```\n",
+    );
+  }
+  equal(transform("- = -0"), "```json\n-0\n```\n");
+});
+
+Deno.test("Hierarchical list to JSON: malformed structure, escapes, stack and output bounds", async () => {
+  const { transform, run, memory } = await listToJSON();
+  for (
+    const text of [
+      "",
+      "plain",
+      "- {}\n- {}",
+      "- {}\n    - x skip",
+      "- {}\n - x odd",
+      "- {}\n  - missing",
+      "- {}\n  -  empty key",
+      '- {}\n  - "key"value',
+      '- "unterminated',
+      '- "bad\\q"',
+      '- "bad\\u12"',
+      '- "bad\\u12gz"',
+      '- "x"extra',
+      '- "tab\t"',
+      "- = truex",
+      "- = 01",
+      "- = .5",
+      "- = 1.",
+      "- = +1",
+      "- = NaN",
+      "- = 1e",
+      "- = ",
+      "- value\n  - child impossible",
+    ]
+  ) traps(() => transform(text));
+  const nested = Array.from(
+    { length: 128 },
+    (_, i) => " ".repeat(i * 2) + "- []",
+  ).join("\n");
+  equal(
+    transform(nested),
+    "```json\n" + "[".repeat(128) + "]".repeat(128) + "\n```\n",
+  );
+  traps(() => transform(nested + "\n" + " ".repeat(256) + "- []"));
+  traps(() => transform("- x" + "\0".repeat(24000)));
+  traps(() => run(0x10001));
+  traps(() => run(-1));
+  memory[0x2ffff] = 0xa5;
+  equal(transform("- recovered"), '```json\n"recovered"\n```\n');
+  equal(memory[0x2ffff], 0xa5);
+  // The lookup table directly follows the deepest allowed stack frame.
+  equal(transform("- x\ty"), '```json\n"x\\ty"\n```\n');
+});

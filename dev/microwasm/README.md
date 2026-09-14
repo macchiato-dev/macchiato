@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 36 tests covering all twenty examples and the supplied
+`deno task test` runs 40 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -119,7 +119,7 @@ code. Module byte sizes exclude host UI and allocated linear memory.
 ## Transformation tools: in progress
 
 The [fifty-tool plan](docs/transformations.md) tracks the larger conversion
-goal. The first implemented tool is [Mad libs](transforms/03-mad-libs.md):
+goal. [Mad libs](transforms/03-mad-libs.md) is implemented:
 template text and a binding list become substituted Markdown. Its 754-byte
 Wasm module performs the substitution; the browser supplies two editable
 textareas, independent code/rendered switches and a Run button. Failed runs
@@ -133,8 +133,16 @@ source documents and hex alongside the ordinary examples.
 [Unsigned number conversion](numbers/01-unsigned-integers.md) is the first
 shared numeric primitive: a 390-byte module parses/formats exact 64-bit
 integers in bases 2..36. Tests cover every digit byte, overflow, full-width
-values and native-oracle round trips. JSON/binary64 conversion and the other
-49 tools remain unfinished; integer support is not a replacement for them.
+values and native-oracle round trips. JSON/binary64 conversion remains
+unfinished; integer support is not a replacement for it.
+
+[Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
+working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed
+scalars, escaping, and exact decimal spellings. Its 1,505-byte module imports
+the 331-byte [JSON number validator](numbers/02-json-number.md) directly as
+Wasm, sharing its memory. The host performs no JSON conversion.
+Try [the local list converter](http://microwasm.localhost:3030/?tool=01-list-to-json).
+The remaining 48 transformations are still pending.
 
 ## Provisional byte-list notation
 

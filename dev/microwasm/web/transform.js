@@ -44,9 +44,30 @@ export async function startTransform(entry) {
     panels.set(side, { textarea, display });
   }
   $("transform-status").textContent = "Loading transformation…";
-  const response = await fetch(`./transforms/${entry.id}.wasm`);
-  if (!response.ok) throw new Error(`Transformation: HTTP ${response.status}`);
-  const { instance } = await WebAssembly.instantiateStreaming(response);
+  const dependencies = entry.dependencies ?? [];
+  const responses = await Promise.all([
+    `./transforms/${entry.id}.wasm`,
+    ...dependencies.map((item) => `./${item.path}.wasm`),
+  ].map((path) => fetch(path)));
+  for (const response of responses) {
+    if (!response.ok) {
+      throw new Error(`Transformation: HTTP ${response.status}`);
+    }
+  }
+  // Wire Wasm exports directly: shared memory and native Wasm calls, not JS
+  // implementations or wrapper functions for the numeric parsing routines.
+  const imports = Object.fromEntries(
+    await Promise.all(dependencies.map(async (item, i) => {
+      const { instance } = await WebAssembly.instantiateStreaming(
+        responses[i + 1],
+      );
+      return [item.name, instance.exports];
+    })),
+  );
+  const { instance } = await WebAssembly.instantiateStreaming(
+    responses[0],
+    imports,
+  );
   const memory = new Uint8Array(instance.exports.memory.buffer);
   const encoder = new TextEncoder(), decoder = new TextDecoder();
   $("transform-run").disabled = false;

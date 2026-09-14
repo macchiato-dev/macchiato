@@ -74,10 +74,11 @@ This is intentionally partial Markdown, not CommonMark conformance. A fixed
 20-page memory avoids allocation and growth during rendering. That memory
 cost is separate from the module's byte size.
 
-## Transformation work, first checkpoint
+## Transformation work, current checkpoint
 
-The suite now has 36 tests. The additional four cover unsigned 64-bit parsing
-and formatting in bases 2..36, plus the first transformation, Mad libs.
+The suite now has 40 tests. The additional eight cover unsigned 64-bit parsing
+and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
+Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
 against native BigInt formatting and test every possible digit byte in every
 radix. This does not yet test or implement binary64/JSON number conversion.
@@ -86,7 +87,16 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/six-renderer-page browser suite still passes.
-There is one implemented transformation out of the planned fifty.
+There are two implemented transformations out of the planned fifty.
+
+The JSON syntax scanner was compared with the native JSON parser on ten
+thousand generated candidate strings and explicit grammar boundaries. List
+conversion tests cover nested objects/arrays, escaped and empty keys, all
+control-character escape forms, typed scalars, preserved decimal spelling,
+128-container depth, skipped levels, invalid escapes and capacity recovery.
+Browser tests edit the tree, render the JSON fence, preserve output after an
+invalid number, and follow the implementation link to the shared numeric
+scanner. The Wasm modules share memory and import functions directly.
 
 ## Size is the complete module, not memory consumption
 
