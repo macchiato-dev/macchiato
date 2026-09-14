@@ -461,6 +461,10 @@ export function createContentStore(client, {
       const project = validatedSnapshot(output.project);
       await snapshotValidator(project);
       const sourceJson = JSON.stringify(snapshot);
+      const storedSource = String(owned.rows[0].snapshot_json);
+      // Older snapshots can use a different key/file order. Compare their
+      // normalized values, then guard the write against the exact row read.
+      if (JSON.stringify(parsedSnapshot(storedSource)) !== sourceJson) return { saved: false };
       const outputJson = JSON.stringify({ format: output.format, project, compiled: JSON.stringify(compiled) });
       // Bound this derived slot independently of the source/history budget.
       if (new TextEncoder().encode(outputJson).byteLength +
@@ -470,7 +474,7 @@ export function createContentStore(client, {
       // A slow build from another tab must not overwrite a newer source's
       // successful output. The source check and replacement are one statement.
       const result = await client.execute({ sql: CONTENT_QUERIES.saveBuildOutput,
-        args: [outputJson, now(), String(projectId), String(userId), sourceJson] });
+        args: [outputJson, now(), String(projectId), String(userId), storedSource] });
       return { saved: Number(result.rowsAffected) > 0 };
     },
 

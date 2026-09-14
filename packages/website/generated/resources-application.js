@@ -1179,13 +1179,15 @@
         const project2 = validatedSnapshot(output.project);
         await snapshotValidator(project2);
         const sourceJson = JSON.stringify(snapshot);
+        const storedSource = String(owned.rows[0].snapshot_json);
+        if (JSON.stringify(parsedSnapshot(storedSource)) !== sourceJson) return { saved: false };
         const outputJson = JSON.stringify({ format: output.format, project: project2, compiled: JSON.stringify(compiled) });
         if (new TextEncoder().encode(outputJson).byteLength + new TextEncoder().encode(sourceJson).byteLength > 70 * 1024 * 1024) {
           throw new ContentValidationError("snapshot", "Build output is too large");
         }
         const result = await client.execute({
           sql: CONTENT_QUERIES.saveBuildOutput,
-          args: [outputJson, now(), String(projectId), String(userId), sourceJson]
+          args: [outputJson, now(), String(projectId), String(userId), storedSource]
         });
         return { saved: Number(result.rowsAffected) > 0 };
       },

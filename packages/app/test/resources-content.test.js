@@ -57,6 +57,10 @@ test("only the latest successful output is retained, apart from source history",
   assert.deepEqual((await content.getProjectWorkspace("latte", "cached", account.id)).savedOutput, output(second));
   await assert.rejects(content.saveProjectBuildOutput(account.id, project.id, broken, {}), /Build output is invalid/);
   assert.deepEqual(await content.getProjectBuildOutput(project.id, account.id), output(second));
+  db.prepare("UPDATE resource_project_state SET snapshot_json = ? WHERE project_id = ?")
+    .run(JSON.stringify({ config: {}, files: broken.files }), project.id);
+  assert.deepEqual(await content.saveProjectBuildOutput(account.id, project.id, broken, output(broken)), { saved: true },
+    "legacy key ordering does not make an unchanged source look stale");
   await content.deleteProject(account.id, project.id);
   assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_build_output").get().n, 0);
 });
