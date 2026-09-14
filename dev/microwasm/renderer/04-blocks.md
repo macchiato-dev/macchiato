@@ -5,7 +5,9 @@
 The block parser scans the input once, keeping only byte offsets and small
 state values. It joins paragraph lines with spaces. Fences preserve line
 breaks and bypass inline parsing; a Mermaid fence is displayed as source.
-CRLF input is normalized to LF in fences. No token tree is retained.
+CRLF input is normalized to LF in fences. An opening fence has at least three
+backticks; a closing fence needs at least that many, followed only by spaces
+or tabs. Shorter runs remain code. No token tree is retained.
 
 ## Pattern: closing nested lists
 
@@ -35,14 +37,14 @@ close_lists(target):
 ## Function 7: run
 
 Locals: length 0, pos 1, end 2, start 3, fence-prefix 4, indent 5, target depth 6,
-heading level 7, paragraph-open 8, fence-open 9, next-line 10.
+heading level 7, paragraph-open 8, open-fence length 9, next-line 10.
 
 ```text
 for each line [pos, end):
     next_line = position after LF, or length + 1 at EOF
     strip trailing CR from the span
     if fence_open:
-        if line starts with ``` : close fence
+        if line is a long enough closing fence: close fence
         else: escaped(pos, end); emit('\n')
     else if blank: close paragraph
     else if line starts with ``` : close other blocks; open fence

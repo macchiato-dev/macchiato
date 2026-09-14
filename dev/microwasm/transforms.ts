@@ -28,4 +28,11 @@ export const transforms = [{
     '```csv\nname,city,note\nBen,Phoenix,"hello, world"\nAda,London,"said ""hi"""\n```\n',
   expected:
     '| name | city | note |\n| --- | --- | --- |\n| Ben | Phoenix | hello,&#32;world |\n| Ada | London | said&#32;"hi" |\n',
+}, {
+  id: "05-table-to-csv",
+  title: "Markdown table to CSV",
+  input:
+    '| name | note |\n| --- | --- |\n| Ben | hello,&#32;world |\n| Ada | said "hi" |',
+  expected:
+    '```csv\n"name","note"\n"Ben","hello, world"\n"Ada","said ""hi"""\n```\n',
 }];

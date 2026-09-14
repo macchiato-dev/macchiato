@@ -23,7 +23,7 @@ This keeps the code-section length correct across page boundaries.
 ## Deliberate limits
 
 Support ATX headings, paragraphs, hyphen lists indented in two-space steps,
-triple-backtick fences, pipe tables, decimal character references, inline
+backtick fences of length three or more, pipe tables, decimal character references, inline
 backticks, `**strong**`, and `[label](target)`.
 Mermaid fences display their source exactly like other fences. Inline nesting
 inside links or strong emphasis is not implemented; those spans are escaped

@@ -46,7 +46,7 @@ does not claim cross-browser certification or exhaustive formal validation.
 
 ## The self-rendering documentation
 
-The reader now uses a 2,478-byte Markdown renderer assembled from seven linked
+The reader now uses a 2,679-byte Markdown renderer assembled from seven linked
 Microwasm pages. It renders all twenty example documents and those seven pages
 itself. No host Markdown parser, imports, or remote rendering service is used.
 
@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 80 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 85 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,18 +169,28 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are four implemented transformations out of the planned fifty.
+There are five implemented transformations out of the planned fifty.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
 400 generated rectangular datasets. Tests use an independent CSV encoder and
 decode the emitted table's character references back to the expected cells.
-Exact 64 KiB input, output overflow, unchanged input/literals and recovery are
+Exact 64 KiB input, output overflow, unchanged input and recovery are
 checked. Two renderer tests cover table recognition, block transitions,
 malformed separators, row-width mismatches and bounded decimal-reference
 parsing. Browser tests check actual header/body cell text, preserved embedded
 newlines, inert markup-like CSV values, invalid-input recovery and mobile
 layout. Light, dark and mobile screenshots were inspected.
+
+Four table-to-CSV tests cover always-quoted fields, doubled quotes, decimal
+Unicode references, punctuation escapes, separator/width validation and 500
+generated round trips through the two actual Wasm converters. Tests include
+embedded backtick runs, long fences, exact input capacity, wrapping overflow,
+memory isolation and recovery. The renderer's additional regression test
+checks long fences, shorter apparent closing fences inside CSV, escaped pipes
+and punctuation. Browser tests edit both valid and invalid tables, compare
+decoded input cells, and verify that CSV with embedded triple backticks remains
+one complete rendered code block. Its side-by-side screenshot was inspected.
 
 The JSON syntax scanner was compared with the native JSON parser on ten
 thousand generated candidate strings and explicit grammar boundaries. List

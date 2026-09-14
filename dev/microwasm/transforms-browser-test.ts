@@ -339,6 +339,63 @@ try {
     path: `${artifacts}/csv-to-table-mobile.png`,
     fullPage: true,
   });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.goto(new URL("?tool=05-table-to-csv", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(
+    "| note | text |\n| --- | --- |\n| &#32;edge&#32; | before&#10;&#96;&#96;&#96;&#10;after |",
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  const csvBody = '"note","text"\n" edge ","before\n```\nafter"\n';
+  const csvExport = "````csv\n" + csvBody + "````\n";
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    csvExport,
+  );
+  await side("input", "Rendered");
+  check(
+    await page.locator("#transform-input-rendered td").last().textContent() ===
+      "before\n```\nafter",
+    "Table input's decoded data differs",
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").count() === 1,
+    "Embedded fence split the CSV output",
+  );
+  check(
+    await page.locator("#transform-output-rendered pre code").textContent() ===
+      csvBody,
+    "Rendered CSV lost data",
+  );
+  await page.screenshot({
+    path: `${artifacts}/table-to-csv-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await page.locator("#transform-input").fill("| a | b |\n|---|\n|x|y|");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output-rendered pre code").textContent() ===
+      csvBody,
+    "Invalid separator replaced successful CSV",
+  );
+  await page.locator("#transform-input").fill("|x|\n|---|");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.querySelector("#transform-output-rendered pre code")
+      ?.textContent === '"x"\n'
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

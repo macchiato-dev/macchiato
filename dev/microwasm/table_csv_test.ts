@@ -200,6 +200,12 @@ Deno.test("Table to CSV: fence collisions, large input, output limits and isolat
   c.run(65536);
   equal(toHex(c.memory.subarray(0, 65536)), toHex(saved));
   c.memory.fill(0xa5, 0x30000);
+  // Quote doubling leaves only two bytes spare after wrapping. The overlapping
+  // copy must preserve every byte and stop before the sentinel region.
+  const quotes = '"'.repeat(65528);
+  const nearLimit = c.transform("|" + quotes + "|\n|---|");
+  equal(nearLimit, fenced(csv([[quotes]])));
+  equal(nearLimit.length, 131070);
   traps(() => c.run(65537));
   traps(() => c.run(-1));
   traps(() => c.transform("|" + "`".repeat(60000) + "|\n|---|"));

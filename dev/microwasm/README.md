@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 80 tests covering all twenty examples and the supplied
+`deno task test` runs 85 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -88,7 +88,7 @@ The Markdown renderer is itself handwritten Microwasm across
 [seven linked pages](renderer/00-module.md), including a page about
 [repeated scanning patterns](renderer/02-scanning.md). It produces HTML in
 linear memory without host imports or a JavaScript Markdown parser. Its
-2,478-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
+2,679-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
 768 KiB of output. Scans keep offsets rather than building an AST. Input and
 output overflow trap; the viewer discards incomplete output.
 Literal strings have one unsigned 8-bit length followed by their bytes, with
@@ -196,9 +196,13 @@ shared JSON number scanner.
 
 [Fenced CSV to a Markdown table](transforms/04-csv-to-table.md) handles quoted
 fields, escaped quotes, embedded line breaks and matching row widths. Its
-917-byte module emits Markdown-safe cell text. The Wasm reader now renders
+948-byte module emits Markdown-safe cell text. The Wasm reader now renders
 pipe tables and decimal character references, so the tool's Rendered view
-shows an actual table. The remaining 46 transformations are pending.
+shows an actual table.
+[Markdown table to CSV](transforms/05-table-to-csv.md) is the reverse tool:
+it decodes escaped cells, quotes CSV fields, and chooses a long enough code
+fence to preserve embedded backticks. Its 1,387-byte module needs no imports.
+The remaining 45 transformations are pending.
 
 ## Provisional byte-list notation
 
