@@ -486,7 +486,9 @@ export class ResourcesEditorDevice {
         source.config.build ? await this.buildDevice.run(source) : source;
       check();
       root.dataset.outputMachineStage = "compile";
-      const compiled = savedOutput ? savedOutput.compiled : await this.buildDevice.compile(project);
+      const compiled = savedOutput ?
+        (typeof savedOutput.compiled === "string" ? JSON.parse(savedOutput.compiled) : savedOutput.compiled) :
+        await this.buildDevice.compile(project);
       check();
       onCompiled();
       const options = project.config?.containerOptions || {};

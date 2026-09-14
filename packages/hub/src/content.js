@@ -440,15 +440,21 @@ export function createContentStore(client, {
         args: [String(projectId), String(userId)] });
       if (!owned.rows[0]) return null;
       const snapshot = validatedSnapshot(source);
+      // Compiled trees can contain thousands of CSS/SVG semantic pieces.
+      // Carry that already-serialized document across the backend bridge as
+      // text instead of spending the generic wire's item budget on each piece.
+      let compiled;
+      try { compiled = typeof output?.compiled === "string" ? JSON.parse(output.compiled) : output?.compiled; }
+      catch { throw new ContentValidationError("snapshot", "Build output is invalid"); }
       if (output?.format !== "resources-project-output-v1" ||
-          !output.project || !output.compiled || !Array.isArray(output.compiled.scripts) ||
-          !Array.isArray(output.compiled.stylesheets)) {
+          !output.project || !compiled || !Array.isArray(compiled.scripts) ||
+          !Array.isArray(compiled.stylesheets)) {
         throw new ContentValidationError("snapshot", "Build output is invalid");
       }
       const project = validatedSnapshot(output.project);
       await snapshotValidator(project);
       const sourceJson = JSON.stringify(snapshot);
-      const outputJson = JSON.stringify({ format: output.format, project, compiled: output.compiled });
+      const outputJson = JSON.stringify({ format: output.format, project, compiled: JSON.stringify(compiled) });
       // Bound this derived slot independently of the source/history budget.
       if (new TextEncoder().encode(outputJson).byteLength +
           new TextEncoder().encode(sourceJson).byteLength > 70 * 1024 * 1024) {

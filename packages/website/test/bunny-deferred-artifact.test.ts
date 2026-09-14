@@ -222,7 +222,7 @@ for (const interrupted of [false, true]) Deno.test(`exported Bunny deferred rout
     const workspace = await authenticated("/-/projects/artifact-user/artifact-project/workspace");
     assert(workspace.status === 200 && JSON.stringify((await workspace.json()).snapshot) === JSON.stringify(edited), "Workspace did not retain the saved edit");
     const output = { format: "resources-project-output-v1", project: edited,
-      compiled: { tree: [], document: {}, scripts: [], stylesheets: [] } };
+      compiled: JSON.stringify({ tree: [], document: {}, scripts: [], stylesheets: [] }) };
     const outputSaved = await authenticated(`/api/projects/${project.id}/output`, {
       method: "POST", headers: { "content-type": "application/json", "x-resources-csrf": csrf },
       body: JSON.stringify({ snapshot: edited, output }),

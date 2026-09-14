@@ -279,8 +279,10 @@ export function createResourcesServerMachine(module, {
                     destructive: decoded.value?.destructive === true,
                   });
               } else if (operation === "output" && input.length === 2 && route === "project.output") {
+                const output = decoded.value?.output;
                 result = await contentStore.saveProjectBuildOutput(userId, projectId,
-                  decoded.value?.snapshot, decoded.value?.output);
+                  decoded.value?.snapshot, output && { ...output,
+                    compiled: typeof output.compiled === "string" ? output.compiled : JSON.stringify(output.compiled) });
               } else if (operation === "restore" && input.length === 3) {
                 result = await contentStore.restoreProjectVersion(userId, projectId,
                   Number(input[2]));

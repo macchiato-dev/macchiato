@@ -37,7 +37,7 @@ test("only the latest successful output is retained, apart from source history",
   const source = text => ({ files: [{ path: "index.html", content: text }], config: {} });
   const first = source("first"), second = source("second"), broken = source("<unfinished");
   const output = project => ({ format: "resources-project-output-v1", project,
-    compiled: { tree: [], document: {}, stylesheets: [], scripts: [] } });
+    compiled: JSON.stringify({ tree: [], document: {}, stylesheets: [], scripts: [] }) });
   const project = await content.createProject(account.id, { namespace: "user", userSlug: "latte",
     slug: "cached", name: "Cached", description: "", visibility: "public", template: "html", snapshot: first });
   assert.equal(await content.getProjectBuildOutput(project.id, account.id), null);

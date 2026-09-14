@@ -31,6 +31,7 @@ if (document.querySelector("[data-project-editor]")) {
     const useSaved = saved?.format === "resources-project-output-v1" &&
       JSON.stringify(savedConfig.containerOptions || {}) === JSON.stringify(config.containerOptions || {}) &&
       JSON.stringify(savedConfig.environment || {}) === JSON.stringify(config.environment || {});
+    if (workspace) delete workspace.savedOutput;
     await requestFrontendService("editor.mount", {
       deferOutput: deferOutput && !useSaved, workspace, savedOutput: useSaved ? saved : null,
     });

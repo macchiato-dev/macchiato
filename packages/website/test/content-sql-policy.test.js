@@ -35,7 +35,7 @@ test("project reads, writes, versions, and batches stay inside the content sql-u
   assert.equal((await store.listPublicProjects({ namespaces: ["elsewhere"] })).length, 0);
   assert.equal((await store.getPublicProjectWorkspace("coffee", "example")).versionCount, 1);
   const output = { format: "resources-project-output-v1", project: first,
-    compiled: { tree: [], document: {}, stylesheets: [], scripts: [] } };
+    compiled: JSON.stringify({ tree: [], document: {}, stylesheets: [], scripts: [] }) };
   assert.deepEqual(await store.saveProjectBuildOutput(account.id, project.id, first, output), { saved: true });
   assert.deepEqual(await store.getProjectBuildOutput(project.id, account.id), output);
 
