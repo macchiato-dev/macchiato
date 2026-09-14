@@ -7,6 +7,8 @@ test("project archives round-trip text, binary images, and configuration", async
     files: [
       { path: "index.html", content: "<!doctype html><title>Slides</title>" },
       { path: "images/pixel.png", content: "data:image/png;base64,iVBORw0KGgo=" },
+      { path: "fonts/title.woff2", content: "data:font/woff2;base64,d09GMgD//g==" },
+      { path: "assets/tiles.bin", content: "data:application/octet-stream;base64,AP/+AA==" },
     ],
     config: { entry: "index.html", container: "presentation", template: "slides" },
   };

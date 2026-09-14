@@ -1515,6 +1515,7 @@ async function mountProjectRoot(root) {
     } catch (error) { setStatus(error.message, "error"); }
   });
   let importingArchive = false;
+  let archiveError = "";
   archiveInput.addEventListener("change", async () => {
     if (importingArchive) return;
     importingArchive = true;
@@ -1532,9 +1533,15 @@ async function mountProjectRoot(root) {
       renderTabs();
       sendContent();
       renderPreview();
+      if (activeError === archiveError) {
+        activeError = "";
+        activeErrorAction = null;
+      }
+      archiveError = "";
       setStatus("ZIP imported");
       if (!importModal.hidden) closeImport();
     } catch (error) {
+      archiveError = error.message;
       importError.textContent = error.message;
       setStatus(error.message, "error");
     } finally {

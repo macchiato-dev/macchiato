@@ -3,6 +3,8 @@ const decoder = new TextDecoder();
 const MAX_ARCHIVE_BYTES = 50 * 1024 * 1024;
 const MAX_FILES = 256;
 const IMAGE_TYPES = Object.freeze({ png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml" });
+const BINARY_TYPES = Object.freeze({ ...IMAGE_TYPES, woff2: "font/woff2", woff: "font/woff",
+  ttf: "font/ttf", otf: "font/otf", wasm: "application/wasm", bin: "application/octet-stream" });
 
 function crc32(bytes) {
   let crc = 0xffffffff;
@@ -117,7 +119,7 @@ export async function decodeProjectArchive(input) {
       if (manifest?.format !== "resources-project" || manifest.version !== 1) throw new Error("Project manifest is invalid");
       config = manifest.config;
     } else {
-      const type = IMAGE_TYPES[extension(path)];
+      const type = BINARY_TYPES[extension(path)];
       files.push({ path, content: type && type !== "image/svg+xml" ? `data:${type};base64,${bytesToBase64(contentBytes)}` : decoder.decode(contentBytes) });
     }
     offset += 46 + nameLength + extraLength + commentLength;

@@ -775,12 +775,15 @@ test("Mahjong ZIP drops round-trip a signed-in project's files and recover from 
     files.push({ path: fullPath.slice(example.length + 1), content: path.name.endsWith(".png")
       ? `data:image/png;base64,${bytes.toString("base64")}` : bytes.toString("utf8") });
   }
+  const font = await readFile(join(repoRoot, "dev/wasm-web-runtimes/examples/microquickjs-suite/mahjong/assets/fonts/libre-baskerville-latin-wght-normal.woff2"));
+  files.push({ path: "fonts/tiles.woff2", content: `data:font/woff2;base64,${font.toString("base64")}` });
   const snapshot = { files, config: { entry: "index.html", template: "html", container: "single-file-web-app" } };
   files.sort((a, b) => a.path.localeCompare(b.path));
   const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
   const client = createNodeSqliteClient(db);
   const account = await createAccountStore(client).authenticateIdentity({ provider: "github",
-    providerUserId: "zip-player", login: "zip-player", name: "ZIP Player" });
+    providerUserId: "zip-player", login: "zip-player", name: "ZIP Player",
+    email: "zip-player@example.test", emailVerified: true });
   await createContentStore(client).createProject(account.id, { userSlug: account.login,
     name: "classic-chinese-mahjong", slug: "classic-chinese-mahjong", snapshot });
   db.close();
@@ -834,6 +837,7 @@ test("Mahjong ZIP drops round-trip a signed-in project's files and recover from 
   await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/mahjong-import-dialog.png") });
   await drop(exported.bytes);
   await page.locator("[data-project-import-modal]").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("[data-project-error]").isHidden(), true);
   await page.waitForFunction(() => {
     const frames = [...document.querySelectorAll("[data-project-output-mount] iframe:not([inert])")];
     return frames.some(frame => frame.contentDocument?.querySelectorAll(".tile").length === 144);

@@ -908,6 +908,22 @@ should use the less ambiguous `BUNNY_STORAGE_ORIGIN` name.
 The SDK is pinned through `deno.json` and `deno.lock`; the edge script does not
 import executable code from a third-party CDN such as esm.sh.
 
+### Project ZIP import and export
+
+The editor menu's **Import ZIP** opens a file picker/drop dialog. Drop one ZIP
+into it or click to choose a file (50 MB maximum). Invalid imports leave the
+current draft unchanged, and a successful retry clears its earlier import error.
+Escape, the close button, and clicking outside dismiss the dialog.
+
+Exports use `<project-name>.zip`, or `untitled-project.zip` for an unnamed
+project. Files and configuration travel together; image, font, WASM, and `.bin`
+resource bytes must survive the round trip without text decoding. Legacy
+`container` configuration is accepted as data, not used to access a removed UI
+control. The Mahjong browser regression covers exporting a signed-in project,
+dropping it into a new project, rendering its 144 tiles, and exporting identical
+files and configuration again. It also checks invalid/multiple-file drops and
+retrying without losing the current draft.
+
 ### Install the code-tour project
 
 The blog's exported `dom-use` tour can also be represented by an ordinary,
