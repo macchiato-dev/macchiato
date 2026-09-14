@@ -527,6 +527,7 @@ function _asyncToGenerator(n) { return function () { var t = this, e = arguments
                       config = ((_workspace2 = workspace) == null || (_workspace2 = _workspace2.snapshot) == null ? void 0 : _workspace2.config) || {};
                       savedConfig = (saved == null || (_saved$project = saved.project) == null ? void 0 : _saved$project.config) || {};
                       useSaved = (saved == null ? void 0 : saved.format) === "resources-project-output-v1" && JSON.stringify(savedConfig.containerOptions || {}) === JSON.stringify(config.containerOptions || {}) && JSON.stringify(savedConfig.environment || {}) === JSON.stringify(config.environment || {});
+                      if (workspace) delete workspace.savedOutput;
                       _context3.n = 4;
                       return requestFrontendService("editor.mount", {
                         deferOutput: deferOutput && !useSaved,

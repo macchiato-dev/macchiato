@@ -856,18 +856,22 @@
     ownedWorkspace: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
                      p.name, p.description, p.visibility, p.template, p.created_at,
                      s.snapshot_json, s.last_version_sequence, s.updated_at,
-                     pub.snapshot_json AS published_snapshot_json
+                     pub.snapshot_json AS published_snapshot_json, b.output_json AS saved_output_json
               FROM resource_projects p
               JOIN resource_project_state s ON s.project_id = p.id
               JOIN resource_project_publications pub ON pub.project_id = p.id
+              LEFT JOIN resource_project_build_output b ON b.project_id = p.id
               WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
                 AND p.owner_user_id = ?`,
     publicWorkspace: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
                      p.name, p.description, p.visibility, p.template, p.created_at,
-                     pub.snapshot_json, s.last_version_sequence, s.updated_at
+                     pub.snapshot_json, s.last_version_sequence, s.updated_at,
+                     b.output_json AS saved_output_json
               FROM resource_projects p
               JOIN resource_project_state s ON s.project_id = p.id
               JOIN resource_project_publications pub ON pub.project_id = p.id
+              LEFT JOIN resource_project_build_output b ON b.project_id = p.id
+                AND b.source_json = pub.snapshot_json
               WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
                 AND p.visibility = 'public'`,
     publicProjects: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
@@ -1007,6 +1011,12 @@
       this.field = field;
     }
   };
+  function workspaceOutput(json, workspaceJson = "") {
+    if (!json) return null;
+    const encoder = new TextEncoder();
+    if (encoder.encode(json).byteLength + encoder.encode(workspaceJson).byteLength > 70 * 1024 * 1024) return null;
+    return JSON.parse(json);
+  }
   function text(value, field, { min = 0, max }) {
     const result = String(value || "").trim();
     if (result.length < min || result.length > max) {
@@ -1118,7 +1128,7 @@
         return Object.freeze({
           project: project(row),
           snapshot: parsedSnapshot(row.snapshot_json),
-          savedOutput: await this.getProjectBuildOutput(row.id, userId, row.snapshot_json),
+          savedOutput: workspaceOutput(row.saved_output_json, row.snapshot_json),
           publishedSnapshot: parsedSnapshot(row.published_snapshot_json),
           hasUnpublishedChanges: String(row.snapshot_json) !== String(row.published_snapshot_json),
           versionCount: Number(row.last_version_sequence),
@@ -1136,22 +1146,18 @@
         return Object.freeze({
           project: project(row),
           snapshot: parsedSnapshot(row.snapshot_json),
-          savedOutput: await this.getProjectBuildOutput(row.id, "", row.snapshot_json),
+          savedOutput: workspaceOutput(row.saved_output_json, row.snapshot_json),
           versionCount: Number(row.last_version_sequence),
           updatedAt: Number(row.updated_at)
         });
       },
-      async getProjectBuildOutput(projectId, userId = "", workspaceJson = "") {
+      async getProjectBuildOutput(projectId, userId = "") {
         await initialize2();
         const result = await client.execute({
           sql: CONTENT_QUERIES.buildOutput,
           args: [String(projectId), String(userId)]
         });
-        const json = result.rows[0]?.output_json;
-        if (!json) return null;
-        const encoder = new TextEncoder();
-        if (encoder.encode(json).byteLength + encoder.encode(workspaceJson).byteLength > 70 * 1024 * 1024) return null;
-        return JSON.parse(json);
+        return workspaceOutput(result.rows[0]?.output_json);
       },
       async saveProjectBuildOutput(userId, projectId, source, output) {
         await initialize2();
@@ -1161,13 +1167,19 @@
         });
         if (!owned.rows[0]) return null;
         const snapshot = validatedSnapshot(source);
-        if (output?.format !== "resources-project-output-v1" || !output.project || !output.compiled || !Array.isArray(output.compiled.scripts) || !Array.isArray(output.compiled.stylesheets)) {
+        let compiled;
+        try {
+          compiled = typeof output?.compiled === "string" ? JSON.parse(output.compiled) : output?.compiled;
+        } catch {
+          throw new ContentValidationError("snapshot", "Build output is invalid");
+        }
+        if (output?.format !== "resources-project-output-v1" || !output.project || !compiled || !Array.isArray(compiled.scripts) || !Array.isArray(compiled.stylesheets)) {
           throw new ContentValidationError("snapshot", "Build output is invalid");
         }
         const project2 = validatedSnapshot(output.project);
         await snapshotValidator(project2);
         const sourceJson = JSON.stringify(snapshot);
-        const outputJson = JSON.stringify({ format: output.format, project: project2, compiled: output.compiled });
+        const outputJson = JSON.stringify({ format: output.format, project: project2, compiled: JSON.stringify(compiled) });
         if (new TextEncoder().encode(outputJson).byteLength + new TextEncoder().encode(sourceJson).byteLength > 70 * 1024 * 1024) {
           throw new ContentValidationError("snapshot", "Build output is too large");
         }

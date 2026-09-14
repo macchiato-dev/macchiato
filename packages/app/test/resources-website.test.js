@@ -1062,7 +1062,12 @@ test("a project opens its persisted successful output without loading a compiler
     await output.getByRole("button", { name: "Count 0" }).click();
     await output.getByRole("button", { name: "Count 1" }).waitFor();
     await codeSurface(page).locator(".cm-content").waitFor();
-    if (saved) assert.deepEqual(await (await saved).json(), { saved: true });
+    if (saved) {
+      const response = await saved.catch(async error => {
+        assert.fail(`${error.message}\n${errors.join("\n")}\n${await page.locator("body").innerText()}`);
+      });
+      assert.deepEqual(await response.json(), { saved: true });
+    }
     assert.deepEqual(compilers, [], "saved output starts without either compiler artifact");
     assert.deepEqual(errors, []);
     if (process.env.MACCHIATO_TEST_ARTIFACTS) {

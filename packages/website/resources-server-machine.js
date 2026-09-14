@@ -337,6 +337,9 @@ export function createResourcesServerMachine(module, {
             if (!result) return [true, false];
             return [true, true];
           } catch (error) {
+            if (route === "project.output" && !(error instanceof ContentValidationError)) {
+              console.error("Project output persistence failed:", error?.message || String(error));
+            }
             return projectValidationResult(error);
           }
         },

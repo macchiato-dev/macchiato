@@ -102,8 +102,18 @@ test("the application machine initializes stores through the SQL policy machine"
   assert.equal(saved[1].changed, true);
   const workspace = await withTimeout(application.request(["store", "content",
     "getProjectWorkspace", ["latte", "first", "user-1"]]));
-  assert.equal(workspace[0], "ok");
+  assert.equal(workspace[0], "ok", JSON.stringify(workspace));
   assert.equal(workspace[1].snapshot.files[0].content, "<p>machine owned</p>");
+  const output = { format: "resources-project-output-v1", project: workspace[1].snapshot,
+    compiled: JSON.stringify({ tree: [], scripts: [], stylesheets: Array(70_000).fill([]) }) };
+  const cached = await withTimeout(application.request(["store", "content", "saveProjectBuildOutput",
+    ["user-1", "project-1", workspace[1].snapshot, output]]));
+  assert.deepEqual(cached, ["ok", { saved: true }]);
+  const reopened = await withTimeout(application.request(["store", "content",
+    "getProjectWorkspace", ["latte", "first", "user-1"]]));
+  assert.equal(reopened[0], "ok", JSON.stringify(reopened));
+  assert.deepEqual(reopened[1].savedOutput, output,
+    "compiled documents do not spend a wire item for every CSS/SVG piece");
   const plan = await withTimeout(application.request(["document-plan", {
     pathname: "/latte/first", session: { sub: "user-1", login: "latte" },
     staticShellExists: false,
