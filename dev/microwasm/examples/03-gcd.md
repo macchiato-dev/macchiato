@@ -8,9 +8,7 @@ a division-by-zero trap. Values are unsigned i32; a JavaScript caller uses
 ```text
 run(a, b):
     while b != 0:
-        r = a remainder_unsigned b
-        a = b
-        b = r
+        a, b = b, a % b
     return a
 ```
 

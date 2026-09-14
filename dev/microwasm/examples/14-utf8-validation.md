@@ -6,21 +6,21 @@ bytes and truncation. The input is one page, at offset zero. A length greater
 than 65536 traps; a malformed encoding returns a normal Boolean result.
 
 ```text
-remaining = 0; low = 128; high = 191
-for each byte c:
+remaining = 0; low = 0x80; high = 0xbf
+for c in input[0..<length]:
     if remaining:
-        if c outside [low, high]: return 0
-        remaining -= 1; low = 128; high = 191
-    else if c < 128: continue
-    else if 194 <= c <= 223: remaining = 1
-    else if 224 <= c <= 239:
+        if c < low || c > high: return 0
+        remaining -= 1; low = 0x80; high = 0xbf
+    else if c < 0x80: continue
+    else if 0xc2 <= c <= 0xdf: remaining = 1
+    else if 0xe0 <= c <= 0xef:
         remaining = 2
-        if c == 224: low = 160
-        if c == 237: high = 159
-    else if 240 <= c <= 244:
+        if c == 0xe0: low = 0xa0
+        if c == 0xed: high = 0x9f
+    else if 0xf0 <= c <= 0xf4:
         remaining = 3
-        if c == 240: low = 144
-        if c == 244: high = 143
+        if c == 0xf0: low = 0x90
+        if c == 0xf4: high = 0x8f
     else: return 0
 return remaining == 0
 ```

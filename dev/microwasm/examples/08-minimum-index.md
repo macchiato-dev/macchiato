@@ -6,11 +6,11 @@ return `[0, -1]`; the index, not the minimum value, signals absence.
 
 ```text
 run(count):
-    if unsigned(count) > 16384: trap
+    if u32(count) > 0x4000: trap
     if count == 0: return (0, -1)
     minimum = load_i32(0); index = 0; i = 1
     while i < count:
-        value = load_i32(i * 4)
+        value = load_i32(i << 2)
         if value < minimum: minimum = value; index = i
         i += 1
     return (minimum, index)

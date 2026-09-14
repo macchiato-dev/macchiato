@@ -21,20 +21,20 @@ emit '['
 if empty: emit ']'; return
 emit '[' and '"'
 state = start; ended_row = false
-for each byte c:
+for c in input[0..<length]:
     if state == quoted:
         if c == '"': state = after_quote
         else: emit_json_character(c)
-    else if state == after_quote and c == '"':
+    else if state == after_quote && c == '"':
         emit_json_character(c); state = quoted
     else:
-        if state == after_quote and c not in comma, LF, CR: trap
+        if state == after_quote && c not in (',', '\n', '\r'): trap
         if c == '"':
             if state != start: trap
             state = quoted
         else if c == ',':
             emit '"', ',', '"'; state = start
-        else if c in LF, CR:
+        else if c in ('\n', '\r'):
             if CR: require and consume following LF
             emit '"', ']'
             if more input: emit ',', '[', '"'

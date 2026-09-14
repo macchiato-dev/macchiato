@@ -8,7 +8,7 @@ at the final pair avoids computing the overflowing next Fibonacci number.
 
 ```text
 run(n):
-    if unsigned(n) > 46: trap
+    if u32(n) > 46: trap
     a = 0; b = 1
     while n > 1:
         next = a + b

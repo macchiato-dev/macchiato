@@ -6,11 +6,11 @@ a caller precondition; the function checks the count, not the entire array.
 
 ```text
 run(count, target):
-    if unsigned(count) > 16384: trap
+    if u32(count) > 0x4000: trap
     low = 0; high = count
     while low < high:
         middle = low + ((high - low) >> 1)
-        value = load_i32(middle * 4)
+        value = load_i32(middle << 2)
         if value == target: return middle
         if value < target: low = middle + 1
         else: high = middle

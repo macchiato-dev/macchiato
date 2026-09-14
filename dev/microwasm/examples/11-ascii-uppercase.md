@@ -7,11 +7,11 @@ through unchanged: this is not Unicode case conversion.
 
 ```text
 run(length):
-    check length <= 65536
-    for i from 0 to length exclusive:
+    if u32(length) > 0x10000: trap
+    for i in 0..<length:
         c = load_byte(i)
-        if 97 <= c <= 122: c -= 32
-        store_byte(65536 + i, c)
+        if 'a' <= c <= 'z': c -= 0x20
+        store_byte(0x10000 + i, c)
     return length
 ```
 

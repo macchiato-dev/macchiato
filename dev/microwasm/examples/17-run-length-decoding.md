@@ -6,12 +6,12 @@ would exceed 65536 output bytes traps **before that pair is written**. Earlier
 pairs may have been written; after any trap the caller discards the output.
 
 ```text
-check length <= 65536 and length is even
+if u32(length) > 0x10000 || (length & 1): trap
 i = 0; out = 0
 while i < length:
     count = input[i]; value = input[i + 1]
-    if count == 0 or out + count > 65536: trap
-    repeat count times: output[out++] = value
+    if count == 0 || out + count > 0x10000: trap
+    for _ in 0..<count: output[out++] = value
     i += 2
 return out
 ```

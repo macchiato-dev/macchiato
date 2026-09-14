@@ -6,10 +6,10 @@ most 16384 integers fit. Negative counts also fail the unsigned bound check.
 
 ```text
 run(count):
-    if unsigned(count) > 16384: trap
+    if u32(count) > 0x4000: trap
     i = 0; sum = 0
     while i < count:
-        sum += load_i32(i * 4)
+        sum += load_i32(i << 2)
         i += 1
     return sum
 ```

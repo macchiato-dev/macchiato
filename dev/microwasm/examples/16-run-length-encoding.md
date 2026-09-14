@@ -9,7 +9,7 @@ to 32768 bytes, so even all-distinct bytes fit in the output page.
 i = 0; out = 0
 while i < length:
     value = input[i++]; count = 1
-    while i < length and count < 255 and input[i] == value:
+    while i < length && count < 0xff && input[i] == value:
         i += 1; count += 1
     output[out++] = count
     output[out++] = value

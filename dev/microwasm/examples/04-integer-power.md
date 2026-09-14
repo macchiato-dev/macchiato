@@ -10,7 +10,7 @@ run(base, exponent):
     while exponent != 0:
         if exponent & 1: product *= base
         base *= base
-        exponent >>= 1  // unsigned shift
+        exponent >>>= 1
     return product
 ```
 

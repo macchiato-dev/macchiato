@@ -17,6 +17,12 @@ npm dependency, or opcode assembler.
 Instruction names in explanations are just explanations: only the written hex
 bytes and the explicit placeholders produce bytes.
 
+Pseudocode uses normal technical notation: hex for byte values, masks and
+addresses; ASCII character literals; `%`, shifts and compound assignments.
+`u32(x)` interprets the i32 bits as unsigned; `>>>` is a logical right shift.
+Ranges use `a..<b` (exclusive end) or `a..=b` (inclusive end), and `&&`/`||`
+short-circuit. This is explanatory notation, not another compiled DSL.
+
 ## Run the proof of concept
 
 From this directory:

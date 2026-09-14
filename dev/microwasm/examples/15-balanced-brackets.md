@@ -7,11 +7,11 @@ second page. Maximum depth cannot exceed input length, so the stack fits.
 
 ```text
 depth = 0
-for each byte c:
-    if c is an opening bracket:
+for c in input[0..<length]:
+    if c in ('(', '[', '{'):
         expected = c + (1 if c == '(' else 2)
         stack[depth++] = expected
-    else if c is a closing bracket:
+    else if c in (')', ']', '}'):
         if depth == 0: return 0
         if stack[--depth] != c: return 0
 return depth == 0

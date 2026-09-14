@@ -14,19 +14,19 @@ is used. There is no data section: the host chooses the initial pattern.
 
 ```text
 total = 0
-for i from 0 to 255:
-    x = i & 15; y = i >> 4
+for i in 0..<0x100:
+    x = i & 0x0f; y = i >> 4
     neighbors = 0
-    for dy from -1 to 1:
-        for dx from -1 to 1:
-            if dx == 0 and dy == 0: skip
+    for dy in -1..=1:
+        for dx in -1..=1:
+            if (dx | dy) == 0: continue
             nx = x + dx; ny = y + dy
-            if unsigned(nx) < 16 and unsigned(ny) < 16:
-                neighbors += input[ny * 16 + nx] != 0
-    alive = neighbors == 3 or (neighbors == 2 and input[i] != 0)
+            if u32(nx) < 0x10 && u32(ny) < 0x10:
+                neighbors += input[(ny << 4) + nx] != 0
+    alive = neighbors == 3 || (neighbors == 2 && input[i] != 0)
     next[i] = alive
     total += alive
-copy all next cells to input
+input[0..<0x100] = next[0..<0x100]
 return total
 ```
 

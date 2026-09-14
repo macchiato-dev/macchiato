@@ -9,7 +9,7 @@ run(n):
     if n < 2: return 0
     d = 2
     while d <= n / d:
-        if n remainder d == 0: return 0
+        if n % d == 0: return 0
         d += 1
     return 1
 ```

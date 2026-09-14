@@ -10,11 +10,11 @@ first multiplication.
 
 ```text
 factorial(n):
-    if unsigned(n) > 12: trap
+    if u32(n) > 12: trap
     product = 1
     while n != 0:
-        product = product * n
-        n = n - 1
+        product *= n
+        n -= 1
     return product
 ```
 

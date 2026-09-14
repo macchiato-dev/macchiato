@@ -7,16 +7,16 @@ checks rather than treating it as a high-volume sorting implementation.
 
 ```text
 run(count):
-    if unsigned(count) > 16384: trap
-    for i from 1 while i < count:
-        key = load_i32(i * 4)
+    if u32(count) > 0x4000: trap
+    for i in 1..<count:
+        key = load_i32(i << 2)
         j = i
         while j != 0:
-            previous = load_i32((j - 1) * 4)
+            previous = load_i32((j - 1) << 2)
             if previous <= key: break
-            store_i32(j * 4, previous)
+            store_i32(j << 2, previous)
             j -= 1
-        store_i32(j * 4, key)
+        store_i32(j << 2, key)
     return count
 ```
 

@@ -7,12 +7,12 @@ The one-page input has at most 65536 bytes and is never modified.
 
 ```text
 run(length):
-    check length <= 65536
+    if u32(length) > 0x10000: trap
     if length == 0: return 0
     count = 0
-    for each byte c:
-        if c == 10: count += 1
-    if final byte != 10: count += 1
+    for c in input[0..<length]:
+        count += c == '\n'
+    count += input[length - 1] != '\n'
     return count
 ```
 

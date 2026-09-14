@@ -9,23 +9,23 @@ This does not parse JSON or HTML, and does not make HTML embedding safe.
 
 ```text
 run(length):
-    check length <= 65536
-    output_cursor = 65536
+    if u32(length) > 0x10000: trap
+    output_cursor = 0x10000
     emit('"')
-    for each byte c:
-        if c is '"' or '\\': emit('\\'); emit(c)
-        else if c < 32:
-            short = {8: 'b', 9: 't', 10: 'n', 12: 'f', 13: 'r'}.get(c, 0)
+    for c in input[0..<length]:
+        if c in ('"', '\\'): emit('\\'); emit(c)
+        else if c < 0x20:
+            short = {'\b': 'b', '\t': 't', '\n': 'n', '\f': 'f', '\r': 'r'}.get(c, 0)
             emit('\\')
             if short: emit(short)
             else:
                 emit('u'); emit('0'); emit('0')
-                emit(hex(c >> 4)); emit(hex(c & 15))
+                emit(hex(c >> 4)); emit(hex(c & 0x0f))
         else: emit(c)
     emit('"')
-    return output_cursor - 65536
+    return output_cursor - 0x10000
 emit(byte):
-    if output_cursor >= 131072: trap
+    if output_cursor >= 0x20000: trap
     memory[output_cursor++] = byte
 ```
 
