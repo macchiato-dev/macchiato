@@ -797,6 +797,12 @@ separate authorities. See [Bunny Database operations](../../docs/bunny-database-
 for the difference between Bunny's internal durability snapshots and an
 operator-controlled backup.
 
+### Low-cold-start architecture
+
+Low cold-start overhead is a deliberate design constraint. The static path
+must remain usable before backend machines or the database are ready, rather
+than making every request pay for initializing the complete application.
+
 The minified Edge entry registers its HTTP server without network or database
 work. An anonymous `GET /` with no query or session cookie reads a
 pre-rendered localized home document directly from the revisioned Storage
@@ -804,6 +810,14 @@ prefix and identifies itself with `X-Resources-Edge-Tier: bootstrap`. The fast
 document intentionally uses the valid empty state for live project discovery;
 Browse and signed-in home use the bundled application because they require the
 database.
+
+The production composition disables speculative backend prewarming. Backend
+artifacts and machines initialize on demand and are reused within the script
+instance. The exported-entry tests enforce handler registration before I/O
+and prohibit WASM startup on the anonymous-home path. Bunny's platform startup
+and Storage latency still need staging measurements; that measures how well
+this design performs, not whether a low-cold-start design exists. See the
+[readiness record](../../docs/resources-edge-readiness.md#low-cold-start-design).
 
 On the first database-backed request, the application checks
 `resource_schema_migrations`. If it is

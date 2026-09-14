@@ -4,6 +4,31 @@ Current local verification: 2026-09-13, export `resources-co-b46589e`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
 
+## Low-cold-start design
+
+Low cold-start overhead is an explicit architectural objective, not just an
+unmeasured hope. The single Bunny entry registers the HTTP handler before
+Storage access, database initialization, or backend WASM compilation. The
+anonymous home path serves build-time-rendered, localized HTML with its CSS
+already prepared; it does not boot an application machine to render that page.
+Backend initialization is demand-driven, and successful module and machine
+initialization is reused within the running script instance. The deployed
+composition disables speculative backend prewarming, so it does not compete
+with the first home response.
+
+These properties are tested against the actual bundled entry, including a
+test that forbids any WASM startup while serving the anonymous home. They are
+the reason to expect lower cold-start overhead than eagerly initializing the
+whole application. They do not eliminate Bunny's own script startup cost,
+the Storage round trip, or the first dynamic request's deferred work.
+
+Latency measurements should validate this design, not start from an assumption
+that it has no cold-start strategy. Measure platform startup, the home HTML
+Storage fetch (headers and complete body), and the first dynamic request's
+download/initialization/database work separately. Compare warm requests too.
+The home handler currently reads the full HTML body before returning it, so
+Storage time-to-first-byte alone is not its complete response cost.
+
 ## Current build
 
 A transient database outage no longer permanently poisons initialization.
