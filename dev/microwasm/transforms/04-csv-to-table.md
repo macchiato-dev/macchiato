@@ -21,7 +21,8 @@ becomes:
 | Ada | London | said&#32;"hi" |
 ```
 
-Require one triple-backtick `csv` fence starting at the beginning of input.
+Require one backtick `csv` fence starting at the beginning of input, with at
+least three backticks and the same number on the closing fence.
 Fence lines use LF or CRLF. The closing fence is on its own line, followed
 only by ASCII space, tab, CR or LF. There must be at least one CSV record;
 a blank record is a header containing one empty field. The line ending before
@@ -58,7 +59,7 @@ is `&#124;`, not a separator. Other C0 controls are rejected because Markdown
 tables do not reliably preserve them. UTF-8 validity is a caller precondition.
 
 Input is at zero, at most 64 KiB. Output starts at `0x10000`, capped at
-128 KiB. The four-page memory is fixed; literals at `0x30000` cannot be
+128 KiB. The four-page memory is fixed; memory from `0x30000` onward cannot be
 overwritten by output. Invalid syntax, width or capacity traps. Every run
 resets state, and only a successful return publishes the output.
 
@@ -84,7 +85,7 @@ the width, so a separate first-row flag is unnecessary.
 - ct-code-section: `0a {{size:ct-code}}`
   - ct-code: `04`
     - ct-run-record: `{{size:ct-run-body}}`
-      - ct-run-body: `01 05 7f`
+      - ct-run-body: `01 07 7f`
         - ct-bound: `20 00 41 808004 4b 20 00 41 0b 49 72 04 40 00 0b`
         - ct-reset: `41 808004 24 00 41 00 24 01 41 01 24 02`
         - ct-trim-start: `20 00 21 05`
@@ -95,13 +96,20 @@ the width, so a separate first-row flag is unnecessary.
             - ct-trim-space: `20 02 41 20 46 20 02 41 09 46 72 20 02 41 0a 46 72 20 02 41 0d 46 72 45 0d 01`
             - ct-trim-next: `20 05 41 01 6b 21 05 0c 00 0b`
           - ct-trim-end: `0b`
-        - ct-close-room: `20 05 41 0b 49 04 40 00 0b`
-        - ct-close-position: `20 05 41 03 6b 21 05`
-        - ct-close-ticks: `20 05 2d 00 00 41 e000 47 20 05 2d 00 01 41 e000 47 72 20 05 2d 00 02 41 e000 47 72 04 40 00 0b`
+        - ct-open-exit: `02 40`
+          - ct-open-loop: `03 40`
+            - ct-open-bound: `20 01 20 05 4f 0d 01`
+            - ct-open-tick: `20 01 2d 00 00 41 e000 47 0d 01`
+            - ct-open-next: `20 01 41 01 6a 21 01 0c 00 0b`
+          - ct-open-end: `0b`
+        - ct-open-count: `20 01 22 06 41 03 49 04 40 00 0b`
+        - ct-close-room: `20 05 20 06 41 01 74 41 05 6a 49 04 40 00 0b`
+        - ct-close-position: `20 05 20 06 6b 21 05`
+        - ct-close-loop: `03 40`
+          - ct-close-byte: `20 05 20 07 6a 2d 00 00 41 e000 47 04 40 00 0b`
+          - ct-close-next: `20 07 41 01 6a 22 07 20 06 49 0d 00 0b`
         - ct-close-newline: `20 05 41 01 6b 2d 00 00 41 0a 47 04 40 00 0b`
-        - ct-open-loop: `03 40`
-          - ct-open-byte: `20 01 2d 00 00 41 81800c 20 01 6a 2d 00 00 47 04 40 00 0b`
-          - ct-open-next: `20 01 41 01 6a 22 01 41 80800c 2d 00 00 49 0d 00 0b`
+        - ct-open-label: `20 01 2d 00 00 41 e300 47 20 01 2d 00 01 41 f300 47 72 20 01 2d 00 02 41 f600 47 72 04 40 00 0b 20 01 41 03 6a 21 01`
         - ct-open-ending: `20 01 2d 00 00 41 0d 46 04 40 20 01 41 01 6a 21 01 0b`
         - ct-open-lf: `20 01 2d 00 00 41 0a 47 04 40 00 0b 20 01 41 01 6a 21 01`
         - ct-empty-input: `20 01 20 05 4f 04 40 00 0b`
@@ -159,10 +167,7 @@ the width, so a separate first-row flag is unnecessary.
           - ct-rule-end: `41 fc00 10 01 41 0a 10 01`
           - ct-row-width: `05 23 01 23 02 47 04 40 00 0b 0b`
         - ct-row-reset: `41 01 24 02 0b`
-- ct-data-section: `0b {{size:ct-data}}`
-  - ct-data: `01 00 41 80800c 0b {{size:ct-literal}}`
-    - ct-literal: `06 606060637376`
-
 Run locals: input length 0, position 1, byte 2, field state 3, ended-row flag
-4, content end 5. The fence label is length-prefixed;
-cell escaping computes decimal digits directly and needs no string table.
+4, content end 5, fence length 6, fence scan 7. Cell escaping computes decimal
+digits directly. The CSV label is three byte comparisons; no string table or
+terminator is needed.

@@ -58,6 +58,10 @@ allowlist is a separate step. These examples stay inert without that step:
       - inline-loop: `03 40`
         - inline-bound: `20 02 20 01 4f 0d 01`
         - inline-read: `20 02 2d 00 00 21 03`
+        - inline-backslash: `20 03 41 dc00 46 20 02 41 01 6a 20 01 49 71 04 40`
+          - inline-backslash-next: `20 02 2d 00 01 21 04`
+          - inline-backslash-punctuation: `20 04 41 21 6b 41 0e 4d 20 04 41 3a 6b 41 06 4d 72 20 04 41 db00 6b 41 05 4d 72 20 04 41 fb00 6b 41 03 4d 72 04 40`
+            - inline-backslash-escaped: `20 04 10 01 20 02 41 02 6a 21 02 0c 02 0b 0b`
         - inline-entity: `20 03 41 26 46 04 40`
           - inline-entity-read: `20 02 20 01 10 0a 22 04 04 40 20 04 21 02 0c 02 0b 0b`
         - inline-code: `20 03 41 e000 46 04 40`

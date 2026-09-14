@@ -93,19 +93,31 @@ or an extra argument/result convention. The larger repeated scans use the
         - run-cr-room: `20 02 20 01 4b 04 40`
           - run-cr: `20 02 41 01 6b 2d 00 00 41 0d 46 04 40 20 02 41 01 6b 21 02 0b 0b`
         - run-reset-fence-prefix: `41 00 21 04`
-        - run-fence-room: `20 02 20 03 6b 41 03 4f 04 40`
-          - run-fence-prefix: `20 03 2d 00 00 41 e000 46 20 03 2d 00 01 41 e000 46 71 20 03 2d 00 02 41 e000 46 71 21 04 0b`
+        - run-fence-count-exit: `02 40`
+          - run-fence-count-loop: `03 40`
+            - run-fence-count-bound: `20 03 20 04 6a 20 02 4f 0d 01`
+            - run-fence-count-byte: `20 03 20 04 6a 2d 00 00 41 e000 47 0d 01`
+            - run-fence-count-next: `20 04 41 01 6a 21 04 0c 00 0b`
+          - run-fence-count-end: `0b`
+        - run-fence-count-short: `20 04 41 03 49 04 40 41 00 21 04 0b`
         - run-in-fence: `20 09 04 40`
-          - run-fence-close-test: `20 04 04 40`
-            - run-fence-close: `41 2e 10 02 41 00 21 09`
-            - run-fence-source: `05 20 03 20 02 10 04 41 0a 10 00 0b`
+          - run-fence-close-test: `20 04 20 09 4f 04 40`
+            - run-fence-close-position: `20 01 20 04 6a 21 03`
+            - run-fence-close-exit: `02 40`
+              - run-fence-close-loop: `03 40`
+                - run-fence-close-bound: `20 03 20 02 4f 0d 01`
+                - run-fence-close-space: `20 03 2d 00 00 41 20 46 20 03 2d 00 00 41 09 46 72 45 0d 01`
+                - run-fence-close-next: `20 03 41 01 6a 21 03 0c 00 0b`
+              - run-fence-close-end: `0b`
+            - run-fence-close-valid: `20 03 20 02 46 04 40 41 2e 10 02 41 00 21 09 20 0a 21 01 0c 03 0b 0b`
+          - run-fence-source: `20 01 20 02 10 04 41 0a 10 00`
           - run-fence-next: `20 0a 21 01 0c 01 0b`
         - run-blank: `20 03 20 02 46 04 40`
           - run-blank-close-p: `20 08 04 40 41 04 10 02 41 00 21 08 0b`
           - run-blank-next: `20 0a 21 01 0c 01 0b`
         - run-open-fence: `20 04 04 40`
           - run-open-close-p: `20 08 04 40 41 04 10 02 41 00 21 08 0b`
-          - run-open-pre: `41 00 10 06 41 22 10 02 41 01 21 09`
+          - run-open-pre: `41 00 10 06 41 22 10 02 20 04 21 09`
           - run-open-next: `20 0a 21 01 0c 01 0b`
         - run-table-test: `20 01 2d 00 00 41 fc00 46 04 40`
           - run-table-probe: `20 01 20 00 41 00 10 09 04 40`

@@ -172,7 +172,7 @@ Deno.test("CSV to table: rejected syntax, row widths and recovery", async () => 
   equal(rows(c.transform(fence("recovered"))), [["recovered"]]);
 });
 
-Deno.test("CSV to table: exact input bound, output bound and literal isolation", async () => {
+Deno.test("CSV to table: exact input bound, output bound and memory isolation", async () => {
   const c = await converter();
   const large = fence("a".repeat(65524));
   equal(large.length, 65536);
@@ -180,11 +180,10 @@ Deno.test("CSV to table: exact input bound, output bound and literal isolation",
   const input = c.memory.slice(0, 65536);
   c.run(65536);
   equal(toHex(c.memory.subarray(0, 65536)), toHex(input));
-  c.memory.fill(0xa5, 0x30007);
+  c.memory.fill(0xa5, 0x30000);
   traps(() => c.transform(fence(" ".repeat(30000))));
   traps(() => c.run(-1));
   traps(() => c.run(65537));
   equal(rows(c.transform(fence("a,b"))), [["a", "b"]]);
-  equal(c.memory.subarray(0x30007).every((v) => v === 0xa5), true);
-  equal(toHex(c.memory.subarray(0x30000, 0x30007)), "06 60 60 60 63 73 76\n");
+  equal(c.memory.subarray(0x30000).every((v) => v === 0xa5), true);
 });

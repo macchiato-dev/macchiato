@@ -181,6 +181,28 @@ Deno.test("Markdown character references: bounded parsing and no raw HTML", asyn
   equal(performance.now() - start < 2000, true);
 });
 
+Deno.test("Markdown fences and escaped pipes: exported CSV remains one code block", async () => {
+  const { render } = await renderer();
+  for (const count of [3, 4, 7, 127, 128, 1024]) {
+    const fence = "`".repeat(count);
+    const body = '"start\n' + "`".repeat(count - 1) + '\nend"\n';
+    equal(
+      render(fence + "csv\n" + body + fence + "\n"),
+      "<pre><code>" + body.replaceAll('"', "&quot;") + "</code></pre>",
+    );
+  }
+  equal(
+    render("````csv\nx\n```\ny\n````label\nz\n`````\t \nafter"),
+    "<pre><code>x\n```\ny\n````label\nz\n</code></pre><p>after</p>\n",
+  );
+  equal(
+    render("| a\\|b | \\\\ |\n|---|---|\n| \\*x\\* | &#124; |"),
+    "<table><thead><tr><th>a|b</th><th>\\</th></tr>\n</thead><tbody><tr><td>*x*</td><td>&#124;</td></tr>\n</tbody></table>\n",
+  );
+  equal(render("|a\\|\n|---|").includes("<table>"), false);
+  equal(render("\\a \\*x\\* \\[link\\](url)"), "<p>\\a *x* [link](url)</p>\n");
+});
+
 Deno.test("Renderer renders all example pages and its own multi-page source", async () => {
   const { render, built } = await renderer();
   const pages = built.pages.map((page) => page.source);

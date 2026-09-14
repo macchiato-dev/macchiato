@@ -10,8 +10,9 @@ accepted but do not add styles. Every body row must have the header's width;
 the first different row ends the table and is read as another Markdown block.
 
 This is a deliberately small table dialect, not all GFM table syntax. Use
-`&#124;` inside a cell for a literal pipe. Optional outer pipes and backslash-
-escaped pipe separators are not implemented. Cell-edge spaces and tabs are
+`&#124;` or `\|` inside a cell for a literal pipe. Outer pipes are required.
+Backslash escapes of ASCII punctuation are decoded by the inline reader.
+Cell-edge spaces and tabs are
 formatting; encode significant ones as character references. CRLF works.
 
 ## Pattern: probe without emitting, then render
@@ -63,7 +64,14 @@ cell end 6, column count 7. Probe modes never write output.
     - row-exit: `02 40`
       - row-loop: `03 40`
         - row-bound: `20 03 20 01 4f 0d 01`
-        - row-next-pipe: `20 03 20 01 41 fc00 10 03 21 04`
+        - row-pipe-position: `20 03 21 04`
+        - row-pipe-exit: `02 40`
+          - row-pipe-loop: `03 40`
+            - row-pipe-bound: `20 04 20 01 4f 04 40 41 00 0f 0b`
+            - row-pipe-found: `20 04 2d 00 00 41 fc00 46 0d 01`
+            - row-pipe-escape: `20 04 2d 00 00 41 dc00 46 04 40 20 04 41 01 6a 21 04 0b`
+            - row-pipe-next: `20 04 41 01 6a 21 04 0c 00 0b`
+          - row-pipe-end: `0b`
         - row-cell-range: `20 03 21 05 20 04 21 06`
         - row-leading-exit: `02 40`
           - row-leading-loop: `03 40`
