@@ -29100,9 +29100,33 @@ async function mountProjectRoot(root) {
     setStatus("Tab configuration saved");
   });
   const archiveInput = root.querySelector("[data-project-archive-file]");
+  const importModal = root.querySelector("[data-project-import-modal]");
+  const importChoose = root.querySelector("[data-project-import-choose]");
+  const importClose = root.querySelector("[data-project-import-close]");
+  const importError = root.querySelector("[data-project-import-error]");
+  function closeImport() {
+    importModal.hidden = true;
+    editorOverflowTrigger.focus();
+  }
   root.querySelector("[data-project-import]").addEventListener("click", () => {
     closeEditorOverflow();
-    archiveInput.click();
+    importError.textContent = "";
+    importModal.hidden = false;
+    importChoose.focus();
+  });
+  importClose.addEventListener("click", closeImport);
+  importModal.addEventListener("pointerdown", (event) => {
+    if (event.target === importModal) closeImport();
+  });
+  importModal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeImport();
+    }
+    if (event.key === "Tab") {
+      event.preventDefault();
+      (event.target === importChoose ? importClose : importChoose).focus();
+    }
   });
   root.querySelector("[data-project-export]").addEventListener("click", () => {
     closeEditorOverflow();
@@ -29113,7 +29137,13 @@ async function mountProjectRoot(root) {
       setStatus(error.message, "error");
     }
   });
+  let importingArchive = false;
+  let archiveError = "";
   archiveInput.addEventListener("change", async () => {
+    if (importingArchive) return;
+    importingArchive = true;
+    importChoose.disabled = true;
+    importError.textContent = "";
     try {
       const imported = normalizeProjectSnapshot(await importProjectArchive());
       selected = imported.config.entry && imported.files.some((item) => item.path === imported.config.entry) ? imported.config.entry : imported.files[0].path;
@@ -29126,11 +29156,21 @@ async function mountProjectRoot(root) {
       renderTabs();
       sendContent();
       renderPreview();
+      if (activeError === archiveError) {
+        activeError = "";
+        activeErrorAction = null;
+      }
+      archiveError = "";
       setStatus("ZIP imported");
+      if (!importModal.hidden) closeImport();
     } catch (error) {
+      archiveError = error.message;
+      importError.textContent = error.message;
       setStatus(error.message, "error");
     } finally {
       archiveInput.value = "";
+      importingArchive = false;
+      importChoose.disabled = false;
     }
   });
   const workspace = root.querySelector(".project-editor__workspace");

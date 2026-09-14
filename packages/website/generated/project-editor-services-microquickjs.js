@@ -1629,7 +1629,7 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
   function _mountProjectRoot() {
     _mountProjectRoot = _asyncToGenerator(_regenerator().m(function _callee0(root) {
       var _root$closest, _root$querySelector, _exec, _state$files$, _state$config4, _workspacePayload, _fileFilter$previousE, _state$config6, _state$config7, _root$closest1;
-      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selectedStoredSequence, latestStoredSequence, selectedVersionField, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, persistedOutput, outputSaveChain, persistSuccessfulOutput, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i5, _arr3, _arr3$_i, _button2, _label, text, tabLayoutFrame, syncTabOverflow, scheduleTabLayout, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i6, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
+      var editorMount, preview, snapshotField, status, statusSave, statusError, statusNotice, versionButton, versionCount, currentVersion, historyPanel, versionList, projectId, persistence, draft, memoryOnly, readOnly, pendingSnapshotKey, initialProjectLayout, initialDetailsButton, initiallyNarrow, restoredDraft, snapshotUrl, workspacePayload, _root$closest2, response, draftFlash, parsedSnapshot, state, initialOutputSnapshot, historyInEditorMachine, recoveredPendingSnapshot, recoveryFailure, recoveryWriteError, removeRecovery, readRecovery, pendingValue, recovered, _root$closest3, _state$config, _state$config2, fields, templateField, patternsField, requestedTemplate, currentSnapshot, viewingHistorical, selectedStoredSequence, latestStoredSequence, selectedVersionField, selected, tabSessionKey, openTabs, ready, pending2, saveTimer, pendingDestructive, templateOnlyPending, changeGeneration, unsavedChangeCount, currentUpdatedAt, saving, localHistory, editorController, editorGeneration, editorPreviewTimer, activeError, activeErrorAction, activeStatusSurface, activeNotice, persistenceState, persistenceText, showCurrentVersion, refreshSubmitLabel, showSelectedVersion, navigation, _stored$patches, stored, _localHistory, _localHistory2, _root$closest6, _root$closest7, editorDocumentLimits, selectedSource, selectedContent, showSourcePages, mode, language, sendContent, renderPreview, mountEditorMachine, _mountEditorMachine, persistedOutput, outputSaveChain, persistSuccessfulOutput, rotateContainerMachines, renderTabs, renderStatusState, clearNotice, showTemplateNotice, setStatus, resetStoppedEditor, storeRecovery, retryRecovery, updateSnapshot, checkpointDraft, save, _save, renderDraftVersions, renderStoredVersions, _renderStoredVersions, receiveEditorChange, selectProjectFile, openTabList, tabScrollBack, tabScrollForward, _i5, _arr3, _arr3$_i, _button2, _label, text, tabLayoutFrame, syncTabOverflow, scheduleTabLayout, closeOpenTab, draggedTab, fileTrigger, fileTriggerIcon, _i6, _arr4, d, path, fileTriggerArrow, fileTriggerArrowPath, fileMenu, fileFilter, fileEmpty, filterProjectFiles, closeFileMenu, editorOverflow, editorOverflowTrigger, editorOverflowMenu, closeEditorOverflow, archiveInput, importModal, importChoose, importClose, importError, closeImport, importingArchive, archiveError, workspace, outputOverflow, outputOverflowTrigger, outputOverflowMenu, fullscreenButton, closeOutputOverflow, splitter, projectLayout, projectClose, projectCloseHome, projectViewControls, projectDetails, placeProjectClose, setSplit, _loop9, _iterator23, _step23, narrowWorkspace, syncResponsiveWorkspace, form, template, linkPatterns, _option2, growTextarea, updateContainer, applyTemplateSnapshot, _loop0, _iterator25, _step25, _iterator26, _step26, field, closeHistory, positionHistory, openVersionHistory, _t7, _t8;
       return _regenerator().w(function (_context11) {
         while (1) switch (_context11.p = _context11.n) {
           case 0:
@@ -1763,6 +1763,10 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               outputOverflowMenu.hidden = true;
               outputOverflowTrigger.setAttribute("aria-expanded", "false");
               if (focus) outputOverflowTrigger.focus();
+            };
+            closeImport = function _closeImport() {
+              importModal.hidden = true;
+              editorOverflowTrigger.focus();
             };
             closeEditorOverflow = function _closeEditorOverflow(_temp8) {
               var _ref10 = _temp8 === void 0 ? {} : _temp8,
@@ -3199,9 +3203,29 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
               setStatus("Tab configuration saved");
             });
             archiveInput = root.querySelector("[data-project-archive-file]");
+            importModal = root.querySelector("[data-project-import-modal]");
+            importChoose = root.querySelector("[data-project-import-choose]");
+            importClose = root.querySelector("[data-project-import-close]");
+            importError = root.querySelector("[data-project-import-error]");
             root.querySelector("[data-project-import]").addEventListener("click", function () {
               closeEditorOverflow();
-              archiveInput.click();
+              importError.textContent = "";
+              importModal.hidden = false;
+              importChoose.focus();
+            });
+            importClose.addEventListener("click", closeImport);
+            importModal.addEventListener("pointerdown", function (event) {
+              if (event.target === importModal) closeImport();
+            });
+            importModal.addEventListener("keydown", function (event) {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                closeImport();
+              }
+              if (event.key === "Tab") {
+                event.preventDefault();
+                (event.target === importChoose ? importClose : importChoose).focus();
+              }
             });
             root.querySelector("[data-project-export]").addEventListener("click", function () {
               closeEditorOverflow();
@@ -3213,16 +3237,27 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                 setStatus(_error16.message, "error");
               }
             });
+            importingArchive = false;
+            archiveError = "";
             archiveInput.addEventListener("change", _asyncToGenerator(_regenerator().m(function _callee3() {
               var imported, _imported$config, _t, _t2;
               return _regenerator().w(function (_context3) {
                 while (1) switch (_context3.p = _context3.n) {
                   case 0:
-                    _context3.p = 0;
-                    _t = normalizeProjectSnapshot;
-                    _context3.n = 1;
-                    return importProjectArchive();
+                    if (!importingArchive) {
+                      _context3.n = 1;
+                      break;
+                    }
+                    return _context3.a(2);
                   case 1:
+                    importingArchive = true;
+                    importChoose.disabled = true;
+                    importError.textContent = "";
+                    _context3.p = 2;
+                    _t = normalizeProjectSnapshot;
+                    _context3.n = 3;
+                    return importProjectArchive();
+                  case 3:
                     imported = _t(_context3.v);
                     selected = imported.config.entry && imported.files.some(function (item) {
                       return item.path === imported.config.entry;
@@ -3238,21 +3273,31 @@ function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
                     renderTabs();
                     sendContent();
                     renderPreview();
+                    if (activeError === archiveError) {
+                      activeError = "";
+                      activeErrorAction = null;
+                    }
+                    archiveError = "";
                     setStatus("ZIP imported");
-                    _context3.n = 3;
+                    if (!importModal.hidden) closeImport();
+                    _context3.n = 5;
                     break;
-                  case 2:
-                    _context3.p = 2;
-                    _t2 = _context3.v;
-                    setStatus(_t2.message, "error");
-                  case 3:
-                    _context3.p = 3;
-                    archiveInput.value = "";
-                    return _context3.f(3);
                   case 4:
+                    _context3.p = 4;
+                    _t2 = _context3.v;
+                    archiveError = _t2.message;
+                    importError.textContent = _t2.message;
+                    setStatus(_t2.message, "error");
+                  case 5:
+                    _context3.p = 5;
+                    archiveInput.value = "";
+                    importingArchive = false;
+                    importChoose.disabled = false;
+                    return _context3.f(5);
+                  case 6:
                     return _context3.a(2);
                 }
-              }, _callee3, null, [[0, 2, 3, 4, void 0, void 0]]);
+              }, _callee3, null, [[2, 4, 5, 6, void 0, void 0]]);
             })));
             workspace = root.querySelector(".project-editor__workspace");
             outputOverflow = root.querySelector("[data-output-overflow]");

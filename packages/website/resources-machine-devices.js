@@ -237,7 +237,7 @@ export class ResourcesArchiveDevice {
     // event and decoded snapshot for a drop as for the browser's file picker.
     this.fileListener = (event) => {
       const modal = event.target.closest?.("[data-project-import-modal]");
-      if (!modal || modal.hidden) return;
+      if (!modal || modal.hidden || modal !== this.document.querySelector("[data-project-import-modal]")) return;
       if (event.type === "click" && !event.target.closest("[data-project-import-choose]")) return;
       event.preventDefault();
       const input = modal.closest("[data-project-editor]").querySelector("[data-project-archive-file]");
