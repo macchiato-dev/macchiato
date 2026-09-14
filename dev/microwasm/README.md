@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 40 tests covering all twenty examples and the supplied
+`deno task test` runs 47 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -133,8 +133,14 @@ source documents and hex alongside the ordinary examples.
 [Unsigned number conversion](numbers/01-unsigned-integers.md) is the first
 shared numeric primitive: a 390-byte module parses/formats exact 64-bit
 integers in bases 2..36. Tests cover every digit byte, overflow, full-width
-values and native-oracle round trips. JSON/binary64 conversion remains
-unfinished; integer support is not a replacement for it.
+values and native-oracle round trips.
+
+[JSON decimal parsing](numbers/04-json-binary64.md) now converts strict JSON
+number text to binary64 using [exact multiword arithmetic](numbers/03-multiword.md).
+It handles nearest-even rounding, negative zero, subnormals and overflow.
+Tests cover exact rounding midpoints, long digit tails, full-size input and
+native-oracle comparisons. Decimal formatting and JavaScript's more permissive
+number/radix interfaces remain unfinished; this is not the complete number goal.
 
 [Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
 working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed

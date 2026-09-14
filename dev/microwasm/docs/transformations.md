@@ -6,9 +6,10 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation, tools 1 and 3, and the side-by-side editor are implemented
-and tested. Binary64 number conversion and the other 48 tools remain. This
-is not goal completion.
+syntax validation and binary64 parsing, tools 1 and 3, and the side-by-side
+editor are implemented and tested. Binary64 formatting, JavaScript's more
+permissive numeric interfaces and the other 48 tools remain. This is not goal
+completion.
 
 ## Shared number conversion
 

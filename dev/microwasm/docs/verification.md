@@ -76,12 +76,25 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 40 tests. The additional eight cover unsigned 64-bit parsing
+The suite now has 47 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
 against native BigInt formatting and test every possible digit byte in every
-radix. This does not yet test or implement binary64/JSON number conversion.
+radix.
+
+Seven further tests exercise fixed-slot multiword arithmetic and strict JSON
+decimal-to-binary64 parsing. The arithmetic checks carry/borrow chains, shifts,
+aliasing, normalization and 8192-bit capacity against test-only BigInt oracles.
+The parser checks exact halfway values and decimal neighbors (including
+1200-digit tails), subnormal/normal transitions, signed zero, overflow and
+exponent cancellation across a 64 KiB input. Generated tests compare 2500
+decimal inputs to native conversion and approximately 5000 native shortest
+decimal strings to their original binary64 values. Invalid syntax/spans trap;
+subsequent calls recover and output-region sentinels remain unchanged.
+The parser does not import host arithmetic or parsing functions. The shared
+memory is fixed at 256 KiB; input and scratch occupy separate regions.
+Binary64 formatting and JavaScript's other parsing interfaces are still pending.
 
 The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
