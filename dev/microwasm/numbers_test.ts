@@ -128,3 +128,77 @@ Deno.test("Unsigned numbers: digit alphabet, malformed input, capacity and recov
   equal(m.read("000123", 10), 123n);
   equal(m.write(123n, 10), "123");
 });
+
+Deno.test("JSON number syntax: grammar, native parser differential and span bounds", async () => {
+  const source = await Deno.readTextFile(
+    new URL("numbers/02-json-number.md", import.meta.url),
+  );
+  const built = assemble(source);
+  equal(toHex(assemble(built.resolved).bytes), toHex(built.bytes));
+  const { instance } = await WebAssembly.instantiate(
+    fromHex(toHex(built.bytes)),
+  );
+  const memory = new Uint8Array(
+    (instance.exports.memory as WebAssembly.Memory).buffer,
+  );
+  const valid = instance.exports.valid as (
+    start: number,
+    end: number,
+  ) => number;
+  function check(text: string) {
+    const bytes = new TextEncoder().encode(text);
+    memory.fill(0xa5, 0, 0x10000);
+    memory.set(bytes, 7);
+    let expected = false;
+    try {
+      expected = text.trim() === text && typeof JSON.parse(text) === "number";
+    } catch { /* Invalid JSON, including incomplete numeric tokens. */ }
+    equal(valid(7, 7 + bytes.length), Number(expected));
+    equal(memory[6], 0xa5);
+    equal(memory[7 + bytes.length], 0xa5);
+  }
+  for (
+    const text of [
+      "0",
+      "-0",
+      "0.0",
+      "-1.23E+99",
+      "1e9999",
+      "1e-9999",
+      "123",
+      "01",
+      "+1",
+      ".5",
+      "1.",
+      "1e",
+      "1e+",
+      "1e--2",
+      "NaN",
+      "Infinity",
+      "0xff",
+      "1_000",
+      " 1",
+      "1\n",
+      "",
+      "-",
+      "1٢",
+      "true",
+      "null",
+    ]
+  ) check(text);
+  let seed = 0xabc;
+  const alphabet = "0129.-+eE x_[]";
+  for (let i = 0; i < 10000; i++) {
+    let text = "";
+    for (let j = 0; j <= i % 13; j++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      text += alphabet[seed % alphabet.length];
+    }
+    check(text);
+  }
+  memory.fill(0x39, 0, 0x10000);
+  equal(valid(0, 0x10000), 1);
+  for (const [start, end] of [[0, 0], [1, 0], [-1, 3], [0, -1], [0, 0x10001]]) {
+    equal(valid(start, end), 0);
+  }
+});
