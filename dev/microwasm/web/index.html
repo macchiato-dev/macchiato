@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Microwasm — documents that execute</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./demo.js"></script>
+</head>
+<body>
+  <header>
+    <a href="./" class="brand">Microwasm</a>
+    <span>Documents that execute</span>
+  </header>
+  <main>
+    <section id="index">
+      <h1>Twenty small programs, written in bytes.</h1>
+      <p>Pseudocode → flowchart → annotated byte lists → filled counts → hex → WebAssembly.</p>
+      <p>No instruction compiler. The bytes in each Markdown document are the program.</p>
+      <ol id="examples"></ol>
+    </section>
+    <section id="example" hidden>
+      <a href="./">← All examples</a>
+      <h1 id="title"></h1>
+      <p id="size"></p>
+      <div class="panels">
+        <section class="demo">
+          <h2>Run the bytes</h2>
+          <p id="instructions"></p>
+          <form id="form">
+            <label for="input" id="input-label">Input</label>
+            <textarea id="input" rows="5" spellcheck="false"></textarea>
+            <button type="submit">Run</button>
+          </form>
+          <div id="life" hidden>
+            <div class="controls">
+              <button id="step">Step</button>
+              <button id="play">Play</button>
+              <button id="blinker">Blinker</button>
+              <button id="glider">Glider</button>
+              <button id="clear">Clear</button>
+            </div>
+            <div id="board" aria-label="Game of Life board"></div>
+          </div>
+          <pre id="output" role="status" aria-live="polite"></pre>
+          <p class="note">This page supplies input and displays results. The selected Wasm module does the computation.</p>
+        </section>
+        <section class="source">
+          <h2>Follow the derivation</h2>
+          <nav id="formats" aria-label="Source format">
+            <button data-extension="md" aria-pressed="true">Markdown</button>
+            <button data-extension="resolved.md" aria-pressed="false">Filled counts</button>
+            <button data-extension="hex" aria-pressed="false">Hex</button>
+            <a id="download" download>Download Wasm</a>
+          </nav>
+          <pre id="source" tabindex="0" aria-label="Program source"></pre>
+        </section>
+      </div>
+    </section>
+    <p id="error" role="alert" hidden></p>
+  </main>
+  <noscript>This demo needs JavaScript to instantiate WebAssembly. The example Markdown and hex files are also available in the examples directory.</noscript>
+</body>
+</html>

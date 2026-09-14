@@ -1,6 +1,6 @@
 # Twenty examples
 
-This is the full working scope. Each finished example must have its own
+All twenty examples are implemented. Each has its own
 pseudocode, flowchart, annotated nested byte lists with placeholders, resolved
 Markdown, hex output, and execution tests. Build artifacts belong in `dist/`.
 
@@ -33,5 +33,7 @@ rendering a stored grid does not count.
 
 Tests should include empty/boundary inputs and failures where applicable, not
 just one happy-path value. Limits and numeric behavior belong in the documents.
-Names and sequence can change when the handwritten example arrives, but the
-twenty-example scope and the complete document-to-execution pipeline remain.
+Run `deno task build` for the resolved documents and binaries, and
+`deno task test` for the complete document-to-execution checks. The browser
+index links the same examples, reading their generated hex instead of a
+separately maintained implementation.
