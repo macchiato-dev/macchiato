@@ -190,7 +190,45 @@ try {
     const f = await load("04-json-binary64", { n, b });
     const d = await load("05-exact-decimal", { b });
     const s = await load("06-shortest-decimal", { f, d });
+    const p = await load("07-parse-integer", { f, b });
+    const prefix = await load("08-parse-float", { f, p, n });
     const memory = new Uint8Array((s.memory as WebAssembly.Memory).buffer);
+    for (
+      const [text, radix, expected] of [
+        [" \u1680-0xffrest", 0, -255],
+        ["0b101", 0, 0],
+        ["101z", 2, 5],
+        ["-0", 36, -0],
+        ["xyz", 36, 44027],
+        ["+90", 8, NaN],
+      ] as const
+    ) {
+      const input = new TextEncoder().encode(text);
+      memory.set(input);
+      const actual =
+        (p.parse as (start: number, end: number, radix: number) => number)(
+          0,
+          input.length,
+          radix,
+        );
+      if (!Object.is(actual, expected)) throw new Error(`parseInt: ${text}`);
+    }
+    for (
+      const [text, expected] of [
+        ["+.5suffix", .5],
+        ["-Infinity!", -Infinity],
+        ["1e+oops", 1],
+        ["-.0", -0],
+      ] as const
+    ) {
+      const input = new TextEncoder().encode(text);
+      memory.set(input);
+      const actual = (prefix.parse as (start: number, end: number) => number)(
+        0,
+        input.length,
+      );
+      if (!Object.is(actual, expected)) throw new Error(`parseFloat: ${text}`);
+    }
     return ["0.1", "-0", "1e-7", "1e21", "5e-324", "1.7976931348623157e308"]
       .map((text) => {
         const input = new TextEncoder().encode(text);

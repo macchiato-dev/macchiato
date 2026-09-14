@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 52 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 58 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -102,14 +102,26 @@ more than 13,000 cases: every normal power-of-two boundary and both neighbors,
 decimal powers and their neighbors, small subnormals and random bit patterns.
 The results also round-trip through the Wasm parser. This formatter deliberately
 reuses exact expansion and up to 34 parser calls; it is not a native-throughput
-claim. Precision-controlled strings and other radix/JavaScript parsing
-interfaces remain pending.
+claim. Precision-controlled strings, nondecimal binary64 formatting and
+whole-string numeric conversion remain pending.
+
+Six additional tests cover JavaScript-style `parseInt` and `parseFloat` text
+interfaces. They check radix prefixes, all byte values in every radix,
+negative zero, NaN and infinity, and exact large-integer rounding against
+test-only BigInt accumulation. Unicode whitespace is compared across the BMP
+with the native whitespace class; partial/invalid UTF-8 does not get accepted
+as a space. Decimal-prefix parsing is compared with the native parser on
+10,000 generated syntax candidates and 2500 generated numeric prefixes.
+Full 64 KiB tokens, output sentinels, invalid spans and subsequent recovery
+are tested. The public strict JSON parser still rejects looser decimal forms.
 
 The browser suite checks all library documents in the six independent
 content/display combinations, as well as the original examples and renderer
 pages. It instantiates the built numeric dependency graph in Chromium and
 checks parse/shortest-format results across ordinary/scientific notation,
-signed zero and extreme finite values, with no host numeric callbacks.
+signed zero and extreme finite values, with no host numeric callbacks. It also
+checks the shipped integer/decimal prefix parsers on signs, bases, whitespace,
+ignored suffixes, incomplete exponents, NaN and infinity.
 
 The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.

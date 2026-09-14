@@ -73,6 +73,8 @@ for (
     "numbers/04-json-binary64",
     "numbers/05-exact-decimal",
     "numbers/06-shortest-decimal",
+    "numbers/07-parse-integer",
+    "numbers/08-parse-float",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {

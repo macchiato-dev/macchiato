@@ -62,10 +62,12 @@ flowchart LR
     E --> F[Assemble f64 bits]
 ```
 
-This completes strict JSON decimal parsing, not the more permissive JavaScript
-`parseInt`/`parseFloat` interfaces. [Shortest decimal formatting](06-shortest-decimal.md)
-now uses this parser to test candidate strings. The implementation is
-deliberately general before introducing short-decimal fast paths.
+This entry point remains strict JSON parsing. The more permissive
+[integer-prefix](07-parse-integer.md) and [decimal-prefix](08-parse-float.md)
+parsers reuse its arithmetic without weakening that grammar.
+[Shortest decimal formatting](06-shortest-decimal.md) uses the strict parser
+to test candidate strings. The implementation is deliberately general before
+introducing short-decimal fast paths.
 
 ## Module and imports
 

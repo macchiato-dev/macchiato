@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 52 tests covering all twenty examples and the supplied
+`deno task test` runs 58 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -144,14 +144,21 @@ formats the complete finite binary64 value and round-trips through that parser.
 [Shortest finite decimal formatting](numbers/06-shortest-decimal.md) uses those
 digits and the Wasm parser to choose the shortest round-tripping string, with
 JavaScript's decimal notation rules. It is a reference implementation, not
-a cached-power performance optimization. Precision-controlled formatting and
-JavaScript's more permissive number/radix interfaces remain unfinished; this
-is not the complete number goal.
+a cached-power performance optimization.
+
+[Integer-prefix parsing](numbers/07-parse-integer.md) implements `parseInt`
+syntax in bases 2..36, with exact accumulation before binary64 rounding.
+[Decimal-prefix parsing](numbers/08-parse-float.md) implements `parseFloat`
+syntax, reusing Unicode whitespace and decimal conversion. Both preserve
+negative zero, return NaN for missing numeric prefixes, and allow ignored
+suffixes. Precision-controlled formatting, nondecimal binary64 formatting and
+whole-string `Number` conversion remain unfinished; this is not the complete
+number goal.
 
 [Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
 working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed
 scalars, escaping, and exact decimal spellings. Its 1,505-byte module imports
-the 331-byte [JSON number validator](numbers/02-json-number.md) directly as
+the [JSON number validator](numbers/02-json-number.md) directly as
 Wasm, sharing its memory. The host performs no JSON conversion.
 Try [the local list converter](http://microwasm.localhost:3030/?tool=01-list-to-json).
 The remaining 48 transformations are still pending.

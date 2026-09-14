@@ -9,8 +9,10 @@ Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
 syntax validation and binary64 parsing, tools 1 and 3, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
-built on it. Precision formatting, JavaScript's more permissive numeric/radix
-interfaces and the other 48 tools remain. This is not goal completion.
+built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
+prefix parsing are also implemented. Precision formatting, nondecimal binary64
+formatting, whole-string numeric conversion and the other 48 tools remain.
+This is not goal completion.
 
 ## Shared number conversion
 
