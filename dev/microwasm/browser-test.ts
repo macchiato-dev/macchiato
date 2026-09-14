@@ -195,13 +195,38 @@ try {
     const w = await load("10-whole-number", { f, p, n });
     const prefix = await load("08-parse-float", { f, p, n });
     const memory = new Uint8Array((s.memory as WebAssembly.Memory).buffer);
-    for (const [text, expected] of [
-      ["\ufeff", 0], ["0b101", 5], ["0o77", 63], ["0xff", 255],
-      ["-0x10", NaN], ["1e+oops", NaN], [" +.5\u3000", .5], ["-0", -0],
-    ] as const) {
+    for (
+      const [value, expected] of [
+        [NaN, "null"],
+        [Infinity, "null"],
+        [-0, "0"],
+        [0.1, "0.1"],
+      ] as const
+    ) {
+      const length = (r.json as (value: number) => number)(value);
+      const text = new TextDecoder().decode(
+        memory.subarray(65536, 65536 + length),
+      );
+      if (text !== expected) throw new Error(`JSON scalar: ${text}`);
+    }
+    for (
+      const [text, expected] of [
+        ["\ufeff", 0],
+        ["0b101", 5],
+        ["0o77", 63],
+        ["0xff", 255],
+        ["-0x10", NaN],
+        ["1e+oops", NaN],
+        [" +.5\u3000", .5],
+        ["-0", -0],
+      ] as const
+    ) {
       const input = new TextEncoder().encode(text);
       memory.set(input);
-      const actual = (w.parse as (start: number, end: number) => number)(0, input.length);
+      const actual = (w.parse as (start: number, end: number) => number)(
+        0,
+        input.length,
+      );
       if (!Object.is(actual, expected)) throw new Error(`Number: ${text}`);
     }
     for (

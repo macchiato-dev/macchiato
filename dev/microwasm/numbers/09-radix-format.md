@@ -12,6 +12,10 @@ positional notation, with a point when needed and no radix prefix or exponent.
 Output needs at most 1077 bytes, including the sign of the smallest subnormal
 in base two. These strings are not JSON numbers except in radix ten.
 
+`json(value)` is the JSON scalar-serialization entry point: finite values use
+shortest decimal notation, while NaN and both infinities become `null`. This
+distinction is explicit rather than silently treating `NaN` as valid JSON.
+
 ## Pattern: stop inside the binary64 rounding interval
 
 Represent the value and its lower/upper rounding distances as exact integers
@@ -79,7 +83,7 @@ input document elsewhere before invoking this formatter.
 ## Module
 
 Function imports: set 0, shl 1, muladd 2, cmp 3, sub 4, add 5, divrem 6,
-shortest 7. Helpers: emit 8, digit 9, span 10, literal 11. Format is 12.
+shortest 7. Helpers: emit 8, digit 9, span 10, literal 11. Format is 12, json 13.
 The output cursor is private global 0 and is reset for each valid radix.
 
 `[microwasm]`
@@ -99,13 +103,13 @@ The output cursor is private global 0 and is reset for each valid radix.
     - rf-import-divrem: `01 62 06 64697672656d 00 02`
     - rf-import-shortest: `01 73 06 666f726d6174 00 03`
 - rf-function-section: `03 {{size:rf-functions}}`
-  - rf-functions: `05 04 04 00 04 05`
+  - rf-functions: `06 04 04 00 04 05 03`
 - rf-global-section: `06 {{size:rf-globals}}`
   - rf-globals: `01 7f 01 41 00 0b`
 - rf-export-section: `07 {{size:rf-exports}}`
-  - rf-exports: `02 06 666f726d6174 00 0c 06 6d656d6f7279 02 00`
+  - rf-exports: `03 06 666f726d6174 00 0c 04 6a736f6e 00 0d 06 6d656d6f7279 02 00`
 - rf-code-section: `0a {{size:rf-code}}`
-  - rf-code: `05`
+  - rf-code: `06`
     - rf-emit-record: `{{size:rf-emit-body}}`
       - rf-emit-body: `00`
         - rf-emit-byte: `23 00 20 00 3a 00 00`
@@ -222,8 +226,13 @@ The output cursor is private global 0 and is reset for each valid radix.
             - rf-format-leading-end: `0b`
           - rf-format-fractional-digits: `41 00 20 09 10 0a 0b`
         - rf-format-length: `23 00 41 808004 6b 0b`
+    - rf-json-record: `{{size:rf-json-body}}`
+      - rf-json-body: `00`
+        - rf-json-nonfinite: `20 00 bd 42 34 88 a7 41 ff0f 71 41 ff0f 46 04 40`
+          - rf-json-null: `41 808004 24 00 41 9de00c 10 0b 41 04 0f 0b`
+        - rf-json-finite: `20 00 41 0a 10 0c 0b`
 - rf-data-section: `0b {{size:rf-data}}`
-  - rf-data: `01 00 41 90e00c 0b 0d 03 4e614e 08 496e66696e697479`
+  - rf-data: `01 00 41 90e00c 0b 12 03 4e614e 08 496e66696e697479 04 6e756c6c`
 
 Format locals: value/radix 0/1; u64 raw bits 2 and significand 3; i32 binary
 exponent 4, biased exponent 5, sign 6, inclusive-endpoint flag 7, radix order

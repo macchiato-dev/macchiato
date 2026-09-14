@@ -28,6 +28,10 @@ async function formatter() {
   return {
     memory,
     run,
+    json(value: number) {
+      const length = (r.json as (value: number) => number)(value);
+      return new TextDecoder().decode(memory.subarray(65536, 65536 + length));
+    },
     format(value: number, radix: number) {
       const length = run(value, radix);
       check(length > 0 && length <= 1077, "Invalid output length");
@@ -171,6 +175,33 @@ Deno.test("Binary64 radix formatting: exact rounding intervals, shortest grids a
     for (let base = 2; base <= 36; base++) {
       verify(value, base, f.format(value, base));
     }
+  }
+});
+
+Deno.test("Binary64 JSON serialization: finite shortest values and nonfinite null", async () => {
+  const f = await formatter();
+  const values = [
+    0,
+    -0,
+    NaN,
+    Infinity,
+    -Infinity,
+    0.1,
+    Number.MIN_VALUE,
+    Number.MAX_VALUE,
+    1e-6,
+    1e21,
+  ];
+  let seed = 0xc0dd123;
+  const random = () => seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+  for (let i = 0; i < 1000; i++) {
+    values.push(number((BigInt(random()) << 32n) | BigInt(random())));
+  }
+  for (const value of values) {
+    check(
+      f.json(value) === JSON.stringify(value),
+      `JSON spelling differs: ${value}`,
+    );
   }
 });
 

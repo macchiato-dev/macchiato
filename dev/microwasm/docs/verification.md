@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 65 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 66 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -133,6 +133,10 @@ surrounding Unicode whitespace, signed decimal zero, forbidden signs on radix
 prefixes, invalid suffixes even after overflow, full 64 KiB input, buffer
 preservation and recovery after invalid spans. The input preservation check
 compares bytes rather than using a decoder that consumes a leading BOM.
+
+JSON scalar formatting is checked against `JSON.stringify` on explicit
+boundaries and 1000 generated binary64 bit patterns. Nonfinite values become
+`null`; finite values and negative zero use their JSON numeric spellings.
 
 The browser suite checks all library documents in the six independent
 content/display combinations, as well as the original examples and renderer

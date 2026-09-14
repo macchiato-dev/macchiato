@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 65 tests covering all twenty examples and the supplied
+`deno task test` runs 66 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -158,6 +158,22 @@ ties. [Whole-string numeric conversion](numbers/10-whole-number.md) covers the
 text part of `Number()`, requiring a complete decimal or unsigned prefixed
 integer and allowing surrounding whitespace. Precision-controlled formatting
 remains unfinished; this is not the complete number goal.
+
+Choose the numeric entry point by its text rules:
+
+| Module | Entry point | Behavior |
+| --- | --- | --- |
+| 04 JSON binary64 | `parse(start, end)` | Strict JSON number; invalid text traps |
+| 07 Integer prefix | `parse(start, end, radix)` | `parseInt` syntax; ignored suffix |
+| 08 Decimal prefix | `parse(start, end)` | `parseFloat` syntax; ignored suffix |
+| 10 Whole number | `parse(start, end)` | `Number(text)` syntax; no junk suffix |
+| 09 Radix format | `format(value, radix)` | Number string, bases 2..36 |
+| 09 Radix format | `json(value)` | JSON scalar; nonfinite values become `null` |
+
+The JavaScript-style parsers return NaN for invalid text, but invalid memory
+spans still trap. These byte interfaces do not perform object coercions.
+All composed numeric modules share the JSON scanner's fixed four-page memory.
+Formatting returns an explicit byte length at `0x10000`; there is no terminator.
 
 [Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
 working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed
