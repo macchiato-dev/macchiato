@@ -1,6 +1,7 @@
 /** Build documents, never synthesize their instructions. No network access. */
 import { assemble, fromHex, toHex } from "./microwasm.ts";
 import { assembleRenderer } from "./renderer.ts";
+import { transforms } from "./transforms.ts";
 
 const root = new URL("./", import.meta.url);
 const pages = new URL("dist/pages/", root);
@@ -63,6 +64,41 @@ const documents = manifest.map((entry) => ({
   title: entry.title,
   example: entry.id,
 }));
+const extraDocuments = [];
+for (
+  const path of [
+    "numbers/01-unsigned-integers",
+    ...transforms.map((entry) => `transforms/${entry.id}`),
+  ]
+) {
+  const source = await Deno.readTextFile(new URL(path + ".md", root));
+  const built = assemble(source);
+  await Deno.mkdir(new URL(path.split("/")[0] + "/", pages), {
+    recursive: true,
+  });
+  await Deno.writeTextFile(new URL(path + ".md", pages), source);
+  await Deno.writeTextFile(
+    new URL(path + ".resolved.md", pages),
+    built.resolved,
+  );
+  await Deno.writeTextFile(new URL(path + ".hex", pages), toHex(built.bytes));
+  const bytes = fromHex(await Deno.readTextFile(new URL(path + ".hex", pages)));
+  await WebAssembly.compile(bytes);
+  await Deno.writeFile(new URL(path + ".wasm", pages), bytes);
+  await Deno.writeTextFile(
+    new URL(path + ".map.json", pages),
+    JSON.stringify(built.map, null, 2) + "\n",
+  );
+  extraDocuments.push({
+    path: path + ".md",
+    title: source.split("\n")[0].replace(/^# /, ""),
+  });
+  console.log(`${path}: ${bytes.length} bytes`);
+}
+await Deno.writeTextFile(
+  new URL("transforms.json", pages),
+  JSON.stringify(transforms, null, 2) + "\n",
+);
 const resolvedLines = renderer.resolved.split("\n");
 let line = 0;
 for (const page of renderer.pages) {
@@ -82,6 +118,7 @@ await Deno.writeTextFile(
   JSON.stringify(
     [
       ...documents,
+      ...extraDocuments,
       ...renderer.pages.map((page) => ({
         path: `renderer/${page.name}`,
         title: page.source.split("\n")[0].replace(/^# /, ""),
@@ -95,7 +132,15 @@ console.log(
   `Markdown renderer: ${rendererBytes.length} bytes, ${renderer.pages.length} linked source pages`,
 );
 
-for (const name of ["index.html", "style.css", "demo.js", "reader.js"]) {
+for (
+  const name of [
+    "index.html",
+    "style.css",
+    "demo.js",
+    "reader.js",
+    "transform.js",
+  ]
+) {
   await Deno.copyFile(new URL(`web/${name}`, root), new URL(name, pages));
 }
 await Deno.writeTextFile(

@@ -42,15 +42,18 @@ textarea { width: 100%; padding: 10px; resize: vertical; margin-bottom: 12px; fo
 pre { white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.55 ui-monospace, monospace; }
 #source { max-height: 68vh; overflow: auto; padding: 12px; background: var(--background); border-radius: 4px; }
 #rendered { max-height: 68vh; overflow: auto; padding: 0 12px; margin-top: 16px; overflow-wrap: anywhere; }
-#rendered h1 { font-size: 26px; }
-#rendered h2 { font-size: 21px; margin-top: 28px; }
-#rendered h3 { font-size: 18px; }
-#rendered code { font: .88em/1.5 ui-monospace, monospace; background: var(--background); border-radius: 3px; padding: 1px 3px; }
-#rendered pre { padding: 12px; background: var(--background); overflow: auto; }
-#rendered pre code { padding: 0; font-size: inherit; }
-#rendered ul { padding-left: 22px; }
-#rendered li { margin: 5px 0; }
-#rendered a:not([href]) { color: var(--muted); text-decoration: none; }
+.markdown-view h1 { font-size: 26px; }
+.markdown-view h2 { font-size: 21px; margin-top: 28px; }
+.markdown-view h3 { font-size: 18px; }
+.markdown-view code { font: .88em/1.5 ui-monospace, monospace; background: var(--background); border-radius: 3px; padding: 1px 3px; }
+.markdown-view pre { padding: 12px; background: var(--background); overflow: auto; }
+.markdown-view pre code { padding: 0; font-size: inherit; }
+.markdown-view ul { padding-left: 22px; }
+.markdown-view li { margin: 5px 0; }
+.markdown-view a:not([href]) { color: var(--muted); text-decoration: none; }
+.transform-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 20px; }
+.transform-panels textarea { margin-top: 16px; line-height: 1.5; }
+.transform-panels .markdown-view { margin-top: 16px; min-height: 350px; max-height: 65vh; overflow: auto; overflow-wrap: anywhere; }
 .panels.reading-only { grid-template-columns: minmax(0, 1fr); max-width: 1050px; }
 .reading-only #rendered { max-height: none; }
 #renderer-pages li { padding: 5px 0; }
@@ -65,6 +68,7 @@ nav a { font-size: 13px; }
 #board button.alive { background: var(--accent); border-color: var(--accent); }
 @media (max-width: 760px) {
   .panels { grid-template-columns: 1fr; }
+  .transform-panels { grid-template-columns: 1fr; }
   header span { display: none; }
   main { padding-top: 20px; }
   #source { max-height: 55vh; }

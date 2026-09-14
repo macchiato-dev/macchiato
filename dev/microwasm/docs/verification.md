@@ -74,6 +74,20 @@ This is intentionally partial Markdown, not CommonMark conformance. A fixed
 20-page memory avoids allocation and growth during rendering. That memory
 cost is separate from the module's byte size.
 
+## Transformation work, first checkpoint
+
+The suite now has 36 tests. The additional four cover unsigned 64-bit parsing
+and formatting in bases 2..36, plus the first transformation, Mad libs.
+The numeric tests compare more than ten thousand value/radix combinations
+against native BigInt formatting and test every possible digit byte in every
+radix. This does not yet test or implement binary64/JSON number conversion.
+
+The new transformation browser suite checks editable input/output, independent
+rendered views, literal substitution, failure recovery and inert user links.
+Desktop light/dark and mobile screenshots were inspected. The existing
+twenty-example/six-renderer-page browser suite still passes.
+There is one implemented transformation out of the planned fifty.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

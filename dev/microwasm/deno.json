@@ -2,6 +2,7 @@
   "tasks": {
     "test": "deno test --allow-read=.",
     "test:browser": "deno run --allow-read --allow-write=dist/browser --allow-run --allow-env --allow-net --allow-sys browser-test.ts",
+    "test:transforms-browser": "deno run --allow-read --allow-write=dist/browser --allow-run --allow-env --allow-net --allow-sys transforms-browser-test.ts",
     "build": "deno run --allow-read=. --allow-write=dist build.ts",
     "serve": "deno run --allow-read=dist/pages --allow-net=0.0.0.0:8766 serve.ts",
     "factorial": "deno run --allow-read=. --allow-write=dist microwasm.ts examples/01-factorial.md factorial 5"

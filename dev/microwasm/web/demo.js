@@ -1,5 +1,6 @@
 // The host owns input/output only. Algorithms are the handwritten Wasm bytes.
 import { createReader } from "./reader.js";
+import { startTransform } from "./transform.js";
 const $ = (id) => document.getElementById(id);
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -62,7 +63,22 @@ async function start() {
   const documents = JSON.parse(await textFile("./documents.json"));
   const selected = new URL(location.href).searchParams.get("example");
   const selectedDoc = new URL(location.href).searchParams.get("doc");
+  const selectedTool = new URL(location.href).searchParams.get("tool");
+  const tools = JSON.parse(await textFile("./transforms.json"));
+  if (selectedTool) {
+    const entry = tools.find((item) => item.id === selectedTool);
+    if (!entry) throw new Error("Unknown transformation.");
+    return startTransform(entry);
+  }
   if (!selected && !selectedDoc) {
+    for (const entry of tools) {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+      a.href = `?tool=${entry.id}`;
+      a.textContent = entry.title;
+      li.append(a);
+      $("tools").append(li);
+    }
     for (const entry of manifest) {
       const li = document.createElement("li");
       const link = document.createElement("a");
@@ -79,7 +95,8 @@ async function start() {
       link.href = `?doc=${encodeURIComponent(entry.path)}`;
       link.textContent = entry.title;
       li.append(link);
-      $("renderer-pages").append(li);
+      $(entry.path.startsWith("renderer/") ? "renderer-pages" : "library-pages")
+        .append(li);
     }
     return;
   }
@@ -95,13 +112,18 @@ async function start() {
     document.querySelector(".panels").classList.add("reading-only");
     $("title").textContent = entry.title;
     document.title = `${entry.title} — Microwasm`;
-    $("size").textContent =
-      "Rendered by the handwritten Wasm module defined across these pages. Hex and download contain the complete module.";
-    $("download").href = "./markdown-renderer.wasm";
+    const rendererPage = entry.path.startsWith("renderer/");
+    $("size").textContent = rendererPage
+      ? "Rendered by the handwritten Wasm module defined across these pages. Hex and download contain the complete module."
+      : "Handwritten Wasm implementation. Rendered using the Microwasm Markdown renderer.";
+    const artifact = rendererPage
+      ? "./markdown-renderer"
+      : `./${entry.path.slice(0, -3)}`;
+    $("download").href = `${artifact}.wasm`;
     await configureSource(
       `./${entry.path.slice(0, -3)}`,
       reader,
-      "./markdown-renderer.hex",
+      `${artifact}.hex`,
     );
     return;
   }

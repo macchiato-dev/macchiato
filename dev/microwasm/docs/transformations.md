@@ -5,6 +5,10 @@ all of these tools are already available. The transforms execute handwritten
 Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
+Current checkpoint: unsigned 64-bit radix primitives, tool 3 (Mad libs), and
+the side-by-side editor are implemented and tested. JSON/binary64 number
+handling and the other 49 tools remain. This is not goal completion.
+
 ## Shared number conversion
 
 Start with exact integer digit accumulation and formatting for bases 2..36.

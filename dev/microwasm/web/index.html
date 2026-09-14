@@ -17,10 +17,14 @@
       <h1>Twenty small programs, written in bytes.</h1>
       <p>Pseudocode → flowchart → annotated byte lists → filled counts → hex → WebAssembly.</p>
       <p>No instruction compiler. The bytes in each Markdown document are the program.</p>
+      <h2>Markdown transformation tools</h2>
+      <ul id="tools"></ul>
       <ol id="examples"></ol>
       <h2>The renderer, written in Microwasm</h2>
       <p>Read the linked source pages using the renderer they define.</p>
       <ul id="renderer-pages"></ul>
+      <h2>Number and transformation implementations</h2>
+      <ul id="library-pages"></ul>
     </section>
     <section id="example" hidden>
       <a href="./">← All examples</a>
@@ -60,10 +64,39 @@
             <button data-extension="hex" aria-pressed="false">Hex</button>
             <a id="download" download>Download Wasm</a>
           </nav>
-          <article id="rendered" aria-label="Rendered program document"></article>
+          <article id="rendered" class="markdown-view" aria-label="Rendered program document"></article>
           <pre id="source" tabindex="0" aria-label="Program source" hidden></pre>
         </section>
       </div>
+    </section>
+    <section id="transformation" hidden>
+      <a href="./">← All examples</a>
+      <h1 id="tool-title"></h1>
+      <div class="controls">
+        <button id="transform-run" disabled>Run</button>
+        <a id="tool-source">Read the Microwasm implementation</a>
+      </div>
+      <div class="transform-panels">
+        <section class="source" data-side="input">
+          <h2><label for="transform-input">Input</label></h2>
+          <nav aria-label="Input display">
+            <button data-display="code" aria-pressed="true">Code</button>
+            <button data-display="rendered" aria-pressed="false">Rendered</button>
+          </nav>
+          <textarea id="transform-input" rows="18" spellcheck="false"></textarea>
+          <article id="transform-input-rendered" class="markdown-view" aria-label="Rendered input" hidden></article>
+        </section>
+        <section class="source" data-side="output">
+          <h2><label for="transform-output">Output</label></h2>
+          <nav aria-label="Output display">
+            <button data-display="code" aria-pressed="true">Code</button>
+            <button data-display="rendered" aria-pressed="false">Rendered</button>
+          </nav>
+          <textarea id="transform-output" rows="18" spellcheck="false"></textarea>
+          <article id="transform-output-rendered" class="markdown-view" aria-label="Rendered output" hidden></article>
+        </section>
+      </div>
+      <p id="transform-status" role="status" aria-live="polite"></p>
     </section>
     <p id="error" role="alert" hidden></p>
   </main>
