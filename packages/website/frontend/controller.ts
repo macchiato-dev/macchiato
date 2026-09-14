@@ -23,7 +23,7 @@ async function loadModule(url, signal) {
 }
 
 export async function startResourcesMachineController({ editorFrame = true } = {}) {
-  let machine, editorDevice, outputDevice;
+  let machine, editorDevice, outputDevice, archiveDevice;
   let disposed = false;
   const startup = new AbortController();
   function destroy() {
@@ -32,6 +32,7 @@ export async function startResourcesMachineController({ editorFrame = true } = {
     startup.abort();
     editorDevice?.destroy();
     outputDevice?.destroy();
+    archiveDevice?.destroy();
     machine?.destroy();
     window.removeEventListener("pagehide", pagehide);
   }
@@ -56,7 +57,8 @@ export async function startResourcesMachineController({ editorFrame = true } = {
 
   const projectResources = new ResourcesProjectResourceDevice();
   const fetchDevice = new ResourcesFetchDevice(window, projectResources);
-  const archiveDevice = new ResourcesArchiveDevice(document, projectResources);
+  archiveDevice = new ResourcesArchiveDevice(document, projectResources);
+  archiveDevice.connect();
   const buildDevice = new ResourcesBuildDevice(projectResources);
   const storageDevice = new ResourcesStorageDevice(window, projectResources);
   let asynchronousServices;

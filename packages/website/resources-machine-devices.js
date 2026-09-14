@@ -232,8 +232,31 @@ export class ResourcesArchiveDevice {
     this.document = document;
     this.projectResources = projectResources;
   }
+  connect() {
+    // File acquisition belongs to the host. The guest receives the same change
+    // event and decoded snapshot for a drop as for the browser's file picker.
+    this.dropListener = (event) => {
+      const modal = event.target.closest?.("[data-project-import-modal]");
+      if (!modal || modal.hidden) return;
+      event.preventDefault();
+      if (event.type === "dragover") {
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      } else if (event.dataTransfer?.files.length) {
+        const input = modal.closest("[data-project-editor]").querySelector("[data-project-archive-file]");
+        input.files = event.dataTransfer.files;
+        input.dispatchEvent(new this.document.defaultView.Event("change", { bubbles: true }));
+      }
+    };
+    this.document.addEventListener("dragover", this.dropListener);
+    this.document.addEventListener("drop", this.dropListener);
+  }
+  destroy() {
+    this.document.removeEventListener("dragover", this.dropListener);
+    this.document.removeEventListener("drop", this.dropListener);
+  }
   async import() {
     const input = this.document.querySelector("[data-project-archive-file]");
+    if (input?.files?.length > 1) throw new Error("Choose one project ZIP at a time");
     const file = input?.files?.[0];
     if (!file) throw new Error("Choose a project ZIP to import");
     if (file.size > 50 * 1024 * 1024) throw new Error("Archive exceeds 50 MB");

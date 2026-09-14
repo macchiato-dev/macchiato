@@ -1483,7 +1483,30 @@ async function mountProjectRoot(root) {
     setStatus("Tab configuration saved");
   });
   const archiveInput = root.querySelector("[data-project-archive-file]");
-  root.querySelector("[data-project-import]").addEventListener("click", () => { closeEditorOverflow(); archiveInput.click(); });
+  const importModal = root.querySelector("[data-project-import-modal]");
+  const importChoose = root.querySelector("[data-project-import-choose]");
+  const importClose = root.querySelector("[data-project-import-close]");
+  const importError = root.querySelector("[data-project-import-error]");
+  function closeImport() {
+    importModal.hidden = true;
+    editorOverflowTrigger.focus();
+  }
+  root.querySelector("[data-project-import]").addEventListener("click", () => {
+    closeEditorOverflow();
+    importError.textContent = "";
+    importModal.hidden = false;
+    importChoose.focus();
+  });
+  importChoose.addEventListener("click", () => archiveInput.click());
+  importClose.addEventListener("click", closeImport);
+  importModal.addEventListener("pointerdown", (event) => { if (event.target === importModal) closeImport(); });
+  importModal.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") { event.preventDefault(); closeImport(); }
+    if (event.key === "Tab") {
+      event.preventDefault();
+      (event.target === importChoose ? importClose : importChoose).focus();
+    }
+  });
   root.querySelector("[data-project-export]").addEventListener("click", () => {
     closeEditorOverflow();
     try {
@@ -1491,7 +1514,12 @@ async function mountProjectRoot(root) {
       downloadProjectArchive(state, projectName);
     } catch (error) { setStatus(error.message, "error"); }
   });
+  let importingArchive = false;
   archiveInput.addEventListener("change", async () => {
+    if (importingArchive) return;
+    importingArchive = true;
+    importChoose.disabled = true;
+    importError.textContent = "";
     try {
       const imported = normalizeProjectSnapshot(await importProjectArchive());
       selected = imported.config.entry && imported.files.some((item) => item.path === imported.config.entry) ? imported.config.entry : imported.files[0].path;
@@ -1505,8 +1533,15 @@ async function mountProjectRoot(root) {
       sendContent();
       renderPreview();
       setStatus("ZIP imported");
-    } catch (error) { setStatus(error.message, "error"); }
-    finally { archiveInput.value = ""; }
+      if (!importModal.hidden) closeImport();
+    } catch (error) {
+      importError.textContent = error.message;
+      setStatus(error.message, "error");
+    } finally {
+      archiveInput.value = "";
+      importingArchive = false;
+      importChoose.disabled = false;
+    }
   });
   const workspace = root.querySelector(".project-editor__workspace");
   const outputOverflow = root.querySelector("[data-output-overflow]");

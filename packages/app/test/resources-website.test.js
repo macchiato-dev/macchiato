@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
@@ -758,6 +758,96 @@ test("Resources project ZIP import accepts legacy container metadata", async (t)
   const downloadPromise = page.waitForEvent("download");
   await page.getByRole("menuitem", { name: "Export ZIP" }).click();
   assert.equal((await downloadPromise).suggestedFilename(), "untitled-project.zip");
+  assert.deepEqual(errors, []);
+});
+
+test("Mahjong ZIP drops round-trip a signed-in project's files and recover from invalid imports", { timeout: 90_000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const files = [];
+  const example = join(repoRoot, "examples/mahjong");
+  for (const path of (await readdir(example, { recursive: true, withFileTypes: true }))) {
+    if (!path.isFile()) continue;
+    const fullPath = join(path.parentPath, path.name);
+    const bytes = await readFile(fullPath);
+    files.push({ path: fullPath.slice(example.length + 1), content: path.name.endsWith(".png")
+      ? `data:image/png;base64,${bytes.toString("base64")}` : bytes.toString("utf8") });
+  }
+  const snapshot = { files, config: { entry: "index.html", template: "html", container: "single-file-web-app" } };
+  files.sort((a, b) => a.path.localeCompare(b.path));
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const client = createNodeSqliteClient(db);
+  const account = await createAccountStore(client).authenticateIdentity({ provider: "github",
+    providerUserId: "zip-player", login: "zip-player", name: "ZIP Player" });
+  await createContentStore(client).createProject(account.id, { userSlug: account.login,
+    name: "classic-chinese-mahjong", slug: "classic-chinese-mahjong", snapshot });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  const errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.context().addCookies([{ name: "resources_session", value: session,
+    domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  async function exportZip() {
+    await page.getByRole("button", { name: "Editor menu" }).click();
+    const downloading = page.waitForEvent("download");
+    await page.getByRole("menuitem", { name: "Export ZIP" }).click();
+    const download = await downloading;
+    return { name: download.suggestedFilename(), bytes: await readFile(await download.path()) };
+  }
+  async function openImport() {
+    await page.getByRole("button", { name: "Editor menu" }).click();
+    await page.getByRole("menuitem", { name: "Import ZIP" }).click();
+    await page.locator("[data-project-import-modal]").waitFor({ state: "visible" });
+  }
+  async function drop(bytes, count = 1) {
+    const transfer = await page.evaluateHandle(({ bytes, count }) => {
+      const data = new DataTransfer();
+      for (let i = 0; i < count; i++) data.items.add(new File([new Uint8Array(bytes)], `mahjong-${i}.zip`, { type: "application/zip" }));
+      return data;
+    }, { bytes: [...bytes], count });
+    await page.locator("[data-project-import-choose]").dispatchEvent("dragover", { dataTransfer: transfer });
+    await page.locator("[data-project-import-choose]").dispatchEvent("drop", { dataTransfer: transfer });
+    await transfer.dispose();
+  }
+  await page.goto(`http://resources-edge.localhost:${port}/zip-player/classic-chinese-mahjong`, { waitUntil: "networkidle" });
+  await codeSurface(page).locator(".cm-content").waitFor();
+  const exported = await exportZip();
+  assert.equal(exported.name, "classic-chinese-mahjong.zip");
+  const expected = await decodeProjectArchive(exported.bytes);
+  assert.deepEqual(expected.files, snapshot.files);
+  await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
+  await codeSurface(page).locator(".cm-content").waitFor();
+  await openImport();
+  const previous = await page.locator("[data-project-snapshot]").inputValue();
+  await drop(new Uint8Array([1, 2, 3]));
+  await page.waitForFunction(() => document.querySelector("[data-project-import-error]").textContent.includes("ZIP"));
+  assert.equal(await page.locator("[data-project-snapshot]").inputValue(), previous);
+  await drop(exported.bytes, 2);
+  await page.waitForFunction(() => document.querySelector("[data-project-import-error]").textContent.includes("one project ZIP"));
+  assert.equal(await page.locator("[data-project-snapshot]").inputValue(), previous);
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/mahjong-import-dialog.png") });
+  await drop(exported.bytes);
+  await page.locator("[data-project-import-modal]").waitFor({ state: "hidden" });
+  await page.waitForFunction(() => {
+    const frames = [...document.querySelectorAll("[data-project-output-mount] iframe:not([inert])")];
+    return frames.some(frame => frame.contentDocument?.querySelectorAll(".tile").length === 144);
+  });
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/mahjong-imported.png") });
+  const roundTrip = await exportZip();
+  assert.equal(roundTrip.name, "untitled-project.zip");
+  assert.deepEqual(await decodeProjectArchive(roundTrip.bytes), expected);
+  await openImport();
+  await page.keyboard.press("Escape");
+  assert.equal(await page.locator("[data-project-import-modal]").isHidden(), true);
+  await openImport();
+  await page.locator("[data-project-import-modal]").click({ position: { x: 5, y: 5 } });
+  assert.equal(await page.locator("[data-project-import-modal]").isHidden(), true);
   assert.deepEqual(errors, []);
 });
 

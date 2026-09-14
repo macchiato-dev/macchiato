@@ -967,6 +967,15 @@ body[data-auth="out"] .ub-guest { display: flex; }
 .version-title-modal > div { display: grid; width: min(410px, 100%); gap: 10px; padding: 20px; border: 1px solid var(--track-border); border-radius: 10px; background: var(--pop-bg); box-shadow: var(--shadow); }
 .version-title-modal h2 { margin: 0 0 4px; font-size: 18px; }
 .version-title-modal__actions { display: flex; justify-content: flex-end; gap: 7px; margin-top: 8px; }
+.project-import-modal header { display: flex; align-items: center; justify-content: space-between; }
+.project-import-modal button { color: var(--text); background: transparent; font: inherit; cursor: pointer; }
+.project-import-modal header button { border: 1px solid transparent; border-radius: 5px; font-size: 24px; line-height: 1; padding: 3px 6px; }
+.project-import-modal header button:hover { border-color: var(--track-border); background: var(--hover); }
+.project-import-modal__drop { display: grid; gap: 8px; padding: 30px 12px; border: 1px dashed var(--track-border); border-radius: 8px; text-align: center; }
+.project-import-modal__drop:hover, .project-import-modal__drop:focus-visible { background: var(--hover); border-color: var(--text); }
+.project-import-modal__drop span, .project-import-modal p { font-size: 12px; }
+.project-import-modal p { margin: 0; }
+.project-import-modal [role="alert"] { color: #df7780; }
 .project-editor__version { display: flex; width: 100%; align-items: center; gap: 7px; text-align: left; }
 .project-editor__version-title { margin: 0 auto 0 0; color: var(--text); }
 .project-editor__latest { padding: 2px 5px; border: 1px solid #6978cc; border-radius: 999px; color: #cbd3ff; font-size: 8px; letter-spacing: 0.08em; }
