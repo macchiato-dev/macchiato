@@ -71,6 +71,7 @@ for (
     "numbers/02-json-number",
     "numbers/03-multiword",
     "numbers/04-json-binary64",
+    "numbers/05-exact-decimal",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {

@@ -33,12 +33,18 @@ async function parser() {
   const n = await load("02-json-number");
   const b = await load("03-multiword", { n });
   const f = await load("04-json-binary64", { n, b });
+  const d = await load("05-exact-decimal", { b });
   const memory = new Uint8Array((f.memory as WebAssembly.Memory).buffer);
   const run = f.parse as (start: number, end: number) => number;
   const encoder = new TextEncoder();
   return {
     memory,
     run,
+    format(value: number) {
+      const length = (d.format as (value: number) => number)(value);
+      if (length < 1 || length > 1077) throw new Error("Invalid output length");
+      return new TextDecoder().decode(memory.subarray(65536, 65536 + length));
+    },
     parse(text: string, offset = 0) {
       const bytes = encoder.encode(text);
       if (offset + bytes.length > 65536) throw new Error("Test input too long");
@@ -129,6 +135,91 @@ Deno.test("Binary64 JSON parsing: ordinary values, range boundaries and signed z
   for (const text of cases) {
     same(p.parse(text), JSON.parse(text), text);
     same(p.parse(text, 65536 - text.length), JSON.parse(text), text);
+  }
+});
+
+Deno.test("Exact binary64 decimal formatting: rational oracle and Wasm parser round trips", async () => {
+  const p = await parser();
+  const values = [
+    0,
+    -0,
+    1,
+    -1,
+    0.1,
+    -0.1,
+    12.5,
+    -12.5,
+    1e-6,
+    1e-7,
+    1e20,
+    1e21,
+    Number.MIN_VALUE,
+    -Number.MIN_VALUE,
+    Number.MAX_VALUE,
+    -Number.MAX_VALUE,
+    value(0x000fffffffffffffn),
+    value(0x0010000000000000n),
+    value(0x0010000000000001n),
+    Number.MAX_SAFE_INTEGER,
+  ];
+  let seed = 0x123abc;
+  const random = () => seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+  for (let i = 0; i < 1500; i++) {
+    const number = value((BigInt(random()) << 32n) | BigInt(random()));
+    if (Number.isFinite(number)) values.push(number);
+  }
+  for (const number of values) {
+    const [coefficient, exponent] = parts(bits(Math.abs(number)));
+    let expected = decimal(coefficient, exponent);
+    if (expected.includes(".")) {
+      expected = expected.replace(/0+$/, "").replace(/\.$/, "");
+    }
+    if (number < 0) expected = "-" + expected;
+    const actual = p.format(number);
+    if (actual !== expected) {
+      throw new Error(`${number}: ${actual} != ${expected}`);
+    }
+    same(p.parse(actual), number === 0 ? 0 : number, actual);
+    same(JSON.parse(actual), number === 0 ? 0 : number, actual);
+  }
+});
+
+Deno.test("Exact binary64 decimal formatting: scratch boundaries and rejection of nonfinite values", async () => {
+  const p = await parser();
+  p.memory.fill(0xa5, 0, 65536);
+  p.memory.fill(0xa5, 65536 + 1077, 131072);
+  p.memory.fill(0xa5, 131072 + 768, 0x31000);
+  p.format(-Number.MIN_VALUE);
+  p.format(Number.MAX_VALUE);
+  for (
+    const [start, end] of [[0, 65536], [65536 + 1077, 131072], [
+      131072 + 768,
+      0x31000,
+    ]]
+  ) {
+    if (!p.memory.subarray(start, end).every((byte) => byte === 0xa5)) {
+      throw new Error(`Formatter wrote outside its buffers: ${start}..${end}`);
+    }
+  }
+  for (const number of [NaN, Infinity, -Infinity]) {
+    const previous = p.format(12.5);
+    let trapped = false;
+    try {
+      p.format(number);
+    } catch (error) {
+      if (!(error instanceof WebAssembly.RuntimeError)) throw error;
+      trapped = true;
+    }
+    if (!trapped) throw new Error("Nonfinite values must trap");
+    const retained = new TextDecoder().decode(
+      p.memory.subarray(65536, 65536 + previous.length),
+    );
+    if (retained !== previous) {
+      throw new Error("A trap overwrote the last output");
+    }
+    if (p.format(0.5) !== "0.5") {
+      throw new Error("Did not recover after a trap");
+    }
   }
 });
 

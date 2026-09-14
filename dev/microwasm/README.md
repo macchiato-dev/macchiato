@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 47 tests covering all twenty examples and the supplied
+`deno task test` runs 50 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -139,8 +139,10 @@ values and native-oracle round trips.
 number text to binary64 using [exact multiword arithmetic](numbers/03-multiword.md).
 It handles nearest-even rounding, negative zero, subnormals and overflow.
 Tests cover exact rounding midpoints, long digit tails, full-size input and
-native-oracle comparisons. Decimal formatting and JavaScript's more permissive
-number/radix interfaces remain unfinished; this is not the complete number goal.
+native-oracle comparisons. [Exact decimal expansion](numbers/05-exact-decimal.md)
+formats the complete finite binary64 value and round-trips through that parser.
+Shortest/precision formatting and JavaScript's more permissive number/radix
+interfaces remain unfinished; this is not the complete number goal.
 
 [Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
 working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed

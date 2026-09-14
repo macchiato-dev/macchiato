@@ -31,7 +31,15 @@ async function arithmetic() {
     { n: numeric.instance.exports },
   );
   const ops = instance.exports as unknown as Record<
-    "set" | "copy" | "muladd" | "shl" | "shr" | "cmp" | "sub" | "bits",
+    | "set"
+    | "copy"
+    | "muladd"
+    | "shl"
+    | "shr"
+    | "cmp"
+    | "sub"
+    | "bits"
+    | "divrem",
     (...args: number[]) => number
   >;
   const memory = new DataView(
@@ -115,6 +123,43 @@ Deno.test("Multiword: set, carry accumulation, bit lengths and native arithmetic
     m.ops.set(slot, 0);
     equal(m.get(slot), 0n);
   }
+});
+
+Deno.test("Multiword: unsigned small-divisor quotient, remainder and zero-divisor isolation", async () => {
+  const m = await arithmetic();
+  const values = [0n, 1n, 0xffffffffn, 1n << 32n, (1n << 8192n) - 1n];
+  let seed = 0xfed12345;
+  const random = () => seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+  for (let i = 0; i < 100; i++) {
+    let value = 0n;
+    for (let j = 0; j <= i; j++) value = (value << 32n) | BigInt(random());
+    values.push(value);
+  }
+  for (const value of values) {
+    for (
+      const divisor of [1, 2, 3, 10, 16, 36, 65537, 0x80000000, 0xffffffff]
+    ) {
+      m.put(0, value);
+      equal(m.ops.divrem(0, divisor) >>> 0, Number(value % BigInt(divisor)));
+      equal(m.get(0), value / BigInt(divisor));
+    }
+    m.put(0, value);
+    traps(() => m.ops.divrem(0, 0));
+    equal(m.get(0), value);
+  }
+  // Repeated division actually constructs the digits used by formatters.
+  for (let radix = 2; radix <= 36; radix++) {
+    const value = (1n << 1075n) - 123n;
+    m.put(0, value);
+    let result = "";
+    while (m.ops.bits(0)) {
+      const digit = m.ops.divrem(0, radix);
+      result = String.fromCharCode(digit < 10 ? 48 + digit : 87 + digit) +
+        result;
+    }
+    equal(result, value.toString(radix));
+  }
+  traps(() => m.ops.divrem(4, 10));
 });
 
 Deno.test("Multiword: shifts, normalization, comparison, borrow chains and aliasing", async () => {

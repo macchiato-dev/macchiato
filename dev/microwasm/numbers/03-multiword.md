@@ -27,6 +27,8 @@ length controls every read. No allocator, recursion or host arithmetic is used.
 - `cmp(a, b)` returns -1, 0 or 1.
 - `sub(a, b)` subtracts b from a; a must be at least b. Aliasing is allowed.
 - `bits(slot)` returns zero for zero, otherwise the bit length.
+- `divrem(slot, divisor)` replaces the value with its unsigned quotient and
+  returns the u32 remainder. A zero divisor traps before writing anything.
 
 The first shift-left implementation deliberately reuses `muladd(slot, 2, 0)`.
 It is easy to audit and bounded. A word-wise shift can replace this later if
@@ -50,12 +52,24 @@ sub(a, b):
         a_limb = low32(difference)
         borrow = difference >>> 63
     trim high zero limbs
+
+divrem(slot, divisor):
+    require divisor != 0
+    remainder = 0
+    for each limb, highest first:
+        combined = (u64(remainder) << 32) | limb
+        limb = combined / divisor
+        remainder = combined % divisor
+    trim high zero limbs
+    return remainder
 ```
 
 The multiply/add maximum fits u64 exactly. A subtraction step lies between
 −2³² and 2³²−1, so bit 63 identifies a borrow without a signed overflow test.
 Comparison walks from the highest limb, while carry and borrow walk from the
-lowest. These opposite traversal directions are intentional.
+lowest. These opposite traversal directions are intentional. In division the
+remainder is always below the divisor, so the combined value fits u64 and each
+quotient limb fits u32, including a divisor of `0xffffffff`.
 
 ```mermaid
 flowchart LR
@@ -68,7 +82,7 @@ flowchart LR
 ## Module
 
 Functions: pointer 0, trim 1, set 2, copy 3, muladd 4, shl 5, shr 6, cmp 7,
-sub 8, bits 9. Pointer and trim are private. Types are one-i32-to-i32 (0),
+sub 8, bits 9, divrem 10. Pointer and trim are private. Types are one-i32-to-i32 (0),
 one-i32-to-void (1), two-i32-to-void (2), three-i32-to-void (3), and
 two-i32-to-i32 (4).
 
@@ -80,11 +94,11 @@ two-i32-to-i32 (4).
 - mw-import-section: `02 {{size:mw-imports}}`
   - mw-imports: `01 01 6e 06 6d656d6f7279 02 01 04 04`
 - mw-function-section: `03 {{size:mw-functions}}`
-  - mw-functions: `0a 00 01 02 02 03 02 01 04 02 00`
+  - mw-functions: `0b 00 01 02 02 03 02 01 04 02 00 04`
 - mw-export-section: `07 {{size:mw-exports}}`
-  - mw-exports: `09 03 736574 00 02 04 636f7079 00 03 06 6d756c616464 00 04 03 73686c 00 05 03 736872 00 06 03 636d70 00 07 03 737562 00 08 04 62697473 00 09 06 6d656d6f7279 02 00`
+  - mw-exports: `0a 03 736574 00 02 04 636f7079 00 03 06 6d756c616464 00 04 03 73686c 00 05 03 736872 00 06 03 636d70 00 07 03 737562 00 08 04 62697473 00 09 06 64697672656d 00 0a 06 6d656d6f7279 02 00`
 - mw-code-section: `0a {{size:mw-code}}`
-  - mw-code: `0a`
+  - mw-code: `0b`
     - mw-pointer-record: `{{size:mw-pointer-body}}`
       - mw-pointer-body: `01 01 7f`
         - mw-pointer-slot: `20 00 41 04 4f 04 40 00 0b`
@@ -191,8 +205,23 @@ two-i32-to-i32 (4).
         - mw-bits-pointer: `20 00 10 00 21 01 20 01 28 02 00 21 02`
         - mw-bits-zero: `20 02 45 04 40 41 00 0f 0b`
         - mw-bits-count: `20 02 41 05 74 20 01 20 02 41 02 74 6a 28 02 00 67 6b 0b`
+    - mw-divrem-record: `{{size:mw-divrem-body}}`
+      - mw-divrem-body: `02 02 7f 02 7e`
+        - mw-divrem-nonzero: `20 01 45 04 40 00 0b`
+        - mw-divrem-pointer: `20 00 10 00 21 02 20 02 28 02 00 21 03`
+        - mw-divrem-exit: `02 40`
+          - mw-divrem-loop: `03 40`
+            - mw-divrem-bound: `20 03 45 0d 01`
+            - mw-divrem-combine: `20 04 42 20 86 20 02 20 03 41 02 74 6a 28 02 00 ad 84 21 05`
+            - mw-divrem-quotient: `20 02 20 03 41 02 74 6a 20 05 20 01 ad 80 a7 36 02 00`
+            - mw-divrem-remainder: `20 05 20 01 ad 82 21 04`
+            - mw-divrem-next: `20 03 41 01 6b 21 03 0c 00 0b`
+          - mw-divrem-end: `0b`
+        - mw-divrem-result: `20 02 10 01 20 04 a7 0b`
 
 `muladd` locals: slot/multiplier/addend 0..2, pointer 3, length 4, index 5,
 u64 carry 6 and product 7. `sub` locals: a/b 0..1, pointers 2/3, lengths 4/5,
 index 6, u64 borrow 7 and difference 8. The public operation parameters are
 all i32; u64 values never cross into the host while arithmetic is running.
+`divrem` locals: slot/divisor 0/1, pointer 2, descending limb index 3,
+u64 remainder 4 and combined dividend 5.
