@@ -1,8 +1,21 @@
 # Resources Edge readiness
 
-Current local verification: 2026-09-13, export `resources-co-b46589e`.
+Current local verification: 2026-09-14, export `resources-co-83cbe1b`.
 This is a current-state record, not a claim that the historical experiments in
 the other architecture documents are all production requirements or complete.
+
+The latest export separates framework build tooling from ordinary document
+compilation. Mahjong no longer loads Vue/Svelte compilers or framework runtimes;
+the ordinary compiler is 291,056 bytes gzipped instead of 1,179,422. Compiler,
+framework/graphics, exact Bunny-entry, and five read-only live-project checks
+pass. Evidence is in `lazy-framework-compiler.log`, `lazy-framework-browser.log`,
+`lazy-framework-bunny.log`, and `lazy-framework-live.log` in the work directory.
+The 173-file export verifies before and after archive extraction.
+
+The newly requested guest-level saved-build-output-first behavior is pending;
+the framework split does not implement persistence of compiled output. See the
+[follow-up](project-editor-typing-performance.md#framework-build-tooling-no-longer-delays-ordinary-output-2026-09-14).
+The final audit below records the preceding scope, before this new request.
 
 ## Low-cold-start design
 
@@ -280,12 +293,12 @@ Evidence is in `/root/macchiato-work/saved-geometry-current.log`,
 `saved-geometry-before-painted.log`, `all-owner-article.log`, and
 `bunny-entry-artifact.log`; screenshots are in `all-owner-projects/`.
 
-`/root/resources-bunny.tar.gz` contains the verified `b46589e` export. SHA-256:
+`/root/resources-bunny.tar.gz` contains the verified `83cbe1b` export. SHA-256:
 
-`0e04ab99f4e1dde4b14f5cd498da1dfa66e1f248e5bb74e259bd81d0e0426696`
+`7f69bf0a37024755bc15d99ba344a52bd7a0777bbf323455e176653c3a430c58`
 
 The prior archive is preserved at
-`/root/archive/2026/09/13/resources-bunny-4042e11-before-database-retry.tar.gz`.
+`/root/archive/2026/09/14/resources-bunny-b46589e-before-lazy-framework.tar.gz`.
 Follow the [manual staging instructions](../packages/website/README.md#update-an-existing-staging-deployment-manually).
 Staging verification is distinct from these local build and browser checks.
 
