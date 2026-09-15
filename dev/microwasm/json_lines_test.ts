@@ -114,6 +114,7 @@ Deno.test("JSON Lines to array: each JSON kind, empty stream, CRLF and exact lex
     json("[" + compact.join(",") + "]"),
   );
   equal(c.transform("toArray", lines([])), json("[]"));
+  equal(c.transform("toArray", lines([]).trimEnd()), json("[]"));
   equal(c.transform("toArray", lines(["null"])), json("[null]"));
   equal(
     c.transform("toArray", lines(records).replaceAll("\n", "\r\n") + "\t "),
@@ -151,6 +152,7 @@ Deno.test("Array to JSON Lines: nested delimiters and escaped quotes do not spli
     lines(records),
   );
   equal(c.transform("toLines", json("[]")), lines([]));
+  equal(c.transform("toLines", json("[]").trimEnd()), lines([]));
   equal(c.transform("toLines", json("[[]]")), lines(["[]"]));
   equal(c.transform("toLines", json("[{}]")), lines(["{}"]));
   equal(

@@ -137,7 +137,7 @@ copy is needed in either direction, and the input is never modified.
         - ja-emit-byte: `23 00 20 00 3a 00 00 23 00 41 01 6a 24 00 0b`
     - ja-fence-record: `{{size:ja-fence-body}}`
       - ja-fence-body: `01 04 7f`
-        - ja-fence-bound: `20 00 41 808004 4b 20 00 41 0c 20 01 6a 49 72 04 40 00 0b`
+        - ja-fence-bound: `20 00 41 808004 4b 20 00 41 0b 20 01 6a 49 72 04 40 00 0b`
         - ja-fence-label-loop: `03 40`
           - ja-fence-label-byte: `20 02 2d 00 00 41 81820c 20 02 6a 2d 00 00 47 04 40 00 0b`
           - ja-fence-label-next: `20 02 41 01 6a 22 02 41 80820c 2d 00 00 49 0d 00 0b`
