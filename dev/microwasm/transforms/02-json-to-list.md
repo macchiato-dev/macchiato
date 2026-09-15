@@ -78,21 +78,31 @@ Formatting changes only the punctuation/indentation emissions; strings and
 scalars use exactly the same validation and span-copying code in every mode.
 No intermediate list, JSON object tree, or host conversion is involved.
 
+`compactSpan(start, end, output, depth)` is function 13, a lower-level entry
+used by the [JSON Lines pair](14-json-lines-to-array.md). It validates one
+complete unfenced value and writes compact JSON directly at the requested
+output cursor, returning the byte length. Input must lie in `0..0x10000`,
+output in `0x10000..0x30000`, and the starting depth in `0..128`. Passing depth
+1 reserves room for a surrounding array within the same 128-container limit.
+It resets all parser globals; callers can append many independent records
+without copying them into temporary input buffers. Its input/output regions
+cannot overlap. Partial writes on a trap must still not be published.
+
 `[microwasm]`
 
 - jl-header: `0061736d 01000000`
 - jl-type-section: `01 {{size:jl-types}}`
-  - jl-types: `06 60 02 7f 7f 01 7f 60 01 7f 00 60 00 00 60 00 01 7f 60 01 7f 01 7f 60 02 7f 7f 00`
+  - jl-types: `07 60 02 7f 7f 01 7f 60 01 7f 00 60 00 00 60 00 01 7f 60 01 7f 01 7f 60 02 7f 7f 00 60 04 7f 7f 7f 7f 01 7f`
 - jl-import-section: `02 {{size:jl-imports}}`
   - jl-imports: `02 01 6e 05 76616c6964 00 00 01 6e 06 6d656d6f7279 02 01 04 04`
 - jl-function-section: `03 {{size:jl-functions}}`
-  - jl-functions: `0c 01 05 03 02 02 01 01 04 01 04 04 04`
+  - jl-functions: `0d 01 05 03 02 02 01 01 04 01 04 04 04 06`
 - jl-global-section: `06 {{size:jl-globals}}`
   - jl-globals: `04 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - jl-export-section: `07 {{size:jl-exports}}`
-  - jl-exports: `04 03 72756e 00 08 06 707265747479 00 0b 07 636f6d70616374 00 0c 06 6d656d6f7279 02 00`
+  - jl-exports: `05 03 72756e 00 08 06 707265747479 00 0b 07 636f6d70616374 00 0c 06 6d656d6f7279 02 00 0b 636f6d706163745370616e 00 0d`
 - jl-code-section: `0a {{size:jl-code}}`
-  - jl-code: `0c`
+  - jl-code: `0d`
     - jl-emit-record: `{{size:jl-emit-body}}`
       - jl-emit-body: `00`
         - jl-emit-bound: `23 00 41 80800c 4f 04 40 00 0b`
@@ -216,6 +226,15 @@ No intermediate list, JSON object tree, or host conversion is involved.
       - jl-pretty-body: `00 41 01 24 03 20 00 10 0a 0b`
     - jl-compact-record: `{{size:jl-compact-body}}`
       - jl-compact-body: `00 41 02 24 03 20 00 10 0a 0b`
+    - jl-span-record: `{{size:jl-span-body}}`
+      - jl-span-body: `00`
+        - jl-span-input-bound: `20 00 20 01 4b 20 01 41 808004 4b 72 04 40 00 0b`
+        - jl-span-output-bound: `20 02 41 808004 49 20 02 41 80800c 4b 72 04 40 00 0b`
+        - jl-span-depth-bound: `20 03 41 8001 4b 04 40 00 0b`
+        - jl-span-reset: `20 00 24 01 20 01 24 02 20 02 24 00 41 02 24 03`
+        - jl-span-value: `20 03 10 07 10 04`
+        - jl-span-trailing: `23 01 23 02 47 04 40 00 0b`
+        - jl-span-result: `23 00 20 02 6b 0b`
 - jl-data-section: `0b {{size:jl-data}}`
   - jl-data: `01 00 41 80800c 0b {{size:jl-literals}}`
     - jl-literals: `07 6060606a736f6e 03 606060`
