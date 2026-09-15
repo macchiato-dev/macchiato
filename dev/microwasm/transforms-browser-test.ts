@@ -2709,6 +2709,56 @@ try {
         ?.value === expected,
     escapedVtt,
   );
+  await page.goto(new URL("?tool=49-json-patch-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const patchSource =
+    '```json\n[{"value":"a`b <img src=https://patch.invalid/x>","path":"/a~1b","op":"add"},{"op":"move","from":"/a","path":"/ab"}]\n```\n';
+  const patchRecords =
+    '- add\n  - ``"value" "a`b <img src=https://patch.invalid/x>"``\n  - `"path" "/a~1b"`\n- move\n  - `"from" "/a"`\n  - `"path" "/ab"`\n';
+  const patchRequests: string[] = [];
+  const onPatchRequest = (r: { url(): string }) => {
+    if (r.url().includes("patch.invalid")) patchRequests.push(r.url());
+  };
+  page.on("request", onPatchRequest);
+  await writeDiff(patchSource, patchRecords);
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered > ul > li").count() === 2 &&
+      await page.locator("#transform-output-rendered code").count() === 4,
+    "JSON Patch operation grouping or code spans were lost",
+  );
+  check(
+    await page.locator("#transform-output-rendered img").count() === 0,
+    "JSON Patch data became an image",
+  );
+  await page.screenshot({
+    path: artifacts + "/json-patch-records-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    patchSource.replace('"/ab"', '"/a/b"'),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === patchRecords,
+    "An invalid move replaced successful operation records",
+  );
+  await writeDiff(patchSource, patchRecords);
+  check(
+    patchRequests.length === 0,
+    "JSON Patch value caused a network request",
+  );
+  page.off("request", onPatchRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   const diff = transforms.find((t) => t.id === "42-diff-to-changes")!;
   await page.goto(new URL("?tool=42-diff-to-changes", base).href);

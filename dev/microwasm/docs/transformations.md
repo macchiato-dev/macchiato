@@ -6,13 +6,13 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–48, and the side-by-side
+syntax validation and binary64 parsing, tools 1–49, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 2 tools remain.
+significant-digit formatting are implemented too. The reverse JSON Patch tool remains.
 This is not goal completion.
 
 ## Data representation
@@ -33,7 +33,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–48 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–49 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -266,10 +266,15 @@ preserve the decimal formatter's small input-prefix workspace; a separate
 The result is a Markdown table with the original field spellings and formatted
 binary64 results. Tests cover all 1,225 base pairs, halfway rounding, infinity,
 the two capacity boundaries, immutable input and recovery after failed edits.
-JSON Patch records (49–50) are next. Their shared
+The JSON Patch reader (49) is implemented. It uses the shared JSON parser
+and preserves operation members as nested code spans, with a normalized
+operation label. Dynamically sized backtick delimiters keep strings and
+nested JSON literal under Markdown rendering. It checks the six operation
+types, required member counts and move ancestry, retaining additional members
+without interpreting them. The reverse writer (50) remains. Their shared
 [pointer helper](../transforms/00-json-pointer.md) validates JSON-quoted
 pointer syntax and checks strict descendant paths without writes or a tree.
-This is infrastructure, not a completed transformation. Escaped spellings,
+This helper is infrastructure, not an additional transformation. Escaped spellings,
 empty keys and root paths must not bypass the move-into-child check; target
 existence and array indexing require an actual target document and are outside
 these format converters.

@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "49-json-patch-to-list",
+        "What is validated",
+        "Valid JSON Pointer",
+      ],
+      [
         "00-json-pointer",
         "Inside descendant: stop at a token boundary, not an arbitrary prefix",
         "Descendant?",

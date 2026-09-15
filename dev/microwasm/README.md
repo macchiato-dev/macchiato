@@ -120,7 +120,7 @@ The Markdown renderer is itself handwritten Microwasm across
 [seven linked pages](renderer/00-module.md), including a page about
 [repeated scanning patterns](renderer/02-scanning.md). It produces HTML in
 linear memory without host imports or a JavaScript Markdown parser. Its
-2,975-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
+3,073-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
 768 KiB of output. Scans keep offsets rather than building an AST. Input and
 output overflow trap; the viewer discards incomplete output.
 Literal strings have one unsigned 8-bit length followed by their bytes, with
@@ -390,8 +390,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty-eight transformations are implemented: tools 1–48 in the plan.
-The remaining 2 are pending.
+Forty-nine transformations are implemented: tools 1–49 in the plan.
+The reverse JSON Patch converter remains pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -560,13 +560,21 @@ rounding boundaries, invalid digits and exact memory limits. The table has
 a 60 KiB bound, separate from numeric scratch; the source has a 64 KiB bound.
 Try [integer/radix rows](http://microwasm.localhost:3030/?tool=48-radix-table).
 
-The forthcoming JSON Patch pair has a
+The JSON Patch pair has a
 [read-only JSON Pointer helper](transforms/00-json-pointer.md). Its 375-byte
 module validates quoted paths and distinguishes true descendants from mere
 string prefixes, reusing the JSON string iterator. Tests cover all UTF-16
 code units, alternate escape spellings, malformed UTF-8 and memory boundaries.
 It does not apply patches or resolve paths against a document, and is not
 counted as a transformation.
+
+The [JSON Patch reader](transforms/49-json-patch-to-list.md) is implemented
+in 1,581 bytes plus shared helpers. It retains all operation members except
+the normalized `op` label, using nested code spans for keys and compact JSON
+values. Required members, duplicate decoded names and move ancestry are
+validated; extra fields and exact numeric/string spellings are preserved.
+It converts patch documents but does not apply them to a target.
+Try [JSON Patch records](http://microwasm.localhost:3030/?tool=49-json-patch-to-list).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

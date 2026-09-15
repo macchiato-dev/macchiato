@@ -1110,6 +1110,46 @@ the escaped spellings, token-boundary table and explanation remain readable.
 The build publishes the helper but does not add an unfinished converter to
 the catalogue. Tools 49–50 and the final collection review remain pending.
 
+## Checkpoint: JSON Patch reader and selective SIMD
+
+Tool 49 is a 1,581-byte module. Six test groups cover all six operations,
+400 generated field/value permutations, decoded-key duplicates, move ancestry,
+exact numeric and escape spelling, unrelated members, invalid UTF-8, depth,
+exact input/output bounds, read-only validation and recovery after traps.
+CommonMark independently checks that generated code spans preserve their data.
+The browser test exposed a real limitation in our partial renderer: it only
+recognized single backticks. Matching complete runs now works; a regression
+group tests differing run widths, literal HTML, incomplete spans and long runs.
+The renderer is now 3,073 bytes.
+
+All 400 pre-existing tests passed in partitions of 225 and 175. The expanded
+renderer suite then passed all ten tests, making 401 tests in total. Both full
+browser suites pass, including all 49 transformation fixtures and a JSON Patch
+editing/recovery scenario with backticks and inert image-looking data. The
+rendered records and tool walkthrough screenshots were visually inspected.
+Tool 50 and the final collection review are still pending.
+
+SIMD is selective, not a blanket rewrite. The shared UTF-8 validator uses
+`v128.load` and `i8x16.bitmask` only on eligible ASCII blocks. Scalar decoding
+still checks multibyte sequences. Tests compare native fatal decoding across
+unaligned starts, vector boundaries, invalid sequences and bounded tails.
+The helper is 1,266 bytes, up from 1,185. A separate small block-loop function
+avoids the Unicode slowdown measured with the first inline experiment.
+
+The optional `deno bench --allow-read=. utf8_bench.ts` compares the same module
+with and without that single fast-path call. Local Deno/aarch64 results:
+
+| Input | Scalar | SIMD | Relative throughput |
+| --- | ---: | ---: | ---: |
+| ASCII, 64 KiB | 55.9 µs | 3.5 µs | 15.89× |
+| JSON-like ASCII | 49.6 µs | 3.1 µs | 15.84× |
+| Mixed text | 41.6 µs | 26.0 µs | 1.60× |
+| Unicode-heavy text | 81.8 µs | 82.0 µs | Essentially unchanged |
+
+These are validator timings, not whole-transformation or browser speedups.
+Multi-value returns and standard SIMD are baseline features for this project;
+scalar code remains preferable wherever it is simpler without a measured cost.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |
