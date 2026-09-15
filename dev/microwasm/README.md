@@ -85,7 +85,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 250 tests covering all twenty examples and the supplied
+`deno task test` runs 255 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -363,7 +363,7 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Twenty-nine transformations are implemented: tools 1–29 in the plan.
+Thirty transformations are implemented: tools 1–29 and 31 in the plan.
 The remaining 21 are pending.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
@@ -433,6 +433,16 @@ attribute ambiguity handling, numeric references and UTF-8 decoding in Wasm.
 It is shared infrastructure, not another counted transformation. Tests cover
 all 2,231 names, all BMP numeric references and malformed byte boundaries;
 browser tests compare text and attributes with Chromium's HTML parser.
+
+The [bookmark writer](transforms/31-outline-to-bookmarks.md) is 2,134 bytes
+plus shared character helpers. It turns plain outline items into folders and
+linked items into bookmarks, emitting Netscape bookmark HTML with a UTF-8
+declaration and an optional title. Empty folders survive; linked items cannot
+have children. It preserves non-HTTP destinations without activating them.
+Tests cover 500 generated trees through an independent HTML parser, edited
+punctuation, exact output capacity, nesting limits and recovery after errors.
+Try [the bookmark writer](http://microwasm.localhost:3030/?tool=31-outline-to-bookmarks).
+Its reverse direction, tool 30, remains in progress; twenty tools remain overall.
 
 ## Provisional byte-list notation
 

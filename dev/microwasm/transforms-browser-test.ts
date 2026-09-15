@@ -1760,6 +1760,77 @@ try {
     }),
     "Decoded link data crossed the HTML attribute boundary",
   );
+  await page.goto(new URL("?tool=31-outline-to-bookmarks", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const bookmarkInput =
+    "# Books & notes\n- Folder\n  - [\\<script\\>inert\\<\\/script\\>](<https://example.com/?x=1&y=2>)\n- Empty";
+  await page.locator("#transform-input").fill(bookmarkInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("Books &amp; notes")
+  );
+  const bookmarkOutput = await page.locator("#transform-output").inputValue();
+  const bookmarkTree = await page.evaluate((output) => {
+    const html = output.slice("```html\n".length, -"\n```\n".length);
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    return {
+      title: doc.title,
+      folders: [...doc.querySelectorAll("h3")].map((n) => n.textContent),
+      links: [...doc.querySelectorAll("a")].map(
+        (n) => [n.textContent, n.getAttribute("href")],
+      ),
+      lists: doc.querySelectorAll("dl").length,
+      active: doc.querySelectorAll("script,iframe,img,link").length,
+    };
+  }, bookmarkOutput);
+  check(
+    JSON.stringify(bookmarkTree) === JSON.stringify({
+      title: "Books & notes",
+      folders: ["Folder", "Empty"],
+      links: [["<script>inert</script>", "https://example.com/?x=1&y=2"]],
+      lists: 3,
+      active: 0,
+    }),
+    "Bookmark export did not survive browser HTML parsing",
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").count() === 1,
+    "Bookmark HTML did not remain one code fence",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered a, #transform-output-rendered script",
+    ).count() === 0,
+    "Bookmark data became live markup",
+  );
+  await page.screenshot({
+    path: `${artifacts}/outline-to-bookmarks-rendered.png`,
+    fullPage: true,
+  });
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    "- [Parent](https://example.com/)\n  - Child",
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === bookmarkOutput,
+    "A child under a bookmark replaced successful output",
+  );
+  await page.locator("#transform-input").fill("- Recovered");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("<H3>Recovered</H3>")
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

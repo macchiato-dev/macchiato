@@ -582,6 +582,34 @@ tests compare both entries and the iterator over the existing 100 XML cases.
 This is preparation for tool 29, not a new transformation. There are still
 28 published tools; the OPML-specific reader has not been completed.
 
+## Checkpoint: bookmark HTML export
+
+Tool 31 is published before the reverse reader, retaining the planned
+numbering. The 2,134-byte module parses the Markdown outline directly and
+uses the existing scalar/character output helpers. Folder items open H3/DL
+structures; link items emit complete A elements. A byte stack distinguishes
+the closing behavior and rejects descent below a link. Empty documents and
+folders are representable; browser metadata is outside this outline model.
+
+Five tests cover titles, CRLF, empty labels, balanced link delimiters,
+non-HTTP destinations, 500 generated trees, punctuation substitutions,
+malformed input, invalid UTF-8, 128 levels and rejection of a 129th, exact
+64 KiB source and 128 KiB output capacity, overflow, and repeat recovery.
+An independent CommonMark parser verifies the fence and parse5 verifies the
+actual HTML tree with implied DT/P endings. The Wasm leaves input, literals
+and the memory beyond its 128-byte kind stack untouched.
+
+The browser fixture checks both panes' display switches. Additional browser
+tests compare title, folder and link values using DOMParser, ensure generated
+HTML stays inert in its rendered code fence, and confirm a failed edit keeps
+the previous successful output before a later valid edit recovers.
+The full suite passes 255 tests; all 30 transformation browser fixtures pass.
+The rendered bookmark output screenshot was also inspected at 1440×900.
+
+There are now 30 published transformations: 1–29 and 31. Tool 30 and tools
+32–50 remain, along with the final full collection review. This is not goal
+completion.
+
 ## Checkpoint: HTML character reader for bookmark imports
 
 The shared reader has all 2,231 WHATWG names, including semicolon-less aliases

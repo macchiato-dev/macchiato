@@ -304,4 +304,17 @@ export const transforms = [{
     '```opml\n<opml version="2.0">\n  <head><title>Reading</title></head>\n  <body>\n    <outline text="Web">\n      <outline text="WebAssembly" type="link" url="https://webassembly.org/"/>\n      <outline text="SQLite" type="link" url="https://sqlite.org/docs.html"/>\n    </outline>\n  </body>\n</opml>\n```\n',
   expected:
     "# Reading\n\n- Web\n  - [WebAssembly](<https://webassembly.org/>)\n  - [SQLite](<https://sqlite.org/docs.html>)\n",
+}, {
+  id: "31-outline-to-bookmarks",
+  title: "Markdown bookmark outline to browser HTML",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "x", path: "transforms/00-xml-strings" },
+    { name: "o", path: "transforms/00-xml-output" },
+  ],
+  input:
+    "# Reading\n\n- Web\n  - [WebAssembly](https://webassembly.org/)\n  - [SQLite](<https://sqlite.org/docs.html>)\n- Empty folder",
+  expected:
+    '```html\n<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Reading</TITLE>\n<H1>Reading</H1>\n<DL><p>\n  <DT><H3>Web</H3>\n  <DL><p>\n    <DT><A HREF="https://webassembly.org/">WebAssembly</A>\n    <DT><A HREF="https://sqlite.org/docs.html">SQLite</A>\n  </DL><p>\n  <DT><H3>Empty folder</H3>\n  <DL><p>\n  </DL><p>\n</DL><p>\n```\n',
 }];
