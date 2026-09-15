@@ -60,6 +60,124 @@ The normalization helper also accepts the exponent notation produced by the
 exponential output reuse the shortest decimal selection without duplicating
 that algorithm. Only that entry point strips trailing coefficient zeros.
 
+## Inside normalize: separate source position from decimal position
+
+`pf-normalize-loop` reads the dependency's output at `0x10000` and copies
+digits into `0x30000`. The source cursor advances past every digit and point;
+the coefficient length advances only when a digit is retained. No output
+rendering happens yet.
+
+| State | Owner | Meaning |
+| --- | --- | --- |
+| Scan index, local 1 | Normalize | Next source byte; never an output position |
+| After-point flag, local 2 | Normalize | Stops counting integer places after the point |
+| Leading-zero count, local 3 | Normalize | Discarded zeros before the first nonzero digit, on either side of the point |
+| Order, global 1 | Normalize, then round | Number of coefficient places before the decimal point |
+| Coefficient length, global 2 | Normalize, then round | Number of stored ASCII digits, including zeros after the first nonzero digit |
+
+Before seeing the point, every digit increments order, including discarded
+zeros. After the scan, subtract the count of discarded leading zeros.
+Thus `0.00125` first counts one integer place and three leading zeros;
+the result is coefficient `125`, order minus two. It is not order minus
+three: scientific notation uses `order - 1` as its exponent.
+
+The exponent branch owns the rest of the source. At
+`pf-normalize-exponent-loop`, accumulate decimal exponent digits, then add
+or subtract that magnitude from order and exit the outer scan. For
+`1.25e+3`, the coefficient remains `125` but order becomes four.
+This helper consumes trusted formatter output, not arbitrary user text;
+the loop is not a replacement for a validating exponent parser.
+
+When all digits were zero, `pf-normalize-zero` replaces the empty result
+with one stored zero and order one. Later code never has to interpret a
+zero-length coefficient as the number zero.
+
+## Inside round: three cutoff regions before any carry
+
+The cutoff is a count of retained significant digits, not a source offset.
+`fixed` passes `order + places`; exponential passes `places + 1`;
+precision passes its requested count directly. Only fixed can put the
+cutoff before the first significant digit.
+
+```mermaid
+flowchart TD
+  A{Cutoff at or before zero?} -- yes --> B{Cutoff zero and first digit at least 5?}
+  B -- yes --> C[Store one; increment order; length = 1; return]
+  B -- no --> D[Store zero; order = 1; length = 1; return]
+  A -- no --> E{Cutoff at or after length?}
+  E -- yes --> F[Append zeros until length equals cutoff; return]
+  E -- no --> G[Read first discarded digit; shorten length to cutoff]
+  G --> H{Discarded digit at least 5?}
+  H -- no --> R[Return with truncated coefficient]
+  H -- yes --> I[Carry backward through retained digits]
+  I --> R
+```
+
+`pf-round-up-test` reads the discarded digit before setting the new length.
+Bytes beyond that length can remain in scratch memory; they no longer
+belong to the coefficient. This is a span change, not a memory clearing pass.
+
+### Carry: the ordinary exit skips the leading-carry repair
+
+`pf-round-carry-loop` decrements its index before reading a retained digit.
+If incrementing it gives at most ASCII `9`, write the new digit and branch
+out of the carry block. If it overflows, write `0` and continue left.
+Falling through at index zero means every retained digit overflowed.
+Only then does `pf-round-carry-leading` replace the first zero with `1`
+and increment order.
+
+For the intermediate coefficient `9995`, order one, cutoff three:
+
+| Step | Retained coefficient | Carry index | Order |
+| --- | --- | --- | --- |
+| Discarded 5 requests rounding up | `999` | 3 | 1 |
+| Increment last 9 | `990` | 2 | 1 |
+| Increment next 9 | `900` | 1 | 1 |
+| Increment first 9 | `000` | 0 | 1 |
+| Leading-carry repair | `100` | 0 | 2 |
+
+The significant count stays three, so scientific rendering gives `1.00e+1`.
+This is a trace of an intermediate digit sequence, not a claim that the
+JavaScript literal `9.995` has exactly those decimal digits in binary64.
+
+At `pf-round-no-carry`, `br 2` exits the enclosing carry block, skipping
+the leading repair. At `pf-round-carry-zero`, `br_if 0` repeats the loop
+only while the index is nonzero. Confusing the two exits would increase
+order on ordinary increments as well as all-nine carries.
+
+### Before the first digit: no negative array index
+
+The exact binary64 value `0.0625` normalizes to `625` at order minus one.
+With one fractional place, cutoff is zero: the first discarded digit is
+6, so round stores `1` and changes order to zero. Fixed layout emits `0.1`.
+With zero fractional places, cutoff is minus one: the result is zero
+regardless of that first digit. The rounding threshold lies a full decimal
+place earlier. Neither branch reads memory using the negative cutoff.
+
+The sign is applied later from the original argument. For `-0.0625` at
+zero places this produces `-0`; actual negative zero does not satisfy the
+less-than-zero test in `pf-begin-sign` and produces `0` instead.
+
+## Inside span and layout: missing digits become zeros deliberately
+
+`span(start, end)` iterates with signed positions, but compares a position
+with coefficient length using an unsigned comparison before reading.
+A negative position therefore fails the bounds test and emits ASCII `0`,
+as does any position beyond the stored length. This one branch covers
+leading fractional zeros and trailing requested zeros without reading
+outside the coefficient. The loop's signed end check still ends the span.
+
+For `fixed(0.03125, 4)`, normalization gives `3125`, order minus one.
+Cutoff three rounds the retained digits to `313`. The fractional span
+is positions minus one through two: zero, 3, 1, 3. Output is `0.0313`.
+For precision formatting, the notation decision happens after rounding:
+a carry can change order and therefore change which layout branch runs.
+
+Explicit precision retains padding zeros. Only
+`pf-shortest-trim-loop`, used by omitted-argument exponential formatting,
+removes trailing coefficient zeros, stopping at one digit. Its output is
+shortest selection in scientific layout, not another precision-rounding pass.
+
 ## Memory and imports
 
 Import exact formatting as `d` and radix formatting as `r`, sharing memory.

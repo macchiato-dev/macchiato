@@ -40,6 +40,19 @@ async function formatter() {
   };
 }
 
+Deno.test("radix formatting: documented digit and positional-zero traces", async () => {
+  const r = await formatter();
+  for (
+    const [value, output] of [
+      [10.5, "1010.1"],
+      [8, "1000"],
+      [0.125, "0.001"],
+    ] as const
+  ) {
+    check(r.format(value, 2) === output, String(value));
+  }
+});
+
 type Rational = { n: bigint; d: bigint };
 const rawBuffer = new DataView(new ArrayBuffer(8));
 function bits(value: number) {

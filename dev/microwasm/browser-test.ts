@@ -183,6 +183,16 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "09-radix-format",
+        "The two candidate tests and the temporary denominator",
+        "D temporarily becomes",
+      ],
+      [
+        "11-precision-format",
+        "Carry: the ordinary exit skips the leading-carry repair",
+        "Leading-carry repair",
+      ],
+      [
         "33-entries-to-rss",
         "Inside classify and field: what the descriptor actually decides",
         "Repeated-field flag",

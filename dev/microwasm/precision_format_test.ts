@@ -61,6 +61,21 @@ function compare(
   );
 }
 
+Deno.test("precision formatting: documented cutoff and layout traces", async () => {
+  const p = await formatter();
+  for (
+    const [value, places, output] of [
+      [0.0625, 1, "0.1"],
+      [0.0625, 0, "0"],
+      [-0.0625, 0, "-0"],
+      [-0, 0, "0"],
+      [0.03125, 4, "0.0313"],
+    ] as const
+  ) {
+    check(p.format("fixed", value, places) === output, `${value}, ${places}`);
+  }
+});
+
 Deno.test("precision formatting: all counts, rounding carries and decimal boundaries", async () => {
   const p = await formatter();
   const fixtures = [

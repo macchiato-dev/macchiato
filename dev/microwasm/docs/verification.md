@@ -5,6 +5,23 @@ are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler
 is involved. The host code does not implement the filters or Life rules.
 
+## Checkpoint: inner-function number-formatting walkthroughs
+
+The radix and precision formatting pages now explain the inner quotient,
+interval, carry, normalization and layout loops. Branch diagrams distinguish
+continuation from termination; state tables tie destructive scratch changes
+and saved values to the actual byte-list labels. Worked traces include base-two
+10.5, an all-nine intermediate coefficient, negative cutoffs and signed zero.
+These are qualitative explanations of the handwritten code, not generated
+function inventories. Mermaid remains readable source in the partial renderer.
+
+Both modules assemble byte-for-byte identically to the preceding commit.
+Ten focused radix/precision tests pass, including two new groups checking
+the documented numeric examples. The build and complete documentation browser
+suite pass. The browser suite checks all six source/display combinations
+and now captures the new internal-state tables; the 1440-by-900 screenshots
+were visually inspected. Published transformation count remains 35.
+
 ## Checkpoint: calendar pair completes tools 1–35
 
 Tool 35 is a 2,040-byte handwritten writer. It consumes component headings

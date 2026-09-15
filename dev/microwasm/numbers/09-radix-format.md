@@ -70,6 +70,127 @@ Nondecimal native-engine output may differ where implementations approximate
 the conversion. Tests check the exact rounding interval and minimal precision,
 rather than demanding identical approximations in every radix.
 
+## Inside normalization: move the scale without losing the interval
+
+Call the four slots N, D, L and U. The digit loop needs `1 <= N/D < radix`
+on entry, not merely a positive ratio. Local 8 starts at zero and records
+the radix order: the eventual point is after `order + 1` digits.
+
+The two normalization branches deliberately change different slots:
+
+- `rf-format-large-loop` multiplies D by the radix until D exceeds N.
+  Each multiplication that still leaves D at or below N increments order.
+  The first overshoot is undone by exact division in
+  `rf-format-large-stop`; that division's remainder is zero because this
+  branch just multiplied D. L and U do not move.
+- `rf-format-small-loop` multiplies N, L and U together, decrementing order
+  on every pass, until N reaches D. Moving only N would change the rounding
+  interval relative to the value. D does not move.
+
+For the exactly representable `10.5` in base two, the large branch advances
+order three times. Its normalized ratio is `1.3125`. A fourth successful
+order increment would be wrong: the multiplication that makes the ratio
+`0.65625` is the overshoot that gets undone.
+
+## Inside digit extraction: a remainder is not the next numerator yet
+
+The quotient loop repeatedly subtracts D from N. Its exit leaves
+`0 <= N < D`; N now holds the remainder R. The stored digit is a numeric
+byte, not ASCII. Character conversion happens only when rendering.
+
+```mermaid
+flowchart TD
+  A[Check digit capacity; digit = 0] --> B{N at least D?}
+  B -- yes --> C[N -= D; digit += 1]
+  C --> B
+  B -- no --> E[Store digit; update coefficient parity]
+  E --> F[Compute lower-valid and upper-valid from remainder R]
+  F --> G{Either prefix valid?}
+  G -- no --> H[Multiply R, L and U by radix; keep D]
+  H --> A
+  G -- yes --> I[Choose truncated or incremented prefix]
+  I --> J[Carry if needed; leave digit loop]
+```
+
+The nested `rf-format-quotient-loop` finishes one digit; its exit does not
+finish formatting. Only `rf-format-stop-exit` leaves the outer digit loop.
+The capacity trap is an invariant failure, not an instruction to print a
+truncated approximation.
+
+### The two candidate tests and the temporary denominator
+
+The truncated prefix is R below the exact value. The incremented prefix is
+`D - R` above it. `rf-format-low-good` checks R against L;
+`rf-format-high-good` checks the other distance against U. Equality is
+accepted only when local 7 says the original binary significand is even.
+
+| Byte-list label | Slot contents while it runs | What must survive |
+| --- | --- | --- |
+| `rf-format-low-compare` | N = R, D unchanged | Both distances and R |
+| `rf-format-high-distance` | D temporarily becomes D minus R | R, so addition can restore D |
+| End of `rf-format-high-distance` | D restored; comparison in local 11 | Original scale for either continuation or tie-breaking |
+| `rf-format-twice-remainder` | N becomes twice R | D only; generation has already decided to stop |
+| `rf-format-more-digits` | N, L and U multiplied by radix | D unchanged for the next quotient |
+
+Doubling R without restoring it is safe only on the terminal, both-valid
+branch. The nonterminal high-bound check must restore D. This distinction
+is why those two destructive operations cannot be interchanged.
+
+| Lower valid | Upper valid | Action |
+| --- | --- | --- |
+| No | No | Generate another digit |
+| Yes | No | Keep the prefix |
+| No | Yes | Increment the prefix |
+| Yes | Yes | Compare twice R with D; at equality increment an odd coefficient |
+
+There are two different parity questions here. Binary-significand parity
+decides whether the interval endpoints belong to this binary64 value.
+Coefficient parity decides between two equally close textual candidates.
+For base three digits `12`, the coefficient is five, hence odd, even though
+its last digit is two. Local 14 accumulates parity across all digits.
+
+### Worked digit trace: 10.5 in base two
+
+These ratios describe the exact multiword state; they are not floating-point
+calculations performed by the formatter. L and U are tiny at this scale, so
+the first four remainders fail both candidate tests.
+
+| Pass | Ratio entering quotient | Digit | R divided by D after subtraction | Decision |
+| --- | --- | --- | --- | --- |
+| 1 | 1.3125 | 1 | 0.3125 | Multiply remainder and distances by two |
+| 2 | 0.625 | 0 | 0.625 | Continue, retaining the zero digit |
+| 3 | 1.25 | 1 | 0.25 | Continue |
+| 4 | 0.5 | 0 | 0.5 | Continue |
+| 5 | 1 | 1 | 0 | Truncated prefix is exact; stop |
+
+The saved digits are `10101`; order is three. Rendering places the point
+after four digits, giving `1010.1`. Notice that normalization applies only
+before the first digit: later quotient inputs may be below one.
+
+## Inside carry and layout: digits and point position are separate
+
+`rf-format-carry-loop` walks backward from the digit count. A digit below
+`radix - 1` accepts the increment and exits the carry block immediately.
+Otherwise it becomes zero and the cursor moves left. If every digit carries,
+`rf-format-leading-carry` writes a leading one and increments order; it does
+not insert another byte. For an illustrative base-three coefficient `222`,
+the same three slots become `100` at the next order.
+
+`rf-format-trim-loop` then shortens the significant span while its last digit
+is zero, never below one digit. It does not change order. Consequently the
+layout loops can put back positional zeros without pretending they remain
+significant digits:
+
+- Nonnegative order, digit count at most `order + 1`: emit saved digits,
+  then enough zeros to fill the integer positions.
+- Nonnegative order, more saved digits: split the span at `order + 1` and
+  put the point between its two parts.
+- Negative order: emit `0.`, then `-1 - order` zeros, then the saved span.
+
+For base-two `8`, one significant digit at order three renders as `1000`.
+For `0.125`, one digit at order minus three renders as `0.001`. Neither
+case needs a long significant-digit buffer just to hold positional zeros.
+
 ## Memory and integration
 
 Import `b` from the multiword module and `s` from shortest decimal formatting;
