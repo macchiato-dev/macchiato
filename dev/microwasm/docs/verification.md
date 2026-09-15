@@ -1086,6 +1086,30 @@ were inspected: `48-radix-table-code.png`, `radix-table-rendered.png` and
 Two transformations remain: the JSON Patch pair, followed by the collection's
 completion review. This checkpoint does not complete the goal.
 
+## JSON Pointer groundwork for tools 49–50
+
+The new 375-byte helper validates complete JSON-quoted pointer spans and
+compares strict descendant paths without allocating or writing memory. It
+uses the existing decoded JSON iterator; tilde escapes remain encoded after
+validation because their encoding is unique and literal slashes delimit
+tokens. Full validation precedes comparison, so an early mismatch cannot
+hide a malformed suffix. Empty root, empty keys and equal paths are explicit
+cases. This is not target lookup, patch application or another counted tool.
+
+Five test groups cover documented path relationships in raw and escaped JSON,
+3,000 generated token-array comparisons against an independent token oracle,
+all 65,536 UTF-16 code units, invalid JSON and tilde escapes, strict raw UTF-8,
+full-memory spans, read-only operation and recovery. The complete Deno suite
+passes: 393 tests in partitions of 218 and 175. Both browser suites pass,
+including all 48 transformation fixtures and six direct Chromium pointer
+comparisons plus malformed-pointer rejection.
+
+The document's original, filled-count and hex views pass the browser checks.
+The screenshot `dist/browser/00-json-pointer-walkthrough.png` was inspected;
+the escaped spellings, token-boundary table and explanation remain readable.
+The build publishes the helper but does not add an unfinished converter to
+the catalogue. Tools 49–50 and the final collection review remain pending.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

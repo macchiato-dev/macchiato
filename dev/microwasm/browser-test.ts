@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "00-json-pointer",
+        "Inside descendant: stop at a token boundary, not an arbitrary prefix",
+        "Descendant?",
+      ],
+      [
         "48-radix-table",
         "Preserve a small workspace, not a whole document",
         "Saved in four i64 locals; restored immediately",
@@ -656,6 +661,53 @@ try {
   await page.goto(xmlOutputPage!);
   await page.waitForSelector("#rendered h1");
   await screenshot("xml-output-light");
+  const pointerCases = await page.evaluate(async () => {
+    async function load(path: string, imports: WebAssembly.Imports = {}) {
+      return (await WebAssembly.instantiateStreaming(
+        fetch(`./${path}.wasm`),
+        imports,
+      )).instance.exports;
+    }
+    const n = await load("numbers/02-json-number");
+    const k = await load("transforms/00-json-string-keys", { n });
+    const p = await load("transforms/00-json-pointer", { k });
+    const memory = new Uint8Array((p.memory as WebAssembly.Memory).buffer);
+    const cases = [
+      ['""', '"/a"', 1],
+      ['"/a"', '"/ab"', 0],
+      ['"/a"', '"\\u002fa/b"', 1],
+      ['"/a~1b"', '"/a~1b/c"', 1],
+      ['"/雪😀"', '"/雪\\ud83d\\ude00/x"', 1],
+      ['"/a"', '"/a"', 0],
+    ] as const;
+    for (const [from, path, expected] of cases) {
+      const a = new TextEncoder().encode(from),
+        b = new TextEncoder().encode(path);
+      memory.set(a);
+      memory.set(b, a.length);
+      const actual = (p.descendant as CallableFunction)(
+        0,
+        a.length,
+        a.length,
+        a.length + b.length,
+      );
+      if (actual !== expected) {
+        throw Error(`Pointer boundary: ${from} -> ${path}`);
+      }
+    }
+    const bad = new TextEncoder().encode('"/a~2"');
+    memory.set(bad);
+    let rejected = false;
+    try {
+      (p.pointer as CallableFunction)(0, bad.length);
+    } catch (e) {
+      if (e instanceof WebAssembly.RuntimeError) rejected = true;
+      else throw e;
+    }
+    if (!rejected) throw Error("Bad pointer escaped validation");
+    return cases.length;
+  });
+  check(pointerCases === 6, "Pointer browser checks incomplete");
   const shortestPage = libraryLinks.find((link) =>
     link.includes("06-shortest-decimal")
   );

@@ -554,6 +554,14 @@ rounding boundaries, invalid digits and exact memory limits. The table has
 a 60 KiB bound, separate from numeric scratch; the source has a 64 KiB bound.
 Try [integer/radix rows](http://microwasm.localhost:3030/?tool=48-radix-table).
 
+The forthcoming JSON Patch pair has a
+[read-only JSON Pointer helper](transforms/00-json-pointer.md). Its 375-byte
+module validates quoted paths and distinguishes true descendants from mere
+string prefixes, reusing the JSON string iterator. Tests cover all UTF-16
+code units, alternate escape spellings, malformed UTF-8 and memory boundaries.
+It does not apply patches or resolve paths against a document, and is not
+counted as a transformation.
+
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
 UTF-8 scalar decoding, predefined/numeric entities, and text/attribute whitespace

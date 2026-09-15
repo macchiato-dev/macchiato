@@ -266,7 +266,13 @@ preserve the decimal formatter's small input-prefix workspace; a separate
 The result is a Markdown table with the original field spellings and formatted
 binary64 results. Tests cover all 1,225 base pairs, halfway rounding, infinity,
 the two capacity boundaries, immutable input and recovery after failed edits.
-JSON Patch records (49–50) are next.
+JSON Patch records (49–50) are next. Their shared
+[pointer helper](../transforms/00-json-pointer.md) validates JSON-quoted
+pointer syntax and checks strict descendant paths without writes or a tree.
+This is infrastructure, not a completed transformation. Escaped spellings,
+empty keys and root paths must not bypass the move-into-child check; target
+existence and array indexing require an actual target document and are outside
+these format converters.
 
 ## Shared number conversion
 
