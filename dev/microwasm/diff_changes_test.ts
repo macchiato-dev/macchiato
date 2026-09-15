@@ -86,6 +86,7 @@ async function reader() {
   const w = imports.w as unknown as {
     memory: WebAssembly.Memory;
     run(n: number): number;
+    validate(start: number, end: number): void;
   };
   const memory = new Uint8Array(w.memory.buffer),
     constants = memory.slice(196608);
@@ -102,7 +103,7 @@ async function reader() {
       equal(toHex(memory.subarray(196608)), toHex(constants));
     }
   }
-  return { convert, memory, run: w.run };
+  return { convert, memory, run: w.run, validate: w.validate };
 }
 
 Deno.test("Diff reader: documented file/hunk/change records and preserved metadata", async () => {
@@ -354,5 +355,50 @@ Deno.test("Diff reader: single-byte edits cannot silently discard accepted patch
     restore(r.convert(fence("GIT binary patches are different\n"))),
     "GIT binary patches are different\n",
   );
+  equal(restore(r.convert(fence(basic))), basic);
+});
+
+Deno.test("Diff validation: bare output spans are read-only and independent of Markdown output size", async () => {
+  const r = await reader();
+  const valid = [
+    basic,
+    "",
+    header,
+    basic + marker,
+    header + "@@ -0,0 +1,38000 @@\n" + "+\n".repeat(38000),
+  ];
+  for (const patch of valid) {
+    const bytes = encoder.encode(patch);
+    for (const start of [0, 65535, 196608 - bytes.length]) {
+      r.memory.set(bytes, start);
+      const before = r.memory.slice();
+      r.validate(start, start + bytes.length);
+      equal(toHex(r.memory), toHex(before));
+    }
+    equal(restore(r.convert(fence(basic))), basic);
+  }
+  for (
+    const patch of [
+      header + "@@ -1 +1 @@\n-old\n",
+      basic + marker + marker,
+      "GIT binary patch\n",
+      "@@@ -1 -1 +1 @@@\n",
+    ]
+  ) {
+    const bytes = encoder.encode(patch), start = 65536;
+    r.memory.set(bytes, start);
+    const before = r.memory.slice();
+    traps(() => r.validate(start, start + bytes.length));
+    equal(toHex(r.memory), toHex(before));
+    equal(restore(r.convert(fence(basic))), basic);
+  }
+  for (const [a, b] of [[-1, 0], [1, 0], [0, 196609], [196609, 196609]]) {
+    const before = r.memory.slice();
+    traps(() => r.validate(a, b));
+    equal(toHex(r.memory), toHex(before));
+  }
+  const badUtf8 = new Uint8Array([43, 0xc0, 0x80, 10]);
+  r.memory.set(badUtf8, 65536);
+  traps(() => r.validate(65536, 65536 + badUtf8.length));
   equal(restore(r.convert(fence(basic))), basic);
 });

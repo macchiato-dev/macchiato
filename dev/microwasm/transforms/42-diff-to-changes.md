@@ -127,8 +127,17 @@ LF inside the diff body and never normalize CR in its content.
 ## Module
 
 Imports: LF line 0, spaces 1, range 2, UTF-8 validation 3. Defined functions:
-run 4, emit 5, copy 6, quote 7, fence 8, fence-lines 9, take 10, literal 11,
-word 12, hex digit 13. All addresses are offsets in one shared memory.
+scan 4, emit 5, copy 6, quote 7, fence 8, fence-lines 9, take 10, literal 11,
+word 12, hex digit 13, validate 14, run 15. All addresses are offsets in one
+shared memory.
+
+`validate(start, end)` checks bare diff bytes anywhere through `0x30000`,
+without writing memory. It runs the same scanner, but the emit/copy/quote
+helpers return immediately. In particular it does not build a throwaway
+Markdown result or reject a patch merely because that result would overflow.
+The writer uses this entry point on its completed output before framing it.
+The public `run(length)` always enables rendering again, including after a
+failed validation. Validation changes internal cursors, not the caller's bytes.
 
 `[microwasm]`
 
@@ -138,15 +147,15 @@ word 12, hex digit 13. All addresses are offsets in one shared memory.
 - dr-import-section: `02 {{size:dr-imports}}`
   - dr-imports: `05 01 70 04 6c696e65 00 00 01 72 06 737061636573 00 01 01 70 05 72616e6765 00 00 01 63 04 75746638 00 02 01 70 06 6d656d6f7279 02 01 04 04`
 - dr-function-section: `03 {{size:dr-functions}}`
-  - dr-functions: `0a 03 04 02 02 05 06 04 04 07 04`
+  - dr-functions: `0c 03 04 02 02 05 06 04 04 07 04 02 03`
 - dr-global-section: `06 {{size:dr-globals}}`
-  - dr-globals: `09 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
+  - dr-globals: `0a 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - dr-export-section: `07 {{size:dr-exports}}`
-  - dr-exports: `02 03 72756e 00 04 06 6d656d6f7279 02 00`
+  - dr-exports: `03 03 72756e 00 0f 08 76616c6964617465 00 0e 06 6d656d6f7279 02 00`
 - dr-code-section: `0a {{size:dr-code}}`
-  - dr-code: `0a`
+  - dr-code: `0c`
     - dr-run-record: `{{size:dr-run-body}}`
-      - dr-run-body: `01 0b 7f 20 00 10 08 24 02 24 01 23 01 23 02 10 03 41 808004 24 00 41 00 24 04 41 00 24 05 41 00 24 06 41 00 24 07 41 00 24 08`
+      - dr-run-body: `01 0b 7f 23 09 45 04 40 20 00 10 08 24 02 24 01 0b 23 01 23 02 10 03 41 808004 24 00 41 00 24 04 41 00 24 05 41 00 24 06 41 00 24 07 41 00 24 08`
         - dr-run-loop: `02 40 03 40 23 01 23 02 4f 0d 01 23 01 23 02 10 00 21 02 22 01 24 03 41 00 21 03 23 01 20 01 49 04 40 23 01 2d 00 00 21 03 0b`
           - dr-marker: `20 03 41 dc00 46 04 40 23 07 45 04 40 00 0b 23 01 20 01 41 c2800c 10 0c 20 01 47 04 40 00 0b 23 07 41 01 71 23 04 41 00 47 71 23 07 41 02 71 41 00 47 23 05 41 00 47 71 72 04 40 00 0b 23 08 23 07 72 24 08 41 00 24 07 41 b4800c 10 0b 20 02 24 01 0c 01 0b`
           - dr-content: `23 04 23 05 72 04 40 20 03 41 20 46 04 7f 41 03 05 20 03 41 2d 46 04 7f 41 01 05 20 03 41 2b 46 04 7f 41 02 05 00 0b 0b 0b 21 0b`
@@ -164,11 +173,11 @@ word 12, hex digit 13. All addresses are offsets in one shared memory.
           - dr-meta: `20 03 41 20 46 20 03 41 2b 46 72 04 40 00 0b 23 01 20 01 41 de800c 10 0c 20 01 46 04 40 00 0b 41 80800c 10 0b 23 01 20 01 10 07 41 0a 10 05 41 00 24 06 41 00 24 08 20 02 24 01 0c 00 0b 0b`
         - dr-run-complete: `23 04 23 05 72 04 40 00 0b 23 00 41 808004 6b 0b`
     - dr-emit-record: `{{size:dr-emit-body}}`
-      - dr-emit-body: `00 23 00 41 80800c 4f 04 40 00 0b 23 00 20 00 3a 00 00 23 00 41 01 6a 24 00 0b`
+      - dr-emit-body: `00 23 09 04 40 0f 0b 23 00 41 80800c 4f 04 40 00 0b 23 00 20 00 3a 00 00 23 00 41 01 6a 24 00 0b`
     - dr-copy-record: `{{size:dr-copy-body}}`
-      - dr-copy-body: `00 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 10 05 20 00 41 01 6a 21 00 0c 00 0b 0b 0b`
+      - dr-copy-body: `00 23 09 04 40 0f 0b 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 10 05 20 00 41 01 6a 21 00 0c 00 0b 0b 0b`
     - dr-quote-record: `{{size:dr-quote-body}}`
-      - dr-quote-body: `01 01 7f 41 22 10 05 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 21 02 20 00 41 01 6a 21 00`
+      - dr-quote-body: `01 01 7f 23 09 04 40 0f 0b 41 22 10 05 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 21 02 20 00 41 01 6a 21 00`
         - dr-quote-short: `20 02 41 09 46 04 40 41 dc00 10 05 41 f400 10 05 0c 01 0b 20 02 41 0d 46 04 40 41 dc00 10 05 41 f200 10 05 0c 01 0b 20 02 41 08 46 04 40 41 dc00 10 05 41 e200 10 05 0c 01 0b 20 02 41 0c 46 04 40 41 dc00 10 05 41 e600 10 05 0c 01 0b`
         - dr-quote-control: `20 02 41 20 49 04 40 41 dc00 10 05 41 f500 10 05 41 30 10 05 41 30 10 05 20 02 41 04 76 10 0d 20 02 41 0f 71 10 0d 0c 01 0b`
         - dr-quote-escape: `20 02 41 22 46 20 02 41 dc00 46 72 04 40 41 dc00 10 05 0b 20 02 10 05 0c 00 0b 0b 41 22 10 05 0b`
@@ -190,6 +199,10 @@ word 12, hex digit 13. All addresses are offsets in one shared memory.
       - dr-word-body: `01 02 7f 20 02 2d 00 00 21 03 20 01 20 00 6b 20 03 49 04 40 41 00 0f 0b 20 02 41 01 6a 21 02 02 40 03 40 20 04 20 03 4f 0d 01 20 00 20 04 6a 2d 00 00 20 02 20 04 6a 2d 00 00 47 04 40 41 00 0f 0b 20 04 41 01 6a 21 04 0c 00 0b 0b 20 00 20 03 6a 0b`
     - dr-hex-record: `{{size:dr-hex-body}}`
       - dr-hex-body: `00 20 00 20 00 41 0a 49 04 7f 41 30 05 41 d700 0b 6a 10 05 0b`
+    - dr-validate-record: `{{size:dr-validate-body}}`
+      - dr-validate-body: `00 20 00 24 01 20 01 24 02 41 01 24 09 41 00 10 04 1a 0b`
+    - dr-entry-record: `{{size:dr-entry-body}}`
+      - dr-entry-body: `00 41 00 24 09 20 00 10 04 0b`
 - dr-data-section: `0b {{size:dr-data}}`
   - dr-data: `01 00 41 80800c 0b 6f`
     - dr-prefixes: `07 2d206d65746120 07 2d2066696c6520 07 2d2068756e6b20 0a 2d20636f6e7465787420 09 2d2072656d6f766520 06 2d2061646420 0d 2d206e6f2d6e65776c696e650a`
