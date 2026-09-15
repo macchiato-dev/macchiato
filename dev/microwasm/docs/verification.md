@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 123 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 130 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are fourteen implemented transformations out of the planned fifty:
-tools 1–8 and 10–15.
+There are fifteen implemented transformations out of the planned fifty:
+tools 1–15.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -268,7 +268,7 @@ escaped forms, 2,000 generated UTF-16 strings, Unicode scalar boundaries,
 surrogate pairs, escaped lone surrogates, case/normalization distinctions,
 encountered invalid escapes/UTF-8, invalid spans, unchanged memory and long
 common prefixes. The helper imports only memory and remains a shared pattern,
-not a fifteenth transformation. Early difference is not full JSON validation;
+not a transformation of its own. Early difference is not full JSON validation;
 the object-table converter validates the entire document first.
 
 Six object-table tests cover first-appearance header order, absent/null/empty
@@ -284,6 +284,25 @@ actual header/cell text, literal markup, missing versus null, duplicate-key
 failure retention, and empty-array recovery. The inspected screenshot shows
 editable source beside its rendered table, with the escaped spelling sharing
 the original column.
+
+Seven reverse-object-table tests cover blank/missing/null distinctions,
+header spelling, Unicode references, JSON escapes, equivalent duplicate
+headers, exact numeric and nested tokens, and 600 round trips through the
+actual Wasm pair. Round trips compare union-column order rather than claiming
+to recover each original object's property order. Negative cases isolate
+each JSON cell, reject malformed table shapes and check column, depth, input,
+scratch and output bounds. A repeated 10,000-character header deliberately
+overflows output into temporary records; the next conversion rebuilds them
+and succeeds. Large header pairs test decoding without a retained string
+store. The shared decoder's new API is tested for invalid spans, raw text
+decoding, exact scratch capacity, untouched output/input/literals and recovery.
+An exact 120 KiB result leaves the adjacent header records intact; increasing
+the repeated header by one byte traps. Chromium verifies all fifteen tool
+fixtures, both rendered views of the new reverse tool, preserved JSON header
+spelling, inert markup-like values, rejection of duplicate headers and
+cross-cell JSON injection while retaining output, and recovery to `[{}]`.
+The side-by-side rendered screenshot was inspected. The full example,
+renderer and six-view source-document browser suite also passes.
 The rendered side-by-side screenshot was inspected: the embedded pipe remains
 in one cell, markup-like text stays literal, and duplicate keys and exponent
 spelling are visible unchanged in the JSON output.

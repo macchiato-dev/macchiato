@@ -223,6 +223,16 @@ Deno.test("Table objects: column/depth limits, output expansion and recovery", a
   equal(c.toJSON(longHeader + "|1|\n".repeat(10)).length > 100000, true);
   traps(() => c.toJSON(longHeader + "|1|\n".repeat(13)));
   equal(c.toJSON('|"recovered"|\n|---|\n|2|'), fence('[{"recovered":2}]'));
+  // Two repeated keys can exactly fill the 120 KiB output region. The next
+  // header byte would require two additional output bytes and must trap.
+  const exactKey = "k".repeat(61426);
+  const exactTable = '|"' + exactKey + '"|\n|---|\n|1|\n|1|';
+  equal(c.toJSON(exactTable).length, 120 * 1024);
+  const records = new DataView(c.memory.buffer);
+  equal(records.getUint32(0x2e000, true), 1);
+  equal(records.getUint32(0x2e004, true), exactKey.length + 3);
+  traps(() => c.toJSON('|"' + exactKey + 'k"|\n|---|\n|1|\n|1|'));
+  equal(c.toJSON('|"x"|\n|---|\n||'), fence('[{}]'));
   equal(c.toTable(fence('[{"x":3}]')), '| "x" |\n| --- |\n| 3 |\n');
 });
 

@@ -736,6 +736,68 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === ""
   );
+  await page.goto(new URL("?tool=09-table-to-json-objects", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const objectTable = '|"&#92;u006eame"|"score"|"active"|\n|---|---|---|\n' +
+    '|"&#60;b&#62;Ben&#60;/b&#62;"|null||\n|"Ada"||true|\n||||';
+  const objectJSON = '```json\n[{"\\u006eame":"<b>Ben</b>","score":null},' +
+    '{"\\u006eame":"Ada","active":true},{}]\n```\n';
+  await page.locator("#transform-input").fill(objectTable);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    objectJSON,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-input-rendered th").first().textContent() ===
+      '"\\u006eame"',
+    "Encoded header did not render as the original JSON spelling",
+  );
+  check(
+    await page.locator("#transform-output-rendered pre code").textContent() ===
+      objectJSON.slice(8, -4),
+    "Object output lost the header spelling or missing/null distinction",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "Object value became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/table-to-json-objects-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  for (
+    const invalid of [
+      '|"x"|"&#92;u0078"|\n|---|---|\n|1|2|',
+      '|"x"|\n|---|\n|1,"y":2|',
+    ]
+  ) {
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === objectJSON,
+      "Malformed object table replaced the previous output",
+    );
+  }
+  await page.locator("#transform-input").fill('|"x"|\n|---|\n||');
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "```json\n[{}]\n```\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

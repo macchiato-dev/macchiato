@@ -61,6 +61,19 @@ export const transforms = [{
   expected:
     '| "name" | "score" | "active" |\n| --- | --- | --- |\n| "Ben" | 12.50 |  |\n| "Ada" |  | true |\n|  |  |  |\n',
 }, {
+  id: "09-table-to-json-objects",
+  title: "Typed Markdown table to JSON objects",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "d", path: "transforms/11-table-to-json-rows" },
+  ],
+  input:
+    '| "name" | "score" | "active" |\n| --- | --- | --- |\n| "Ben" | 12.50 |  |\n| "Ada" |  | true |\n|  |  |  |\n',
+  expected:
+    '```json\n[{"name":"Ben","score":12.50},{"name":"Ada","active":true},{}]\n```\n',
+}, {
   id: "10-json-rows-to-table",
   title: "JSON rows to Markdown table",
   dependencies: [

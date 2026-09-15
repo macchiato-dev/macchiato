@@ -237,5 +237,5 @@ decode call, so callers must consume it immediately.
 
 Run locals: length 0, line start/end 1/2, temporary width 3, line index 4,
 header width 5. Row locals: start/end 0/1, data-mode 2, cursor 3, next pipe 4,
-cell start/end 5/6, column count 7. Cell locals: start/end 0/1, current byte 2,
+cell start/end 5/6, column count 7. Decoder locals: start/end 0/1, current byte 2,
 escaped byte 3, decoded-reference end 4.

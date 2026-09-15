@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 123 tests covering all twenty examples and the supplied
+`deno task test` runs 130 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -244,7 +244,7 @@ Try [the typed row converter](http://microwasm.localhost:3030/?tool=10-json-rows
 [Typed table to JSON rows](transforms/11-table-to-json-rows.md) reverses that
 representation. It decodes each cell into bounded scratch and validates it as
 one complete JSON value before appending it. A cell cannot smuggle extra
-columns through commas or unmatched brackets. Its 1,312-byte module imports
+columns through commas or unmatched brackets. Its 1,348-byte module imports
 the shared parser and memory; the original table is not modified. The parser
 can now read disjoint scratch spans, using a new memory-wide numeric scanner
 entry while the original first-page `valid` API keeps its existing bounds.
@@ -259,8 +259,17 @@ allocating strings, so equivalent key spellings share one column. Duplicate
 keys within a row are rejected; nested value tokens are preserved.
 Try [the object-table converter](http://microwasm.localhost:3030/?tool=08-json-objects-to-table).
 
-Fourteen transformations are implemented: tools 1–8 and 10–15 in the plan.
-The remaining 36 are pending.
+[Table to JSON objects](transforms/09-table-to-json-objects.md) reverses the
+object-table representation. Blank cells omit properties, and each remaining
+cell is validated independently. Header spellings are retained, with decoded
+duplicate names rejected. Its 1,182-byte module imports the parser, comparator
+and the typed-row module's shared cell decoder. It keeps original header spans
+rather than a decoded object tree. See its source for memory bounds and the
+tradeoff of decoding short headers again when emitting properties.
+Try [the reverse object-table converter](http://microwasm.localhost:3030/?tool=09-table-to-json-objects).
+
+Fifteen transformations are implemented: tools 1–15 in the plan.
+The remaining 35 are pending.
 
 ## Provisional byte-list notation
 
