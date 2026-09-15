@@ -235,4 +235,10 @@ export const transforms = [{
     '- {}\n  - NAME Ben\n  - PORT "3030"\n  - GREETING "Hello # friend"\n  - LINES "first\\nsecond"\n  - LITERAL "${NAME}"\n  - EMPTY ""',
   expected:
     '```dotenv\nNAME=Ben\nPORT=3030\nGREETING="Hello # friend"\nLINES="first\\nsecond"\nLITERAL=${NAME}\nEMPTY=\n```\n',
+}, {
+  id: "24-query-to-list",
+  title: "URL query string to ordered Markdown pairs",
+  input: "```query\n?name=Ben+Atkin&tag=wasm&tag=Markdown&flag\n```\n",
+  expected:
+    '- []\n  - []\n    - "name"\n    - "Ben Atkin"\n  - []\n    - "tag"\n    - "wasm"\n  - []\n    - "tag"\n    - "Markdown"\n  - []\n    - "flag"\n    - ""\n',
 }];

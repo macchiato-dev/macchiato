@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–23, and the side-by-side
+syntax validation and binary64 parsing, tools 1–24, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 27 tools remain.
+significant-digit formatting are implemented too. The other 26 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–23 are now all implemented.
+stable numbering; tools 1–24 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -55,6 +55,10 @@ expands variables. Tool 23 writes flat string properties, choosing between
 unquoted, double-quoted, single-quoted and backtick forms. It rejects values
 that this dialect cannot preserve. Both directions support longer Markdown
 fences when literal multiline data contains a closing-fence line.
+Tool 24 reads query strings using form-url-encoded decoding, with standard
+UTF-8 replacement rather than rejection. Arrays of name/value pairs preserve
+order, repeated names and empty names; the reverse tool will use that same
+representation. Percent escapes are decoded after splitting raw separators.
 
 ## Shared number conversion
 
@@ -101,8 +105,8 @@ with different constants would not satisfy this list.
 21. Hierarchical section/key list to fenced INI.
 22. Fenced dotenv assignments to a Markdown key/value list.
 23. Markdown key/value list to fenced dotenv with quoting.
-24. Fenced URL query string to a Markdown list, decoding UTF-8 values.
-25. Markdown key/value list to a percent-encoded query-string fence.
+24. Fenced URL query string to ordered Markdown name/value pairs, decoding UTF-8.
+25. Ordered Markdown name/value pairs to a percent-encoded query-string fence.
 26. Fenced XML to a Markdown element/attribute/text tree.
 27. Markdown element/attribute/text tree to escaped fenced XML.
 28. Markdown outline of links to fenced OPML.

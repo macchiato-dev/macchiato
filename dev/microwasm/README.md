@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 187 tests covering all twenty examples and the supplied
+`deno task test` runs 193 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -339,8 +339,16 @@ short quote/backslash combinations and CommonMark checks supplement the
 generated round trips and independent dotenv-parser comparisons.
 Try [the dotenv writer](http://microwasm.localhost:3030/?tool=23-list-to-dotenv).
 
-Twenty-three transformations are implemented: tools 1–23 in the plan.
-The remaining 27 are pending.
+[Query strings to ordered pairs](transforms/24-query-to-list.md) preserves
+repeated names, empty names and order using arrays of name/value pairs. Its
+1,634-byte standalone module implements percent decoding and UTF-8 replacement
+without a host parser. Tests compare generated queries with `URLSearchParams`
+and every one- and two-byte sequence with `TextDecoder`, plus multibyte
+boundaries, malformed sequences and exact input/output limits.
+Try [the query reader](http://microwasm.localhost:3030/?tool=24-query-to-list).
+
+Twenty-four transformations are implemented: tools 1–24 in the plan.
+The remaining 26 are pending.
 
 ## Provisional byte-list notation
 

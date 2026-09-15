@@ -1252,6 +1252,56 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
       .includes('"BODY" "literal\\\\n\\n```\\nafter"')
   );
+  await page.goto(new URL("?tool=24-query-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const queryInput =
+    "```query\n?tag=%3Cb%3ENotes%3C%2Fb%3E&tag=%E2%82A&=empty&flag\n```\n";
+  const queryOutput =
+    '- []\n  - []\n    - "tag"\n    - "<b>Notes</b>"\n  - []\n    - "tag"\n    - "�A"\n  - []\n    - ""\n    - "empty"\n  - []\n    - "flag"\n    - ""\n';
+  await page.locator("#transform-input").fill(queryInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    queryOutput,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "Decoded query data became HTML",
+  );
+  check(
+    (await page.locator("#transform-output-rendered").textContent())?.includes(
+      "�A",
+    ),
+    "Decoded replacement text was lost",
+  );
+  await page.screenshot({
+    path: `${artifacts}/query-to-list-rendered.png`,
+    fullPage: true,
+  });
+  await page.locator("#transform-input").fill("```query\na=b\nc=d\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-output").inputValue() === queryOutput,
+    "Malformed query framing replaced successful output",
+  );
+  await page.locator("#transform-input").fill("```query\nx=%2B+y\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value ===
+      '- []\n  - []\n    - "x"\n    - "+ y"\n'
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

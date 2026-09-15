@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 187 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 193 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -170,7 +170,7 @@ rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
 There are nineteen implemented transformations out of the planned fifty:
-tools 1–23.
+tools 1–24.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -501,6 +501,29 @@ the writer's output back with tool 22. The inspected screenshot shows the
 embedded backtick line and following assignment together in the same code
 block, alongside editable list source. There are 27 transformations still
 pending; this is not goal completion.
+
+## Query reader checkpoint
+
+The 1,634-byte standalone query reader adds six tests. One thousand generated
+ordered pair lists are serialized by `URLSearchParams`, then decoded by the
+actual Wasm module. Two thousand generated raw queries also compare directly
+with that independent parser. Repeated/empty names, first-equals splitting,
+encoded separators, plus signs, literal fragments and bad percent escapes
+are covered explicitly.
+
+All 256 one-byte and 65,536 two-byte sequences are percent-encoded and checked
+against `TextDecoder` with BOM retention. Ten thousand longer byte sequences,
+scalar boundaries, truncation and invalid-continuation recovery extend that
+comparison. Direct malformed UTF-8 at the Wasm ABI is also tested. Input is
+unchanged; exact 64 KiB input and 128 KiB output cases pass, excess output
+traps without writing beyond its region, and the instance recovers afterward.
+Queries that would close their own Markdown fence are rejected, with percent
+encoding documented as the lossless spelling.
+
+The browser suite edits percent-encoded HTML-looking data and repeated names,
+checks rendered output remains text, retains the previous result on malformed
+framing and runs successfully again. Its screenshot is
+`dist/browser/query-to-list-rendered.png`.
 
 ## Size is the complete module, not memory consumption
 
