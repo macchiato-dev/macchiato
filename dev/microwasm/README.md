@@ -103,7 +103,13 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 300 tests covering all twenty examples and the supplied
+Multi-value returns and standard Wasm SIMD are part of the target baseline.
+Use multiple results for spans and iterator state rather than scratch result
+buffers. Use SIMD selectively where it simplifies or accelerates bulk work,
+not throughout branch-heavy parsers. The shared UTF-8 validator's ASCII-block
+check is one such place; Unicode sequences and short tails remain scalar.
+
+`deno task test` covers all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -416,7 +422,7 @@ Try [the RSS writer](http://microwasm.localhost:3030/?tool=33-entries-to-rss).
 The iCalendar reader (34) and reverse writer (35) are implemented too.
 
 The [calendar content-line helper](transforms/00-calendar-lines.md) is now
-implemented in 1,185 bytes. It unfolds before validating UTF-8, preserving
+implemented in 1,266 bytes. It unfolds before validating UTF-8, preserving
 characters split across physical lines, and returns spans for property names,
 quoted parameter lists and raw values. Six test groups cover precise cursor
 boundaries, 300 folded calendars compared with ICAL.js, split UTF-8 repair,

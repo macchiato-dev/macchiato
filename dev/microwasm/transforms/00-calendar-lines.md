@@ -120,9 +120,39 @@ a nonempty name and an equals sign before receiving the next delimiter.
 A blank line has no property name and traps. `BEGIN` and `END` are ordinary
 names at this layer; matching component boundaries is the agenda reader's job.
 
+## A targeted SIMD fast path for ASCII
+
+Inside the existing ASCII branch, when at least sixteen input bytes remain,
+load one vector and test its byte sign bits. A zero `i8x16.bitmask` means all
+sixteen bytes are ASCII, so advance sixteen bytes at once. Otherwise use the
+existing scalar state machine. Short tails remain scalar too.
+
+The remaining-length check precedes the load, including for unaligned spans.
+Skipping is forbidden while a continuation is pending: ASCII in that state
+is an encoding error, not a block that may be ignored. ASCII control bytes
+remain valid encoding here; application-specific control rules belong to
+callers, as before. SIMD changes no validation policy and writes no memory.
+
+The [binary instruction definitions](https://webassembly.github.io/spec/core/binary/instructions.html)
+encode `v128.load` as `fd 00` and `i8x16.bitmask` as `fd 64`. The load's two
+zero immediates specify byte alignment and zero offset. This is a selective
+bulk-scan optimization, not a SIMD rewrite of the parsers.
+
+The private ASCII helper consumes consecutive complete ASCII vectors, then
+returns the last consumed byte's position. If no vector is consumed, it
+returns the original position, whose first byte the caller already checked.
+The scalar loop's existing one-byte increment therefore works in both cases.
+Keeping the vector loop in a separate function avoids enlarging the hot
+Unicode state-machine path. No vector load is attempted for short tails.
+
+`deno bench --allow-read=. utf8_bench.ts` compares this path with the same
+validator with only the labeled call site removed. That scalar reference is
+benchmark-only; there is no runtime feature detection or fallback build.
+
 ## Module
 
-Functions: unfold 0, emit 1, utf8 2, nameEnd 3, parameter 4, line 5, range 6.
+Functions: unfold 0, emit 1, utf8 2, nameEnd 3, parameter 4, line 5, range 6,
+ASCII-block scan 7.
 The sole global is the unfold output pointer. The UTF-8 state machine is the
 same range-checking pattern as [example 14](../examples/14-utf8-validation.md),
 adapted to explicit spans and a trapping validation entry point.
@@ -135,13 +165,13 @@ adapted to explicit spans and a trapping validation entry point.
 - cl-import-section: `02 {{size:cl-imports}}`
   - cl-imports: `01 01 6e 06 6d656d6f7279 02 01 04 04`
 - cl-function-section: `03 {{size:cl-functions}}`
-  - cl-functions: `07 00 01 02 00 03 04 02`
+  - cl-functions: `08 00 01 02 00 03 04 02 00`
 - cl-global-section: `06 {{size:cl-globals}}`
   - cl-globals: `01 7f 01 41 00 0b`
 - cl-export-section: `07 {{size:cl-exports}}`
   - cl-exports: `06 06 756e666f6c64 00 00 04 75746638 00 02 07 6e616d65456e64 00 03 09 706172616d65746572 00 04 04 6c696e65 00 05 06 6d656d6f7279 02 00`
 - cl-code-section: `0a {{size:cl-code}}`
-  - cl-code: `07`
+  - cl-code: `08`
     - cl-unfold-record: `{{size:cl-unfold-body}}`
       - cl-unfold-body: `01 02 7f 20 00 20 01 10 06 20 01 41 808004 4b 04 40 00 0b 41 808004 24 00 02 40 03 40 20 00 20 01 4f 0d 01`
         - cl-unfold-read: `20 00 2d 00 00 21 02 20 00 41 01 6a 21 00`
@@ -153,13 +183,16 @@ adapted to explicit spans and a trapping validation entry point.
     - cl-emit-record: `{{size:cl-emit-body}}`
       - cl-emit-body: `00 23 00 41 808008 4f 04 40 00 0b 23 00 20 00 3a 00 00 23 00 41 01 6a 24 00 0b`
     - cl-utf8-record: `{{size:cl-utf8-body}}`
-      - cl-utf8-body: `01 04 7f 20 00 20 01 10 06 41 8001 21 03 41 bf01 21 04 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 21 05`
+      - cl-utf8-body: `01 04 7f 20 00 20 01 10 06 41 8001 21 03 41 bf01 21 04 02 40 03 40 20 00 20 01 4f 0d 01`
+        - cl-utf8-read: `20 00 2d 00 00 21 05`
         - cl-utf8-continuation: `20 02 04 40 20 05 20 03 49 20 05 20 04 4b 72 04 40 00 0b 20 02 41 01 6b 21 02 41 8001 21 03 41 bf01 21 04`
         - cl-utf8-lead: `05 20 05 41 8001 4f 04 40`
           - cl-utf8-two: `20 05 41 c201 4f 20 05 41 df01 4d 71 04 40 41 01 21 02`
           - cl-utf8-three: `05 20 05 41 e001 4f 20 05 41 ef01 4d 71 04 40 41 02 21 02 20 05 41 e001 46 04 40 41 a001 21 03 0b 20 05 41 ed01 46 04 40 41 9f01 21 04 0b`
           - cl-utf8-four: `05 20 05 41 f001 4f 20 05 41 f401 4d 71 04 40 41 03 21 02 20 05 41 f001 46 04 40 41 9001 21 03 0b 20 05 41 f401 46 04 40 41 8f01 21 04 0b`
-          - cl-utf8-invalid: `05 00 0b 0b 0b 0b 0b`
+          - cl-utf8-invalid: `05 00 0b 0b 0b`
+          - cl-utf8-ascii-block: `05 20 01 20 00 6b 41 10 4f 04 40 20 00 20 01 10 07 21 00 0b`
+        - cl-utf8-class-end: `0b 0b`
         - cl-utf8-next: `20 00 41 01 6a 21 00 0c 00 0b 0b 20 02 04 40 00 0b 0b`
     - cl-name-record: `{{size:cl-name-body}}`
       - cl-name-body: `01 02 7f 20 00 20 01 10 06 20 00 21 02 02 40 03 40 20 02 20 01 4f 0d 01 20 02 2d 00 00 21 03`
@@ -184,3 +217,5 @@ adapted to explicit spans and a trapping validation entry point.
         - cl-line-return: `20 00 20 02 10 02 20 03 20 04 20 05 20 02 20 06 0b`
     - cl-range-record: `{{size:cl-range-body}}`
       - cl-range-body: `00 20 00 20 01 4b 20 01 41 80800c 4b 72 04 40 00 0b 0b`
+    - cl-ascii-record: `{{size:cl-ascii-body}}`
+      - cl-ascii-body: `01 01 7f 20 00 21 02 02 40 03 40 20 01 20 02 6b 41 10 49 0d 01 20 02 fd 00 00 00 fd 64 0d 01 20 02 41 10 6a 21 02 0c 00 0b 0b 20 02 20 00 47 04 40 20 02 41 01 6b 0f 0b 20 00 0b`

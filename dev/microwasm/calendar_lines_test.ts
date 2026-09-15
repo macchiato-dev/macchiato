@@ -283,3 +283,49 @@ Deno.test("Calendar span limits: full page, no mutations while reading, and reus
   equal(h.unfold("X:\r\n"), "X:\n");
   equal(h.memory.subarray(131072).every((byte) => byte === 0xa5), true);
 });
+
+Deno.test("UTF-8 SIMD: lane positions, unaligned loads, scalar tails and pending continuations", async () => {
+  const h = await helper();
+  const sequences = [
+    [0],
+    [127],
+    [0x80],
+    [0xc0, 0xaf],
+    [0xc2, 0xa0],
+    [0xe0, 0xa0, 0x80],
+    [0xed, 0xa0, 0x80],
+    [0xed, 0x9f, 0xbf],
+    [0xf0, 0x90, 0x80, 0x80],
+    [0xf4, 0x90, 0x80, 0x80],
+    [0xc2],
+    [0xe2, 0x82],
+    [0xf0, 0x9f, 0x98],
+  ];
+  for (let offset = 0; offset < 16; offset++) {
+    for (let lane = 0; lane < 32; lane++) {
+      for (const seq of sequences) {
+        for (const tail of [0, 15, 16, 17]) {
+          const bytes = new Uint8Array(lane + seq.length + tail).fill(65);
+          bytes.set(seq, lane);
+          const end = h.input(bytes, offset);
+          h.memory.fill(0xff, end, end + 16); // Outside the span is not input.
+          let valid = true;
+          try {
+            decoder.decode(bytes);
+          } catch {
+            valid = false;
+          }
+          if (valid) h.c.utf8(offset, end);
+          else traps(() => h.c.utf8(offset, end));
+          equal(toHex(h.memory.subarray(offset, end)), toHex(bytes));
+        }
+      }
+    }
+  }
+  for (let length = 0; length <= 48; length++) {
+    const start = 196608 - length;
+    h.memory.fill(65, start, 196608);
+    h.memory.fill(0xff, 196608);
+    h.c.utf8(start, 196608);
+  }
+});
