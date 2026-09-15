@@ -49,6 +49,18 @@ export const transforms = [{
   input: "| name | city |\n| --- | --- |\n| Ben | Phoenix |\n| Ada | London |",
   expected: "```tsv\nname\tcity\nBen\tPhoenix\nAda\tLondon\n```\n",
 }, {
+  id: "08-json-objects-to-table",
+  title: "JSON objects to a table with a header union",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+  ],
+  input:
+    '```json\n[{"name":"Ben","score":12.50},{"name":"Ada","active":true},{}]\n```\n',
+  expected:
+    '| "name" | "score" | "active" |\n| --- | --- | --- |\n| "Ben" | 12.50 |  |\n| "Ada" |  | true |\n|  |  |  |\n',
+}, {
   id: "10-json-rows-to-table",
   title: "JSON rows to Markdown table",
   dependencies: [

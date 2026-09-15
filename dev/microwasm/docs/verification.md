@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 113 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 123 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are thirteen implemented transformations out of the planned fifty:
-tools 1–7 and 10–15.
+There are fourteen implemented transformations out of the planned fifty:
+tools 1–8 and 10–15.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -262,6 +262,28 @@ spans outside the first page. JSON scratch-span checks reject output overlap,
 literal overlap and out-of-memory bounds. Browser tests render both sides,
 compare exact JSON text, keep markup inert, reject a multi-value cell while
 retaining the prior result, and recover to the empty-array result.
+
+Four JSON-key tests exercise the allocation-free comparator: ordinary and
+escaped forms, 2,000 generated UTF-16 strings, Unicode scalar boundaries,
+surrogate pairs, escaped lone surrogates, case/normalization distinctions,
+encountered invalid escapes/UTF-8, invalid spans, unchanged memory and long
+common prefixes. The helper imports only memory and remains a shared pattern,
+not a fifteenth transformation. Early difference is not full JSON validation;
+the object-table converter validates the entire document first.
+
+Six object-table tests cover first-appearance header order, absent/null/empty
+string distinctions, later-introduced keys, empty rows, exact nested JSON
+tokens, prototype-like names and every ASCII character in keys/strings.
+An independent encoder checks 500 generated sparse row sets. Negative cases
+include non-object rows, zero-column nonempty tables, semantically duplicate
+keys, malformed JSON and fences, the 1,024-column limit, nesting overflow,
+and output expansion beyond 112 KiB. Exact 64 KiB input fills the final
+scratch byte; original input is checked unchanged and subsequent runs recover
+after traps. Chromium runs all fourteen fixtures and checks the new union's
+actual header/cell text, literal markup, missing versus null, duplicate-key
+failure retention, and empty-array recovery. The inspected screenshot shows
+editable source beside its rendered table, with the escaped spelling sharing
+the original column.
 The rendered side-by-side screenshot was inspected: the embedded pipe remains
 in one cell, markup-like text stays literal, and duplicate keys and exponent
 spelling are visible unchanged in the JSON output.

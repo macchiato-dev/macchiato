@@ -675,6 +675,67 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === "```json\n[]\n```\n"
   );
+  await page.goto(new URL("?tool=08-json-objects-to-table", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const objects = '```json\n[{"name":"<b>Ben</b>","score":null},' +
+    '{"\\u006eame":"Ada","active":true},{}]\n```\n';
+  await page.locator("#transform-input").fill(objects);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered th").allTextContents()
+      .then((cells) => JSON.stringify(cells)) ===
+      JSON.stringify(['"name"', '"score"', '"active"']),
+    "Escaped key created an extra column or reordered the union",
+  );
+  check(
+    await page.locator("#transform-output-rendered td").allTextContents()
+      .then((cells) => JSON.stringify(cells)) ===
+      JSON.stringify([
+        '"<b>Ben</b>"',
+        "null",
+        "",
+        '"Ada"',
+        "",
+        "true",
+        "",
+        "",
+        "",
+      ]),
+    "Missing and null cells were conflated or literal markup was interpreted",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "JSON string created HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/json-object-union-rendered.png`,
+    fullPage: true,
+  });
+  await side("output", "Code");
+  const successfulObjects = await page.locator("#transform-output")
+    .inputValue();
+  await page.locator("#transform-input").fill(
+    '```json\n[{"x":1,"\\u0078":2}]\n```',
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === successfulObjects,
+    "Duplicate key failure replaced the successful table",
+  );
+  await page.locator("#transform-input").fill("```json\n[]\n```");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === ""
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 113 tests covering all twenty examples and the supplied
+`deno task test` runs 123 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -249,8 +249,18 @@ the shared parser and memory; the original table is not modified. The parser
 can now read disjoint scratch spans, using a new memory-wide numeric scanner
 entry while the original first-page `valid` API keeps its existing bounds.
 Try [the reverse typed-table converter](http://microwasm.localhost:3030/?tool=11-table-to-json-rows).
-Thirteen transformations are implemented: tools 1–7 and 10–15 in the plan.
-The remaining 37 are pending.
+
+[JSON objects to table](transforms/08-json-objects-to-table.md) collects an
+ordered union of property names across all rows. Blank cells represent absent
+properties; `null` remains explicit. Its 1,187-byte module imports the parser
+and an [815-byte JSON key comparator](transforms/00-json-string-keys.md).
+The comparator decodes UTF-8 and JSON escapes into UTF-16 units without
+allocating strings, so equivalent key spellings share one column. Duplicate
+keys within a row are rejected; nested value tokens are preserved.
+Try [the object-table converter](http://microwasm.localhost:3030/?tool=08-json-objects-to-table).
+
+Fourteen transformations are implemented: tools 1–8 and 10–15 in the plan.
+The remaining 36 are pending.
 
 ## Provisional byte-list notation
 
