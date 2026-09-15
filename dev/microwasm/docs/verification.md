@@ -582,6 +582,33 @@ tests compare both entries and the iterator over the existing 100 XML cases.
 This is preparation for tool 29, not a new transformation. There are still
 28 published tools; the OPML-specific reader has not been completed.
 
+## Checkpoint: HTML character reader for bookmark imports
+
+The shared reader has all 2,231 WHATWG names, including semicolon-less aliases
+and two-scalar replacements. Its byte table remains visible in the Markdown;
+the index is broken into short rows rather than one opaque long line.
+The source data's retrieval date and SHA-256 are recorded alongside it.
+
+Five tests compare every named entry with the independent entities decoder,
+every BMP numeric reference, C1 replacements, overflow-resistant accumulation,
+all ASCII bytes at digit boundaries, attribute ambiguity, malformed UTF-8,
+exact source bounds, pending results and untouched memory. The numeric digit
+test caught punctuation being misclassified as digit 9; its lower bound is
+now explicit in both the bytes and the function breakdown.
+
+Chromium checks the names in both text and attribute contexts, plus malformed
+references, raw CR/NUL and astral text. Ordinary text returns a NUL token;
+the HTML body tree builder drops it, while attributes replace it with U+FFFD.
+The test keeps that distinction rather than claiming this helper builds a DOM.
+The oracle uses an explicit document DOCTYPE and body, as a bookmark document
+does. A separate probe found Chromium's bare-fragment DOMParser path preserved
+an attribute NUL in an astral-containing string, whereas the full-document
+path replaced it as specified. That discrepancy is not emulated in Wasm.
+
+All 250 tests, the static build, and the browser document checks passed at this
+checkpoint. There are still 29 published transformations; this helper does not
+advance the fifty-tool count.
+
 ## Checkpoint: OPML reader and rendered outline parity
 
 Tool 29 is now published: the 2,698-byte module validates the fenced OPML

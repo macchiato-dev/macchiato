@@ -169,6 +169,79 @@ try {
       `./${new URL(link).searchParams.get("doc")!.slice(0, -3)}`,
     );
   }
+  const htmlPage = libraryLinks.find((link) =>
+    link.includes("00-html-characters")
+  );
+  check(htmlPage, "Missing HTML character documentation");
+  await page.goto(htmlPage!);
+  await page.waitForSelector("#rendered h1");
+  const htmlCases = await page.evaluate(async () => {
+    const memory = new WebAssembly.Memory({ initial: 4, maximum: 4 });
+    const k = (await WebAssembly.instantiateStreaming(
+      await fetch("./transforms/00-json-string-keys.wasm"),
+      { n: { memory } },
+    )).instance.exports;
+    const h = (await WebAssembly.instantiateStreaming(
+      await fetch("./transforms/00-html-characters.wasm"),
+      { k },
+    )).instance.exports;
+    const next = h.next as (...args: number[]) => number[];
+    const bytes = new Uint8Array(memory.buffer),
+      view = new DataView(memory.buffer);
+    const encoder = new TextEncoder(), decoder = new TextDecoder();
+    const names = Array.from({ length: 2231 }, (_, i) => {
+      const p = 0x33000 + view.getUint16(0x31000 + 2 * i, true);
+      return "&" + decoder.decode(bytes.subarray(p + 1, p + 1 + bytes[p]));
+    });
+    const parser = new DOMParser();
+    const sources = [
+      names.join("|"),
+      "&notit; &notin; &amp=1 &AMPx &copy7 &fjlig; &NotEqualTilde;",
+      "&#@; &#x`; &#13; &#xD; &#0; &#128; &#xD800; &#1114112;",
+      "&#" + "9".repeat(1000) + "; &unknown; &#x; &; &",
+      "line\r\nnext\rline\0with\ttabs and 😀",
+    ];
+    for (const source of sources) {
+      const input = encoder.encode(source);
+      if (input.length > 65536) throw Error("HTML oracle input too big");
+      for (const attribute of [0, 1]) {
+        bytes.set(input);
+        let p = 0, pending = 0, output = "";
+        for (let calls = 0;; calls++) {
+          if (calls > input.length * 2 + 1) {
+            throw Error("HTML iterator stalled");
+          }
+          const [cp, end, later] = next(p, input.length, attribute, pending);
+          p = end;
+          pending = later;
+          if (cp === -1) break;
+          output += String.fromCodePoint(cp);
+        }
+        const doc = parser.parseFromString(
+          "<!DOCTYPE html><body>" +
+            (attribute ? `<span data-value="${source}"></span>` : source),
+          "text/html",
+        );
+        const expected = attribute
+          ? doc.querySelector("span")!.getAttribute("data-value")
+          : doc.body.textContent;
+        // The in-body tree builder ignores raw NUL character tokens;
+        // numeric references to zero have already become U+FFFD.
+        const bodyText = attribute ? output : output.replaceAll("\0", "");
+        if (bodyText !== expected) {
+          throw Error(
+            `Browser HTML character mismatch in mode ${attribute}: ` +
+              JSON.stringify([output.slice(0, 100), expected?.slice(0, 100)]),
+          );
+        }
+      }
+    }
+    return names.length;
+  });
+  check(htmlCases === 2231, "HTML character table count differs");
+  console.log(
+    "HTML character reader agrees with browser text and attribute parsing",
+  );
   const xmlPage = libraryLinks.find((link) => link.includes("00-xml-strings"));
   check(xmlPage, "Missing XML primitive documentation");
   await page.goto(xmlPage!);

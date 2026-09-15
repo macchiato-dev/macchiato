@@ -85,7 +85,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 245 tests covering all twenty examples and the supplied
+`deno task test` runs 250 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -425,6 +425,14 @@ seven-node tree, punctuation edits, malformed input, exact output limits and
 recovery. The renderer now understands angle-delimited destinations and
 decodes punctuation/reference escapes inside links while keeping them inert.
 Try [the OPML reader](http://microwasm.localhost:3030/?tool=29-opml-to-outline).
+
+The [HTML character reader](transforms/00-html-characters.md) prepares the
+bookmark import pair. It includes the complete WHATWG named-reference table
+as visible length-prefixed data, with binary lookup, longest-prefix matching,
+attribute ambiguity handling, numeric references and UTF-8 decoding in Wasm.
+It is shared infrastructure, not another counted transformation. Tests cover
+all 2,231 names, all BMP numeric references and malformed byte boundaries;
+browser tests compare text and attributes with Chromium's HTML parser.
 
 ## Provisional byte-list notation
 
