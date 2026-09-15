@@ -123,9 +123,30 @@ tables for classifications/state, and byte-list substeps with explanations.
 A list of function names or one top-level pseudocode block is not sufficient
 for a complicated routine. Repeated mechanisms can link to a shared pattern,
 but the routine's differing decisions should remain explained locally. The
-XML modules, query pair and list-to-JSON compiler now use this fuller form;
-other earlier tools still need
-a documentation-depth review as part of completing the collection.
+XML modules, query pair and list-to-JSON compiler use this fuller form.
+The following earlier pages have also had their explanations checked against
+the instruction branches, rather than only their function names:
+
+- [JSON descent](../transforms/02-json-to-list.md): checked peeks, delimiter
+  ownership across recursive calls, the child loop, output-mode differences,
+  string escape validation, and entry-point failure boundaries.
+- [CSV reader](../transforms/04-csv-to-table.md): all four field states,
+  doubled quotes, CRLF cursor movement, the final-record flag, width checks,
+  and decimal escaping. TSV's unreachable quote states are explicit.
+- [Inline renderer](../renderer/03-inline.md) and its
+  [scan helpers](../renderer/02-scanning.md): actual dispatch order, distinct
+  failed-scan outcomes, cursor progress, and nested Wasm branch targets.
+- [Unsigned integers](../numbers/01-unsigned-integers.md): digit classification,
+  the pre-multiply overflow inequality, extraction and reversal invariants.
+- [JSON number scanner](../numbers/02-json-number.md): the one-byte zero branch,
+  mandatory digit progress after optional markers, and whole-span rejection.
+
+Keep this as a qualitative review, not a generated inventory of functions.
+Diagrams must expose the decisions that are easy to get wrong; an arrow between
+two function names does not explain a loop. Small routines can use prose or a
+state table instead. Mermaid remains visible source in the partial renderer,
+as with other code fences. Other earlier tools still need a documentation-depth
+review as part of completing the collection.
 
 1. Hierarchical JSON-shaped Markdown list to fenced JSON.
 2. Fenced JSON to hierarchical JSON-shaped Markdown list.

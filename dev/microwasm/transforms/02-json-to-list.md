@@ -39,23 +39,125 @@ Each recursive call owns only a depth, closing delimiter and a few temporary
 spans. It writes a container's list line before visiting its children. Nothing
 needs to retain a node after its subtree has been emitted.
 
-```text
-value(depth):
-    skip JSON whitespace
-    if string: validate its escapes, copy the original span, emit newline
-    else if object or array:
-        enforce the nesting limit; emit '{}' or '[]' and newline
-        consume opening delimiter; accept an immediate closing delimiter
-        otherwise, for each child:
-            emit indentation and '- '
-            for objects: consume a quoted key and ':'; emit key and space
-            value(depth + 1)
-            require a comma or this container's closing delimiter
-    else:
-        scan up to a separator
-        require true, false, null, or a valid JSON number
-        emit '= ', the unchanged scalar, and newline
+### Inside `value`: dispatch without consuming the first byte
+
+`jl-value-peek` calls `skip`, then `take`, then backs the input cursor up by
+one. This is a checked peek: an absent value traps in `take`, while each
+selected branch still receives its opening byte. A recursive child consumes
+its own value, **not** its parent's comma or closing delimiter.
+
+```mermaid
+flowchart TD
+  A[Skip whitespace; checked peek] --> B{Opening byte?}
+  B -- quote --> S[Validate and copy complete string span]
+  S --> SN[Lists only: emit newline; return]
+  B -- brace or bracket --> D{Depth below 128?}
+  D -- no --> X[Trap before opening another container]
+  D -- yes --> O[Remember closing byte; emit container opening]
+  O --> E[Consume opener; skip whitespace; take next byte]
+  E --> F{Already the matching close?}
+  F -- yes --> R[Finish empty container; return]
+  F -- no --> U[Put that byte back; enter child loop]
+  B -- other --> V[Scan scalar until whitespace, comma, or a closing delimiter]
+  V --> K{Exact true, false, or null?}
+  K -- no --> N{Entire span is a JSON number?}
+  N -- no --> X
+  K -- yes --> C[Copy unchanged scalar; return]
+  N -- yes --> C
 ```
+
+The closing byte is the opener plus two: `[` becomes `]`, `{` becomes `}`.
+It lives in value-local 2, so descending into a nested container cannot
+overwrite the parent's expected close. Only the input/output cursors are
+shared across recursive calls. Scalar-local 4 begins at zero on each call;
+an exact keyword match sets it, otherwise the imported number validator must
+accept the whole span. This rejects both an empty scalar and `truex`.
+
+### Inside the child loop: delimiter ownership
+
+```mermaid
+flowchart TD
+  A[Emit child prefix for depth plus one] --> B{Parent is an object?}
+  B -- yes --> K[Skip whitespace; validate and copy quoted key]
+  K --> C[Emit key separator; require input colon]
+  B -- no --> V[Call value at depth plus one]
+  C --> V
+  V --> S[Skip whitespace; take parent's separator]
+  S --> D{Matching closing byte?}
+  D -- yes --> E[Finish container in selected output mode; return]
+  D -- no --> M{Comma?}
+  M -- no --> X[Trap: mismatched close or missing comma]
+  M -- yes --> P[Emit comma in JSON modes]
+  P --> A
+```
+
+After a comma there is no special empty-child case. The next iteration must
+read a key/value, which is why a trailing comma fails instead of being treated
+as an empty member. An array's `]` encountered there reaches the scalar branch
+as a zero-length token and fails validation. An object's `}` fails the quoted
+key check. A missing colon fails before the value call.
+
+For `{"a":[1,2],"b":3}`, the nested array returns just after `]`. The outer
+object then consumes the comma before `"b"`. When `3` returns, its cursor is
+still **on** `}`; the outer object consumes that close and returns. This is the
+same ownership rule for every nesting level, with no saved token queue.
+
+| Decision point | Lists: mode 0 | Pretty JSON: mode 1 | Compact JSON: mode 2 |
+| --- | --- | --- | --- |
+| Prefix | Two spaces per depth, then `- ` | Two spaces per depth | Nothing |
+| Container opening | Emit `{}` or `[]`, then LF | Emit opener only | Emit opener only |
+| Before a nonempty child | Prefix only | LF, then prefix | Nothing |
+| After an object key | Space | Colon and space | Colon |
+| After a scalar/string | LF; scalar also has `= ` prefix | Nothing | Nothing |
+| Between children | No comma | Comma | Comma |
+| Nonempty container close | Nothing: marker already emitted | LF, parent indentation, close | Close |
+
+Validation branches do not depend on the output mode. A change to indentation
+must not change which input delimiter a child consumes.
+
+### Inside `string`: validate first, copy once
+
+The start cursor is saved before consuming the required opening quote. The
+loop advances only through `take`, so truncated escapes and missing closing
+quotes share its input-bound check. Ordinary bytes are not copied as they are
+scanned; the final `copy(start, position)` includes both quotes and preserves
+the original escape spelling.
+
+```mermaid
+flowchart TD
+  A[Save start; require opening quote] --> T[Take one byte with bounds check]
+  T --> Q{Closing quote?}
+  Q -- yes --> C[Copy saved span through closing quote; return]
+  Q -- no --> L{Byte below 0x20?}
+  L -- yes --> X[Trap]
+  L -- no --> B{Backslash?}
+  B -- no --> T
+  B -- yes --> E[Take escape selector]
+  E --> U{Selector is u?}
+  U -- yes --> H[Take and validate exactly four hexadecimal digits]
+  H --> T
+  U -- no --> S{One of quote, backslash, slash, b, f, n, r, t?}
+  S -- yes --> T
+  S -- no --> X
+```
+
+This is byte-oriented syntax validation, not a UTF-8 decoder. The input's
+UTF-8 validity is a caller precondition; raw multibyte text passes through.
+The four-digit loop does not turn `\u` escapes into characters or combine
+surrogates. In particular, the slash in an escape is not a structural token.
+
+### Entry points and the failure boundary
+
+`run`, `pretty` and `compact` select a mode, then use the same fenced-document
+reader. It bounds and resets input/output, checks the opening label and line
+ending, reads exactly one value, and checks the closing fence and trailing
+whitespace. Output can already contain a prefix when a later check fails;
+success is the returned length, not the presence of bytes in memory.
+
+`compactSpan` skips only the fence handling. It checks disjoint input/output
+regions and depth, resets the same globals, reads one value, skips JSON
+whitespace, then requires the cursor to equal the supplied end. An accepted
+prefix followed by another value is therefore an error in both entry paths.
 
 The [JSON number scanner](../numbers/02-json-number.md) is imported directly
 as Wasm, with its four-page memory. The host does no JSON parsing. Strings are

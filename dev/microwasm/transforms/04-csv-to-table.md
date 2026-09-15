@@ -35,21 +35,123 @@ matter only outside a quoted field. Finishing a record checks its width; the
 first record also emits a Markdown header separator. There is no stored row
 array and no host CSV parser.
 
-```text
-for each input byte inside the fence:
-    if quoted:
-        quote changes state; everything else is cell data
-    else if after_quote and quote:
-        emit one quote; resume quoted
-    else:
-        require a separator if after_quote
-        quote starts a quoted field only at field start
-        comma ends a field
-        record ending finishes a row, checking its width
-        anything else is cell data; enter unquoted state
-require the quoted field to be closed
-finish the last row if no trailing record ending already did
+### Inside `convert`: the field-state transition table
+
+Local 3 is the field state. It starts at zero because Wasm initializes locals;
+commas and record endings explicitly restore zero. In this table, “data” means
+calling `cell-byte`, which may reject a control character or expand it into a
+Markdown-safe reference. It does not interpret CSV delimiters.
+
+| State before byte | Quote | Comma | LF or CR | Other byte |
+| --- | --- | --- | --- | --- |
+| 0: field start | Enter 2; emit nothing | End empty field; stay 0 | Finish record; stay 0 | Emit data; enter 1 |
+| 1: unquoted | Trap | End field; enter 0 | Finish record; enter 0 | Emit data; stay 1 |
+| 2: quoted | Enter 3; emit nothing | Emit data; stay 2 | Emit data; stay 2 | Emit data; stay 2 |
+| 3: after quote | Emit one quote; return to 2 | End field; enter 0 | Finish record; enter 0 | Trap |
+
+State 3 means “the last quote may have closed the field”; it is not yet a
+committed record boundary. A second quote makes the pair data. For example,
+`"a""b",c` follows states `0 → 2 → 2 → 3 → 2 → 2 → 3 → 0 → 1`.
+The two adjacent quotes emit only one quote, and the comma increments the
+field count only after the closing quote.
+
+```mermaid
+flowchart TD
+  A[Read byte at position] --> Q{State is quoted?}
+  Q -- yes --> QQ{Quote?}
+  QQ -- yes --> AQ[Set after-quote state]
+  QQ -- no --> D[Emit cell data]
+  Q -- no --> E{After-quote plus another quote?}
+  E -- yes --> DD[Emit quote; set quoted state]
+  E -- no --> V[If after-quote, require comma or record ending]
+  V --> O{Quote at field start?}
+  O -- yes --> QS[Set quoted state]
+  O -- no --> S{Delimiter or record ending?}
+  S -- comma --> F[Emit cell boundary; increment width; reset field state]
+  S -- ending --> R[Validate CRLF if needed; finish row; reset field state]
+  S -- other --> U[Emit cell data; set unquoted state]
+  AQ --> N[Advance position once]
+  D --> N
+  DD --> N
+  QS --> N
+  F --> N
+  R --> N
+  U --> N
+  N --> A
 ```
+
+The transition table supplies the error edges omitted from this diagram:
+a quote in an unquoted field and a nonseparator after a closing quote trap.
+The actual byte groups `ct-quoted`, `ct-doubled`, `ct-after-valid`,
+`ct-opening`, `ct-comma` and `ct-newline` follow this decision order. Checking
+quoted state first is what prevents a quoted comma or newline from reaching
+the row machinery.
+
+In TSV mode the opening-quote branch is disabled and the delimiter comparison
+uses tab instead of comma. States 2 and 3 are consequently unreachable;
+quotes and commas are ordinary data. The rest of the width and row handling
+is shared, not a separate TSV parser.
+
+### Record endings: when position advances twice
+
+Outside quotes, LF finishes a row directly. CR first requires another byte
+inside the content region, advances onto it and requires LF. The common
+bottom-of-loop increment then advances past that LF. Inside quotes, CR and
+LF each go through `cell-byte` separately, preserving both as data rather
+than normalizing them.
+
+After finishing a row, `ct-more` checks whether another content byte remains.
+If so it opens the next Markdown row. Otherwise it sets local 4, the
+ended-row flag. The post-loop `ct-final-row` calls `finish-row` only when that
+flag is unset. Thus a trailing record ending is not counted twice. The flag
+is not a general “currently at line start” flag: it is set only at the final
+record ending.
+
+### Inside `finish-row`: first record establishes width
+
+```mermaid
+flowchart TD
+  A[Emit final pipe and LF] --> H{Header width is zero?}
+  H -- yes --> S[Save current width as header width and loop counter]
+  S --> P[Emit one separator cell]
+  P --> C[Decrement counter]
+  C --> D{More columns?}
+  D -- yes --> P
+  D -- no --> E[Emit separator row's final pipe and LF]
+  H -- no --> W{Current width equals header width?}
+  W -- no --> X[Trap; do not publish partial output]
+  W -- yes --> R[Reset current width to one]
+  E --> R
+```
+
+Current width starts at one, even for a blank record, and only delimiters
+increment it. This makes zero an unambiguous “header not seen” sentinel.
+`finish-row` resets the width, while its caller resets the field state and
+decides whether to open another output row. Those responsibilities are
+separate: this function never advances the input cursor.
+
+### Inside `cell-byte`: encode data without creating table syntax
+
+First reject C0 controls other than TAB, LF and CR. Then classify the byte as
+ordinary or Markdown-sensitive. Ordinary bytes are emitted directly. For a
+sensitive byte, emit `&#`, optional hundreds, optional tens, mandatory ones,
+then `;`. The numeric value here is an unsigned byte, so three decimal digits
+always suffice; no general number formatter or scratch buffer is needed.
+
+For a pipe (124), division yields `1`, `2`, `4`, producing `&#124;`. A tab (9)
+skips both optional digits and produces `&#9;`. Every emitted byte goes through
+`emit`'s capacity check, including bytes introduced by escaping. Output size
+is not bounded by the source size alone.
+
+### Fence scanning is separate from the CSV state machine
+
+Before parsing fields, `convert` trims allowed whitespace after the document,
+counts the opening backticks, locates the equal-length closing run, and checks
+its preceding LF. The closing-fence offset becomes local 5, content end.
+The opening label and LF/CRLF are consumed before the first field begins.
+The record ending just before the closing fence remains in the content span.
+This keeps fence recognition out of the hot field loop; that loop sees only
+CSV bytes and an exclusive end offset.
 
 The cell writer uses decimal HTML character references for `&`, `<`, `>`,
 `|`, backslash, backtick, `*`, `_`, `[` and `]`, plus spaces and the three
