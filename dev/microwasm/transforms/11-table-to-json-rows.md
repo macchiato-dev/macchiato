@@ -73,6 +73,25 @@ not a CSV string writer. Numeric references are limited to seven decimal
 digits and valid nonzero Unicode scalar values; malformed references are
 ordinary text. Actual JSON escapes are handled by the shared JSON parser.
 
+## Inside the row loop: structure before decoding
+
+Scan to an unescaped pipe first, then trim literal spaces/tabs at the cell's
+edges. A backslash skips the following source byte during this delimiter
+search; actual punctuation decoding happens only after the cell span is
+known. A decoded pipe therefore cannot retroactively split a cell.
+
+| Physical row | Row mode | Output |
+| --- | --- | --- |
+| First | Decode each cell and validate JSON | First array plus retained width |
+| Second | Strip optional edge colons; require at least three hyphens | No array |
+| Later | Decode each cell and validate JSON | Another array; require same width |
+
+Each call to `decode` resets the scratch cursor; `compactSpan` must consume
+that decoded span before the next cell reuses it. JSON parser globals may be
+reset by every call, but the row count, cell count and output position needed
+by the table converter are retained by the converter itself. A decoded
+`1,2` fails the complete-value check rather than adding an accidental column.
+
 ## Module
 
 Instantiate the number scanner as `n`, the JSON parser using `n` as `p`, and

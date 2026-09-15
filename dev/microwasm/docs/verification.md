@@ -1,5 +1,55 @@
 # Verification checkpoint
 
+## Current completion checkpoint: fifty transformations
+
+All fifty planned transformations are implemented, documented and published.
+The numeric layer includes JSON-number validation and binary64 parsing,
+exact/shortest decimal output, radix 2–36 parsing and formatting, whole-string
+and prefix parsing, and fixed/exponential/significant-digit formatting.
+The browser supplies editable input and output, independent Code/Rendered
+switches and Run. The conversions and Markdown renderer execute the visible
+handwritten Wasm; JavaScript supplies bytes, wires exports and manages the UI.
+
+Final regression results: **407 Deno tests passed**, in partitions of 231 and
+176. The complete transformation browser suite passes all 50 catalogue
+fixtures, independent view switching, editing, failed-run output retention,
+recovery and mobile layout. The documentation browser suite passes all twenty
+original examples, seven renderer pages and the library documents, including
+the independent original/filled/hex and code/rendered views. After the final
+prose-only review, it was rebuilt and that documentation suite passed again.
+
+Tool 50 is a 1,078-byte writer plus shared helpers. Six test groups cover all
+operations, 500 generated round trips, independent JSON and CommonMark checks,
+exact numbers/escapes, irrelevant members, duplicate required members, malformed
+Markdown/JSON, pointer rules, Unicode, 64 KiB source and nesting boundaries,
+immutable source/literals, failure recovery and punctuation mutations.
+The browser scenario checks literal backticks and image-looking data, renders
+the output as one inert JSON fence, rejects a move into its own descendant,
+retains the successful output and recovers after the edit is repaired.
+
+The final qualitative review expanded the early table, YAML, TOML and dotenv
+explanations where important state changes were still hidden in a high-level
+step. It now covers column-record lifetimes, temporary header comparisons,
+cell delimiter ownership, YAML sibling lookahead, TOML number normalization,
+escaped-quote cursor movement and the dotenv quote-choice mask. The eight
+transformation binaries and the corrected exact-decimal documentation's binary
+are byte-for-byte unchanged. Stale completion/future-work notes were corrected.
+
+Visually inspected final screenshots in `dist/browser/`:
+
+- `records-to-json-patch-rendered.png`
+- `50-list-to-json-patch-walkthrough.png`
+- `08-json-objects-to-table-walkthrough.png`
+- `23-list-to-dotenv-walkthrough.png`
+
+The format subsets and memory limits documented by each tool still apply.
+This milestone does not claim complete YAML/TOML/CommonMark compliance,
+arbitrary uploaded-code safety, patch application to a target, or production
+parser-library readiness. SIMD remains selective; its validator-only timings
+are recorded below, not presented as whole-application speedups.
+
+## Earlier checkpoints
+
 The proof of concept has twenty executable Markdown documents. Instructions
 are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler

@@ -87,6 +87,32 @@ subsequent run rebuilds the stack and resets all cursors. A very long embedded
 backtick line can expand the output beyond the reader's 64 KiB input limit;
 round trips are subject to both tools' memory limits.
 
+## Inside format: remove choices, do not repeatedly attempt encodings
+
+`ld-format-start` begins with four allowed bits: unquoted 1, single-quoted 2,
+backtick-quoted 4 and double-quoted 8. One forward byte scan only clears bits.
+It retains the preceding byte so a delimiter already preceded by backslash
+can stay literal. The last-byte checks run after the loop, including for
+outer whitespace and a trailing backslash.
+
+| Observed data | Choices removed | Reason |
+| --- | --- | --- |
+| Hash or line break | Unquoted | Comment or assignment boundary |
+| Leading quote, or outer space/tab | Unquoted | Quote recognition or trimming |
+| Unprotected quote delimiter | That quoted form | Would close the value |
+| Literal backslash followed by n or r | Double-quoted | Reader would decode it |
+| CR | Single-quoted and backtick-quoted | Physical CR normalizes to LF |
+| Trailing backslash | All quoted forms | Closing quote would remain escaped |
+
+`ld-format-choice` prefers unquoted, then double, single, backtick. No bit
+means failure; it does not retry with a lossy escape convention. Rendering
+then walks the temporary bytes once. Only double-quoted LF/CR expand to
+backslash-letter pairs. The rendered result is placed after the temporary
+value and moved back over it with overlap-safe `memory.copy`; the output
+cursor becomes the end of the moved result. The original decoded bytes are
+no longer needed. Fence sizing inspects the rendered literal-quoted bytes,
+where physical lines actually exist, not the JSON escape spelling.
+
 ## Module
 
 Imports: list-run 0, equal 1, next-unit 2 and memory. Definitions: run 3,

@@ -149,11 +149,11 @@ The JSON examples assume valid UTF-8; their output is not an HTML sanitizer.
 The browser viewer runs these fixed trusted examples, not arbitrary uploaded
 code. Module byte sizes exclude host UI and allocated linear memory.
 
-## Transformation tools: in progress
+## Fifty transformation tools
 
-The [fifty-tool plan](docs/transformations.md) tracks the larger conversion
-goal. [Mad libs](transforms/03-mad-libs.md) is implemented:
-template text and a binding list become substituted Markdown. Its 754-byte
+The [tool catalogue and contracts](docs/transformations.md) cover all fifty
+conversions. For example, [Mad libs](transforms/03-mad-libs.md) converts
+template text and a binding list into substituted Markdown. Its 754-byte
 Wasm module performs the substitution; the browser supplies two editable
 textareas, independent code/rendered switches and a Run button. Failed runs
 retain the previous output. User-written links remain inert in rendered views.
@@ -214,8 +214,8 @@ spans still trap. These byte interfaces do not perform object coercions.
 All composed numeric modules share the JSON scanner's fixed four-page memory.
 Formatting returns an explicit byte length at `0x10000`; there is no terminator.
 
-[Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
-working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed
+[Hierarchical list to JSON](transforms/01-list-to-json.md) handles
+`{}`/`[]` nesting, quoted keys and strings, typed
 scalars, escaping, and exact decimal spellings. Its 1,647-byte module imports
 the [JSON number validator](numbers/02-json-number.md) directly as
 Wasm, sharing its memory. The host performs no JSON conversion.
@@ -390,8 +390,9 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty-nine transformations are implemented: tools 1–49 in the plan.
-The reverse JSON Patch converter remains pending.
+All fifty transformations are implemented: tools 1–50 in the plan.
+The [completion checkpoint](docs/verification.md) records 407 passing Deno
+tests, both full browser suites and the final qualitative documentation review.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -575,6 +576,14 @@ values. Required members, duplicate decoded names and move ancestry are
 validated; extra fields and exact numeric/string spellings are preserved.
 It converts patch documents but does not apply them to a target.
 Try [JSON Patch records](http://microwasm.localhost:3030/?tool=49-json-patch-to-list).
+
+The [reverse writer](transforms/50-list-to-json-patch.md), 1,078 bytes,
+constructs the JSON punctuation, validates each member's key/value, and reuses
+the reader's semantic checks on the completed array. It does not allocate a
+tree or move JSON parsing into the host. Tests include 500 generated round
+trips, independent JSON/CommonMark checks, punctuation mutations, Unicode,
+required-member errors, exact source capacity and nesting boundaries.
+Try [records to JSON Patch](http://microwasm.localhost:3030/?tool=50-list-to-json-patch).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

@@ -74,6 +74,22 @@ it is not an alternative JSON validator. The cell escaping is the same small
 byte-wise pattern documented in [CSV to table](04-csv-to-table.md), written
 here against this module's own output cursor so no callback is needed.
 
+## Inside scan-cell: the row delimiter belongs to the caller
+
+The scanner carries a string flag and a nesting depth, not a container stack:
+the original JSON validator has already checked matching brackets. Inside a
+string, backslash skips the following byte and quote clears the string flag.
+Outside a string, opening containers increase depth and their closes decrease
+it. Only a comma or closing bracket encountered at depth zero ends this cell.
+The returned span excludes that delimiter.
+
+`jt-cell-count` advances the caller to one byte after the returned boundary.
+If it was `]`, the row ends; if it was a comma, the next cell starts there.
+For `[1,{"x":[2,3]}]`, commas inside the object/array do not end the second
+cell. The row loop never has to scan them again. `finish-row` records the
+first width and writes the separator once; later calls only check equality
+and finish their line.
+
 ## Module
 
 Instantiate the JSON-number scanner as `n`, the JSON parser using `n` as `p`,

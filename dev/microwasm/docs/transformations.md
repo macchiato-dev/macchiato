@@ -1,19 +1,18 @@
 # Markdown transformation tools
 
-This is the implementation checklist for the current goal, not a claim that
-all of these tools are already available. The transforms execute handwritten
+All fifty tools in this implementation checklist are available. They execute handwritten
 Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–49, and the side-by-side
+syntax validation and binary64 parsing, tools 1–50, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The reverse JSON Patch tool remains.
-This is not goal completion.
+significant-digit formatting are implemented too. Final verification is
+recorded in [the verification log](verification.md).
 
 ## Data representation
 
@@ -33,7 +32,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–49 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–50 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -271,7 +270,10 @@ and preserves operation members as nested code spans, with a normalized
 operation label. Dynamically sized backtick delimiters keep strings and
 nested JSON literal under Markdown rendering. It checks the six operation
 types, required member counts and move ancestry, retaining additional members
-without interpreting them. The reverse writer (50) remains. Their shared
+without interpreting them. The reverse writer (50) constructs JSON punctuation,
+validates each member's key/value independently, then reuses those semantic
+checks on the completed array. Its data stays in spans, with no object tree.
+Their shared
 [pointer helper](../transforms/00-json-pointer.md) validates JSON-quoted
 pointer syntax and checks strict descendant paths without writes or a tree.
 This helper is infrastructure, not an additional transformation. Escaped spellings,
@@ -347,8 +349,11 @@ Keep this as a qualitative review, not a generated inventory of functions.
 Diagrams must expose the decisions that are easy to get wrong; an arrow between
 two function names does not explain a loop. Small routines can use prose or a
 state table instead. Mermaid remains visible source in the partial renderer,
-as with other code fences. Other earlier tools still need a documentation-depth
-review as part of completing the collection.
+as with other code fences. The final collection review also checked the early
+table, YAML, TOML, INI and dotenv paths. It added explicit explanations of
+column-record reuse, temporary header comparisons, cell delimiter ownership,
+YAML lookahead, TOML scalar normalization and dotenv quote-choice masks.
+These documentation changes leave the assembled instructions unchanged.
 
 1. Hierarchical JSON-shaped Markdown list to fenced JSON.
 2. Fenced JSON to hierarchical JSON-shaped Markdown list.

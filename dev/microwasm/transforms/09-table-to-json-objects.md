@@ -82,6 +82,27 @@ used: the call traps and the next run rebuilds them. Prefix checks use at
 most the combined size of two source header cells, so they cannot reach the
 record region. Shared memory must not be used concurrently.
 
+## Inside header comparison: retain the candidate, replace its neighbor
+
+`to-key-validate` decodes the new header to scratch, then compacts it at the
+start of output. Its exclusive end stays in a local. For each earlier header,
+`to-key-previous` reuses scratch and compacts immediately after that saved
+end. The comparison therefore sees two stable JSON strings even though there
+is only one decoding buffer. Each next comparison overwrites only the older
+header's temporary copy, not the candidate.
+
+After uniqueness succeeds, store the original source span in the column
+record. `to-prefix-reset` discards these temporary compact strings before
+the real output begins. This is why the retained records point into input,
+not into the temporary output that will be overwritten.
+
+The row loop separately counts **columns visited** and **properties emitted**.
+An absent cell advances the column index but not the property count. Only
+present properties receive separating commas. For `blank, 1, blank, 2`,
+the two emitted properties have one comma, while the width check still sees
+four columns. This is distinct from the row-array writer, where every cell
+must supply a value.
+
 ## Module
 
 Instantiate the number scanner `n`, JSON parser `p`, key comparator `k`, and

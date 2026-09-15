@@ -5,12 +5,12 @@
 JSON. NaN and infinities trap before writing output. No exponent notation,
 rounding, host string conversion, or parser is needed in this primitive.
 
-This is deliberately **not** JavaScript's shortest `Number.toString()` yet.
+This primitive deliberately differs from JavaScript's shortest `Number.toString()`.
 For example, binary64 `0.1` becomes
 `0.1000000000000000055511151231257827021181583404541015625`.
 The exact digits provide a reference and a starting point for
-[shortest-string selection](06-shortest-decimal.md). Explicit-precision
-formatting remains future work.
+[shortest-string selection](06-shortest-decimal.md) and
+[explicit-precision formatting](11-precision-format.md).
 
 The only dependency is [multiword arithmetic](03-multiword.md), imported as
 `b`, including its memory. Slot 0 is scratch. Reversed digits occupy at most

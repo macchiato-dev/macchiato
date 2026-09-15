@@ -65,6 +65,33 @@ parser enforces JSON syntax and a 128-container nesting limit. All capacity
 failures trap; publish only successful output. Another run resets working
 state, including after a trap. Do not use the shared memory concurrently.
 
+## Inside lookup and row: the working words change meaning between passes
+
+`jo-lookup-loop` walks column records in first-seen order. A decoded key
+match returns that record immediately. A miss may append a record only in
+the collecting pass; in the rendering pass it traps, because every key must
+already belong to the collected union. A new record starts with zero working
+words, while row IDs start at one.
+
+`jo-row-collect` compares the record's saved row ID with this row's ID before
+replacing it. Thus the same key in the next object is fine, while a second
+occurrence in this object fails. No clearing pass is needed during collection.
+During rendering, `jo-clear-words` clears only the value words, and
+`jo-row-render` fills them with source spans. The key spans never move.
+
+| Phase | Words 0/1 | Word 2 | Word 3 |
+| --- | --- | --- | --- |
+| New column | First key spelling | Zero | Zero |
+| Collecting | Same key span | Last row ID containing this key | Unused |
+| Between rendered rows | Same key span | Zero: absent | Zero |
+| Present rendered cell | Same key span | Value start | Value end |
+
+For `[{"x":1},{"x":2,"y":3},{}]`, collection gives columns x, y.
+Rendering resets the value words three times: the rows become `(1, absent)`,
+`(2, 3)`, then `(absent, absent)`. The empty object cannot accidentally reuse
+the second row's values. Zero is a safe absence sentinel because all compact
+source spans live in the fourth memory page.
+
 ## Module
 
 Instantiate the number scanner as `n`, the JSON parser as `p`, and the

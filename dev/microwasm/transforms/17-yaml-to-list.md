@@ -55,6 +55,30 @@ contains only fixed literals. There are at most 128 nested collections.
 Bounds are checked before stores; input remains unchanged. A failed run may
 leave partial output, which must not be displayed; a later run resets state.
 
+## Inside value: advancing lookahead does not mean consuming a sibling
+
+`yl-value-analyze` separates scalar content from comments and rejects a
+mapping delimiter where a scalar is required. When the remaining span is
+empty, `yl-value-nested` advances to the next significant line. Its indentation
+decides whether this value owns that line:
+
+```mermaid
+flowchart TD
+  A[No inline value; advance significant-line lookahead] --> B{A deeper line exists?}
+  B -- no --> N[Emit null; leave sibling or ancestor line available]
+  B -- yes --> C{Exactly two spaces deeper?}
+  C -- no --> X[Trap on indentation jump]
+  C -- yes --> R[Recurse; child consumes only its own block]
+  R --> P[Return with child's next outer line still in lookahead]
+```
+
+At the top of `yl-block-loop`, a shallower line returns without advancing
+again; an equal indentation is another sibling; an unexpected greater
+indentation traps. After an inline scalar, `yl-value-continuation` rejects
+a deeper line instead of attaching it to an already complete value.
+This distinguishes a missing value followed by a nested collection from a
+scalar followed by unsupported continuation text, without a rewind buffer.
+
 ## Module
 
 Imports: scalar 0, analyze 1, quote-end 2 from `s`, equal 3 from `k`, and

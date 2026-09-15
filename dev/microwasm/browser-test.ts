@@ -183,9 +183,24 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "08-json-objects-to-table",
+        "Inside lookup and row: the working words change meaning between passes",
+        "Last row ID containing this key",
+      ],
+      [
+        "23-list-to-dotenv",
+        "Inside format: remove choices, do not repeatedly attempt encodings",
+        "Choices removed",
+      ],
+      [
         "49-json-patch-to-list",
         "What is validated",
         "Valid JSON Pointer",
+      ],
+      [
+        "50-list-to-json-patch",
+        "Inside the member reader",
+        "Shared parser",
       ],
       [
         "00-json-pointer",

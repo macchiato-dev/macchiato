@@ -78,6 +78,29 @@ There are at most 128 collections including the root. Stores are bounded;
 failed runs may leave partial output but reset correctly on the next call.
 The host must retain the previous result on a trap, not publish partial data.
 
+## Inside scalar: normalize only after checking each decoration
+
+`tl-scalar-scan` stops before whitespace, comments or collection delimiters;
+the caller still owns those separators. Exact true/false tokens take the
+Boolean branch. Other tokens must become valid JSON numbers. A leading plus
+is removed only when a digit follows. Each underscore must have digits on
+both sides before it is omitted; deleting underscores blindly would accept
+invalid spellings such as `1__2`.
+
+The cleaned token is written once, then checked by the shared JSON-number
+validator. A point or exponent selects the float path, preserving that text
+without rounding. Otherwise accumulate the decimal magnitude in a u64,
+checking before multiplication; the final bound is `2^63 - 1` for positive
+numbers and `2^63` for negative numbers. No sign is applied to that magnitude,
+so the asymmetric negative endpoint is representable during the check.
+
+Array and inline-table loops intentionally differ after a comma. The array
+loop accepts a closing bracket on its next iteration, allowing trailing commas.
+The inline-table path requires another entry and does not admit that shortcut.
+Their whitespace modes differ too: arrays allow comments/newlines between
+values; inline-table separators do not. Recursive array values retain their
+own mode even when they occur inside an inline table.
+
 ## Module
 
 Imports: string-read 0 from `s`, key-equal 1 and next-unit 2 from `k`,

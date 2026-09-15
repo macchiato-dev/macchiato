@@ -81,6 +81,26 @@ ten fixed fence bytes occupy the last page. Stores are bounded. Input and
 scratch remain unchanged after instantiation. A trap must not publish partial
 output, and another call resets the instance for recovery.
 
+## Inside value: consume escaped quotes before the next loop iteration
+
+The quoted branch retains the opening delimiter. Each iteration loads a
+byte and advances the source cursor immediately. If that byte is backslash
+and the following byte is the matching delimiter, `dl-quoted-escaped-quote`
+emits both as data, advances past the delimiter, and repeats the loop.
+That delimiter can therefore never reach `dl-quoted-close` on the next turn.
+This is not JSON escape handling: the backslash remains part of the value.
+
+Only double quotes activate the n/r escape branch. Physical CR optionally
+consumes a following LF, then becomes one LF; an escaped r becomes CR and
+does not go through that physical-line normalization. Other bytes go to the
+JSON quote-byte emitter unchanged in meaning.
+
+The unquoted branch instead retains two ends: the source cursor stops at
+the comment or line separator, while a local end moves backward to trim
+spaces/tabs. Copying uses the trimmed end, but the outer assignment loop
+resumes at the original separator. Trimming cannot accidentally turn comment
+text into part of the value or skip the next assignment.
+
 ## Module
 
 Imports: equal 0, next-unit 1 and memory from `k`. Definitions: run 2, emit 3,
