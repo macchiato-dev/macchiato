@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 233 tests covering all twenty examples and the supplied
+`deno task test` runs 237 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -359,7 +359,7 @@ Twenty-eight transformations are implemented: tools 1–28 in the plan.
 The remaining 22 are pending.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
-implemented in a 1,649-byte module: XML 1.0 characters and Unicode names,
+implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
 UTF-8 scalar decoding, predefined/numeric entities, and text/attribute whitespace
 normalization. These support tools 26–28, not an additional tool.
 Tests check every Unicode position's character/name classes and compare decoded
@@ -368,7 +368,7 @@ are outside the reader's scope; no host XML parser ships in the demo.
 
 [XML to an ordered Markdown tree](transforms/26-xml-to-list.md) now reads
 elements, attributes, mixed text, comments, CDATA, processing instructions and
-an initial declaration. Its 2,809-byte module retains repeated siblings and
+an initial declaration. Its 2,875-byte module retains repeated siblings and
 whitespace, validates matching tags and unique attributes, and supports longer
 Markdown fences. Tests compare 600 generated documents with an independent
 parser, exercise 930 single-character edits, and check exact input/output
@@ -405,6 +405,13 @@ emits escaped XML directly without a JSON intermediate. Its tests include
 500 generated trees, edited punctuation, malformed UTF-8, overflow-resistant
 character references, exact memory bounds and recovery after a trap.
 Try [the OPML writer](http://microwasm.localhost:3030/?tool=28-outline-to-opml).
+
+Preparation for the reverse OPML converter now includes a no-allocation XML
+character iterator and an unfenced document-reading entry point. The existing
+JSON-string output loop uses that same iterator, preserving its normalization
+rules. Raw document spans use the same structural parser and output bounds as
+fenced XML; they do not bypass validation. These helpers are tested separately
+and in the browser, but do not count as another finished transformation.
 
 ## Provisional byte-list notation
 

@@ -185,6 +185,7 @@ try {
     const k = await load("./transforms/00-json-string-keys.wasm", { n });
     const x = await load("./transforms/00-xml-strings.wasm", { k });
     const o = await load("./transforms/00-xml-output.wasm", { k, x });
+    const reader = await load("./transforms/26-xml-to-list.wasm", { x });
     const memory = new Uint8Array((x.memory as WebAssembly.Memory).buffer);
     const string = x.string as (
       start: number,
@@ -193,6 +194,11 @@ try {
       mode: number,
     ) => number;
     const write = o.string as typeof string;
+    const next = x.next as (
+      start: number,
+      end: number,
+      mode: number,
+    ) => [number, number];
     const encoder = new TextEncoder();
     const decoder = new TextDecoder("utf-8", { ignoreBOM: true });
     const chunks = [
@@ -237,6 +243,18 @@ try {
         if (actual !== expected) {
           throw new Error("XML decoding differs from DOMParser: " + source);
         }
+        let cursor = 0, decoded = "";
+        while (cursor < bytes.length) {
+          const [cp, end] = next(cursor, bytes.length, mode);
+          if (end <= cursor || end > bytes.length) {
+            throw Error("XML iterator did not advance within span");
+          }
+          decoded += String.fromCodePoint(cp);
+          cursor = end;
+        }
+        if (JSON.stringify(decoded) !== expected) {
+          throw Error("XML iterator differs from DOMParser");
+        }
         const input = encoder.encode(expected.slice(1, -1));
         memory.set(input);
         const outputLength = write(0, input.length, 65536, mode);
@@ -256,6 +274,25 @@ try {
         ) {
           throw new Error("XML output changed data after DOMParser: " + output);
         }
+      }
+      const xml = '<r a="' + source + '">' + source + "</r>";
+      const rawBytes = encoder.encode(xml);
+      memory.set(rawBytes, 37);
+      const rawLength =
+        (reader.readSpan as (start: number, end: number) => number)(
+          37,
+          37 + rawBytes.length,
+        );
+      const rawTree = decoder.decode(memory.subarray(65536, 65536 + rawLength));
+      const fencedBytes = encoder.encode("```xml\n" + xml + "\n```\n");
+      memory.set(fencedBytes);
+      const fencedLength = (reader.run as (length: number) => number)(
+        fencedBytes.length,
+      );
+      if (
+        decoder.decode(memory.subarray(65536, 65536 + fencedLength)) !== rawTree
+      ) {
+        throw Error("XML raw and fenced entry points disagree in browser");
       }
     }
     return 100;

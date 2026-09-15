@@ -562,6 +562,26 @@ This does not prove an XML document parser: structural parsing, declarations,
 tag matching, duplicate attributes and the reverse tree writer are still to
 be implemented. The transformation count remains 25.
 
+## XML reuse for OPML reading
+
+The XML string helper is now 1,699 bytes. Its new `next` entry returns one
+normalized character and its next source offset without memory writes; the
+existing `string` loop uses it too. Two additional tests check exact cursor
+movement at three memory locations, 500 generated spans against Saxes in
+text/attribute/literal contexts, malformed references and UTF-8, mode/bounds
+rejection, and recovery. Referenced whitespace must remain distinct from raw
+whitespace. All earlier string and document tests continue to run.
+
+The 2,875-byte XML document reader now has `readSpan`, sharing its document
+body with the fenced entry. Two added tests compare varied-offset raw spans
+with fenced output, preserve the source/literal regions, check exact input
+bounds and nesting, and alternate the entries after failures. Raw backticks
+are accepted as XML data rather than mistaken for a Markdown fence. Browser
+tests compare both entries and the iterator over the existing 100 XML cases.
+
+This is preparation for tool 29, not a new transformation. There are still
+28 published tools; the OPML-specific reader has not been completed.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

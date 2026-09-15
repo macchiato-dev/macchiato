@@ -99,6 +99,10 @@ trap, including values that would otherwise wrap i32. HTTP(S) destinations
 are stored as data, never fetched. A longer output fence contains backticks.
 The reverse OPML reader (29) is next: it needs real outline/link conversion,
 not merely another label on the generic XML tree tools.
+Its reusable groundwork is implemented: `x.next` returns normalized XML
+characters without JSON output, and the XML document reader's `readSpan`
+validates/reads an unfenced source span without changing the caller's framing.
+The OPML-specific title, attribute and hierarchy conversion remains to be done.
 
 ## Shared number conversion
 
