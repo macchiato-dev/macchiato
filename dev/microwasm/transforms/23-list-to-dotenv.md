@@ -50,9 +50,9 @@ silently changing it. This is dotenv data, **not shell-escaped commands**.
 The surrounding Markdown matters too: if a literal multiline value contains
 a line that could close a three-backtick fence, the writer uses a longer
 fence. Other backticks remain ordinary data. This keeps the rendered contents
-consistent with the source without changing the value. There is no interpolation,
-variable
-expansion, command substitution or environment lookup. Consumers that perform
+consistent with the source without changing the value. There is no
+interpolation, variable expansion, command substitution or environment lookup.
+Consumers that perform
 such operations have their own policies beyond this transformation.
 
 ## Pattern: one string decode, then a small choice of encodings

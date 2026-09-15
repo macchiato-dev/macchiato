@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 180 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 187 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -170,7 +170,7 @@ rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
 There are nineteen implemented transformations out of the planned fifty:
-tools 1–22.
+tools 1–23.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -454,7 +454,7 @@ and the empty section preserved.
 
 ## Dotenv reader checkpoint
 
-Six tests cover assignment separators, export prefixes, comments, empty and
+Seven tests cover assignment separators, export prefixes, comments, empty and
 numeric-looking strings, three quote delimiters, multiline values, CR/CRLF
 normalization and retained backslashes. Five hundred generated documents
 compare with `dotenv@17.2.3`'s pure `parse` function under Deno. That independent
@@ -468,7 +468,7 @@ name order and prototype-looking names. Unicode boundaries, raw controls and
 malformed UTF-8 are tested in values, quotes and comments. The module validates
 the body before parsing and never performs variable expansion.
 
-The 1,714-byte reader fills the 64 KiB input and 128 KiB output limits in
+The 2,046-byte reader fills the 64 KiB input and 128 KiB output limits in
 tests, rejects an extra byte, leaves scratch intact and recovers on the same
 instance. Chromium edits a multiline assignment, checks it becomes a single
 list item, verifies literal HTML-like text and `${TITLE}`, and preserves the
@@ -476,7 +476,31 @@ previous successful output through duplicate/unterminated/trailing-text errors.
 The inspected screenshot shows the physical multiline source on the left and
 its escaped single-item representation on the right, with the variable
 reference and HTML-like text displayed literally.
-There are 28 transformations still pending; this is not goal completion.
+The reader also accepts matching longer Markdown fences and rejects an
+earlier closing fence rather than treating it as quoted value text.
+
+The 1,834-byte dotenv writer adds six tests. Five hundred generated objects
+round-trip through both actual Wasm modules and compare with the independent
+dotenv parser. All 7,381 strings up to four characters drawn from an alphabet
+of letters, quotes, backticks, backslashes, hashes, spaces, LF and CR are
+tested. Successful writes must preserve the string through both parsers;
+rejections must have no usable candidate among the four quoting forms, as
+checked independently through the reader.
+
+Additional fixtures cover Unicode, surrogate pairs, invalid names, duplicate
+decoded keys, unsupported structures, typed values and unrepresentable
+strings. Input/intermediate limits and temporary-output reuse are checked.
+An embedded 43,680-backtick line expands both fences to fill exactly 128 KiB
+of output; one more value byte traps without overwriting scratch. Such large
+outputs exceed the reader's own 64 KiB input limit, which remains explicit.
+
+CommonMark 0.31.2 independently verifies that emitted multiline values remain
+inside a single code fence, including indented and longer embedded backtick
+lines. Chromium checks the same case through the side-by-side UI and reads
+the writer's output back with tool 22. The inspected screenshot shows the
+embedded backtick line and following assignment together in the same code
+block, alongside editable list source. There are 27 transformations still
+pending; this is not goal completion.
 
 ## Size is the complete module, not memory consumption
 

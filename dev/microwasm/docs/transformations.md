@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–22, and the side-by-side
+syntax validation and binary64 parsing, tools 1–23, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 28 tools remain.
+significant-digit formatting are implemented too. The other 27 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–22 are now all implemented.
+stable numbering; tools 1–23 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -51,7 +51,10 @@ Tool 22 reads dotenv assignments, including export prefixes, comments and
 single/double/backtick quotes with physical multiline values. It follows the
 documented common value conventions but rejects duplicates and malformed
 syntax instead of silently dropping it. It neither loads an environment nor
-expands variables. The reverse dotenv writer remains pending.
+expands variables. Tool 23 writes flat string properties, choosing between
+unquoted, double-quoted, single-quoted and backtick forms. It rejects values
+that this dialect cannot preserve. Both directions support longer Markdown
+fences when literal multiline data contains a closing-fence line.
 
 ## Shared number conversion
 

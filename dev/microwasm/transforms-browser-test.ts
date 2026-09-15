@@ -1182,6 +1182,76 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === '- {}\n  - "OK" "yes"\n'
   );
+  await page.goto(new URL("?tool=23-list-to-dotenv", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const dotenvTree =
+    '- {}\n  - TITLE "<b>Notes</b>"\n  - GREETING "Hello # friend"\n  - BODY "literal\\\\n\\n```\\nafter"\n  - LITERAL "${TITLE}"';
+  const dotenvOutput =
+    "````dotenv\nTITLE=<b>Notes</b>\nGREETING=\"Hello # friend\"\nBODY='literal\\n\n```\nafter'\nLITERAL=${TITLE}\n````\n";
+  await page.locator("#transform-input").fill(dotenvTree);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    dotenvOutput,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre").count() === 1,
+    "Literal backticks closed the dotenv output fence",
+  );
+  check(
+    await page.locator("#transform-output-rendered pre").textContent() ===
+      dotenvOutput.slice(11, -5),
+    "Dotenv fence lost multiline data",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "Dotenv output became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/list-to-dotenv-rendered.png`,
+    fullPage: true,
+  });
+  for (
+    const input of [
+      "- {}\n  - A = false",
+      '- {}\n  - A "#\\\\"',
+      '- {}\n  - "bad key" value',
+    ]
+  ) {
+    await page.locator("#transform-input").fill(input);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === dotenvOutput,
+      "Unrepresentable dotenv value replaced successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("- {}\n  - OK yes");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "```dotenv\nOK=yes\n```\n"
+  );
+  await page.goto(new URL("?tool=22-dotenv-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(dotenvOutput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes('"BODY" "literal\\\\n\\n```\\nafter"')
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

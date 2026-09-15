@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 180 tests covering all twenty examples and the supplied
+`deno task test` runs 187 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -323,15 +323,24 @@ Try [the INI writer](http://microwasm.localhost:3030/?tool=21-list-to-ini).
 
 [Dotenv to a list](transforms/22-dotenv-to-list.md) supports unquoted,
 single-quoted, double-quoted and backtick values, including physical multiline
-text. The 1,714-byte module handles `export`, comments and double-quoted
+text. The 2,046-byte module handles `export`, comments and double-quoted
 newline escapes without setting environment variables or expanding them.
 It rejects duplicates and malformed assignments instead of dropping data.
 Its documented dialect is tested against the independent dotenv parser,
 which is a test-only dependency and is not shipped to the browser.
 Try [the dotenv reader](http://microwasm.localhost:3030/?tool=22-dotenv-to-list).
 
-Twenty-two transformations are implemented: tools 1–22 in the plan.
-The remaining 28 are pending.
+[String properties to dotenv](transforms/23-list-to-dotenv.md) completes the
+pair. The 1,834-byte module selects quoting that preserves each value, sharing
+the list compiler and Unicode iterator. Literal variable references remain
+literal; unsupported shapes or unrepresentable strings are errors. Both
+directions now support longer fences for embedded backtick lines. Exhaustive
+short quote/backslash combinations and CommonMark checks supplement the
+generated round trips and independent dotenv-parser comparisons.
+Try [the dotenv writer](http://microwasm.localhost:3030/?tool=23-list-to-dotenv).
+
+Twenty-three transformations are implemented: tools 1–23 in the plan.
+The remaining 27 are pending.
 
 ## Provisional byte-list notation
 
