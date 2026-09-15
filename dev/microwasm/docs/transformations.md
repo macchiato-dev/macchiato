@@ -158,6 +158,14 @@ the instruction branches, rather than only their function names:
 - [Inline renderer](../renderer/03-inline.md) and its
   [scan helpers](../renderer/02-scanning.md): actual dispatch order, distinct
   failed-scan outcomes, cursor progress, and nested Wasm branch targets.
+- [Block renderer](../renderer/04-blocks.md): ordered line dispatch including
+  table probing, speculative fence scans, list descent/siblings/ascent,
+  cursor ownership, and final closing tags.
+- [Bracket stack](../examples/15-balanced-brackets.md): active scratch prefix,
+  underflow versus mismatch versus unfinished input, and a capacity proof.
+- [Game of Life](../examples/20-game-of-life.md): both neighbor loops, skipped
+  loads, signed versus unsigned comparisons, branch-free rule evaluation,
+  and the delayed copy demonstrated with a blinker.
 - [Unsigned integers](../numbers/01-unsigned-integers.md): digit classification,
   the pre-multiply overflow inequality, extraction and reversal invariants.
 - [JSON number scanner](../numbers/02-json-number.md): the one-byte zero branch,

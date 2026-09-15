@@ -19,16 +19,62 @@ return depth == 0
 
 ```mermaid
 flowchart TD
-    A[depth = 0] --> B{More bytes?}
-    B -- No --> R[Accept if stack empty]
-    B -- Yes --> C{Opening bracket?}
+    A[Check length; i = 0; depth = 0] --> B{More bytes?}
+    B -- No --> R[Return whether depth is zero]
+    B -- Yes --> L[Load current byte]
+    L --> C{Opening bracket?}
     C -- Yes --> P[Push expected closer]
     C -- No --> D{Closing bracket?}
-    D -- No --> B
-    D -- Yes --> E[Pop and compare, reject underflow or mismatch]
-    P --> B
-    E -- Match --> B
+    D -- No --> I[Increment i]
+    D -- Yes --> U{depth zero?}
+    U -- Yes --> X[Return 0 immediately]
+    U -- No --> E[Decrement depth; load expected closer]
+    E --> M{Loaded closer equals current byte?}
+    M -- No --> X
+    M -- Yes --> I
+    P --> I
+    I --> B
 ```
+
+## The stack contains obligations, not opening bytes
+
+`push` stores the byte that must eventually close the new group. The stack
+therefore contains `)` for `(`, `]` for `[` and `}` for `{`. A closing byte
+needs only one comparison; it does not run through another bracket-kind
+dispatch. The `select` in `push` chooses the ASCII delta: 1 for a parenthesis,
+2 for the other two kinds. Both candidate deltas are constants, not branches.
+
+| Input byte in `([)]` | i | Depth before | Active stack before | Operation |
+| --- | --- | --- | --- | --- |
+| `(` | 0 | 0 | empty | Store `)` at scratch[0]; depth becomes 1 |
+| `[` | 1 | 1 | `)` | Store `]` at scratch[1]; depth becomes 2 |
+| `)` | 2 | 2 | `) ]` | Pop expected `]`; mismatch returns 0 |
+
+The final `]` is never read. By contrast, `([])` pops `]`, then `)`, and
+reaches EOF at depth zero. An opening-only input such as `((` reaches EOF
+normally but returns 0 because obligations remain. A first byte of `)`
+returns 0 at `underflow`, before subtracting depth or reading scratch.
+These are three distinct rejection paths.
+
+### Loop invariant and scratch lifetime
+
+At `finished`, `i` counts consumed bytes. The active scratch prefix
+`[65536, 65536 + depth)` lists their still-unmatched closing obligations,
+with the newest at its end. Bytes beyond that prefix may be stale; they
+are never used until a push overwrites them. Returning 0 does not clear
+scratch, nor does a successful return need to: locals reset on the next call.
+
+Every non-returning path reaches `advance` exactly once, including ignored
+non-bracket bytes. It consumes one input byte and `repeat` targets the
+outer loop. `finished` uses `br_if 1` to exit the loop's enclosing block
+and evaluate `empty-stack`; the two invalid-closing paths instead use
+`return` directly. A length above 65536 traps at `bounds`, which is a
+caller-bound violation rather than the ordinary false result for bad brackets.
+
+Before processing a byte, depth cannot exceed i. At the last possible push,
+i is at most 65535, so its destination is at most 131071: the last byte of
+the second page. That input bound is also the stack-capacity proof; no
+separate per-push capacity check is needed.
 
 ## Expose the input and scratch memory
 

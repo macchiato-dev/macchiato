@@ -12,6 +12,14 @@ The workflow is deliberately visible:
 4. Concatenate the bytes into a plain hex file.
 5. Read that hex file back, validate the module, and instantiate it as Wasm.
 
+The explanations should follow control flow inside functions, not stop at a
+call graph. For worked examples, see the [block parser's state transitions](renderer/04-blocks.md),
+the [bracket checker's stack trace](examples/15-balanced-brackets.md), and
+[Life's neighbor loops and delayed copy](examples/20-game-of-life.md).
+These connect decisions to byte-list labels, identify what advances on each
+path, and explain early returns, traps and loop invariants. Simple routines
+need less ceremony; a diagram box that hides the interesting loop needs more.
+
 Building and running the examples needs no Rust/C compiler, WAT compiler,
 npm dependency, or opcode assembler.
 Instruction names in explanations are just explanations: only the written hex

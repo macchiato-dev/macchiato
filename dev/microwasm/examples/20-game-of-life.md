@@ -33,13 +33,110 @@ return total
 ```mermaid
 flowchart TD
     A[Start from unchanged input board] --> B{More cells?}
-    B -- Yes --> C[Visit eight in-bounds neighbors]
+    B -- Yes --> C[Scan neighbor positions; load only valid neighbors]
     C --> D[Apply birth and survival rules]
     D --> E[Write to next board, add live count]
     E --> B
     B -- No --> F[Copy complete next board to input]
     F --> R[Return live count]
 ```
+
+That is the generation-level view. The work inside `C` is two loops, with
+two distinct reasons to skip a neighbor. The copy phase is a third loop;
+it must not be moved inside the cell loop.
+
+## Inside one cell: nine positions, at most eight loads
+
+`coordinates` derives `(x, y)` from `i`. `initialize-neighbors` clears the
+count and sets `dy = -1`; `reset-dx` sets `dx = -1` on every row, not just
+once for the cell.
+
+```mermaid
+flowchart TD
+    A[neighbors = 0; dy = -1] --> R[dx = -1]
+    R --> S{dx OR dy nonzero?}
+    S -- no: center --> X[Increment dx]
+    S -- yes --> P[nx = x + dx; ny = y + dy]
+    P --> B{Both coordinates unsigned below 16?}
+    B -- no: outside board --> X
+    B -- yes --> L[Load old board at ny * 16 + nx]
+    L --> C[Add one if loaded byte nonzero]
+    C --> X
+    X --> Q{dx at most 1, signed?}
+    Q -- yes --> S
+    Q -- no --> Y[Increment dy]
+    Y --> T{dy at most 1, signed?}
+    T -- yes --> R
+    T -- no --> D[Apply rule to completed neighbor count]
+```
+
+There are nine coordinate visits even at a corner. The center skips the
+coordinate calculation and load; out-of-board coordinates skip only the
+load. All paths reach `next-column`, so neither skip can stall the loop.
+For the top-left cell, the only loaded positions are `(1, 0)`, `(0, 1)` and
+`(1, 1)`. There is no wrap from the left edge to the previous row.
+
+The signedness is intentional: `nx = -1` fails the unsigned bounds test,
+but `dx = -1` belongs in a signed loop over -1, 0, 1. The `count` load is
+inside the bounds `if`; checking after loading would already be too late.
+
+| Byte-list label | State change | What remains unchanged |
+| --- | --- | --- |
+| `initialize-neighbors` | Clear count; start first neighbor row | Cell index and old board |
+| `reset-dx` | Start first column of each neighbor row | Accumulated count from earlier rows |
+| `count` | Add normalized old cell value to count | Both board buffers |
+| `next-column` | Increment dx, then repeat while at most 1 | dy and current cell |
+| `next-row` | Increment dy, then repeat while at most 1 | Current cell and accumulated count |
+| `write-next` | Write one normalized 0/1 at 256 + i | Entire old board |
+| `next-cell` | Increment i | Finished next-board prefix and live total |
+
+### Rule evaluation has no branch
+
+`rule` computes two conditions and combines them with integer AND/OR:
+birth-or-survival at three neighbors, or survival at two with a live old cell.
+Both comparisons and the old-cell load execute; this is not short-circuit
+control flow. Each comparison returns 0/1, so the stored byte and count
+increment are already normalized.
+
+| Neighbors | Old cell zero | Old cell nonzero |
+| --- | --- | --- |
+| 2 | Store 0 | Store 1 |
+| 3 | Store 1 | Store 1 |
+| Any other count | Store 0 | Store 0 |
+
+The `eqz; eqz` sequence also normalizes neighbor bytes. A cell whose byte is
+255 contributes one neighbor, not 255.
+
+### Why the delayed copy matters: a blinker trace
+
+Place live cells at `(7, 8)`, `(8, 8)` and `(9, 8)`. In row-major order:
+
+| Cell visited | Old value | Old-board neighbor count | Next value |
+| --- | --- | --- | --- |
+| `(8, 7)` | 0 | 3 | 1: birth above the row |
+| `(7, 8)` | 1 | 1 | 0: left end dies |
+| `(8, 8)` | 1 | 2 | 1: center survives |
+| `(9, 8)` | 1 | 1 | 0: right end dies |
+| `(8, 9)` | 0 | 3 | 1: birth below the row |
+
+When the left end is examined, the new cell above it has already been
+written to scratch. It must not count as an old neighbor. Otherwise this
+very first generation would depend on scan order.
+
+`finished` leaves the cell loop at `i = 256`; only then does `reset-i` start
+the copy. `copy-loop` loads scratch at `256 + i`, stores input at `i`, and
+repeats through byte 255. This loop has a post-test because its length is
+fixed and nonzero. Its addresses never overlap: the last destination is
+255 and the first source is 256. `total` was computed before the copy and
+is returned unchanged.
+
+### Three loop backs with the same branch depth
+
+`next-column`, `next-row` and `copy-next` each use `br_if 0`, but target
+different labels. At `next-column`, both neighbor `if`s have ended, so the
+nearest label is `columns-loop`. At `next-row`, that column loop has ended,
+so it is `rows-loop`. During copying it is `copy-loop`.
+The shared depth does not imply shared state or a shared destination.
 
 ## No arguments, an integer result
 

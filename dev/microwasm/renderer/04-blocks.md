@@ -46,12 +46,15 @@ for each line [pos, end):
     if fence_open:
         if line is a long enough closing fence: close fence
         else: escaped(pos, end); emit('\n')
-    else if blank: close paragraph
+    else if empty line: close paragraph
     else if line starts with ``` : close other blocks; open fence
+    else if line starts with '|' and table probe succeeds:
+        close other blocks; render table; resume at returned position
     else if 1..6 hashes followed by space:
         close other blocks; emit heading with inline contents
-    else if even indentation followed by '- ':
-        close paragraph; adjust list depth; emit inline item
+    else if indentation followed by '- ':
+        close paragraph; require even indentation
+        adjust list depth, rejecting skipped levels; emit inline item
     else if list_depth > 0 and indent >= 2 * list_depth:
         emit(' '); emit inline continuation of the current item
     else:
@@ -62,19 +65,129 @@ return output length
 
 ```mermaid
 flowchart TD
-    A[Read line] --> F{Inside fence?}
-    F -- Yes --> C[Close fence or escape source line]
-    F -- No --> B{Block prefix}
-    B --> H[Heading]
-    B --> L[List item]
-    B --> P[Paragraph]
-    B --> O[Open fence or blank line]
-    H --> A
-    L --> A
-    P --> A
-    O --> A
-    C --> A
+    A{pos below length?} -- no --> Z[Close remaining paragraph, lists and fence; return output length]
+    A -- yes --> R[Find line end; save next-line; exclude trailing CR]
+    R --> T[Count leading backticks; discard count below three]
+    T --> F{Open fence length nonzero?}
+    F -- yes --> FC[Fence close-or-source subflow]
+    F -- no --> B{Line span empty?}
+    B -- yes --> BC[Close paragraph only; retain list depth]
+    B -- no --> O{Backtick prefix nonzero?}
+    O -- yes --> OC[Close paragraph and lists; open fence]
+    O -- no --> Q{Starts with pipe and table probe succeeds?}
+    Q -- yes --> QR[Close paragraph and lists; render table]
+    QR --> QA[Assign pos from table result, not next-line]
+    Q -- no --> H{One to six hashes followed by a space?}
+    H -- yes --> HC[Close paragraph and lists; emit heading]
+    H -- no --> I[Rescan indentation from original pos]
+    I --> L{Dash-space after indentation?}
+    L -- yes --> LC[List-depth subflow; emit item or trap]
+    L -- no --> C{Open list and indent at least twice its depth?}
+    C -- yes --> CC[Append space and inline continuation to current item]
+    C -- no --> P[Close lists; open paragraph or append space; emit inline line]
+    FC --> N[Assign pos = next-line]
+    BC --> N
+    OC --> N
+    HC --> N
+    LC --> N
+    CC --> N
+    P --> N
+    N --> A
+    QA --> A
 ```
+
+The decision order matters. A heading-looking line inside a fence is source;
+a failed table probe leaves the pipe line available to paragraph handling.
+Only an empty span is a blank line here: a line containing spaces is not
+silently treated as empty. Fences and headings must begin at the line start.
+The indentation scan happens later, after those checks.
+
+### Fence subflow: examine a candidate without consuming the line
+
+`run-fence-count-loop` counts backticks at the original line start. When a
+fence is already open, that count alone does not close it:
+
+```mermaid
+flowchart TD
+    A{Prefix at least open-fence length?} -- no --> S[Escape entire line and emit LF]
+    A -- yes --> P[Set start after backtick prefix]
+    P --> B{start below end?}
+    B -- no --> C[Emit fence close; clear open-fence length]
+    B -- yes --> W{Byte is space or tab?}
+    W -- yes --> I[Increment start]
+    I --> B
+    W -- no --> S
+    S --> N[Advance pos to saved next-line]
+    C --> N
+```
+
+`start` is a speculative cursor; `pos` still points to the beginning. A
+candidate such as four backticks followed by `x` is therefore escaped in
+full, including its backticks. There is no rewind or temporary text buffer.
+An empty line inside a fence emits LF instead of closing a paragraph.
+
+### List subflow: descent, sibling and ascent are different operations
+
+The `run-list-*` labels handle a recognized dash-space marker. They do not
+silently repair odd indentation or a jump over a missing parent.
+
+```mermaid
+flowchart TD
+    A[Close paragraph if open] --> E{Indent even?}
+    E -- no --> X[Trap]
+    E -- yes --> T[Target = indent / 2 + 1]
+    T --> D{Target greater than list depth?}
+    D -- yes --> O{Target exactly depth + 1?}
+    O -- no --> X
+    O -- yes --> N[Open ul and li; assign new depth]
+    D -- no --> U[close_lists target: close deeper items and lists]
+    U --> S[Close previous item at target; open sibling item]
+    N --> C[Render contents after dash-space]
+    S --> C
+    C --> R[Advance to next line]
+```
+
+The parent item stays open while a child list is opened. On ascent,
+`close_lists` closes each deeper item and list, but leaves the target-level
+item open; `run-list-sibling` closes that item itself. Closing it in both
+places would create an extra closing tag.
+
+| Input line | Depth before | Action | Depth after |
+| --- | --- | --- | --- |
+| `- root` | 0 | Open first list and item | 1 |
+| `  - child` | 1 | Open child list inside root item | 2 |
+| `    continuation` | 2 | Append to child; no new item | 2 |
+| `  - sibling` | 2 | Close child item; open sibling | 2 |
+| `- last` | 2 | Close nested item/list, then root item; open sibling | 1 |
+| `prose` | 1 | Close final item/list; open paragraph | 0 |
+
+At depth 1, `    - skipped` requests depth 3 and traps. In contrast,
+`    continuation` has no dash-space marker and simply continues the current
+item. The depth validation belongs to the marker branch, not all indented text.
+
+### Cursor ownership and termination
+
+| State | Owner and lifetime |
+| --- | --- |
+| `pos` (local 1) | Outer loop's first unconsumed byte; changed only on a completed block/line path |
+| `end` (local 2) | Current line's exclusive content bound, with trailing CR removed |
+| `start` (local 3) | Reused scan cursor for fences, hashes and indentation; reset before indentation |
+| `next-line` (local 10) | Saved before trimming CR; points past LF, or to length + 1 at EOF |
+| `paragraph-open` (local 8) | Tracks whether a paragraph close is still owed |
+| `open-fence length` (local 9) | Zero outside a fence; otherwise the minimum closing run |
+| `list depth` (global 1) | Number of open lists; each has an open item |
+
+`run-table-probe` uses the non-emitting mode of function 9. On success its
+emitting call can consume several lines, so `run-table-render` assigns the
+returned cursor directly to `pos`. Using the saved `next-line` there would
+render part of the table twice. All other successful paths use `next-line`.
+Thus every repeat consumes at least one line; no fallback retries a line.
+
+At EOF, `run-final-*` emits any outstanding closing tags. It also closes an
+unterminated fence, without inventing another source line. At the
+`run-fence-close-valid` branch, depth 3 targets the outer line loop: the
+inner labels are the valid-close `if`, length-test `if`, and in-fence `if`.
+This is a loop continuation, not a return from `run`.
 
 Closing a paragraph appears at several transitions: test local 8, emit
 literal 4, then clear local 8. It stays inline because the state is local and

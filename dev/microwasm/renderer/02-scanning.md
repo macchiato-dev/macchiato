@@ -53,8 +53,9 @@ how far to advance beyond the delimiter it found.
 
 ## Function 4: escaped span
 
-This is used for code fences, inline code, link labels and link destinations.
-It shares the escaping policy instead of duplicating it at every call site.
+This is used for code fences, inline code, strong contents and literal
+fallbacks. Link labels and destinations instead use function 11, which also
+decodes escapes and character references. Both share the escaped-byte writer.
 
 This loop has no early match exit: while `p < end`, load one source byte,
 call the escaped-byte writer, then increment `p`. The writer may emit several
