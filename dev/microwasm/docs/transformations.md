@@ -63,6 +63,21 @@ encoding, canonicalizing the query spelling without sorting or dropping pairs.
 It accepts exactly two strings per pair and replaces lone surrogates as the
 browser API does; it neither coerces scalar types nor invents nested names.
 
+The XML pair (26–27) is in progress, not yet selectable. Its shared
+[character/name/string helper](../transforms/00-xml-strings.md) is implemented
+and tested. Next is the document parser, retaining ordered element, text,
+comment, CDATA and processing-instruction nodes. The representation will be a
+root array of nodes: element objects contain `element` (the lexical name),
+`attributes` (a string-valued object) and `children` (an ordered node array).
+Other node objects carry `text`, `comment` or `cdata` strings; processing
+instructions carry `pi` (target) and `data`. This preserves mixed content,
+repeated sibling names and whitespace rather than flattening XML into a map.
+An optional initial XML declaration needs a distinct, validated record.
+Require one root element and matching tags, reject duplicate attributes,
+DTDs and undeclared entities, and keep namespace prefixes as lexical names.
+The reverse writer must validate this shape and preserve the normalized data,
+without inventing namespace bindings or fetching resources.
+
 ## Shared number conversion
 
 Start with exact integer digit accumulation and formatting for bases 2..36.
@@ -84,6 +99,16 @@ Each tool has its own documented input/output contract, successful fixtures,
 malformed-input checks and browser interaction test. Shared parsing, escaping
 and serialization helpers are desirable; fifty names for the same conversion
 with different constants would not satisfy this list.
+
+Function explanations must go below the call-graph level: show meaningful
+branches and loops, when cursors/state advance or are retained, and where
+validation and bounds checks happen. Use small flowcharts where they help,
+tables for classifications/state, and byte-list substeps with explanations.
+A list of function names or one top-level pseudocode block is not sufficient
+for a complicated routine. Repeated mechanisms can link to a shared pattern,
+but the routine's differing decisions should remain explained locally. The
+XML helper and query pair now use this fuller form; earlier tools still need
+a documentation-depth review as part of completing the collection.
 
 1. Hierarchical JSON-shaped Markdown list to fenced JSON.
 2. Fenced JSON to hierarchical JSON-shaped Markdown list.

@@ -82,6 +82,124 @@ store is bounded. Dense empty pairs or replacement characters can exhaust
 output before input. A failed call may leave partial output, which the UI
 must not publish. Another call resets output and field-local state.
 
+## Inside the functions
+
+### `run`: find structure before interpreting field data
+
+```mermaid
+flowchart TD
+  A[Validate fence and one physical query line] --> B[Skip one optional initial question mark]
+  B --> C[Emit root array marker]
+  C --> D{More query bytes?}
+  D -- no --> R[Return output length]
+  D -- yes --> E[Find next raw ampersand or end]
+  E --> F{Segment empty?}
+  F -- yes --> G[Advance past separator]
+  F -- no --> H[Find first raw equals sign inside segment]
+  H --> I[Emit pair marker and decoded name]
+  I --> J[Emit decoded value, or empty value if no equals sign]
+  J --> G
+  G --> D
+```
+
+`ql-run-segment` and `ql-run-equals` operate on original bytes. They cannot
+mistake `%26` for a pair separator or `%3D` for the name/value separator.
+`ql-run-value` adds one to the equals position only when an equals sign was
+actually found. Otherwise the value span begins and ends at the segment end.
+`ql-run-empty` skips empty segments but never skips an empty *name*: `=` is a
+nonempty segment and produces a pair of two empty strings.
+
+The fence checks happen before any transformation output. `ql-run-one-line`
+rejects embedded physical line breaks; decoded `%0A` remains allowed later.
+The `ql-run-fence-*` checks prevent a query line from also being a Markdown
+closing fence. An encoded backtick is data and does not trigger those checks.
+
+### `field`: one scratch store for each decoded byte
+
+```mermaid
+flowchart TD
+  A[Reset scratch cursor to last page] --> B{Source bytes remain?}
+  B -- no --> Z[Decode scratch as UTF-8 and emit a quoted string]
+  B -- yes --> C{Current byte is plus?}
+  C -- yes --> D[Replace with space]
+  C -- no --> E{Percent sign with two following bytes?}
+  E -- no --> S[Store current byte in bounded scratch]
+  E -- yes --> F[Decode both hex digits]
+  F --> G{Both valid?}
+  G -- no --> S
+  G -- yes --> H[Combine nibbles and advance source by two]
+  H --> S
+  D --> S
+  S --> I[Advance source and scratch by one]
+  I --> B
+```
+
+The plus branch runs before percent decoding. `%2B` therefore becomes a
+literal plus, not a space. On an invalid triplet, the percent sign alone is
+copied on this iteration; the following characters are still visited normally.
+For `%%41`, that produces `%A`. Only a valid triplet advances by the extra two
+bytes. The final increment is shared by all paths.
+
+### `quoted UTF-8`: retry invalid continuations, not valid ones
+
+The state is a partial scalar, a remaining-continuation count, and the allowed
+interval for the next byte. The interval tightens for the first continuation
+of certain lead bytes, then resets to `80..BF` after an accepted continuation.
+
+| Lead byte | First continuation | Reason |
+| --- | --- | --- |
+| E0 | A0–BF | Exclude overlong three-byte encodings. |
+| ED | 80–9F | Exclude surrogate scalars. |
+| F0 | 90–BF | Exclude overlong four-byte encodings. |
+| F4 | 80–8F | Stop at U+10FFFF. |
+
+```mermaid
+flowchart TD
+  A{At end of field?} -- yes --> B{Partial sequence remains?}
+  B -- yes --> C[Emit one replacement, then closing quote]
+  B -- no --> D[Emit closing quote]
+  A -- no --> E{Continuation expected?}
+  E -- no --> F{ASCII or valid leading byte?}
+  F -- ASCII --> G[Emit scalar]
+  F -- lead --> H[Initialize partial scalar, count and interval]
+  F -- neither --> I[Emit replacement]
+  E -- yes --> J{Byte within allowed interval?}
+  J -- no --> K[Emit replacement; clear state; do not advance cursor]
+  K --> A
+  J -- yes --> L[Accumulate six bits; decrement count; reset interval]
+  L --> M{Sequence complete?}
+  M -- yes --> G
+  M -- no --> N[Advance cursor]
+  G --> N
+  H --> N
+  I --> N
+  N --> A
+```
+
+`ql-string-invalid-continuation` branches directly back to the loop, bypassing
+`ql-string-next`. For bytes `E2 82 41`, the incomplete sequence becomes one
+replacement and `41` is retried as `A`. Advancing there would lose the `A`.
+For `ED A0 80`, the restricted interval rejects `A0`; it and `80` are then
+individually invalid leading bytes, producing three replacements in total.
+
+`ql-string-truncated` emits only one replacement for a partial sequence at
+the field end. Each field gets a fresh set of locals, so state cannot leak
+from a name into its value or into the next pair.
+
+### `scalar`, `prefix`, and `emit`: rendering without another parser
+
+- `scalar` emits JSON short escapes first, then `\u00xx` for other controls
+  below space. It prefixes quote/backslash with a backslash; other ASCII is
+  direct. Non-ASCII scalars use the two/three/four-byte UTF-8 branches and their
+  shared continuation-byte tails. Its input is already a decoded scalar.
+- `prefix(depth)` repeats two spaces per depth, then emits `- `. The caller
+  chooses depth 0 for the root, 1 for a pair and 2 for each string leaf.
+- `emit` enforces the output region on every byte. Scratch writes have their
+  own bound in `field`; reaching one region's limit cannot spill into another.
+- `hex-value` and `hex-digit` have opposite roles: the former accepts either
+  case and returns `-1` on failure; the latter writes one lowercase hex digit
+  for a JSON control escape. Their callers supply the surrounding syntax.
+
 ## Module
 
 Functions: run 0, emit 1, prefix 2, field 3, quoted UTF-8 4, scalar 5,
@@ -137,14 +255,19 @@ hex-value 6, hex-digit 7, whitespace 8. Global 0 is the output cursor.
           - ql-field-plus: `20 03 41 2b 46 04 40 41 20 21 03`
             - ql-field-percent: `05 20 03 41 25 46 20 00 41 02 6a 20 01 49 71 04 40`
               - ql-field-hex: `20 00 41 01 6a 2d 00 00 10 06 21 04 20 00 41 02 6a 2d 00 00 10 06 21 05`
-              - ql-field-valid: `20 04 41 00 4e 20 05 41 00 4e 71 04 40 20 04 41 04 74 20 05 72 21 03 20 00 41 02 6a 21 00 0b 0b 0b`
+              - ql-field-valid: `20 04 41 00 4e 20 05 41 00 4e 71 04 40` — Only two valid hex digits take the decoding branch.
+                - ql-field-combine: `20 04 41 04 74 20 05 72 21 03` — High nibble times sixteen, combined with the low nibble.
+                - ql-field-consume-triplet: `20 00 41 02 6a 21 00 0b 0b 0b` — Consume the extra two bytes only on success; every path still takes the common final increment.
           - ql-field-store: `20 02 41 808010 4f 04 40 00 0b 20 02 20 03 3a 00 00 20 02 41 01 6a 21 02`
           - ql-field-next: `20 00 41 01 6a 21 00 0c 00 0b 0b 41 80800c 20 02 10 04 0b`
     - ql-string-record: `{{size:ql-string-body}}`
       - ql-string-body: `01 05 7f 41 8001 21 05 41 bf01 21 06 41 22 10 01`
         - ql-string-loop: `02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 21 02`
           - ql-string-continuation: `20 04 04 40`
-            - ql-string-invalid-continuation: `20 02 20 05 49 20 02 20 06 4b 72 04 40 41 fdff03 10 05 41 00 21 04 41 8001 21 05 41 bf01 21 06 0c 02 0b`
+            - ql-string-invalid-continuation: `20 02 20 05 49 20 02 20 06 4b 72 04 40` — Outside the current continuation interval.
+              - ql-string-replace-partial: `41 fdff03 10 05` — Replace the unfinished sequence, not the current byte.
+              - ql-string-reset-partial: `41 00 21 04 41 8001 21 05 41 bf01 21 06` — Clear the remaining count and restore the ordinary continuation bounds.
+              - ql-string-retry-byte: `0c 02 0b` — Branch past both if blocks to the loop without advancing the cursor.
             - ql-string-accumulate: `20 03 41 06 74 20 02 41 3f 71 72 21 03 20 04 41 01 6b 21 04 41 8001 21 05 41 bf01 21 06`
             - ql-string-complete: `20 04 45 04 40 20 03 10 05 0b`
           - ql-string-leading: `05`

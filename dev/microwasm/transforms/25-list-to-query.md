@@ -85,6 +85,99 @@ and source bytes are unchanged. Percent encoding may exhaust output before
 input. The UI keeps its previous successful result after a trap; a subsequent
 run rebuilds the list stack and resets the writer cursors.
 
+## Inside the writer
+
+### `run`: validate shape while streaming each pair
+
+```mermaid
+flowchart TD
+  A[Compile list; check intermediate size] --> B[Copy JSON body to scratch and reset cursors]
+  B --> C[Emit query fence; require outer array opening]
+  C --> D{Outer array is empty?}
+  D -- yes --> Z[Require outer closing and exact end; finish fence]
+  D -- no --> E[Require pair opening; encode first string]
+  E --> F[Require comma; emit equals sign]
+  F --> G[Encode second string; require pair closing]
+  G --> H{Outer closing follows?}
+  H -- yes --> Z
+  H -- no --> I[Require comma; emit ampersand]
+  I --> E
+```
+
+The byte labels `lq-pair-name`, `-value`, `-end`, and `-next` correspond to
+the loop above. `take` checks each expected bracket or comma, including bounds,
+before moving the global source cursor. `string` checks its own opening quote.
+Together they reject an empty pair, a third item, a non-string item, or a
+non-array child without constructing another tree.
+
+The list compiler has already validated JSON syntax. This traversal checks
+the destination's narrower shape, rather than trusting any JSON array as a
+pair list. After the outer closing bracket, the source cursor must equal the
+saved end. The final newline and fence are written only after that check.
+
+### `string`: scan once, then decode with a non-consuming peek
+
+The first loop (`lq-string-scan`) locates the closing quote. Backslash skips
+one following byte, so an escaped quote does not terminate the scan. The JSON
+has already been validated; the loop is finding a boundary, not interpreting
+escapes. It saves that boundary as local 1 and advances the global source
+cursor past the quote. Locals then decode within that bounded string span.
+
+```mermaid
+flowchart TD
+  A[Read next UTF-16 unit with current cursor and pending unit] --> B{End marker?}
+  B -- yes --> R[Return to pair traversal]
+  B -- no --> C{High surrogate?}
+  C -- yes --> D[Peek using separate cursor and pending locals]
+  D --> E{Peeked unit is low surrogate?}
+  E -- yes --> F[Commit peeked state and combine pair]
+  E -- no --> G[Use U+FFFD without committing peeked state]
+  C -- no --> H{Lone low surrogate?}
+  H -- yes --> I[Use U+FFFD]
+  H -- no --> J[Keep unit as scalar]
+  F --> O[Emit scalar through UTF-8 and query encoding]
+  G --> O
+  I --> O
+  J --> O
+  O --> A
+```
+
+| State | Locals | When it changes |
+| --- | --- | --- |
+| Current decoder cursor and pending unit | 0 and 2 | After a normal iterator call, or a successful surrogate-pair peek. |
+| String end | 1 | Set by the quote scanner; never advances during decoding. |
+| Current unit or combined scalar | 3 | Replaced with a combined scalar or U+FFFD when needed. |
+| Peeked unit, cursor and pending unit | 4, 5 and 6 | Speculative until the peek completes a valid pair. |
+
+For `high-surrogate, A`, the replacement is emitted and `A` is read again on
+the next iteration. For `high-surrogate, high-surrogate, low-surrogate`, the
+first is replaced, while the second and third still form a pair. Committing
+every peek would incorrectly lose those following characters. At string end,
+the iterator's `-1` is distinct from a valid NUL character.
+
+### `UTF-8`, `encoded-byte`, and `emit`: keep three responsibilities separate
+
+`UTF-8` chooses one, two, three or four bytes based on scalar magnitude. Its
+multibyte branches share the final continuation byte, and its three/four-byte
+branches share the final two. Every resulting byte goes through `encoded-byte`,
+not directly to memory.
+
+```mermaid
+flowchart TD
+  A[One UTF-8 byte] --> B{Space?}
+  B -- yes --> C[Emit plus and return]
+  B -- no --> D{ASCII alphanumeric or star, hyphen, dot, underscore?}
+  D -- yes --> E[Emit unchanged and return]
+  D -- no --> F[Emit percent sign]
+  F --> G[Emit uppercase hex of high nibble]
+  G --> H[Emit uppercase hex of low nibble]
+```
+
+`encoded-byte` knows the query's escaping policy. `hex-digit` merely maps a
+nibble to 0–9 or A–F. `emit` alone owns the bounds check and memory store.
+Because the Unicode iterator never emits raw invalid scalars to `UTF-8`, the
+UTF-8 routine needs no second surrogate validator.
+
 ## Module
 
 Imports: list-run 0, next-unit 1, shared memory. Definitions: run 2, emit 3,
@@ -110,7 +203,7 @@ source cursor 1, source end 2. `take` consumes an expected structural byte.
       - lq-run-body: `01 01 7f`
         - lq-compile: `20 00 10 00 41 0d 6b 21 01`
         - lq-source-bound: `20 01 45 20 01 41 808004 4b 72 04 40 00 0b`
-        - lq-source-copy: `41 80800c 41 888004 20 01 fc 0a 00 00`
+        - lq-source-copy: `41 80800c 41 888004 20 01 fc 0a 00 00` — Move only the compact JSON body, after the list compiler has finished using its stack.
         - lq-reset: `41 808004 24 00 41 80800c 24 01 41 80800c 20 01 6a 24 02`
         - lq-fence: `41 e000 10 03 41 e000 10 03 41 e000 10 03 41 f100 10 03 41 f500 10 03 41 e500 10 03 41 f200 10 03 41 f900 10 03 41 0a 10 03`
         - lq-root: `41 db00 10 04 23 01 2d 00 00 41 dd00 47 04 40 03 40`
@@ -127,13 +220,17 @@ source cursor 1, source end 2. `take` consumes an expected structural byte.
     - lq-string-record: `{{size:lq-string-body}}`
       - lq-string-body: `01 07 7f`
         - lq-string-open: `41 22 10 04 23 01 21 00 23 01 21 01`
-        - lq-string-scan: `02 40 03 40 20 01 23 02 4f 04 40 00 0b 20 01 2d 00 00 41 22 46 0d 01 20 01 2d 00 00 41 dc00 46 04 40 20 01 41 01 6a 21 01 0b 20 01 41 01 6a 21 01 0c 00 0b 0b`
+        - lq-string-scan: `02 40 03 40`
+          - lq-string-scan-bound: `20 01 23 02 4f 04 40 00 0b` — A quote must be found inside the validated JSON body.
+          - lq-string-scan-close: `20 01 2d 00 00 41 22 46 0d 01` — Keep the closing quote's position as the exclusive decoder end.
+          - lq-string-scan-escape: `20 01 2d 00 00 41 dc00 46 04 40 20 01 41 01 6a 21 01 0b` — Skip an escaped byte so an escaped quote cannot end the scan.
+          - lq-string-scan-next: `20 01 41 01 6a 21 01 0c 00 0b 0b` — Advance and repeat, then retain the bounded span.
         - lq-string-source-next: `20 01 41 01 6a 24 01`
         - lq-string-loop: `02 40 03 40 20 00 20 01 20 02 10 01 21 02 21 00 21 03 20 03 41 7f 46 0d 01`
           - lq-string-high: `20 03 41 80b003 6b 41 ff07 4d 04 40`
-            - lq-string-peek: `20 00 20 01 20 02 10 01 21 06 21 05 21 04`
+            - lq-string-peek: `20 00 20 01 20 02 10 01 21 06 21 05 21 04` — Decode speculatively into locals 4–6; do not change cursor 0 or pending 2 yet.
             - lq-string-pair: `20 04 41 80b803 6b 41 ff07 4d 04 40 20 05 21 00 20 06 21 02 20 03 41 80b003 6b 41 0a 74 20 04 41 80b803 6b 6a 41 808004 6a 21 03`
-            - lq-string-replacement: `05 41 fdff03 21 03 0b`
+            - lq-string-replacement: `05 41 fdff03 21 03 0b` — Leave the failed peek unconsumed and replace only the current high surrogate.
           - lq-string-lone-low: `05 20 03 41 80b803 6b 41 ff07 4d 04 40 41 fdff03 21 03 0b 0b`
           - lq-string-emit: `20 03 10 06 0c 00 0b 0b 0b`
     - lq-utf8-record: `{{size:lq-utf8-body}}`

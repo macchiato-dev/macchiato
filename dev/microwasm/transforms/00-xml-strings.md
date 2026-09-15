@@ -69,6 +69,172 @@ start in `0x10000..0x30000` and stores stop before `0x30000`. The caller keeps
 input and output disjoint. Input bytes are never changed. Failed output may
 be partial and must not be published; the next call resets the output cursor.
 
+## Inside the functions
+
+These walkthroughs use the byte-list labels below. They explain the decisions
+inside the routines, not just which routine calls which. The Mermaid source
+is intentionally visible in the current lightweight Markdown renderer.
+
+### `scalar`: decode first, then check XML legality
+
+```mermaid
+flowchart TD
+  A[Check nonempty in-memory span] --> B{First byte is ASCII?}
+  B -- yes --> C[Read byte and advance cursor by one]
+  B -- no --> D[Call k.next with no pending unit]
+  D --> E{Returned a pending low surrogate?}
+  E -- yes --> F[Combine high and low units into one scalar]
+  E -- no --> G[Keep returned scalar and cursor]
+  C --> H{Allowed XML character?}
+  F --> H
+  G --> H
+  H -- yes --> I[Return scalar and next cursor]
+  H -- no --> J[Trap]
+```
+
+- `xs-scalar-bound` prevents an empty span or out-of-memory read. The UTF-8
+  iterator performs the continuation and scalar-encoding checks on its path.
+- `xs-scalar-ascii` reads a backslash as byte 92. It deliberately bypasses
+  the JSON iterator's escape handling, so XML `\n` stays two characters.
+- `xs-scalar-astral` consumes the iterator's already-decoded pending unit;
+  it does not read another character from memory. The cursor already points
+  after the four UTF-8 bytes.
+- `xs-scalar-xml` rejects otherwise valid UTF-8 such as NUL or U+FFFE.
+  Valid UTF-8 is necessary, but not sufficient, for XML character data.
+
+### `character`, `nameStart`, `namePart`: ranges, not a scanner
+
+These predicates never read memory or advance a cursor. Each interval test
+uses unsigned `(value - lower) <= (upper - lower)`. A value below the interval
+wraps to a large unsigned difference and fails the same comparison.
+
+| Predicate portion | Accepted values | Why it is separate |
+| --- | --- | --- |
+| `character` whitespace | TAB, LF, CR | Other characters below U+0020 are forbidden. |
+| `character` BMP | U+0020–D7FF, U+E000–FFFD | Surrogates and the final two BMP noncharacters are excluded. |
+| `character` astral | U+10000–10FFFF | XML's character range is broader than its name range. |
+| `nameStart` ASCII fast path | Letters, colon, underscore | Common names return without testing the Unicode intervals. |
+| `nameStart` Unicode path | The XML production's explicit intervals | Not every legal XML character can start a name. |
+| `namePart` additions | Digits, hyphen, dot, U+00B7, U+0300–036F, U+203F–2040 | These may follow, but not replace, the initial name character. |
+
+The non-ASCII `nameStart` expression is grouped into these byte-list sections.
+Each row contributes more alternatives to the same Boolean result; it does
+not require matching every interval in that row.
+
+| Byte-list group | Inclusive code-point intervals |
+| --- | --- |
+| `xs-name-start-latin` | 00C0–00D6, 00D8–00F6, 00F8–02FF |
+| `xs-name-start-greek` | 0370–037D, 037F–1FFF |
+| `xs-name-start-middle` | 200C–200D, 2070–218F, 2C00–2FEF, 3001–D7FF |
+| `xs-name-start-high` | F900–FDCF, FDF0–FFFD, 10000–EFFFF |
+
+### `nameEnd`: look ahead without swallowing a delimiter
+
+```mermaid
+flowchart TD
+  A[Decode first scalar] --> B{Valid name start?}
+  B -- no --> X[Trap]
+  B -- yes --> C[Commit its next cursor]
+  C --> D{At end of supplied span?}
+  D -- yes --> R[Return current cursor]
+  D -- no --> E[Decode candidate into a separate next cursor]
+  E --> F{Valid name continuation?}
+  F -- no --> R
+  F -- yes --> G[Commit candidate next cursor]
+  G --> D
+```
+
+`xs-name-end-first` requires at least one character; an empty name is not a
+successful zero-length token. In `xs-name-end-loop`, local 2 holds the
+candidate cursor while local 0 still points at the candidate's first byte.
+If the candidate is `=`, `>` or whitespace, the routine returns local 0.
+The document parser can then consume that delimiter itself. A malformed
+UTF-8 candidate still traps: it is not treated as an innocent delimiter.
+
+### `entity`: two bounded paths with different termination rules
+
+```mermaid
+flowchart TD
+  A[Require ampersand and at least one following byte] --> B{Next byte is #?}
+  B -- yes --> C[Use radix 10; optional lowercase x selects 16]
+  C --> D{Current byte is semicolon?}
+  D -- no --> E[Decode digit and require digit less than radix]
+  E --> F[Accumulate value; reject above U+10FFFF]
+  F --> G[Increment digit count and cursor]
+  G --> D
+  D -- yes --> H{At least one digit and legal XML character?}
+  H -- no --> X[Trap]
+  H -- yes --> R[Return scalar and cursor after semicolon]
+  B -- no --> I[Scan at most four name bytes up to semicolon]
+  I --> J{Exact predefined name?}
+  J -- no --> X
+  J -- yes --> R
+```
+
+- `xs-entity-bound` checks the opening `&`. Both loops check their bounds
+  before reading, so a missing semicolon cannot read beyond the supplied span.
+- `xs-entity-digit-value` rejects a failed hex conversion using an unsigned
+  comparison. The `-1` sentinel is larger than either accepted radix.
+- `xs-entity-accumulate` checks after every digit, not only at the end. With
+  the prior value capped at U+10FFFF, multiplying by at most 16 cannot wrap
+  an i32 before this check. Leading zeros still count as digits.
+- `xs-entity-two`, `-three`, and `-four` select `lt`/`gt`, `amp`, and
+  `quot`/`apos`. Length alone is never enough: every name byte is compared.
+- The terminating semicolon is consumed in the returned cursor. Following
+  text remains unread. No recursive entity substitution takes place.
+
+### `string`: entity characters must bypass literal-space normalization
+
+```mermaid
+flowchart TD
+  A[Check spans, output region and mode; emit opening quote] --> B{Input remains?}
+  B -- no --> Z[Emit closing quote; return byte length]
+  B -- yes --> C{Entity-enabled mode and ampersand?}
+  C -- yes --> D[Decode entity and retain its scalar unchanged]
+  C -- no --> E[Reject markup forbidden in this mode]
+  E --> F[Decode one raw XML scalar]
+  F --> G{Literal CR?}
+  G -- yes --> H[Skip following LF if present; use LF]
+  G -- no --> I{Attribute mode and literal TAB or LF?}
+  H --> I
+  I -- yes --> J[Use space]
+  I -- no --> K[Keep scalar]
+  D --> O[JSON-escape and emit scalar]
+  J --> O
+  K --> O
+  O --> B
+```
+
+The split at `xs-string-entity` is the important semantic boundary: `&#13;`
+in an attribute must remain a CR, while a literal CR becomes a space. The
+entity branch jumps past both `xs-string-cr` and `xs-string-attribute-space`.
+
+`xs-string-cdata-close` checks the raw bytes for `]]>` before decoding. Thus
+`]]&gt;` is allowed in text even though it produces the same decoded characters.
+Literal mode skips both markup checks and entity decoding, but still checks
+XML characters and normalizes line endings.
+
+### `emit` and `JSON-scalar`: storage versus representation
+
+`emit` checks capacity before each store and advances the shared output cursor
+only after the store. A later failure does not roll back earlier bytes; the
+caller must withhold the partial result. Every new `string` call resets that
+cursor from its explicit output argument.
+
+`JSON-scalar` receives an already validated XML scalar. Its branch order is:
+
+1. TAB, LF or CR: emit a backslash and the short escape letter, then return.
+2. Quote or backslash: emit a backslash prefix, then continue to ASCII output.
+3. ASCII: emit one byte and return.
+4. Below U+0800: emit a two-byte UTF-8 prefix, then the common final byte.
+5. Below U+10000: emit a three-byte prefix, then the common lower two bytes.
+6. Otherwise: emit the first two bytes of a four-byte sequence, then the same
+   lower two bytes. The bit masks prevent bits from neighboring groups leaking.
+
+The small `hex-value` routine used by `entity` tries decimal digits first,
+then folds ASCII case for A–F, and returns `-1` for anything else. It does
+not itself decide whether hexadecimal digits are allowed in the current radix.
+
 ## Module
 
 Import the JSON iterator as `k.next` (function 0) and `k.memory`. Definitions:
@@ -92,10 +258,10 @@ string 7, emit 8, JSON-scalar 9, hex-value 10. Global 0 is the output cursor.
   - xs-code: `0a`
     - xs-scalar-record: `{{size:xs-scalar-body}}`
       - xs-scalar-body: `01 02 7f`
-        - xs-scalar-bound: `20 00 20 01 4f 20 01 41 808010 4b 72 04 40 00 0b`
+        - xs-scalar-bound: `20 00 20 01 4f 20 01 41 808010 4b 72 04 40 00 0b` — Require start before end and end within memory.
         - xs-scalar-ascii: `20 00 2d 00 00 22 02 41 8001 49 04 40 20 00 41 01 6a 21 00`
         - xs-scalar-utf8: `05 20 00 20 01 41 00 10 00 21 03 21 00 21 02`
-          - xs-scalar-astral: `20 03 04 40 20 02 41 80b003 6b 41 0a 74 20 03 41 80b803 6b 6a 41 808004 6a 21 02 0b 0b`
+          - xs-scalar-astral: `20 03 04 40 20 02 41 80b003 6b 41 0a 74 20 03 41 80b803 6b 6a 41 808004 6a 21 02 0b 0b` — Combine the iterator's high and pending low units; no extra input read.
         - xs-scalar-xml: `20 02 10 02 45 04 40 00 0b 20 02 20 00 0b`
     - xs-character-record: `{{size:xs-character-body}}`
       - xs-character-body: `00 20 00 41 09 46 20 00 41 0a 46 72 20 00 41 0d 46 72 20 00 41 20 6b 41 dfaf03 4d 72 20 00 41 80c003 6b 41 fd3f 4d 72 20 00 41 808004 6b 41 ffff3f 4d 72 0b`
@@ -111,15 +277,25 @@ string 7, emit 8, JSON-scalar 9, hex-value 10. Global 0 is the output cursor.
     - xs-name-end-record: `{{size:xs-name-end-body}}`
       - xs-name-end-body: `01 01 7f`
         - xs-name-end-first: `20 00 20 01 10 01 21 00 10 03 45 04 40 00 0b`
-        - xs-name-end-loop: `02 40 03 40 20 00 20 01 4f 0d 01 20 00 20 01 10 01 21 02 10 04 45 0d 01 20 02 21 00 0c 00 0b 0b 20 00 0b`
+        - xs-name-end-loop: `02 40 03 40`
+          - xs-name-end-at-end: `20 00 20 01 4f 0d 01` — Leave the loop without reading at end.
+          - xs-name-end-candidate: `20 00 20 01 10 01 21 02` — Keep the candidate cursor separate from the committed cursor.
+          - xs-name-end-delimiter: `10 04 45 0d 01` — Return before the candidate if it is not a name continuation.
+          - xs-name-end-commit: `20 02 21 00 0c 00 0b 0b 20 00 0b` — Commit and repeat, or return the retained cursor after leaving the loop.
     - xs-entity-record: `{{size:xs-entity-body}}`
       - xs-entity-body: `01 06 7f`
         - xs-entity-bound: `20 00 20 01 4f 20 01 41 808010 4b 72 04 40 00 0b 20 00 2d 00 00 41 26 47 04 40 00 0b 20 00 41 01 6a 21 00 20 00 20 01 4f 04 40 00 0b`
         - xs-entity-numeric: `20 00 2d 00 00 41 23 46 04 40 20 00 41 01 6a 21 00 41 0a 21 03`
           - xs-entity-hex-prefix: `20 00 20 01 49 04 40 20 00 2d 00 00 41 f800 46 04 40 41 10 21 03 20 00 41 01 6a 21 00 0b 0b`
-          - xs-entity-digits: `03 40 20 00 20 01 4f 04 40 00 0b 20 00 2d 00 00 22 04 41 3b 46 04 40 20 05 45 04 40 00 0b 20 02 10 02 45 04 40 00 0b 20 02 20 00 41 01 6a 0f 0b`
+          - xs-entity-digits: `03 40`
+            - xs-entity-digit-bound: `20 00 20 01 4f 04 40 00 0b` — Reaching end before the semicolon is an error.
+            - xs-entity-digit-byte: `20 00 2d 00 00 22 04 41 3b 46 04 40` — A semicolon takes the terminating branch.
+              - xs-entity-digit-required: `20 05 45 04 40 00 0b` — Reject a reference with no digits.
+              - xs-entity-character-required: `20 02 10 02 45 04 40 00 0b` — Reject forbidden XML scalars even when their numeric spelling is valid.
+              - xs-entity-digit-return: `20 02 20 00 41 01 6a 0f 0b` — Return the scalar and consume the semicolon.
             - xs-entity-digit-value: `20 04 10 0a 22 04 20 03 4f 04 40 00 0b`
-            - xs-entity-accumulate: `20 02 20 03 6c 20 04 6a 22 02 41 ffffc300 4b 04 40 00 0b 20 05 41 01 6a 21 05 20 00 41 01 6a 21 00 0c 00 0b 0b`
+            - xs-entity-accumulate: `20 02 20 03 6c 20 04 6a 22 02 41 ffffc300 4b 04 40 00 0b` — Multiply, add the digit, and enforce the scalar upper bound immediately.
+            - xs-entity-digit-next: `20 05 41 01 6a 21 05 20 00 41 01 6a 21 00 0c 00 0b 0b` — Count the digit, advance and repeat; close the numeric branch after the loop.
         - xs-entity-name-start: `20 00 21 06`
         - xs-entity-name-loop: `02 40 03 40 20 00 20 01 4f 04 40 00 0b 20 00 2d 00 00 41 3b 46 0d 01 20 00 20 06 6b 41 04 4f 04 40 00 0b 20 00 41 01 6a 21 00 0c 00 0b 0b 20 00 20 06 6b 21 07`
         - xs-entity-two: `20 07 41 02 46 04 40 20 06 41 01 6a 2d 00 00 41 f400 47 04 40 00 0b 20 06 2d 00 00 41 ec00 46 04 40 41 3c 21 02 05 20 06 2d 00 00 41 e700 47 04 40 00 0b 41 3e 21 02 0b`
@@ -132,12 +308,14 @@ string 7, emit 8, JSON-scalar 9, hex-value 10. Global 0 is the output cursor.
       - xs-string-body: `01 01 7f`
         - xs-string-bound: `20 00 20 01 4b 20 01 41 808010 4b 72 20 02 41 808004 49 72 20 02 41 80800c 4b 72 20 03 41 02 4b 72 04 40 00 0b 20 02 24 00 41 22 10 08`
         - xs-string-loop: `02 40 03 40 20 00 20 01 4f 0d 01`
-          - xs-string-entity: `20 03 41 02 49 20 00 2d 00 00 41 26 46 71 04 40 20 00 20 01 10 06 21 00 21 04`
+          - xs-string-entity: `20 03 41 02 49 20 00 2d 00 00 41 26 46 71 04 40 20 00 20 01 10 06 21 00 21 04` — Entity characters bypass the raw-character normalization branch.
           - xs-string-raw: `05`
             - xs-string-less: `20 03 41 02 49 20 00 2d 00 00 41 3c 46 71 04 40 00 0b`
             - xs-string-cdata-close: `20 03 45 20 00 41 02 6a 20 01 49 71 04 40 20 00 2d 00 00 41 dd00 46 20 00 41 01 6a 2d 00 00 41 dd00 46 71 20 00 41 02 6a 2d 00 00 41 3e 46 71 04 40 00 0b 0b`
             - xs-string-scalar: `20 00 20 01 10 01 21 00 21 04`
-            - xs-string-cr: `20 04 41 0d 46 04 40 20 00 20 01 49 04 40 20 00 2d 00 00 41 0a 46 04 40 20 00 41 01 6a 21 00 0b 0b 41 0a 21 04 0b`
+            - xs-string-cr: `20 04 41 0d 46 04 40` — Only literal CR enters this branch.
+              - xs-string-crlf: `20 00 20 01 49 04 40 20 00 2d 00 00 41 0a 46 04 40 20 00 41 01 6a 21 00 0b 0b` — Consume a following LF once, if present.
+              - xs-string-cr-normalized: `41 0a 21 04 0b` — Both CR and CRLF now represent one LF.
             - xs-string-attribute-space: `20 03 41 01 46 20 04 41 09 46 20 04 41 0a 46 72 71 04 40 41 20 21 04 0b 0b`
           - xs-string-output: `20 04 10 09 0c 00 0b 0b 41 22 10 08 23 00 20 02 6b 0b`
     - xs-emit-record: `{{size:xs-emit-body}}`
