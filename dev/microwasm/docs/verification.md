@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 107 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 113 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are twelve implemented transformations out of the planned fifty:
-tools 1–7, 10 and 12–15.
+There are thirteen implemented transformations out of the planned fifty:
+tools 1–7 and 10–15.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -248,6 +248,23 @@ literals are verified. The browser flow checks typed rendered cells, inert
 markup, retention after a ragged-row error and recovery to empty output.
 The side-by-side screenshot was inspected: quoted strings, an embedded pipe,
 duplicate object keys and markup-like string text all remain distinct cells.
+
+Six typed-table reverse tests cover exact JSON values, empty documents,
+Unicode reference decoding, punctuation escapes and 600 generated round trips
+through both actual Wasm modules sharing memory. Negative cases include
+multiple values in one cell and JSON punctuation split across cells that
+could otherwise form a valid combined document. They also cover malformed
+JSON, ragged tables, separator errors, depth limits and recovery. Exact input
+and per-cell scratch capacities, untouched original input, scratch sentinels
+and parser literals are checked. The new numeric `validMemory` entry is
+tested through the final memory byte; the original `valid` still rejects
+spans outside the first page. JSON scratch-span checks reject output overlap,
+literal overlap and out-of-memory bounds. Browser tests render both sides,
+compare exact JSON text, keep markup inert, reject a multi-value cell while
+retaining the prior result, and recover to the empty-array result.
+The rendered side-by-side screenshot was inspected: the embedded pipe remains
+in one cell, markup-like text stays literal, and duplicate keys and exponent
+spelling are visible unchanged in the JSON output.
 
 The JSON syntax scanner was compared with the native JSON parser on ten
 thousand generated candidate strings and explicit grammar boundaries. List

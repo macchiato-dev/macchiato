@@ -60,6 +60,17 @@ export const transforms = [{
   expected:
     '| "name" | "score" | "metadata" |\n| --- | --- | --- |\n| "Ben" | 12.50 | {"active":true} |\n| "Ada" | null | &#91;"wasm","Markdown"&#93; |\n',
 }, {
+  id: "11-table-to-json-rows",
+  title: "Typed Markdown table to JSON rows",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+  ],
+  input:
+    '| "name" | "score" | "metadata" |\n| --- | --- | --- |\n| "Ben" | 12.50 | {"active":true} |\n| "Ada" | null | &#91;"wasm","Markdown"&#93; |\n',
+  expected:
+    '```json\n[["name","score","metadata"],["Ben",12.50,{"active":true}],["Ada",null,["wasm","Markdown"]]]\n```\n',
+}, {
   id: "12-json-pretty",
   title: "Pretty-print JSON",
   dependencies: [

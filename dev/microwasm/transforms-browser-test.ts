@@ -625,6 +625,56 @@ try {
         ?.value === "" &&
     document.getElementById("transform-status")?.textContent === "Done."
   );
+  await page.goto(new URL("?tool=11-table-to-json-rows", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const typedTable =
+    '|"name"|"value"|\n|---|---|\n|"a&#124;b"|{"x":1,"x":2}|\n|"&#60;b&#62;text&#60;/b&#62;"|1.2300E+40|';
+  const typedJSON =
+    '```json\n[["name","value"],["a|b",{"x":1,"x":2}],["<b>text</b>",1.2300E+40]]\n```\n';
+  await page.locator("#transform-input").fill(typedTable);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    typedJSON,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").textContent() ===
+      typedJSON.slice(8, -4),
+    "Typed table output lost its exact JSON tokens",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "Typed table JSON became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/table-to-json-rows-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await page.locator("#transform-input").fill('|"x"|\n|---|\n|1,2|');
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-output").inputValue() === typedJSON,
+    "Invalid multi-value cell replaced successful output",
+  );
+  await page.locator("#transform-input").fill("");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "```json\n[]\n```\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
