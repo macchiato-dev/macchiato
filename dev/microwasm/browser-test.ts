@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "39-cues-to-srt",
+        "Inside run: keep the header, stream the text",
+        "Reset at each decoded LF",
+      ],
+      [
         "38-srt-to-cues",
         "Inside run: header spans and a text span instead of a cue object",
         "Distinguishes missing text from empty input",

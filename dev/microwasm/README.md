@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-eight transformations are implemented: tools 1–38 in the plan.
-The remaining 12 are pending.
+Thirty-nine transformations are implemented: tools 1–39 in the plan.
+The remaining 11 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -467,7 +467,15 @@ times, malformed input and unsupported timing extensions fail explicitly.
 Tests exercise generated cues, exact ordering with very large hours, controls,
 fence boundaries, capacity limits and recovery; browser tests cover both views.
 Try [the subtitle reader](http://microwasm.localhost:3030/?tool=38-srt-to-cues).
-The reverse subtitle writer (39) is next.
+
+The [subtitle writer](transforms/39-cues-to-srt.md) completes the SubRip pair.
+Its 1,143-byte module reuses the reader's timing checks and the shared JSON
+Unicode iterator. It streams decoded text, preserves number/timestamp spelling,
+and rejects blank text lines that could be mistaken for a cue separator.
+An overlap-safe move frames the completed body using a fence longer than any
+decoded backtick run. Tests cover generated round trips, the BMP scalar corpus,
+surrogate pairs, malformed edits, CommonMark fence parsing and exact capacity.
+Try [the subtitle writer](http://microwasm.localhost:3030/?tool=39-cues-to-srt).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

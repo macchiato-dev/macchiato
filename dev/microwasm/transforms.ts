@@ -416,4 +416,17 @@ export const transforms = [{
     "```srt\n1\n00:00:01,000 --> 00:00:03,250\nHello, world!\nSecond line.\n\n2\n00:00:03,000 --> 00:00:05,000\n<i>Overlapping subtitles</i>\n```\n",
   expected:
     '- 1 00:00:01,000 --> 00:00:03,250 "Hello, world!\\nSecond line."\n- 2 00:00:03,000 --> 00:00:05,000 "<i>Overlapping subtitles</i>"\n',
+}, {
+  id: "39-cues-to-srt",
+  title: "Markdown cue list to SubRip subtitles",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "r", path: "transforms/38-srt-to-cues" },
+  ],
+  input:
+    '- 1 00:00:01,000 --> 00:00:03,250 "Hello, world!\\nSecond line."\n- 2 00:00:03,000 --> 00:00:05,000 "<i>Overlapping subtitles</i>"\n',
+  expected:
+    "```srt\n1\n00:00:01,000 --> 00:00:03,250\nHello, world!\nSecond line.\n\n2\n00:00:03,000 --> 00:00:05,000\n<i>Overlapping subtitles</i>\n```\n",
 }];

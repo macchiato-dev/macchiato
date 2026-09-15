@@ -2403,6 +2403,85 @@ try {
     subtitles.expected,
   );
   check(subtitleFetches.length === 0, "Subtitle data fetched a resource");
+  await page.goto(new URL("?tool=39-cues-to-srt", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  // Backticks created by decoding escapes count too, not just source backticks.
+  const writerRows = subtitleRows.replace(
+    "Second line.",
+    "\\u0060\\u0060\\u0060\\nSecond line.",
+  );
+  const writtenSubtitles = subtitleSource.replace(
+    "Second line.",
+    "```\nSecond line.",
+  )
+    .replace("```srt", "````srt").replace(/\n```\n$/, "\n````\n");
+  await page.locator("#transform-input").fill(writerRows);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    writtenSubtitles,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre").count() === 1,
+    "Decoded backticks broke the subtitle fence",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered img, #transform-output-rendered script",
+    ).count() === 0,
+    "Written subtitle text became active markup",
+  );
+  check(
+    (await page.locator("#transform-output-rendered pre").textContent())
+      ?.includes("```\nSecond line."),
+    "Literal backtick line was lost",
+  );
+  await page.screenshot({
+    path: artifacts + "/cues-to-srt-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    writerRows.replace("Hello, world!", ""),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === writtenSubtitles,
+    "Unrepresentable cue text replaced successful output",
+  );
+  await page.locator("#transform-input").fill(subtitles.expected);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    subtitles.input,
+  );
+  await page.goto(new URL("?tool=38-srt-to-cues", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(writtenSubtitles);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    writerRows.replaceAll("\\u0060", "`"),
+  );
+  check(subtitleFetches.length === 0, "Subtitle pair fetched a resource");
   page.off("request", onSubtitleRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(

@@ -6,13 +6,13 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–38, and the side-by-side
+syntax validation and binary64 parsing, tools 1–39, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 12 tools remain.
+significant-digit formatting are implemented too. The other 11 tools remain.
 This is not goal completion.
 
 ## Data representation
@@ -33,7 +33,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–38 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–39 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -204,7 +204,27 @@ Exact timestamp comparison works on validated digit strings without integer
 overflow; overlaps and out-of-order cues remain valid. UTF-8 and physical
 line boundaries are validated, and multiline text is normalized to LF.
 Generated cue models, large hour values, malformed syntax, fence ambiguity,
-capacity and recovery are tested. The reverse subtitle writer (39) is next.
+capacity and recovery are tested.
+
+The reverse subtitle writer (39) reuses those timing checks and the JSON
+Unicode iterator. It emits each cue directly from spans, decoding text without
+allocating a string. A nonblank-line flag rejects text that would split into
+separate cues. One scan of the finished body sizes its fence; one overlapping
+memory move makes room. Actual pair round trips, generated models, Unicode,
+malformed edits, CommonMark parsing and exact framed capacity are tested.
+WebVTT subtitles (40–41) are next.
+
+For that pair, use the [WebVTT file structure and timing rules](
+https://www.w3.org/TR/2026/CRD-webvtt1-20260520/#file-structure), not just a
+comma-to-dot change to SubRip. The draft permits timestamps without hours,
+optional cue identifiers and cue settings, plus NOTE, STYLE and REGION blocks.
+It requires positive-duration cues in nondecreasing start-time order.
+Preserve those additional blocks, identifiers, settings and header text as
+data rather than dropping them. Keep the Markdown flat where possible; an
+ordinary cue-only file should not need a header wrapper. CSS and cue markup
+remain inert strings, not rendered subtitles. Test frame boundaries and
+round trips, and use browser text tracks as an independent cue-parsing check.
+These are next-step design notes, not claims of implemented WebVTT support.
 
 ## Shared number conversion
 
