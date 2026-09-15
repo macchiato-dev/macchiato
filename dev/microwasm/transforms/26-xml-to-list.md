@@ -75,6 +75,12 @@ it does not accept an XML fragment or skip validation. It writes the ordinary
 ordered tree at `65536`, just as `run` does. Callers may discard that tree
 after validation, but its output-capacity limit still applies.
 
+`checkFenceLines(start, end, ticks)` exposes the same read-only framing scan
+used by `run`. A format with a different fence label can check its extracted
+body for premature closing-fence lines before calling `readSpan`. It also
+validates XML characters. The caller supplies a bounded source span and a
+positive opening-fence length, just as the internal reader does.
+
 ## Function walkthroughs
 
 ### `run`: framing, validation and the one-root condition
@@ -278,7 +284,7 @@ root count 3, document start 4, opening-fence length 5.
 - xl-global-section: `06 {{size:xl-globals}}`
   - xl-globals: `06 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - xl-export-section: `07 {{size:xl-exports}}`
-  - xl-exports: `03 03 72756e 00 03 06 6d656d6f7279 02 00 08 726561645370616e 00 18`
+  - xl-exports: `04 03 72756e 00 03 06 6d656d6f7279 02 00 08 726561645370616e 00 18 0f 636865636b46656e63654c696e6573 00 17`
 - xl-code-section: `0a {{size:xl-code}}`
   - xl-code: `17`
     - xl-run-record: `{{size:xl-run-body}}`
