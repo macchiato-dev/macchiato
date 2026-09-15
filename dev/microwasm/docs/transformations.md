@@ -6,13 +6,13 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–39, and the side-by-side
+syntax validation and binary64 parsing, tools 1–40, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 11 tools remain.
+significant-digit formatting are implemented too. The other 10 tools remain.
 This is not goal completion.
 
 ## Data representation
@@ -33,7 +33,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–39 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–40 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -212,19 +212,16 @@ allocating a string. A nonblank-line flag rejects text that would split into
 separate cues. One scan of the finished body sizes its fence; one overlapping
 memory move makes room. Actual pair round trips, generated models, Unicode,
 malformed edits, CommonMark parsing and exact framed capacity are tested.
-WebVTT subtitles (40–41) are next.
 
-For that pair, use the [WebVTT file structure and timing rules](
-https://www.w3.org/TR/2026/CRD-webvtt1-20260520/#file-structure), not just a
-comma-to-dot change to SubRip. The draft permits timestamps without hours,
-optional cue identifiers and cue settings, plus NOTE, STYLE and REGION blocks.
-It requires positive-duration cues in nondecreasing start-time order.
-Preserve those additional blocks, identifiers, settings and header text as
-data rather than dropping them. Keep the Markdown flat where possible; an
-ordinary cue-only file should not need a header wrapper. CSS and cue markup
-remain inert strings, not rendered subtitles. Test frame boundaries and
-round trips, and use browser text tracks as an independent cue-parsing check.
-These are next-step design notes, not claims of implemented WebVTT support.
+The WebVTT reader (40) is implemented. Its flat records retain header text,
+NOTE/STYLE/REGION blocks, optional identifiers, settings and cue payloads.
+The shared timestamp helper locates a fixed-width tail and optional hour span,
+comparing them exactly without allocating padded strings or converting numbers.
+The reader checks positive durations, start ordering and block boundaries;
+it deliberately does not interpret CSS, settings values or cue markup.
+Generated data models, grammar comparisons, large hours, malformed UTF-8,
+fence boundaries, exact source limits and browser text-track parsing are tested.
+The reverse WebVTT writer (41) is next; it is not yet implemented.
 
 ## Shared number conversion
 

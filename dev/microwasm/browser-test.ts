@@ -183,6 +183,16 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "40-vtt-to-cues",
+        "Inside run: find the block once, then classify it",
+        "Checks ordering without converting to a number",
+      ],
+      [
+        "00-webvtt-time",
+        "Timestamp: find the tail, then validate it once",
+        "Large hours remain a span",
+      ],
+      [
         "39-cues-to-srt",
         "Inside run: keep the header, stream the text",
         "Reset at each decoded LF",

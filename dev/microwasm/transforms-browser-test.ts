@@ -2483,6 +2483,165 @@ try {
   );
   check(subtitleFetches.length === 0, "Subtitle pair fetched a resource");
   page.off("request", onSubtitleRequest);
+  const vtt = transforms.find((t) => t.id === "40-vtt-to-cues")!;
+  await page.goto(new URL("?tool=40-vtt-to-cues", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const vttSource = vtt.input.replace(
+    "color: lime",
+    "background: url(https://vtt.invalid/image)",
+  );
+  const vttRows = vtt.expected.replace(
+    "color: lime",
+    "background: url(https://vtt.invalid/image)",
+  );
+  const vttRequests: string[] = [];
+  const onVttRequest = (request: { url(): string }) => {
+    if (request.url().includes("vtt.invalid")) vttRequests.push(request.url());
+  };
+  page.on("request", onVttRequest);
+  await page.locator("#transform-input").fill(vttSource);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    vttRows,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered > ul > li").count() === 5,
+    "WebVTT records were nested or lost",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered style, #transform-output-rendered img",
+    ).count() === 0,
+    "WebVTT data became active content",
+  );
+  await page.screenshot({
+    path: artifacts + "/vtt-to-cues-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    vttSource.replace("00:03.250", "00:01.000"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === vttRows,
+    "Invalid WebVTT duration discarded successful output",
+  );
+  await page.locator("#transform-input").fill(vtt.input);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    vtt.expected,
+  );
+  check(vttRequests.length === 0, "WebVTT stylesheet fetched a resource");
+  page.off("request", onVttRequest);
+
+  // Chromium's independent parser loads only a generated local Blob in a
+  // separate blank page. This oracle is test tooling, not converter code.
+  const oracle = await browser.newPage();
+  try {
+    const models = Array.from({ length: 24 }, (_, i) => {
+      const stamp = (s: number, hours: boolean) =>
+        (hours ? "00:" : "") +
+        `${String(Math.floor(s / 60)).padStart(2, "0")}:${
+          String(s % 60).padStart(2, "0")
+        }.250`;
+      return {
+        id: `cue ${i}`,
+        start: stamp(i * 3, i % 2 === 0),
+        end: stamp(i * 3 + 2, i % 2 !== 0),
+        text: i % 3 ? `line ${i}\n<v Jane>雪 &amp; 😀` : "",
+        align: i % 2 ? "end" : "start",
+        startTime: i * 3 + 0.25,
+        endTime: i * 3 + 2.25,
+      };
+    });
+    const raw = "WEBVTT\n\nNOTE oracle\n\n" +
+      models.map((c) =>
+        `${c.id}\n${c.start} --> ${c.end} align:${c.align}\n${c.text}\n`
+      ).join("\n");
+    const parsed = await oracle.evaluate(async (source) => {
+      const video = document.createElement("video"),
+        track = document.createElement("track");
+      const url = URL.createObjectURL(new Blob([source], { type: "text/vtt" }));
+      try {
+        track.kind = "metadata";
+        const loaded = new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(
+            () => reject(Error("Text-track load timed out")),
+            10000,
+          );
+          track.addEventListener("load", () => {
+            clearTimeout(timer);
+            resolve();
+          }, { once: true });
+          track.addEventListener("error", () => {
+            clearTimeout(timer);
+            reject(Error("Text-track load failed"));
+          }, { once: true });
+        });
+        track.src = url;
+        video.append(track);
+        document.body.append(video);
+        track.track.mode = "hidden";
+        await loaded;
+        return Array.from(track.track.cues ?? [], (value) => {
+          const c = value as VTTCue;
+          return {
+            id: c.id,
+            text: c.text,
+            startTime: c.startTime,
+            endTime: c.endTime,
+            align: c.align,
+          };
+        });
+      } finally {
+        video.remove();
+        URL.revokeObjectURL(url);
+      }
+    }, raw);
+    const expected = models.map(({ id, text, startTime, endTime, align }) => ({
+      id,
+      text,
+      startTime,
+      endTime,
+      align,
+    }));
+    check(
+      JSON.stringify(parsed) === JSON.stringify(expected),
+      "Chromium WebVTT parsing disagrees with the generated model",
+    );
+    await page.locator("#transform-input").fill("```vtt\n" + raw + "```\n");
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(
+      (expected) =>
+        (document.getElementById("transform-output") as HTMLTextAreaElement)
+          ?.value === expected,
+      '- block "NOTE oracle"\n' +
+        models.map((c) =>
+          `- cue ${c.start} --> ${c.end} ${JSON.stringify(c.text)} id ${
+            JSON.stringify(c.id)
+          } settings "align:${c.align}"\n`
+        ).join(""),
+    );
+  } finally {
+    await oracle.close();
+  }
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

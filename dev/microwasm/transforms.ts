@@ -429,4 +429,17 @@ export const transforms = [{
     '- 1 00:00:01,000 --> 00:00:03,250 "Hello, world!\\nSecond line."\n- 2 00:00:03,000 --> 00:00:05,000 "<i>Overlapping subtitles</i>"\n',
   expected:
     "```srt\n1\n00:00:01,000 --> 00:00:03,250\nHello, world!\nSecond line.\n\n2\n00:00:03,000 --> 00:00:05,000\n<i>Overlapping subtitles</i>\n```\n",
+}, {
+  id: "40-vtt-to-cues",
+  title: "WebVTT to Markdown cues and ordered blocks",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "r", path: "transforms/38-srt-to-cues" },
+    { name: "v", path: "transforms/00-webvtt-time" },
+  ],
+  input:
+    "```vtt\nWEBVTT Interview\n\nNOTE Opening remarks\n\nSTYLE\n::cue { color: lime; }\n\nopening\n00:01.000 --> 00:03.250 align:start\n<v Jane>Hello!\nSecond line.\n\n00:03.000 --> 00:05.000\nAn overlapping cue.\n```\n",
+  expected:
+    '- header "Interview"\n- block "NOTE Opening remarks"\n- block "STYLE\\n::cue { color: lime; }"\n- cue 00:01.000 --> 00:03.250 "<v Jane>Hello!\\nSecond line." id "opening" settings "align:start"\n- cue 00:03.000 --> 00:05.000 "An overlapping cue."\n',
 }];

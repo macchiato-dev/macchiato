@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-nine transformations are implemented: tools 1–39 in the plan.
-The remaining 11 are pending.
+Forty transformations are implemented: tools 1–40 in the plan.
+The remaining 10 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -476,6 +476,16 @@ An overlap-safe move frames the completed body using a fence longer than any
 decoded backtick run. Tests cover generated round trips, the BMP scalar corpus,
 surrogate pairs, malformed edits, CommonMark fence parsing and exact capacity.
 Try [the subtitle writer](http://microwasm.localhost:3030/?tool=39-cues-to-srt).
+
+The [WebVTT reader](transforms/40-vtt-to-cues.md) preserves header text,
+NOTE/STYLE/REGION blocks, optional identifiers, settings and multiline payloads
+as flat records. Cue-only files need no header wrapper. Its 1,969-byte module
+uses a [630-byte timestamp helper](transforms/00-webvtt-time.md) for exact
+mixed-form ordering without numeric conversion. CSS, settings and cue markup
+remain data, not executed content; this is not a full authoring validator.
+Tests cover generated models, original/resolved byte equivalence, chronology,
+Unicode, malformed edits, fence safety, memory limits and browser cue parsing.
+Try [the WebVTT reader](http://microwasm.localhost:3030/?tool=40-vtt-to-cues).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
