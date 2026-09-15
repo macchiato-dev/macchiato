@@ -78,6 +78,138 @@ flowchart TD
     G --> A
 ```
 
+## Inside `run`: indentation changes the open-container stack
+
+The overview above hides an important distinction: a line's level is not the
+number of containers open when that line begins. The previous line may have
+opened a container, or several ancestors may need closing first.
+
+```mermaid
+flowchart TD
+  A[Find LF; exclude a preceding CR] --> B[Count leading spaces]
+  B --> C{Line contains only spaces?}
+  C -- yes --> N[Advance past physical line]
+  C -- no --> D[Require list marker and even indentation]
+  D --> E{Level exceeds open depth, or another root?}
+  E -- yes --> X[Trap]
+  E -- no --> F{Open depth exceeds line level?}
+  F -- yes --> G[Pop one container and emit its closing delimiter]
+  G --> F
+  F -- no --> H{Line has a parent?}
+  H -- yes --> I[Emit comma if needed; increment parent item count]
+  I --> J{Parent is an object?}
+  J -- yes --> K[Read key; require separator; emit key and colon]
+  J -- no --> V[Read value]
+  K --> V
+  H -- no --> V
+  V --> N
+  N --> L{More input?}
+  L -- yes --> A
+  L -- no --> Z[Require root; close remaining containers; finish fence]
+```
+
+`lj-list-level` rejects skipped levels **before** the closing loop changes the
+stack. `lj-close-pop` then decrements depth before indexing the record to pop.
+The address is `0x30000 + depth * 8`: four bytes for the closing delimiter,
+then four for the child count. Once the stack matches the line level,
+`lj-parent-record` indexes `level - 1`, the still-open parent.
+
+Here is the stack evolution for the first example, with one extra sibling:
+
+| Incoming line | Level | Action before value | Stack after value, outermost first |
+| --- | --- | --- | --- |
+| `- {}` | 0 | No parent | Object, count 0 |
+| `  - name Ben` | 1 | First root child; no comma | Object, count 1 |
+| `  - location {}` | 1 | Root comma; count the child immediately | Object, count 2 → object, count 0 |
+| `    - city Phoenix` | 2 | First location child; no comma | Object, count 2 → object, count 1 |
+| `    - state AZ` | 2 | Location comma | Object, count 2 → object, count 2 |
+| `  - active = true` | 1 | Close location, then emit root comma | Object, count 3 |
+| End of input | — | Close root | Empty |
+
+Opening `location` counts it once in its parent. Closing it does not count it
+again. A scalar never pushes a record, so indenting beneath `name Ben` would
+fail the level check. An empty container is still pushed: the following
+sibling, or the final closing loop, supplies its closing delimiter.
+
+### Value dispatch: exact markers, then progressively broader cases
+
+```mermaid
+flowchart TD
+  A[Value span after any object key] --> B{Exactly two bytes: object or array marker?}
+  B -- yes --> C[Check depth limit; store closing delimiter and zero count]
+  C --> D[Emit opening delimiter; increment depth; next line]
+  B -- no --> E{Begins with equals and space?}
+  E -- yes --> F{Exact true, false, or null?}
+  F -- no --> G[Require valid JSON number over entire remaining span]
+  F -- yes --> H[Copy spelling unchanged; next line]
+  G --> H
+  E -- no --> I{Begins with a quote?}
+  I -- yes --> J[Validate quoted string; require its end equals line end]
+  J --> H
+  I -- no --> K[Quote and escape plain bytes; next line]
+```
+
+The order matters. `"{}"` is a string, while bare `{}` opens a container.
+An invalid typed value does not fall through to plain text. Likewise,
+`"hello" junk` traps rather than silently discarding the suffix.
+`lj-container-next`, `lj-typed-copy`, and `lj-string-value-copy` all advance
+the physical-line cursor and branch back to the same outer line loop. Their
+branch depths differ because their surrounding `if` blocks differ.
+
+| State | Storage | Meaning during a line |
+| --- | --- | --- |
+| Physical line start / LF position | Locals 1 / 16 | Local 16 is retained even when CR is excluded from content. |
+| Content end / first non-space byte | Locals 2 / 3 | Bounds for marker, key and value reads. |
+| Space count / line level | Locals 4 / 5 | Even space count divided by two gives level. |
+| Open depth / root seen | Locals 6 / 7 | Distinguishes a new child from a skipped level or second root. |
+| Value start | Local 8 | Moves past the key and separator only for object children. |
+| Stack-record address | Local 11 | Reused for parent counting and a newly opened container. |
+| Output cursor | Global 0 | Advanced only by the bounded byte emitter. |
+
+## Inside the string helpers: validate versus escape
+
+`string` and `quote` solve different problems. The former locates and validates
+an already-quoted JSON string; the latter creates one from plain input.
+
+```mermaid
+flowchart TD
+  A[Start after opening quote] --> B{At span end?}
+  B -- yes --> X[Trap: missing closing quote]
+  B -- no --> C{Current byte is closing quote?}
+  C -- yes --> R[Return position after quote]
+  C -- no --> D{Raw control byte?}
+  D -- yes --> X
+  D -- no --> E{Backslash?}
+  E -- no --> N[Advance to next byte]
+  E -- yes --> F[Advance; require escape byte]
+  F --> G{Unicode escape?}
+  G -- yes --> H[Consume exactly four checked hex digits]
+  G -- no --> I[Require one of the JSON short escapes]
+  H --> N
+  I --> N
+  N --> B
+```
+
+`lj-string-close` returns before consuming anything after the quote. A key's
+caller checks that a space follows; a value's caller requires the returned
+position to be the line end. The same scanner therefore serves both contexts
+without deciding their separators itself. The four-digit loop validates
+escape syntax; it does not combine surrogate pairs or rewrite their spelling.
+
+`quote` emits an opening quote, then handles each byte in this order:
+
+- Quote or backslash: emit a backslash and the original byte.
+- Byte below `0x20`: use the short-escape table when available; otherwise
+  emit `\u00` and two hexadecimal digits.
+- Any other byte: copy it, leaving multibyte UTF-8 sequences unchanged.
+- At the span end: emit the closing quote.
+
+`copy` and `find` are bounded forward scans: `copy` emits bytes in `[start,
+end)`, while `find` returns the matching position or `end`. Neither constructs
+a string object. Every output path eventually calls `emit`, which checks
+the output limit before its one-byte store. A trap can leave partial output;
+the caller must publish only a successful return, not that partial buffer.
+
 ## Module and imports
 
 `n.valid` is function 0; `n.memory` is memory 0. They come from the number
