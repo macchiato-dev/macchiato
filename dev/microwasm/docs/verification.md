@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 169 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 174 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -170,7 +170,7 @@ rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
 There are nineteen implemented transformations out of the planned fifty:
-tools 1–20.
+tools 1–21.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -435,7 +435,23 @@ Chromium runs all 20 transformation fixtures and edits the INI source. It
 checks section nesting, literal HTML-like strings, preservation of the last
 successful output after errors, and recovery. The inspected screenshot shows
 the side-by-side editable source and rendered section/assignment hierarchy.
-There are 30 transformations still pending; this is not goal completion.
+The reverse writer adds five tests, including 500 generated documents checked
+against Deno's INI parser and cycled through both actual Wasm modules. Tests
+check canonical LF/equals output, literal quote/backslash/comment-like text,
+typed-value rejection, duplicate decoded names, Unicode boundaries, surrogate
+pairs, significant whitespace, unsupported nesting and control characters.
+The exact 64 KiB source and intermediate boundaries are exercised, along with
+overflow, malformed UTF-8 and reuse after failure. INI decoding does not
+expand strings like TOML's control escaping, so the writer tests do not claim
+to fill its 128 KiB output region. Stores still check that boundary.
+
+The writer is 1,158 bytes in addition to its shared list compiler and Unicode
+helper. No host conversion callbacks are used. The browser checks independently
+rendered input/output, exact fence text and previous-output retention after
+unrepresentable input, then recovers on the same page. The inspected screenshot
+shows the nested input alongside the INI fence, with literal HTML-like text
+and the empty section preserved. There are 29
+transformations still pending; this is not goal completion.
 
 ## Size is the complete module, not memory consumption
 

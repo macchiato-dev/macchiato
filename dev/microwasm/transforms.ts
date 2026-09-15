@@ -200,4 +200,16 @@ export const transforms = [{
     "```ini\nname = Ben\n\n[server]\nhost = localhost\nport: 3030\n\n[paths]\nroot = C:\\projects\n```\n",
   expected:
     '- {}\n  - "" {}\n    - "name" "Ben"\n  - "server" {}\n    - "host" "localhost"\n    - "port" "3030"\n  - "paths" {}\n    - "root" "C:\\\\projects"\n',
+}, {
+  id: "21-list-to-ini",
+  title: "Hierarchical Markdown sections to INI",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "l", path: "transforms/01-list-to-json" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+  ],
+  input:
+    '- {}\n  - "" {}\n    - name Ben\n  - server {}\n    - host localhost\n    - port "3030"\n  - empty {}',
+  expected:
+    "```ini\nname = Ben\n[server]\nhost = localhost\nport = 3030\n[empty]\n```\n",
 }];

@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–20, and the side-by-side
+syntax validation and binary64 parsing, tools 1–21, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 30 tools remain.
+significant-digit formatting are implemented too. The other 29 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–20 are now all implemented.
+stable numbering; tools 1–21 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -43,7 +43,10 @@ Tool 20 reads INI into a two-level section/assignment object. The unnamed
 section holds assignments before any header. Values stay strings, including
 quotes, numeric-looking text and interpolation-looking text. It rejects
 duplicate case-sensitive names, malformed UTF-8 and unsupported line syntax.
-The reverse INI tool remains pending.
+Tool 21 writes this representation back as INI, rejecting unrepresentable
+data instead of inventing quoting or silently trimming values. A nonempty
+unnamed section must come first. Only string-valued assignments are accepted;
+named empty sections survive. Both actual Wasm directions are tested together.
 
 ## Shared number conversion
 

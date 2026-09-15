@@ -1066,6 +1066,65 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === '- {}\n  - "empty" {}\n'
   );
+  await page.goto(new URL("?tool=21-list-to-ini", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const iniTree =
+    '- {}\n  - "" {}\n    - title "<b>Notes</b>"\n  - server {}\n    - port "3030"\n    - enabled "false"\n    - note "a # b"\n  - empty {}';
+  const iniOutput =
+    "```ini\ntitle = <b>Notes</b>\n[server]\nport = 3030\nenabled = false\nnote = a # b\n[empty]\n```\n";
+  await page.locator("#transform-input").fill(iniTree);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    iniOutput,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre").textContent() ===
+      iniOutput.slice(7, -4),
+    "Rendered INI changed the emitted fence contents",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "INI output created an HTML element",
+  );
+  await page.screenshot({
+    path: `${artifacts}/list-to-ini-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  for (
+    const invalid of [
+      '- {}\n  - "" {}',
+      "- {}\n  - s {}\n    - x = false",
+      '- {}\n  - s {}\n    - x "trailing "',
+      '- {}\n  - s {}\n    - x "line\\nline"',
+    ]
+  ) {
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === iniOutput,
+      "Unrepresentable INI data replaced the last successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("- {}\n  - empty {}");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "```ini\n[empty]\n```\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
