@@ -278,6 +278,9 @@ Imports: unfold 0, line 1, parameter 2, nameEnd 3.
 Definitions: run 4, emit 5, literal 6, same 7, equalSpans 8, value 9,
 JSON byte 10, kind 11, heading 12, component 13, fence 14,
 fenceLines 15, skip 16, begin 17. Only the output pointer is global.
+The reverse writer also imports `same` and `kind` directly. These read-only
+helpers share ASCII name comparison and the property/VALUE mode decision;
+they do not run the reader or change its output pointer.
 
 `[microwasm]`
 
@@ -291,7 +294,7 @@ fenceLines 15, skip 16, begin 17. Only the output pointer is global.
 - ca-global-section: `06 {{size:ca-globals}}`
   - ca-globals: `01 7f 01 41 00 0b`
 - ca-export-section: `07 {{size:ca-exports}}`
-  - ca-exports: `02 03 72756e 00 04 06 6d656d6f7279 02 00`
+  - ca-exports: `04 03 72756e 00 04 06 6d656d6f7279 02 00 04 73616d65 00 07 04 6b696e64 00 0b`
 - ca-code-section: `0a {{size:ca-code}}`
   - ca-code: `0e`
     - ca-run-record: `{{size:ca-run-body}}`
