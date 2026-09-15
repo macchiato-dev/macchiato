@@ -79,6 +79,82 @@ is rescanned. Required masks are checked after the closing brace because
 field order is arbitrary. The image and textInput masks include high bits,
 not just the first few fields.
 
+### Inside classify and field: what the descriptor actually decides
+
+Each schema record is eight bytes. Its index is also the bit position in the
+object's seen mask. This keeps name recognition separate from output shape;
+the same string field can be admitted under several parent contexts.
+
+| Record offset | Stored value | Used by |
+| --- | --- | --- |
+| 0–1 | Little-endian offset into the name table | `fieldName`: choose a trusted XML tag |
+| 2 | Allowed parent-context bits | `classify`: reject a known field in the wrong object |
+| 3 | Shape: 0 string, 1 attributes plus text, 2 attributes only, 3 nested object | `field`: select how one value is consumed |
+| 4 | Repeated-field flag | `object`: dispatch an array instead of one field |
+| 5 | Child context for shape 3 | `field`: give the recursive object its own schema context |
+| 6–7 | Allowed attribute bits | `attributed`: check each attribute key |
+
+`classify` starts at field index zero, not at a hash lookup. On each iteration,
+`rw-classify-name` compares the decoded key to one length-prefixed schema name.
+Field 30 is the one exception in spelling: its input key is `entries`, while
+its XML name is `item`. A miss increments the index. A match checks
+`allowedContexts & (1 << parentContext)`; zero traps immediately, otherwise
+the index returns. Exhausting all 31 names also traps.
+
+The comparisons do not move the shared JSON cursor. `span` already advanced
+it past the key's closing quote. `same` has private cursors: one traverses
+decoded JSON scalars and one traverses ASCII schema bytes. A mismatch returns
+false; reaching the JSON end succeeds only if the schema name ended too.
+Consequently `"ti\u0074le"` selects exactly the same seen bit as `"title"`.
+
+```mermaid
+flowchart TD
+  A[Read descriptor; indent; emit opening angle and field name] --> B{Shape 1 or 2?}
+  B -- yes --> AT[Attributed writer consumes the object and closes the element]
+  AT --> R[Return]
+  B -- no --> C[Emit closing angle of start tag]
+  C --> D{Shape 0?}
+  D -- yes --> S[Consume one quoted span; escape it as XML text]
+  D -- no --> O[Emit newline; recursively consume object with child context]
+  O --> I[Indent at this field's original depth]
+  S --> E[Emit matching end tag and newline]
+  I --> E
+  E --> R
+```
+
+These are the branches of `rw-field-attributed` and `rw-field-content`.
+The attributed branch returns early because it owns the still-open start tag
+and its eventual close. Falling through would produce a second closing tag.
+The string and nested-object branches share `rw-field-close` instead.
+
+The array wrapper owns only `[`, commas and `]`. An empty array exits before
+calling `field`. Otherwise each member calls `field` with the same descriptor
+and depth. After that call the cursor must be at a comma or closing bracket.
+The flag is not recursively interpreted by `field`, so a category array does
+not recursively expect another array for each category.
+
+### Trace: one repeated category, not two duplicate object keys
+
+Consider this compact fragment inside an item:
+
+```json
+{"category":[{"value":"A"},{"domain":"topics","value":"B"}],"title":"News"}
+```
+
+| Boundary | Item's seen mask | Shared cursor's next byte | What remains local |
+| --- | --- | --- | --- |
+| Item opens | 0 | First key's quote | Item context and indentation depth |
+| Category key accepted | `1 << 18` | `[` after consuming colon | Field index 18; repetition flag |
+| First category finishes | Unchanged | Comma between array members | Parent's mask survives the child call |
+| Second category finishes | Unchanged | Closing array bracket | Attribute mask belonged to that category only |
+| Array returns | Unchanged | Comma before title | One object field has been consumed |
+| Title finishes | `(1 << 18) \| 1` | Closing object brace | Required item test now succeeds |
+
+Each attributed member gets a fresh local seen mask. The item marks category
+once, before entering the array. A second `"category"` key in the item would
+trap; a second category array member does not. The required item check is
+`seen & 5 != 0`: title or description suffices, whereas category alone does not.
+
 ### Inside attributed: keep a span, not a second string
 
 The caller has written `<guid` (or another known name) before entering
@@ -110,10 +186,44 @@ nor another object's offsets are invalidated: JSON input stays fixed for the
 entire output pass. Attribute TAB/LF/CR are referenced rather than normalized
 away by the next XML parse; text CR is referenced as well.
 
-The final framing pass finds the longest consecutive backtick run in the
-XML, chooses a longer fence (minimum three), checks total capacity and moves
-the output once. Thus a description containing a backtick fence cannot end
-the enclosing Markdown block.
+### Inside frame: measure first, then make one overlapping move
+
+`rw-frame-ticks` scans the completed XML from `0x10000` to the old output
+pointer. Its three scan locals are the current position, current run length,
+and largest run length. A backtick increments the current run and possibly
+the largest run. Any other byte resets only the current run. Every iteration
+advances the position; no output is written while measuring.
+
+```mermaid
+flowchart TD
+  A[Save XML length; current run = 0; longest = 0] --> B{Position before XML end?}
+  B -- yes --> C{Backtick?}
+  C -- yes --> T[Increment run; longest = maximum of longest and run]
+  C -- no --> N[Reset run to zero]
+  T --> P[Advance position]
+  N --> P
+  P --> B
+  B -- no --> F[Choose fence length: maximum of 3 and longest plus 1]
+  F --> L{XML length plus twice fence length plus 6 fits?}
+  L -- no --> X[Trap before moving bytes]
+  L -- yes --> M[Move XML forward by fence length plus 4]
+  M --> H[Reset output pointer; write opening ticks and rss plus newline]
+  H --> S[Jump output pointer past moved XML; write newline, closing ticks, newline]
+```
+
+The six non-backtick framing bytes are `rss` and three newlines. The opening
+prefix is `fenceLength + 4` bytes. `memory.copy` handles source/destination
+overlap; an ordinary forward byte-copy loop would overwrite unread XML.
+The global pointer is then reset to write the prefix, and explicitly set to
+the end of the moved XML before writing the suffix. The prefix's writes must
+not be mistaken for the XML's new end.
+
+For XML whose longest backtick run is four, `rw-frame-count` chooses five.
+A trailing run is included because the maximum updates on every backtick,
+not only when a non-backtick ends the run. This is deliberately conservative:
+it considers runs anywhere in the XML, not only at potential fence-line starts.
+The XML is copied once and is not re-escaped. Its byte length and the completed
+fence length together determine the returned output size.
 
 ## Module
 
