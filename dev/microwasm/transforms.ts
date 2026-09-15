@@ -381,4 +381,15 @@ export const transforms = [{
     '# Agenda\n\n## VCALENDAR\n\n- "VERSION" raw "2.0"\n- "PRODID" text "-//Microwasm//Agenda//EN"\n\n### VEVENT\n\n- "UID" text "planning-1"\n- "DTSTAMP" raw "20260915T120000Z"\n- "DTSTART" raw "20260916T160000Z"\n- "SUMMARY" text "Planning, then lunch"\n- "CATEGORIES" text-list ["Work","Research, reading"]\n',
   expected:
     "```ics\nBEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Microwasm//Agenda//EN\r\nBEGIN:VEVENT\r\nUID:planning-1\r\nDTSTAMP:20260915T120000Z\r\nDTSTART:20260916T160000Z\r\nSUMMARY:Planning\\, then lunch\r\nCATEGORIES:Work,Research\\, reading\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n\n```\n",
+}, {
+  id: "36-vcard-to-contacts",
+  title: "vCard to a Markdown contact outline",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+  ],
+  input:
+    "```vcard\nBEGIN:VCARD\nVERSION:4.0\nFN:Jane Doe\nN:Doe;Jane,Janet;;Dr.;\nitem1.EMAIL;TYPE=home:jane@example.com\nORG:Example\\, Inc.;Research\nNICKNAME:Jane,JJ\nEND:VCARD\n```\n",
+  expected:
+    '# Contacts\n\n## Contact\n\n- "VERSION" text "4.0"\n- "FN" text "Jane Doe"\n- "N" structured [["Doe"],["Jane","Janet"],[""],["Dr."],[""]]\n- "item1.EMAIL;TYPE=home" text "jane@example.com"\n- "ORG" structured [["Example, Inc."],["Research"]]\n- "NICKNAME" text-list ["Jane","JJ"]\n',
 }];
