@@ -22,8 +22,10 @@ The reader follows the content-line and value rules in
 [vCard 3.0, RFC 2426](https://www.rfc-editor.org/rfc/rfc2426.html).
 Version 4 requires VERSION first and five/seven components for N/ADR;
 version 3 accepts shorter structures and VERSION later. Each card requires
-one VERSION and at least one FN; version 3 also requires N. Duplicate N is
-rejected. This is not a complete property-cardinality or URI/date validator.
+one VERSION and at least one FN; version 3 also requires N. Repeated N fields
+are retained: [ALTID variants](https://www.rfc-editor.org/rfc/rfc6350.html#section-5.4)
+can legitimately repeat them. This is not a complete property-cardinality or
+URI/date validator.
 
 Only UTF-8 input is supported. Physical folds are removed before validating
 UTF-8, using the [content-line helper](00-calendar-lines.md). LF is accepted
@@ -35,7 +37,7 @@ dropped just because the field is unfamiliar.
 
 ## Inside card: discover the version before interpreting values
 
-One pass finds the closing boundary, VERSION, FN and N. It validates header
+The read-only `inspect` pass finds the closing boundary, VERSION, FN and N. It validates header
 syntax but does not choose value types. This matters for a version-3 UID
 before VERSION: UID is text in version 3 but defaults to a URI in version 4.
 The second pass rewinds to the first property and emits rows using the
@@ -133,6 +135,11 @@ of opening backticks is retained separately from source/output positions.
 Imports: unfold 0, line 1, parameter 2, nameEnd 3. Functions: run 4,
 emit 5, literal 6, same 7, value 8, jsonByte 9, kind 10, grouped 11,
 card 12, fence 13, fenceLines 14, blank 15, boundary 16.
+The discovery pass is function 17, `inspect(start, end)`, returning first
+property position, END position, after-END position and version. It shares
+the local layout in the table above. The writer also uses this pass; it does
+not invoke conversion to discover the version. `same`, `kind`, `grouped` and
+`inspect` are read-only exports with no global-cursor dependence.
 Only the output cursor is global. ASCII comparisons reuse the explicit
 A–Z folding pattern from the calendar reader, not an unconditional OR.
 
@@ -140,17 +147,17 @@ A–Z folding pattern from the calendar reader, not an unconditional OR.
 
 - vc-header: `0061736d 01000000`
 - vc-type-section: `01 {{size:vc-types}}`
-  - vc-types: `0b 60 02 7f 7f 01 7f 60 02 7f 7f 05 7f 7f 7f 7f 7f 60 02 7f 7f 03 7f 7f 7f 60 01 7f 01 7f 60 01 7f 00 60 03 7f 7f 7f 01 7f 60 04 7f 7f 7f 7f 00 60 04 7f 7f 7f 7f 01 7f 60 02 7f 7f 06 7f 7f 7f 7f 7f 7f 60 01 7f 02 7f 7f 60 03 7f 7f 7f 00`
+  - vc-types: `0c 60 02 7f 7f 01 7f 60 02 7f 7f 05 7f 7f 7f 7f 7f 60 02 7f 7f 03 7f 7f 7f 60 01 7f 01 7f 60 01 7f 00 60 03 7f 7f 7f 01 7f 60 04 7f 7f 7f 7f 00 60 04 7f 7f 7f 7f 01 7f 60 02 7f 7f 06 7f 7f 7f 7f 7f 7f 60 01 7f 02 7f 7f 60 03 7f 7f 7f 00 60 02 7f 7f 04 7f 7f 7f 7f`
 - vc-import-section: `02 {{size:vc-imports}}`
   - vc-imports: `05 01 63 06 756e666f6c64 00 00 01 63 04 6c696e65 00 01 01 63 09 706172616d65746572 00 02 01 63 07 6e616d65456e64 00 00 01 63 06 6d656d6f7279 02 01 04 04`
 - vc-function-section: `03 {{size:vc-functions}}`
-  - vc-functions: `0d 03 04 04 05 06 04 07 08 00 09 0a 00 05`
+  - vc-functions: `0e 03 04 04 05 06 04 07 08 00 09 0a 00 05 0b`
 - vc-global-section: `06 {{size:vc-globals}}`
   - vc-globals: `01 7f 01 41 00 0b`
 - vc-export-section: `07 {{size:vc-exports}}`
-  - vc-exports: `02 03 72756e 00 04 06 6d656d6f7279 02 00`
+  - vc-exports: `06 03 72756e 00 04 06 6d656d6f7279 02 00 04 73616d65 00 07 04 6b696e64 00 0a 07 67726f75706564 00 0b 07 696e7370656374 00 11`
 - vc-code-section: `0a {{size:vc-code}}`
-  - vc-code: `0d`
+  - vc-code: `0e`
     - vc-run-record: `{{size:vc-run-body}}`
       - vc-run-body: `01 03 7f 20 00 10 0d 10 00 21 01 41 00 41 808004 20 01 fc 0a 00 00 41 808004 24 00 41 86900c 10 06`
         - vc-run-bom: `20 01 41 03 4f 04 40 41 00 2d 00 00 41 ef01 46 41 01 2d 00 00 41 bb01 46 71 41 02 2d 00 00 41 bf01 46 71 04 40 41 03 21 02 0b 0b`
@@ -190,14 +197,7 @@ A–Z folding pattern from the calendar reader, not an unconditional OR.
     - vc-grouped-record: `{{size:vc-grouped-body}}`
       - vc-grouped-body: `01 01 7f 20 00 20 01 10 03 21 02 20 02 20 01 49 04 40 20 02 2d 00 00 41 2e 46 04 40 20 02 41 01 6a 21 00 0b 0b 20 00 20 00 20 01 10 01 0b`
     - vc-card-record: `{{size:vc-card-body}}`
-      - vc-card-body: `01 0f 7f 20 00 20 01 41 a0900c 10 10 22 02 21 03 02 40 03 40 20 03 20 01 4f 04 40 00 0b 20 03 20 01 10 0b 21 09 21 08 21 07 21 06 21 05 21 04`
-        - vc-card-end: `20 04 20 05 41 a6900c 10 07 04 40 20 03 20 01 41 a6900c 10 10 21 0d 20 03 21 0c 0c 02 0b`
-        - vc-card-nested: `20 04 20 05 41 a0900c 10 07 04 40 00 0b`
-        - vc-card-version: `20 04 20 05 41 b0900c 10 07 04 40 20 0a 20 04 20 03 47 72 04 40 00 0b 20 07 20 08 41 b8900c 10 07 04 40 41 03 21 0a 05 20 07 20 08 41 bc900c 10 07 04 40 41 04 21 0a 05 00 0b 0b 20 03 21 0b 0b`
-        - vc-card-fn: `20 04 20 05 41 c0900c 10 07 04 40 20 0e 41 01 6a 21 0e 0b`
-        - vc-card-n: `20 04 20 05 41 c3900c 10 07 04 40 20 0f 41 01 6a 21 0f 0b`
-        - vc-card-discover-next: `20 09 21 03 0c 00 0b 0b`
-        - vc-card-required: `20 0a 45 20 0e 45 72 20 0f 41 01 4b 72 20 0a 41 03 46 20 0f 45 71 72 20 0a 41 04 46 20 0b 20 02 47 71 72 04 40 00 0b`
+      - vc-card-body: `01 0f 7f 20 00 20 01 10 11 21 0a 21 0d 21 0c 21 02`
         - vc-card-rewind: `41 92900c 10 06 20 02 21 03 02 40 03 40 20 03 20 0c 4f 0d 01 20 03 20 0c 10 0b 21 09 21 08 21 07 21 06 21 05 21 04`
         - vc-card-mode: `20 04 20 05 20 06 20 0a 10 0a 21 10 41 2d 10 05 41 20 10 05 20 03 20 06 41 00 20 0a 10 08`
         - vc-card-mode-label: `20 10 45 04 7f 41 c5900c 05 20 10 41 01 46 04 7f 41 cb900c 05 20 10 41 02 46 04 7f 41 d2900c 05 41 de900c 0b 0b 0b 10 06`
@@ -218,6 +218,16 @@ A–Z folding pattern from the calendar reader, not an unconditional OR.
       - vc-blank-body: `00 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 41 0a 47 0d 01 20 00 41 01 6a 21 00 0c 00 0b 0b 20 00 0b`
     - vc-boundary-record: `{{size:vc-boundary-body}}`
       - vc-boundary-body: `01 05 7f 20 00 20 01 10 01 21 07 21 06 21 05 21 04 21 03 20 03 20 04 47 20 00 20 03 20 02 10 07 45 72 20 05 20 06 41 aa900c 10 07 45 72 04 40 00 0b 20 07 0b`
+    - vc-inspect-record: `{{size:vc-inspect-body}}`
+      - vc-inspect-body: `01 0f 7f 20 00 20 01 41 a0900c 10 10 22 02 21 03 02 40 03 40 20 03 20 01 4f 04 40 00 0b 20 03 20 01 10 0b 21 09 21 08 21 07 21 06 21 05 21 04`
+        - vc-inspect-end: `20 04 20 05 41 a6900c 10 07 04 40 20 03 20 01 41 a6900c 10 10 21 0d 20 03 21 0c 0c 02 0b`
+        - vc-inspect-nested: `20 04 20 05 41 a0900c 10 07 04 40 00 0b`
+        - vc-inspect-version: `20 04 20 05 41 b0900c 10 07 04 40 20 0a 20 04 20 03 47 72 04 40 00 0b 20 07 20 08 41 b8900c 10 07 04 40 41 03 21 0a 05 20 07 20 08 41 bc900c 10 07 04 40 41 04 21 0a 05 00 0b 0b 20 03 21 0b 0b`
+        - vc-inspect-fn: `20 04 20 05 41 c0900c 10 07 04 40 20 0e 41 01 6a 21 0e 0b`
+        - vc-inspect-n: `20 04 20 05 41 c3900c 10 07 04 40 20 0f 41 01 6a 21 0f 0b`
+        - vc-inspect-next: `20 09 21 03 0c 00 0b 0b`
+        - vc-inspect-required: `20 0a 45 20 0e 45 72 20 0a 41 03 46 20 0f 45 71 72 20 0a 41 04 46 20 0b 20 02 47 71 72 04 40 00 0b`
+        - vc-inspect-result: `20 02 20 0c 20 0d 20 0a 0b`
 - vc-data-section: `0b {{size:vc-data}}`
   - vc-data: `02`
     - vc-literal-segment: `00 41 80900c 0b {{size:vc-literals}}`

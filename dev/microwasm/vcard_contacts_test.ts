@@ -246,7 +246,6 @@ Deno.test("Contacts: boundary, required-field and version failures recover", asy
       "BEGIN:VCARD\nVERSION:2.1\nFN:Jane\nEND:VCARD",
       "BEGIN:VCARD\nVERSION:3.0\nFN:Jane\nEND:VCARD",
       card("VERSION:4.0\n"),
-      card("N:;;;;\nN:;;;;\n"),
       card("BEGIN:VCARD\n"),
       card("item1.END:VCARD\n"),
       card("item1.VERSION:4.0\n"),
