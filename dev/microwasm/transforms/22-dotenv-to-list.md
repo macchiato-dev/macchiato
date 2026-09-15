@@ -50,8 +50,10 @@ no concatenation of quoted and unquoted pieces. Raw C0 controls except tab,
 LF and CR, DEL and malformed UTF-8 are rejected, including in comments.
 Whitespace here means ASCII space/tab, not arbitrary Unicode whitespace.
 
-The fence is exactly three backticks plus `dotenv`, followed by LF or CRLF,
-with its closing fence on a separate line and no surrounding prose.
+The fence is at least three backticks plus `dotenv`, followed by LF or CRLF,
+with a closing fence of at least the same length on a separate line and no
+surrounding prose. Longer fences can surround literal backtick lines in values.
+An earlier closing-fence line is an error, not silently treated as value text.
 An empty body produces `- {}`. Source order is retained; numeric-looking and
 Boolean-looking values remain strings. JSON quoting keeps multiline values
 on one physical Markdown list line.
@@ -84,8 +86,8 @@ output, and another call resets the instance for recovery.
 
 Imports: equal 0, next-unit 1 and memory from `k`. Definitions: run 2, emit 3,
 quote-byte 4, spaces 5, name-byte 6, name 7, value 8, comment 9, unique 10,
-validate 11, newline 12, whitespace 13, export-word 14.
-Globals: output 0, cursor 1, body end 2.
+validate 11, newline 12, whitespace 13, export-word 14, contained-fence 15.
+Globals: output 0, cursor 1, body end 2, opening fence length 3.
 
 `[microwasm]`
 
@@ -95,23 +97,25 @@ Globals: output 0, cursor 1, body end 2.
 - dl-import-section: `02 {{size:dl-imports}}`
   - dl-imports: `03 01 6b 05 657175616c 00 00 01 6b 04 6e657874 00 01 01 6b 06 6d656d6f7279 02 01 04 04`
 - dl-function-section: `03 {{size:dl-functions}}`
-  - dl-functions: `0d 02 03 03 04 02 05 04 04 06 07 04 02 08`
+  - dl-functions: `0e 02 03 03 04 02 05 04 04 06 07 04 02 08 07`
 - dl-global-section: `06 {{size:dl-globals}}`
-  - dl-globals: `03 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
+  - dl-globals: `04 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - dl-export-section: `07 {{size:dl-exports}}`
   - dl-exports: `02 03 72756e 00 02 06 6d656d6f7279 02 00`
 - dl-code-section: `0a {{size:dl-code}}`
-  - dl-code: `0d`
+  - dl-code: `0e`
     - dl-run-record: `{{size:dl-run-body}}`
       - dl-run-body: `01 07 7f`
         - dl-run-bound: `20 00 41 0d 49 20 00 41 808004 4b 72 04 40 00 0b`
-        - dl-run-prefix: `03 40 20 02 2d 00 00 20 02 41 81820c 6a 2d 00 00 47 04 40 00 0b 20 02 41 01 6a 22 02 41 09 49 0d 00 0b`
-        - dl-run-opening: `41 09 24 01 41 09 2d 00 00 41 0d 46 04 40 41 0a 24 01 0b 23 01 2d 00 00 41 0a 47 04 40 00 0b 23 01 41 01 6a 24 01 20 00 21 01`
+        - dl-run-fence-count: `41 00 24 03 02 40 03 40 23 03 20 00 4f 0d 01 23 03 2d 00 00 41 e000 47 0d 01 23 03 41 01 6a 24 03 0c 00 0b 0b`
+        - dl-run-fence-bound: `23 03 41 03 49 23 03 41 07 6a 20 00 4b 72 04 40 00 0b`
+        - dl-run-prefix: `03 40 23 03 20 02 6a 2d 00 00 20 02 41 84820c 6a 2d 00 00 47 04 40 00 0b 20 02 41 01 6a 22 02 41 06 49 0d 00 0b`
+        - dl-run-opening: `23 03 41 06 6a 24 01 23 01 2d 00 00 41 0d 46 04 40 23 01 41 01 6a 24 01 0b 23 01 2d 00 00 41 0a 47 04 40 00 0b 23 01 41 01 6a 24 01 20 00 21 01`
         - dl-run-trim: `02 40 03 40 20 01 45 0d 01 20 01 41 01 6b 2d 00 00 10 0d 45 0d 01 20 01 41 01 6b 21 01 0c 00 0b 0b`
-        - dl-run-closing-bound: `20 01 23 01 41 03 6a 49 04 40 00 0b 20 01 41 03 6b 24 02 41 00 21 02`
-        - dl-run-closing: `03 40 23 02 20 02 6a 2d 00 00 41 e000 47 04 40 00 0b 20 02 41 01 6a 22 02 41 03 49 0d 00 0b`
+        - dl-run-closing-count: `41 00 21 02 02 40 03 40 20 01 45 0d 01 20 01 41 01 6b 2d 00 00 41 e000 47 0d 01 20 01 41 01 6b 21 01 20 02 41 01 6a 21 02 0c 00 0b 0b`
+        - dl-run-closing-bound: `20 02 23 03 49 20 01 23 01 49 72 04 40 00 0b 20 01 24 02`
         - dl-run-closing-line: `23 02 23 01 47 04 40 23 02 41 01 6b 2d 00 00 22 02 41 0a 47 20 02 41 0d 47 71 04 40 00 0b 0b`
-        - dl-run-validate: `23 01 23 02 10 0b`
+        - dl-run-validate: `23 01 23 02 10 0b 23 01 23 02 10 0f`
         - dl-run-root: `41 808004 24 00 41 2d 10 03 41 20 10 03 41 fb00 10 03 41 fd00 10 03 41 0a 10 03`
         - dl-run-loop: `02 40 03 40`
           - dl-run-spaces: `10 05 23 01 23 02 4f 0d 01`
@@ -172,6 +176,15 @@ Globals: output 0, cursor 1, body end 2.
       - dl-whitespace-body: `00 20 00 41 20 46 20 00 41 09 46 72 20 00 41 0a 46 72 20 00 41 0d 46 72 0b`
     - dl-export-record: `{{size:dl-export-body}}`
       - dl-export-body: `00 20 01 20 00 6b 41 06 47 04 40 41 00 0f 0b 20 00 2d 00 00 41 e500 46 20 00 2d 00 01 41 f800 46 71 20 00 2d 00 02 41 f000 46 71 20 00 2d 00 03 41 ef00 46 71 20 00 2d 00 04 41 f200 46 71 20 00 2d 00 05 41 f400 46 71 0b`
+    - dl-contained-record: `{{size:dl-contained-body}}`
+      - dl-contained-body: `01 02 7f 02 40 03 40 20 00 20 01 4f 0d 01 20 00 21 02 41 00 21 03`
+        - dl-contained-indent: `02 40 03 40 20 02 20 01 4f 20 03 41 03 4f 72 0d 01 20 02 2d 00 00 41 20 47 0d 01 20 03 41 01 6a 21 03 20 02 41 01 6a 21 02 0c 00 0b 0b 41 00 21 03`
+        - dl-contained-ticks: `02 40 03 40 20 02 20 01 4f 0d 01 20 02 2d 00 00 41 e000 47 0d 01 20 03 41 01 6a 21 03 20 02 41 01 6a 21 02 0c 00 0b 0b`
+        - dl-contained-candidate: `20 03 23 03 4f 04 40`
+          - dl-contained-trailing: `02 40 03 40 20 02 20 01 4f 0d 01 20 02 2d 00 00 41 20 46 20 02 2d 00 00 41 09 46 72 45 0d 01 20 02 41 01 6a 21 02 0c 00 0b 0b`
+          - dl-contained-reject: `20 02 20 01 4f 04 40 00 0b 20 02 2d 00 00 41 0a 46 20 02 2d 00 00 41 0d 46 72 04 40 00 0b 0b`
+        - dl-contained-line: `02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 41 0a 46 20 00 2d 00 00 41 0d 46 72 0d 01 20 00 41 01 6a 21 00 0c 00 0b 0b`
+        - dl-contained-next: `20 00 41 01 6a 21 00 0c 00 0b 0b 0b`
 - dl-data-section: `0b {{size:dl-data}}`
   - dl-data: `01 00 41 80820c 0b {{size:dl-literals}}`
     - dl-literals: `09 606060646f74656e76`

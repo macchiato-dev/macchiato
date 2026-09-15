@@ -250,3 +250,26 @@ Deno.test("Dotenv reader: exact source and output bounds, scratch isolation and 
   equal(r.convert(fence("A=ok\n")), list({ A: "ok" }));
   traps(() => r.run(-1));
 });
+
+Deno.test("Dotenv reader: variable Markdown fence lengths and matching close", async () => {
+  const r = await reader();
+  for (const count of [3, 4, 7, 128, 256]) {
+    const ticks = "`".repeat(count);
+    equal(r.convert(ticks + "dotenv\nA=x\n" + ticks + "\n"), list({ A: "x" }));
+    equal(r.convert(ticks + "dotenv\nA=x\n" + ticks + "`\n"), list({ A: "x" }));
+    traps(() => r.convert(ticks + "dotenv\nA=x\n" + ticks.slice(1) + "\n"));
+  }
+  equal(
+    r.convert("````dotenv\nA='before\n```\nafter'\n````\n"),
+    list({ A: "before\n```\nafter" }),
+  );
+  traps(() => r.convert("```dotenv\nA=x\n```extra\n"));
+  for (const close of ["```", "````", " ```", "  ```  ", "   ```\t"]) {
+    traps(() => r.convert(fence("A='before\n" + close + "\nafter'\n")));
+  }
+  equal(
+    r.convert(fence("A='before\n    ```\nafter'\n")),
+    list({ A: "before\n    ```\nafter" }),
+  );
+  equal(r.convert(fence("A=reset\n")), list({ A: "reset" }));
+});
