@@ -1125,6 +1125,63 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === "```ini\n[empty]\n```\n"
   );
+  await page.goto(new URL("?tool=22-dotenv-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const envSource =
+    '```dotenv\nexport TITLE="<b>Notes</b>"\nBODY="first\nsecond"\nLITERAL=\'${TITLE}\'\nPORT=3030 # remains a string\n```\n';
+  const envList =
+    '- {}\n  - "TITLE" "<b>Notes</b>"\n  - "BODY" "first\\nsecond"\n  - "LITERAL" "${TITLE}"\n  - "PORT" "3030"\n';
+  await page.locator("#transform-input").fill(envSource);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    envList,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered ul ul > li").count() === 4,
+    "Dotenv multiline text split an assignment into multiple items",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "Dotenv string became HTML",
+  );
+  check(
+    (await page.locator("#transform-output-rendered").textContent())?.includes(
+      "${TITLE}",
+    ),
+    "Dotenv variable reference was expanded",
+  );
+  await page.screenshot({
+    path: `${artifacts}/dotenv-to-list-rendered.png`,
+    fullPage: true,
+  });
+  for (const source of ["A=1\nA=2\n", 'A="unclosed\n', 'A="value" junk\n']) {
+    await page.locator("#transform-input").fill(
+      "```dotenv\n" + source + "```\n",
+    );
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === envList,
+      "Malformed dotenv replaced the last successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("```dotenv\nOK=yes\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === '- {}\n  - "OK" "yes"\n'
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

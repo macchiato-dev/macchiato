@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 174 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 180 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -170,7 +170,7 @@ rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
 There are nineteen implemented transformations out of the planned fifty:
-tools 1–21.
+tools 1–22.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -450,8 +450,33 @@ helper. No host conversion callbacks are used. The browser checks independently
 rendered input/output, exact fence text and previous-output retention after
 unrepresentable input, then recovers on the same page. The inspected screenshot
 shows the nested input alongside the INI fence, with literal HTML-like text
-and the empty section preserved. There are 29
-transformations still pending; this is not goal completion.
+and the empty section preserved.
+
+## Dotenv reader checkpoint
+
+Six tests cover assignment separators, export prefixes, comments, empty and
+numeric-looking strings, three quote delimiters, multiline values, CR/CRLF
+normalization and retained backslashes. Five hundred generated documents
+compare with `dotenv@17.2.3`'s pure `parse` function under Deno. That independent
+parser is used only in tests; neither its file/environment loading code nor
+any JavaScript conversion code is included in the browser tool.
+
+The implementation documents stricter handling of duplicates, unterminated
+quotes, ambiguous final backslashes and trailing text. Tests cover these
+differences explicitly, along with long keys, case-sensitive names, numeric
+name order and prototype-looking names. Unicode boundaries, raw controls and
+malformed UTF-8 are tested in values, quotes and comments. The module validates
+the body before parsing and never performs variable expansion.
+
+The 1,714-byte reader fills the 64 KiB input and 128 KiB output limits in
+tests, rejects an extra byte, leaves scratch intact and recovers on the same
+instance. Chromium edits a multiline assignment, checks it becomes a single
+list item, verifies literal HTML-like text and `${TITLE}`, and preserves the
+previous successful output through duplicate/unterminated/trailing-text errors.
+The inspected screenshot shows the physical multiline source on the left and
+its escaped single-item representation on the right, with the variable
+reference and HTML-like text displayed literally.
+There are 28 transformations still pending; this is not goal completion.
 
 ## Size is the complete module, not memory consumption
 

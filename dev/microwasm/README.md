@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 174 tests covering all twenty examples and the supplied
+`deno task test` runs 180 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -321,8 +321,17 @@ outer whitespace and other data the reader could not preserve. A nonempty
 unnamed section must come first; named empty sections are preserved.
 Try [the INI writer](http://microwasm.localhost:3030/?tool=21-list-to-ini).
 
-Twenty-one transformations are implemented: tools 1–21 in the plan.
-The remaining 29 are pending.
+[Dotenv to a list](transforms/22-dotenv-to-list.md) supports unquoted,
+single-quoted, double-quoted and backtick values, including physical multiline
+text. The 1,714-byte module handles `export`, comments and double-quoted
+newline escapes without setting environment variables or expanding them.
+It rejects duplicates and malformed assignments instead of dropping data.
+Its documented dialect is tested against the independent dotenv parser,
+which is a test-only dependency and is not shipped to the browser.
+Try [the dotenv reader](http://microwasm.localhost:3030/?tool=22-dotenv-to-list).
+
+Twenty-two transformations are implemented: tools 1–22 in the plan.
+The remaining 28 are pending.
 
 ## Provisional byte-list notation
 

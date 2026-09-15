@@ -212,4 +212,15 @@ export const transforms = [{
     '- {}\n  - "" {}\n    - name Ben\n  - server {}\n    - host localhost\n    - port "3030"\n  - empty {}',
   expected:
     "```ini\nname = Ben\n[server]\nhost = localhost\nport = 3030\n[empty]\n```\n",
+}, {
+  id: "22-dotenv-to-list",
+  title: "Dotenv assignments to a Markdown data list",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+  ],
+  input:
+    '```dotenv\nexport NAME=Ben\nPORT=3030\nGREETING="Hello # friend"\nLINES="first\\nsecond"\nLITERAL=\'${NAME}\'\nEMPTY=\n```\n',
+  expected:
+    '- {}\n  - "NAME" "Ben"\n  - "PORT" "3030"\n  - "GREETING" "Hello # friend"\n  - "LINES" "first\\nsecond"\n  - "LITERAL" "${NAME}"\n  - "EMPTY" ""\n',
 }];
