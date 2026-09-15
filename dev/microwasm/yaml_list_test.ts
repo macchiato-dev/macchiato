@@ -271,7 +271,13 @@ Deno.test("YAML memory: input, intermediate body, depth and output limits with r
   const chain = (n: number) =>
     Array.from({ length: n }, (_, i) => "  ".repeat(i) + "- []\n").join("") +
     "  ".repeat(n) + "- = 0";
-  equal(c.convert(chain(128)).includes("0\n```"), true);
+  let nested = read(c.convert(chain(128)));
+  for (let depth = 0; depth < 128; depth++) {
+    equal(Array.isArray(nested), true);
+    equal((nested as unknown[]).length, 1);
+    nested = (nested as unknown[])[0];
+  }
+  equal(nested, 0);
   traps(() => c.convert(chain(129)));
   // DEL is one input byte, but deliberately emits six readable escape bytes.
   const expanded = "\x7f".repeat(21842) + "a".repeat(5);

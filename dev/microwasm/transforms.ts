@@ -140,4 +140,16 @@ export const transforms = [{
     '```json\n[\n  {"name":"Ben","tags":["wasm","Markdown"]},\n  [1,2],\n  "comma, inside a string",\n  null\n]\n```\n',
   expected:
     '```jsonl\n{"name":"Ben","tags":["wasm","Markdown"]}\n[1,2]\n"comma, inside a string"\nnull\n```\n',
+}, {
+  id: "16-list-to-yaml",
+  title: "Hierarchical Markdown data to YAML",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "l", path: "transforms/01-list-to-json" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+  ],
+  input:
+    "- {}\n  - name Ben\n  - active = true\n  - location {}\n    - city Phoenix\n  - tags []\n    - wasm\n    - yaml\n  - empty {}",
+  expected:
+    '```yaml\n"name": "Ben"\n"active": true\n"location":\n  "city": "Phoenix"\n"tags":\n  - "wasm"\n  - "yaml"\n"empty": {}\n```\n',
 }];

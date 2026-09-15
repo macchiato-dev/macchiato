@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 130 tests covering all twenty examples and the supplied
+`deno task test` runs 137 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -253,7 +253,7 @@ Try [the reverse typed-table converter](http://microwasm.localhost:3030/?tool=11
 [JSON objects to table](transforms/08-json-objects-to-table.md) collects an
 ordered union of property names across all rows. Blank cells represent absent
 properties; `null` remains explicit. Its 1,187-byte module imports the parser
-and an [815-byte JSON key comparator](transforms/00-json-string-keys.md).
+and an [871-byte JSON string helper](transforms/00-json-string-keys.md).
 The comparator decodes UTF-8 and JSON escapes into UTF-16 units without
 allocating strings, so equivalent key spellings share one column. Duplicate
 keys within a row are rejected; nested value tokens are preserved.
@@ -268,8 +268,17 @@ rather than a decoded object tree. See its source for memory bounds and the
 tradeoff of decoding short headers again when emitting properties.
 Try [the reverse object-table converter](http://microwasm.localhost:3030/?tool=09-table-to-json-objects).
 
-Fifteen transformations are implemented: tools 1–15 in the plan.
-The remaining 35 are pending.
+[Hierarchical list to YAML](transforms/16-list-to-yaml.md) emits two-space block
+mappings/sequences with quoted strings, empty flow containers and exact number
+spellings. Its 1,285-byte module imports the list compiler and string helpers.
+It rejects duplicate mapping keys and unpaired surrogates, and switches long
+keys to explicit YAML syntax. The shared helper now exposes bounded code-unit
+iteration as well as equality. Tests use `@std/yaml@1.2.0` as an independent
+oracle only; the browser still runs just the handwritten Wasm conversion.
+Try [the YAML writer](http://microwasm.localhost:3030/?tool=16-list-to-yaml).
+
+Sixteen transformations are implemented: tools 1–16 in the plan.
+The remaining 34 are pending, including the reverse YAML reader.
 
 ## Provisional byte-list notation
 

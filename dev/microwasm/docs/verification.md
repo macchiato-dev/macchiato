@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 130 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 137 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are fifteen implemented transformations out of the planned fifty:
-tools 1–15.
+There are sixteen implemented transformations out of the planned fifty:
+tools 1–16.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -303,6 +303,32 @@ spelling, inert markup-like values, rejection of duplicate headers and
 cross-cell JSON injection while retaining output, and recovery to `[{}]`.
 The side-by-side rendered screenshot was inspected. The full example,
 renderer and six-view source-document browser suite also passes.
+
+The string helper now exposes a bounded three-result iterator. A fifth helper
+test checks cursor/pending-unit handoff, escaped NUL versus end, final-memory
+positions, and invalid spans or pending values. Its 871-byte module still
+imports only memory; the equality implementation is unchanged.
+
+Six YAML-writer tests compare block output against `@std/yaml@1.2.0` under the
+JSON schema, used only as a test oracle. Cases include scalar roots, mappings,
+sequences, empty containers, type-like strings, exact numeric spellings, every
+code point below 160, supplementary Unicode, escaped controls, mapping-key
+uniqueness at different depths, and 500 generated nested datasets. Long keys
+are parsed in explicit-key form, including Unicode and control-rich keys.
+Memory tests cover an exact 64 KiB input, a compact intermediate filling the
+last page, an exact 128 KiB result, overflows and reuse. The independent parser
+also reconstructs all 128 levels of the maximum-depth sequence. Lone surrogate
+units are rejected rather than published as nonportable YAML string values.
+These tests establish the writer's stated data subset, not full YAML support
+or completion of the pending reverse reader.
+Chromium passes all sixteen fixtures and edits the new writer's input to
+check block indentation, string/boolean distinctions, Unicode decoding and
+literal markup. Duplicate keys and lone-surrogate errors keep the successful
+output; a later empty-sequence input recovers. The screenshot was inspected:
+the two panes and escaped newline are visible. This container's installed
+fonts have no emoji face, so the supplementary-character sample displays a
+missing-glyph box there; its exact `😀` text is verified in the DOM and by the
+independent parser. The complete source-view/example browser suite also passes.
 The rendered side-by-side screenshot was inspected: the embedded pipe remains
 in one cell, markup-like text stays literal, and duplicate keys and exponent
 spelling are visible unchanged in the JSON output.

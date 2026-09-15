@@ -798,6 +798,58 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === "```json\n[{}]\n```\n"
   );
+  await page.goto(new URL("?tool=16-list-to-yaml", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const yamlInput =
+    '- {}\n  - name "<b>Ben</b>"\n  - tags []\n    - false\n    - = false\n' +
+    '    - "\\ud83d\\ude00"\n  - note "a\\nb"';
+  const yamlOutput =
+    '```yaml\n"name": "<b>Ben</b>"\n"tags":\n  - "false"\n  - false\n' +
+    '  - "😀"\n"note": "a\\u000ab"\n```\n';
+  await page.locator("#transform-input").fill(yamlInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    yamlOutput,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").textContent() ===
+      yamlOutput.slice(8, -4),
+    "Rendered YAML lost quoting, indentation or Unicode escapes",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "YAML string became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/list-to-yaml-rendered.png`,
+    fullPage: true,
+  });
+  for (const invalid of ['- {}\n  - x one\n  - "\\u0078" two', '- "\\ud800"']) {
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === yamlOutput,
+      "Invalid YAML data replaced the successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("- []");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "```yaml\n[]\n```\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
