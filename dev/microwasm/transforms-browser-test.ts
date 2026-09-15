@@ -2973,6 +2973,40 @@ try {
   });
   check(base64Requests.length === 0, "Base64 payload caused a network request");
   page.off("request", onBase64Request);
+  await page.goto(new URL("?tool=48-radix-table", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const radixSource =
+    "- 9007199254740993 10 10\n- -FF 16 10\n- +000A 016 2\n- 123456789 10 10\n";
+  const radixTable =
+    "| Input | From base | To base | Result |\n| --- | --- | --- | --- |\n| 9007199254740993 | 10 | 10 | 9007199254740992 |\n| -FF | 16 | 10 | -255 |\n| +000A | 016 | 2 | 1010 |\n| 123456789 | 10 | 10 | 123456789 |\n";
+  await writeDiff(radixSource, radixTable);
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered table").count() === 1 &&
+      await page.locator("#transform-output-rendered tbody tr").count() === 4,
+    "Radix rows did not render as one four-row table",
+  );
+  await page.screenshot({
+    path: artifacts + "/radix-table-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(radixSource + "- 2 2 10\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === radixTable,
+    "An invalid radix digit replaced the successful table",
+  );
+  await writeDiff(radixSource, radixTable);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

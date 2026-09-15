@@ -524,4 +524,20 @@ export const transforms = [{
   ],
   input: "```text\nHello, world!\n```\n",
   expected: "```base64\nSGVsbG8sIHdvcmxkIQ==\n```\n",
+}, {
+  id: "48-radix-table",
+  title: "Integer and radix rows to a conversion table",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "b", path: "numbers/03-multiword" },
+    { name: "f", path: "numbers/04-json-binary64" },
+    { name: "d", path: "numbers/05-exact-decimal" },
+    { name: "s", path: "numbers/06-shortest-decimal" },
+    { name: "p", path: "numbers/07-parse-integer" },
+    { name: "r", path: "numbers/09-radix-format" },
+  ],
+  input:
+    "- ff 16 2\n- -42 10 16\n- 1z 36 10\n- 9007199254740993 10 10\n- -0 10 10\n",
+  expected:
+    "| Input | From base | To base | Result |\n| --- | --- | --- | --- |\n| ff | 16 | 2 | 11111111 |\n| -42 | 10 | 16 | -2a |\n| 1z | 36 | 10 | 71 |\n| 9007199254740993 | 10 | 10 | 9007199254740992 |\n| -0 | 10 | 10 | 0 |\n",
 }];

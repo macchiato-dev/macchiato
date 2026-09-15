@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "48-radix-table",
+        "Preserve a small workspace, not a whole document",
+        "Saved in four i64 locals; restored immediately",
+      ],
+      [
         "46-base64-to-text",
         "Quartet boundaries and canonical padding",
         "Whitespace and end",

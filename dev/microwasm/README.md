@@ -384,8 +384,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty-seven transformations are implemented: tools 1–47 in the plan.
-The remaining 3 are pending.
+Forty-eight transformations are implemented: tools 1–48 in the plan.
+The remaining 2 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -544,6 +544,15 @@ Unicode round trips against the native Base64 codec, exhaustive one/two-byte
 UTF-8 checks, nonzero pad-bit rejection and decoded-fence capacity boundaries.
 Try [Base64 to text](http://microwasm.localhost:3030/?tool=46-base64-to-text) or
 [text to Base64](http://microwasm.localhost:3030/?tool=47-text-to-base64).
+
+The [radix table tool](transforms/48-radix-table.md) takes flat rows containing
+an integer token and two bases, and emits a conversion table. Its 1,121-byte
+module reuses the existing binary64 parser and formatters, rather than
+including a second number engine. This is Number conversion, not BigInt:
+`9007199254740993` rounds to `9007199254740992`. Tests cover every base pair,
+rounding boundaries, invalid digits and exact memory limits. The table has
+a 60 KiB bound, separate from numeric scratch; the source has a 64 KiB bound.
+Try [integer/radix rows](http://microwasm.localhost:3030/?tool=48-radix-table).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

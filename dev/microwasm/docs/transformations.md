@@ -6,13 +6,13 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–47, and the side-by-side
+syntax validation and binary64 parsing, tools 1–48, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 3 tools remain.
+significant-digit formatting are implemented too. The other 2 tools remain.
 This is not goal completion.
 
 ## Data representation
@@ -33,7 +33,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–47 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–48 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -255,7 +255,18 @@ shared fence functions. The codec uses the standard alphabet, requires
 padding for incomplete groups, rejects nonzero unused bits, and ignores only
 the four documented ASCII whitespace bytes. Its encoder emits one unwrapped
 line. Tests use RFC vectors, native codec comparisons, all one/two-byte
-inputs and exact framing limits. Integer/radix conversion rows (48) are next.
+inputs and exact framing limits.
+
+Integer/radix conversion rows (48) reuse the numeric modules. Three fields
+on each flat list row select a signed integer spelling and input/output bases.
+The wrapper validates every digit before calling the prefix parser, so an
+invalid suffix cannot silently become a successful conversion. Four i64 locals
+preserve the decimal formatter's small input-prefix workspace; a separate
+60 KiB staging region keeps accumulated rows away from numeric scratch.
+The result is a Markdown table with the original field spellings and formatted
+binary64 results. Tests cover all 1,225 base pairs, halfway rounding, infinity,
+the two capacity boundaries, immutable input and recovery after failed edits.
+JSON Patch records (49–50) are next.
 
 ## Shared number conversion
 

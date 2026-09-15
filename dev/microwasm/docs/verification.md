@@ -1058,6 +1058,34 @@ Screenshots in `dist/browser/`: `base64-to-text-rendered.png`,
 Three transformations remain, followed by the collection's completion review.
 This checkpoint does not complete the goal.
 
+## Integer/radix conversion table (48)
+
+Tool 48 is a 1,121-byte handwritten module plus the existing shared numeric
+modules. It validates flat integer/base/base rows, preserves their spelling
+and produces a Markdown table. Numeric behavior remains binary64: rounding
+above the safe-integer boundary and overflow are visible rather than hidden
+behind arbitrary-precision output. Whole-token validation deliberately differs
+from the permissive prefix behavior of the underlying integer parser.
+
+Five test groups cover all 1,225 base pairs in the exact-integer range, signed
+and uppercase input, BigInt-derived rounding oracles, negative zero, infinity,
+decimal notation boundaries, malformed fields and repeated recovery. A second
+row after decimal conversion detects input-prefix clobbering. Every ordinary
+run checks the original source, saved prefix and numeric literal tables.
+Exact 64 KiB input and 60 KiB output boundaries, one-byte output overflow and
+invalid input lengths are covered. No host conversion implements the tool.
+
+All 388 Deno tests passed in complete partitions of 213 and 175. Both browser
+suites passed, including 48 transformation fixtures and the document views.
+The new browser scenario edits multiple numeric rows, checks the rendered
+table, preserves the successful output after a later invalid row and recovers.
+Code, rendered input/output and the memory-ownership walkthrough screenshots
+were inspected: `48-radix-table-code.png`, `radix-table-rendered.png` and
+`48-radix-table-walkthrough.png` in `dist/browser/`.
+
+Two transformations remain: the JSON Patch pair, followed by the collection's
+completion review. This checkpoint does not complete the goal.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |
