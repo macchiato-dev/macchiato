@@ -67,8 +67,16 @@ combined. Duplicate keys likewise remain distinct list entries.
 
 Import `n.valid` as function 0 and `n.memory`. Functions: emit 1, copy 2,
 take 3, skip 4, string 5, prefix 6, value 7, run 8, expect 9. Globals:
-output 0, input position 1, input end 2. Output starts at `0x10000` and stops
-before the fence literals at `0x30000`. Only run and memory are public.
+output 0, input position 1, input end 2, output mode 3. Output starts at
+`0x10000` and stops before the fence literals at `0x30000`.
+
+The same descent also powers the [pretty printer](12-json-pretty.md) and
+[compactor](13-json-compact.md). The three public entry points reset the mode
+before calling the shared fenced-document reader 10: run 8 chooses lists,
+pretty 11 chooses two-space JSON, and compact 12 chooses unspaced JSON.
+Formatting changes only the punctuation/indentation emissions; strings and
+scalars use exactly the same validation and span-copying code in every mode.
+No intermediate list, JSON object tree, or host conversion is involved.
 
 `[microwasm]`
 
@@ -78,13 +86,13 @@ before the fence literals at `0x30000`. Only run and memory are public.
 - jl-import-section: `02 {{size:jl-imports}}`
   - jl-imports: `02 01 6e 05 76616c6964 00 00 01 6e 06 6d656d6f7279 02 01 04 04`
 - jl-function-section: `03 {{size:jl-functions}}`
-  - jl-functions: `09 01 05 03 02 02 01 01 04 01`
+  - jl-functions: `0c 01 05 03 02 02 01 01 04 01 04 04 04`
 - jl-global-section: `06 {{size:jl-globals}}`
-  - jl-globals: `03 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
+  - jl-globals: `04 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - jl-export-section: `07 {{size:jl-exports}}`
-  - jl-exports: `02 03 72756e 00 08 06 6d656d6f7279 02 00`
+  - jl-exports: `04 03 72756e 00 08 06 707265747479 00 0b 07 636f6d70616374 00 0c 06 6d656d6f7279 02 00`
 - jl-code-section: `0a {{size:jl-code}}`
-  - jl-code: `09`
+  - jl-code: `0c`
     - jl-emit-record: `{{size:jl-emit-body}}`
       - jl-emit-body: `00`
         - jl-emit-bound: `23 00 41 80800c 4f 04 40 00 0b`
@@ -132,29 +140,37 @@ before the fence literals at `0x30000`. Only run and memory are public.
         - jl-string-copy: `20 00 23 01 10 02 0b`
     - jl-prefix-record: `{{size:jl-prefix-body}}`
       - jl-prefix-body: `00`
+        - jl-prefix-compact: `23 03 41 02 46 04 40 0f 0b`
         - jl-prefix-exit: `02 40`
           - jl-prefix-loop: `03 40`
             - jl-prefix-bound: `20 00 45 0d 01`
             - jl-prefix-spaces: `41 20 10 01 41 20 10 01`
             - jl-prefix-next: `20 00 41 01 6b 21 00 0c 00 0b`
           - jl-prefix-end: `0b`
-        - jl-prefix-marker: `41 2d 10 01 41 20 10 01 0b`
+        - jl-prefix-marker: `23 03 45 04 40 41 2d 10 01 41 20 10 01 0b 0b`
     - jl-value-record: `{{size:jl-value-body}}`
       - jl-value-body: `01 05 7f`
         - jl-value-peek: `10 04 10 03 21 01 23 01 41 01 6b 24 01`
-        - jl-value-string: `20 01 41 22 46 04 40 10 05 41 0a 10 01 0f 0b`
+        - jl-value-string: `20 01 41 22 46 04 40 10 05 23 03 45 04 40 41 0a 10 01 0b 0f 0b`
         - jl-value-container: `20 01 41 fb00 46 20 01 41 db00 46 72 04 40`
           - jl-value-depth: `20 00 41 8001 4f 04 40 00 0b`
           - jl-value-close-byte: `20 01 41 02 6a 21 02`
-          - jl-value-marker: `20 01 10 01 20 02 10 01 41 0a 10 01`
+          - jl-value-marker: `20 01 10 01 23 03 45 04 40 20 02 10 01 41 0a 10 01 0b`
           - jl-value-open: `23 01 41 01 6a 24 01 10 04`
-          - jl-value-empty: `10 03 20 02 46 04 40 0f 0b 23 01 41 01 6b 24 01`
+          - jl-value-empty: `10 03 20 02 46 04 40 23 03 04 40 20 02 10 01 0b 0f 0b 23 01 41 01 6b 24 01`
           - jl-child-loop: `03 40`
+            - jl-child-newline: `23 03 41 01 46 04 40 41 0a 10 01 0b`
             - jl-child-prefix: `20 00 41 01 6a 10 06`
-            - jl-child-key: `20 01 41 fb00 46 04 40 10 04 10 05 41 20 10 01 10 04 10 03 41 3a 47 04 40 00 0b 0b`
+            - jl-child-key: `20 01 41 fb00 46 04 40 10 04 10 05`
+              - jl-key-colon: `23 03 04 40 41 3a 10 01 0b`
+              - jl-key-space: `23 03 41 02 47 04 40 41 20 10 01 0b`
+              - jl-key-input-colon: `10 04 10 03 41 3a 47 04 40 00 0b 0b`
             - jl-child-value: `20 00 41 01 6a 10 07`
-            - jl-child-separator: `10 04 10 03 22 03 20 02 46 04 40 0f 0b`
+            - jl-child-separator: `10 04 10 03 22 03 20 02 46 04 40`
+              - jl-child-close-indent: `23 03 41 01 46 04 40 41 0a 10 01 20 00 10 06 0b`
+              - jl-child-close-json: `23 03 04 40 20 02 10 01 0b 0f 0b`
             - jl-child-comma: `20 03 41 2c 47 04 40 00 0b`
+            - jl-child-comma-json: `23 03 04 40 41 2c 10 01 0b`
             - jl-child-next: `0c 00 0b 0b`
         - jl-scalar-start: `23 01 21 03`
         - jl-scalar-exit: `02 40`
@@ -169,19 +185,10 @@ before the fence literals at `0x30000`. Only run and memory are public.
         - jl-scalar-five: `23 01 20 03 6b 41 05 46 04 40`
           - jl-scalar-false: `20 03 28 00 00 41 e6c2b19b07 46 20 03 2d 00 04 41 e500 46 71 21 04 0b`
         - jl-scalar-number: `20 04 45 04 40 20 03 23 01 10 00 45 04 40 00 0b 0b`
-        - jl-scalar-copy: `41 3d 10 01 41 20 10 01 20 03 23 01 10 02 41 0a 10 01 0b`
+        - jl-scalar-marker: `23 03 45 04 40 41 3d 10 01 41 20 10 01 0b`
+        - jl-scalar-copy: `20 03 23 01 10 02 23 03 45 04 40 41 0a 10 01 0b 0b`
     - jl-run-record: `{{size:jl-run-body}}`
-      - jl-run-body: `01 01 7f`
-        - jl-run-bound: `20 00 41 808004 4b 04 40 00 0b`
-        - jl-run-reset: `20 00 24 02 41 00 24 01 41 808004 24 00`
-        - jl-run-open: `10 04 41 80800c 10 09`
-        - jl-run-cr: `10 03 22 01 41 0d 46 04 40 10 03 21 01 0b`
-        - jl-run-lf: `20 01 41 0a 47 04 40 00 0b`
-        - jl-run-value: `41 00 10 06 41 00 10 07 10 04`
-        - jl-run-close-line: `23 01 41 01 6b 2d 00 00 41 0a 47 04 40 00 0b`
-        - jl-run-close: `41 88800c 10 09 10 04`
-        - jl-run-trailing: `23 01 23 02 47 04 40 00 0b`
-        - jl-run-result: `23 00 41 808004 6b 0b`
+      - jl-run-body: `00 41 00 24 03 20 00 10 0a 0b`
     - jl-expect-record: `{{size:jl-expect-body}}`
       - jl-expect-body: `01 01 7f`
         - jl-expect-end: `20 00 20 00 2d 00 00 6a 41 01 6a 21 01 20 00 41 01 6a 21 00`
@@ -191,6 +198,24 @@ before the fence literals at `0x30000`. Only run and memory are public.
             - jl-expect-byte: `10 03 20 00 2d 00 00 47 04 40 00 0b`
             - jl-expect-next: `20 00 41 01 6a 21 00 0c 00 0b`
           - jl-expect-done: `0b 0b`
+    - jl-document-record: `{{size:jl-document-body}}`
+      - jl-document-body: `01 01 7f`
+        - jl-run-bound: `20 00 41 808004 4b 04 40 00 0b`
+        - jl-run-reset: `20 00 24 02 41 00 24 01 41 808004 24 00`
+        - jl-run-open: `10 04 41 80800c 10 09`
+        - jl-run-cr: `10 03 22 01 41 0d 46 04 40 10 03 21 01 0b`
+        - jl-run-lf: `20 01 41 0a 47 04 40 00 0b`
+        - jl-run-output-fence: `23 03 04 40 41 81800c 41 88800c 10 02 41 0a 10 01 0b`
+        - jl-run-value: `41 00 10 06 41 00 10 07 10 04`
+        - jl-run-close-line: `23 01 41 01 6b 2d 00 00 41 0a 47 04 40 00 0b`
+        - jl-run-close: `41 88800c 10 09 10 04`
+        - jl-run-trailing: `23 01 23 02 47 04 40 00 0b`
+        - jl-run-output-close: `23 03 04 40 41 0a 10 01 41 89800c 41 8c800c 10 02 41 0a 10 01 0b`
+        - jl-run-result: `23 00 41 808004 6b 0b`
+    - jl-pretty-record: `{{size:jl-pretty-body}}`
+      - jl-pretty-body: `00 41 01 24 03 20 00 10 0a 0b`
+    - jl-compact-record: `{{size:jl-compact-body}}`
+      - jl-compact-body: `00 41 02 24 03 20 00 10 0a 0b`
 - jl-data-section: `0b {{size:jl-data}}`
   - jl-data: `01 00 41 80800c 0b {{size:jl-literals}}`
     - jl-literals: `07 6060606a736f6e 03 606060`
