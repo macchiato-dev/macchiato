@@ -20,6 +20,9 @@ This is not goal completion.
 Choose Markdown structures for the data, not to imitate an implementation's
 object tree. Flat records should read as flat lists. The document itself can
 be the top-level collection; omit wrapper items when they add no meaning.
+Often no separate top block is needed at all: start with the records. Keep
+one only when it carries information or resolves an ambiguity, not merely
+to announce that a collection follows.
 Nest only where a relationship needs it. This applies across formats, not
 just the JSON data-list dialect. That dialect also accepts object properties
 directly, without an explicit root marker. Dotenv demonstrates the flat form
