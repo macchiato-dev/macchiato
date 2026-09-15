@@ -42,6 +42,7 @@ async function reader() {
   const t = imports.t as unknown as {
     memory: WebAssembly.Memory;
     run(n: number): number;
+    same(start: number, end: number, literal: number): number;
   };
   const memory = new Uint8Array(t.memory.buffer),
     literals = memory.slice(0x30400);
@@ -124,6 +125,17 @@ Deno.test("Agenda: parent/child cursor trace and property normalization", async 
 
 Deno.test("Agenda: lexical headers, explicit modes and TEXT list escaping", async () => {
   const r = await reader();
+  // The exported comparison is also used for punctuation-bearing literals.
+  // ASCII case folding must not turn NUL into space or CR into hyphen.
+  r.memory[100] = 1;
+  const lower = (n: number) => n >= 65 && n <= 90 ? n + 32 : n;
+  for (let a = 0; a < 256; a++) {
+    r.memory[0] = a;
+    for (let b = 0; b < 256; b++) {
+      r.memory[101] = b;
+      equal(r.t.same(0, 1, 100), lower(a) === lower(b) ? 1 : 0);
+    }
+  }
   const properties = [
     "SUMMARY;LANGUAGE=es:Reunión\\nmañana",
     'ATTENDEE;CN="Doe, Jane";MEMBER="mailto:a","mailto:b";X-NOTE=one^ntwo:mailto:jane',

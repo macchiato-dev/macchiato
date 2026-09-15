@@ -1,5 +1,6 @@
 import ICAL from "npm:ical.js@2.2.1";
 import { assemble, toHex } from "./microwasm.ts";
+import { transforms } from "./transforms.ts";
 
 const encoder = new TextEncoder(),
   decoder = new TextDecoder("utf-8", { fatal: true });
@@ -110,6 +111,8 @@ function payload(output: string): string {
 
 Deno.test("Agenda writer: exact rows, escaped values and nested components", async () => {
   const p = await pair();
+  const demo = transforms.find((t) => t.id === "35-agenda-to-ical")!;
+  equal(p.write(demo.input), demo.expected);
   const rows = '- "VERSION" raw "2.0"\n- "PRODID" text "-//Example//EN"\n' +
     '### VEVENT\n- "UID" text "first"\n- "DTSTART" raw "20260915T090000Z"\n' +
     textRow("Coffee, tea; snow 雪\nNext\\last") +
@@ -191,6 +194,8 @@ Deno.test("Agenda writer: sibling closure, heading depth and case", async () => 
       agenda("### \n"),
       agenda("### A\n#### B\n##### C\n###### D\n####### E\n"),
       agenda("plain prose\n"),
+      "#\0Agenda\n## VCALENDAR\n",
+      String.fromCharCode(3) + " Agenda\n## VCALENDAR\n",
       agenda("  ### X\n"),
     ]
   ) traps(() => p.write(input));
@@ -204,6 +209,7 @@ Deno.test("Agenda writer: reject malformed JSON, header injection and inconsiste
       '- "SUMMARY" raw "wrong mode"',
       '- "X;VALUE=TEXT" raw "wrong mode"',
       '- "CATEGORIES" text "wrong mode"',
+      '- "CATEGORIES" text\rlist ["wrong mode"]',
       '- "CATEGORIES" text-list []',
       '- "CATEGORIES" text-list ["a",]',
       '- "CATEGORIES" text-list ["a",2]',

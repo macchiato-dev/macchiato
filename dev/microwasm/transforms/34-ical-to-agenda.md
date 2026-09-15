@@ -281,6 +281,12 @@ fenceLines 15, skip 16, begin 17. Only the output pointer is global.
 The reverse writer also imports `same` and `kind` directly. These read-only
 helpers share ASCII name comparison and the property/VALUE mode decision;
 they do not run the reader or change its output pointer.
+`same` compares a span with a one-byte-length-prefixed literal. Its underlying
+`equalSpans` first rejects unequal lengths, then loads one byte from each
+span. Only bytes in A–Z gain `0x20`. A mismatch returns zero immediately;
+otherwise both pointers advance until the common length is exhausted.
+An unconditional OR would also equate CR with hyphen or NUL with space,
+which is wrong for the punctuation-bearing literals used by the writer.
 
 `[microwasm]`
 
@@ -308,7 +314,12 @@ they do not run the reader or change its output pointer.
     - ca-same-record: `{{size:ca-same-body}}`
       - ca-same-body: `00 20 00 20 01 20 02 41 01 6a 20 02 41 01 6a 20 02 2d 00 00 6a 10 08 0b`
     - ca-equal-record: `{{size:ca-equal-body}}`
-      - ca-equal-body: `00 20 01 20 00 6b 20 03 20 02 6b 47 04 40 41 00 0f 0b 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 41 20 72 20 02 2d 00 00 41 20 72 47 04 40 41 00 0f 0b 20 00 41 01 6a 21 00 20 02 41 01 6a 21 02 0c 00 0b 0b 41 01 0b`
+      - ca-equal-body: `01 02 7f 20 01 20 00 6b 20 03 20 02 6b 47 04 40 41 00 0f 0b 02 40 03 40 20 00 20 01 4f 0d 01`
+        - ca-equal-bytes: `20 00 2d 00 00 21 04 20 02 2d 00 00 21 05`
+        - ca-equal-left-case: `20 04 41 c100 6b 41 19 4d 04 40 20 04 41 20 6a 21 04 0b`
+        - ca-equal-right-case: `20 05 41 c100 6b 41 19 4d 04 40 20 05 41 20 6a 21 05 0b`
+        - ca-equal-compare: `20 04 20 05 47 04 40 41 00 0f 0b`
+        - ca-equal-next: `20 00 41 01 6a 21 00 20 02 41 01 6a 21 02 0c 00 0b 0b 41 01 0b`
     - ca-value-record: `{{size:ca-value-body}}`
       - ca-value-body: `01 01 7f 20 02 41 02 46 04 40 41 db00 10 05 0b 41 22 10 05 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 21 03 20 00 41 01 6a 21 00`
         - ca-value-text: `20 02 04 40 20 03 41 dc00 46 04 40 20 00 20 01 4f 04 40 00 0b 20 00 2d 00 00 21 03 20 00 41 01 6a 21 00`
