@@ -24,9 +24,10 @@ This keeps the code-section length correct across page boundaries.
 
 Support ATX headings, paragraphs, hyphen lists indented in two-space steps,
 backtick fences of length three or more, pipe tables, decimal character references, inline
-backticks, `**strong**`, and `[label](target)`.
+backticks, `**strong**`, and `[label](target)` or `[label](<target>)`.
 Mermaid fences display their source exactly like other fences. Inline nesting
-inside links or strong emphasis is not implemented; those spans are escaped
+inside links or strong emphasis is not implemented. Link spans decode
+punctuation escapes and decimal references; strong spans are literal escaped
 text. Raw HTML and unsupported syntax remain text, never executable markup.
 
 Links become `<a data-href="...">`. The renderer never emits `href`, scripts,
@@ -63,7 +64,8 @@ flowchart LR
 - Type 3: `(i32, i32, i32) -> i32`, find a byte.
 - Type 4: `(i32, i32) -> i32`, character-reference recognition.
 - Functions: emit 0, text 1, literal 2, find 3, escaped 4, inline 5,
-  close-lists 6, run 7, table-row 8, table 9, character-reference 10.
+  close-lists 6, run 7, table-row 8, table 9, character-reference 10,
+  decoded-text 11, unescaped-delimiter 12.
 - Globals: output cursor 0, open-list depth 1.
 
 `[microwasm]`
@@ -72,15 +74,15 @@ flowchart LR
 - md-type-section: `01 {{size:md-types}}`
   - md-types: `05 60 01 7f 01 7f 60 01 7f 00 60 02 7f 7f 00 60 03 7f 7f 7f 01 7f 60 02 7f 7f 01 7f`
 - md-function-section: `03 {{size:md-functions}}`
-  - md-functions: `0b 01 01 01 03 02 02 01 00 03 03 04`
+  - md-functions: `0d 01 01 01 03 02 02 01 00 03 03 04 02 03`
 - md-memory-section: `05 {{size:md-memories}}`
   - md-memories: `01 01 14 14`
 - md-global-section: `06 {{size:md-globals}}`
   - md-globals: `02 7f 01 41 808010 0b 7f 01 41 00 0b`
 - md-export-section: `07 {{size:md-exports}}`
   - md-exports: `02 03 72756e 00 07 06 6d656d6f7279 02 00`
-- md-code-section: `0a {{size:md-code-count+emit-record+text-record+literal-record+find-record+escaped-record+inline-record+close-record+run-record+row-record+table-record+entity-record}}`
-- md-code-count: `0b`
+- md-code-section: `0a {{size:md-code-count+emit-record+text-record+literal-record+find-record+escaped-record+inline-record+close-record+run-record+row-record+table-record+entity-record+decoded-record+delimiter-record}}`
+- md-code-count: `0d`
 
 The following page starts the first function body, continuing the same code
 section. [Next: output primitives](01-output.md).

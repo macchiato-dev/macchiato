@@ -4,7 +4,8 @@
 
 Function 5 scans one span. It recognizes punctuation escapes, decimal character
 references, single-backtick code, double-asterisk strong emphasis and simple
-links. Construct contents use the escaped-span helper, not recursive inline
+links. Code and strong contents use the escaped-span helper; link contents
+decode punctuation escapes and decimal references without recursive inline
 parsing. Everything else goes through the escaped-byte helper. In particular,
 `<script>` in Markdown is ordinary visible text.
 
@@ -50,6 +51,7 @@ They do not go around the outer loop again with the same opener.
 | 3: c | Byte originally loaded at `i` | Once per outer iteration |
 | 4: j | Escape byte, returned reference end, or first delimiter position | Reused by mutually exclusive branches |
 | 5: k | Closing parenthesis position | Only during a possible link |
+| 6/7: target start/end | Destination interior, excluding optional angle delimiters | After the label scan, before emitting the anchor |
 
 ### Code: a closing backtick commits the span
 
@@ -63,15 +65,18 @@ describe an empty code span. Contents are not sent back through `inline`.
 
 ```mermaid
 flowchart TD
-  A[Find first closing bracket after i] --> B{Found before end?}
+  A[Find first unescaped closing bracket after i] --> B{Found before end?}
   B -- no --> R[Escape remainder including opener; return]
   B -- yes --> C{Following byte exists and is opening parenthesis?}
   C -- no --> F[Escape through closing bracket; set i to j plus one]
-  C -- yes --> D[Find first closing parenthesis from j plus two]
-  D --> E{Found before end?}
+  C -- yes --> D{Target starts with an angle opener?}
+  D -- yes --> DA[Find unescaped angle close; require parenthesis immediately after]
+  D -- no --> DB[Find unescaped closing parenthesis from j plus two]
+  DA --> E{Complete target found?}
+  DB --> E
   E -- no --> R
-  E -- yes --> H[Emit fixed anchor opening and escaped destination]
-  H --> L[Emit escaped label and fixed anchor close]
+  E -- yes --> H[Emit fixed anchor opening and decoded, HTML-escaped destination]
+  H --> L[Emit decoded, HTML-escaped label and fixed anchor close]
   L --> N[Set i to k plus one; continue]
   F --> N2[Continue with following byte unconsumed]
 ```
@@ -79,13 +84,23 @@ flowchart TD
 For `[a]x`, the non-link fallback consumes `[a]`, leaving `x` for the next
 iteration. For `[a](unfinished`, the missing target close consumes the whole
 remainder literally. These are different outcomes, not one generic “not a
-link” branch. Searches do not balance nested brackets/parentheses, interpret
-backslash escapes within the spans, or accept Markdown link titles.
+link” branch. Searches skip escaped delimiter bytes but do not balance nested
+brackets or bare parentheses, or accept Markdown link titles. Angle-delimited
+destinations allow ordinary parentheses, as used by the OPML converter.
+If the angle close has no immediately following `)`, the remainder stays text.
 
-The destination span is `[j + 2, k)` and the label span `[i + 1, j)`.
+The bare destination span is `[j + 2, k)`; the angle form excludes its `<` and
+`>` as well. The label span is `[i + 1, j)`.
 Their output order is reversed: the destination appears first in the anchor
 attribute, followed by the label as element text. Only offsets are retained;
 there is no copied label buffer.
+
+Both spans go through function 11 rather than `inline`: decode punctuation
+escapes and numeric references, then HTML-escape data without interpreting
+new constructs. A quote produced by a reference remains an HTML reference
+inside the attribute. It cannot terminate that attribute. Function 12 finds
+unescaped delimiters without writing output; both helpers are broken down on
+the [table/reference page](06-tables.md).
 
 ### Strong: a first unmatched star is not skipped speculatively
 
@@ -125,7 +140,7 @@ allowlist is a separate step. These examples stay inert without that step:
 `[microwasm]`
 
 - inline-record: `{{size:inline-body}}`
-  - inline-body: `01 04 7f`
+  - inline-body: `01 06 7f`
     - inline-start: `20 00 21 02`
     - inline-exit: `02 40`
       - inline-loop: `03 40`
@@ -145,15 +160,19 @@ allowlist is a separate step. These examples stay inert without that step:
           - inline-code-close: `41 c300 10 02`
           - inline-code-next: `20 04 41 01 6a 21 02 0c 01 0b`
         - inline-link: `20 03 41 db00 46 04 40`
-          - inline-label-find: `20 02 41 01 6a 20 01 41 dd00 10 03 21 04`
+          - inline-label-find: `20 02 41 01 6a 20 01 41 dd00 10 0c 21 04`
           - inline-label-missing: `20 04 20 01 46 04 40 20 02 20 01 10 04 0f 0b`
           - inline-link-room: `20 04 41 01 6a 20 01 49 04 40`
             - inline-link-paren: `20 04 2d 00 01 41 28 46 04 40`
-              - inline-target-find: `20 04 41 02 6a 20 01 41 29 10 03 21 05`
-              - inline-target-missing: `20 05 20 01 46 04 40 20 02 20 01 10 04 0f 0b`
+              - inline-target-start: `20 04 41 02 6a 21 06`
+              - inline-target-room: `20 06 20 01 4f 04 40 20 02 20 01 10 04 0f 0b`
+              - inline-target-angle: `20 06 2d 00 00 41 3c 46 04 40 20 06 41 01 6a 21 06 20 06 20 01 41 3e 10 0c 21 07`
+                - inline-angle-bound: `20 07 41 01 6a 20 01 4f 04 40 20 02 20 01 10 04 0f 0b`
+                - inline-angle-close: `20 07 41 01 6a 21 05 20 05 2d 00 00 41 29 47 04 40 20 02 20 01 10 04 0f 0b`
+              - inline-target-bare: `05 20 06 20 01 41 29 10 0c 22 05 21 07 20 05 20 01 46 04 40 20 02 20 01 10 04 0f 0b 0b`
               - inline-link-open: `41 de00 10 02`
-              - inline-link-target: `20 04 41 02 6a 20 05 10 04`
-              - inline-link-label: `41 ed00 10 02 20 02 41 01 6a 20 04 10 04`
+              - inline-link-target: `20 06 20 07 10 0b`
+              - inline-link-label: `41 ed00 10 02 20 02 41 01 6a 20 04 10 0b`
               - inline-link-close: `41 f000 10 02`
               - inline-link-next: `20 05 41 01 6a 21 02 0c 03 0b`
             - inline-link-room-end: `0b`

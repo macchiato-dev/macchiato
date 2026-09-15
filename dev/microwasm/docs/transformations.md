@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–28, and the side-by-side
+syntax validation and binary64 parsing, tools 1–29, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 22 tools remain.
+significant-digit formatting are implemented too. The other 21 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–28 are now all implemented.
+stable numbering; tools 1–29 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -97,12 +97,15 @@ references, then uses the shared XML character writer for escaping. No JSON
 intermediate or node tree is allocated. Complete invalid character references
 trap, including values that would otherwise wrap i32. HTTP(S) destinations
 are stored as data, never fetched. A longer output fence contains backticks.
-The reverse OPML reader (29) is next: it needs real outline/link conversion,
-not merely another label on the generic XML tree tools.
-Its reusable groundwork is implemented: `x.next` returns normalized XML
-characters without JSON output, and the XML document reader's `readSpan`
-validates/reads an unfenced source span without changing the caller's framing.
-The OPML-specific title, attribute and hierarchy conversion remains to be done.
+The reverse OPML reader (29) is implemented. It uses `readSpan` to validate
+the whole XML document, then emits Markdown titles, labels and selected link
+destinations directly from source spans. It uses `x.next` for normalized
+characters rather than decoding an intermediate JSON representation. The
+first pass's tree and its bounds still apply; the tree is discarded before
+final output. This is an outline projection, not a lossless OPML archive.
+It preserves empty labels in ordinary Markdown with carefully placed blank
+lines, tested against an independent CommonMark parser and the Wasm writer.
+Tool 30, browser bookmark HTML to a folder/link outline, is next.
 
 ## Shared number conversion
 

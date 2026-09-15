@@ -159,3 +159,38 @@ match and emits nothing. Maximum scanning distance is ten bytes.
       - entity-copy-byte: `20 00 2d 00 00 10 00`
       - entity-copy-next: `20 00 41 01 6a 22 00 20 02 49 0d 00 0b`
     - entity-result: `20 02 0b`
+
+## Functions 11–12: decoded text and unescaped delimiters
+
+Links need the same punctuation/reference decoding as ordinary prose, but
+must not open another inline element inside an attribute or link label.
+`decoded(start, end)` therefore has only three paths: decode a punctuation
+escape, retain a valid numeric reference as an HTML reference, or HTML-escape
+one ordinary byte. It never calls the inline renderer recursively.
+
+`delimiter(start, end, target)` probes without writing. A backslash consumes
+the following byte for scanning purposes; an unescaped target returns its
+offset. At exhaustion it returns `end`, even if a trailing backslash advanced
+the local scan position one past it. The bound test precedes every load.
+The caller keeps ownership of both delimiters and decides what a miss means.
+
+Both routines advance monotonically and allocate nothing. Scanning and
+decoding remain separate so an escaped closing bracket cannot end a link
+label, and decoding an entity to a quote cannot create another HTML attribute.
+
+`[microwasm]`
+
+- decoded-record: `{{size:decoded-body}}`
+  - decoded-body: `01 02 7f`
+    - decoded-loop: `02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 21 02`
+      - decoded-slash: `20 02 41 dc00 46 20 00 41 01 6a 20 01 49 71 04 40 20 00 2d 00 01 21 03`
+        - decoded-punctuation: `20 03 41 21 6b 41 0e 4d 20 03 41 3a 6b 41 06 4d 72 20 03 41 db00 6b 41 05 4d 72 20 03 41 fb00 6b 41 03 4d 72 04 40 20 03 10 01 20 00 41 02 6a 21 00 0c 02 0b 0b`
+      - decoded-reference: `20 02 41 26 46 04 40 20 00 20 01 10 0a 22 03 04 40 20 03 21 00 0c 02 0b 0b`
+      - decoded-byte: `20 02 10 01 20 00 41 01 6a 21 00 0c 00 0b 0b 0b`
+- delimiter-record: `{{size:delimiter-body}}`
+  - delimiter-body: `00`
+    - delimiter-loop: `02 40 03 40 20 00 20 01 4f 0d 01`
+      - delimiter-slash: `20 00 2d 00 00 41 dc00 46 04 40 20 00 41 02 6a 21 00 0c 01 0b`
+      - delimiter-match: `20 00 2d 00 00 20 02 46 04 40 20 00 0f 0b`
+      - delimiter-next: `20 00 41 01 6a 21 00 0c 00 0b 0b`
+    - delimiter-missing: `20 01 0b`

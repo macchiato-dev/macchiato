@@ -1656,6 +1656,110 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
       .includes('text="recovered"')
   );
+  await page.goto(new URL("?tool=29-opml-to-outline", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const opmlInput =
+    '```opml\n<opml version="2.0"><head><title>A &amp; B</title></head><body><outline text="Tools" type="link" url="https://example.com/?a=1&amp;b=2"><outline text=""/><outline text="&lt;script&gt;inert&lt;/script&gt;"/></outline></body></opml>\n```\n';
+  await page.locator("#transform-input").fill(opmlInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  const outlineExpected =
+    "# A&#32;\\&&#32;B\n\n- [Tools](<https://example.com/?a=1\\&b=2>)\n\n  - \n  - \\<script\\>inert\\<\\/script\\>\n";
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    outlineExpected,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered h1").textContent() ===
+      "A & B",
+    "OPML title changed when rendered",
+  );
+  check(
+    await page.locator("#transform-output-rendered li").count() === 3,
+    "OPML empty item or hierarchy lost",
+  );
+  check(
+    await page.locator("#transform-output-rendered a").textContent() ===
+      "Tools",
+    "OPML link label differs",
+  );
+  check(
+    await page.locator("#transform-output-rendered a").getAttribute(
+      "data-href",
+    ) === "https://example.com/?a=1&b=2",
+    "OPML destination differs",
+  );
+  check(
+    await page.locator("#transform-output-rendered li li").last()
+      .textContent() === "<script>inert</script>",
+    "OPML label became markup",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered a[href], #transform-output-rendered script",
+    ).count() === 0,
+    "OPML links or labels became active",
+  );
+  await page.screenshot({
+    path: `${artifacts}/opml-to-outline-rendered.png`,
+    fullPage: true,
+  });
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-input").inputValue() === opmlInput,
+    "OPML source was modified",
+  );
+  for (
+    const invalid of [
+      opmlInput.replace('type="link"', 'type="rss"'),
+      opmlInput.replace('text="Tools"', ""),
+      opmlInput.replace("&amp; B", "&unknown;"),
+    ]
+  ) {
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    check(
+      await page.locator("#transform-output").inputValue() === outlineExpected,
+      "Invalid OPML replaced previous output",
+    );
+  }
+  await page.locator("#transform-input").fill(
+    opmlInput.replace('text="Tools"', 'text="Recovered"'),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("[Recovered]")
+  );
+  await page.locator("#transform-output").fill(
+    "[\\<label\\>](<x&#34; onmouseover=&#34;bad>)",
+  );
+  await side("output", "Rendered");
+  const decodedLink = await page.locator("#transform-output-rendered a")
+    .evaluate((link) => ({
+      text: link.textContent,
+      data: link.getAttribute("data-href"),
+      event: link.getAttribute("onmouseover"),
+      href: link.getAttribute("href"),
+    }));
+  check(
+    JSON.stringify(decodedLink) === JSON.stringify({
+      text: "<label>",
+      data: 'x" onmouseover="bad',
+      event: null,
+      href: null,
+    }),
+    "Decoded link data crossed the HTML attribute boundary",
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

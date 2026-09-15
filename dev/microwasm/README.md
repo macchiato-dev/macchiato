@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 237 tests covering all twenty examples and the supplied
+`deno task test` runs 245 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -88,7 +88,7 @@ The Markdown renderer is itself handwritten Microwasm across
 [seven linked pages](renderer/00-module.md), including a page about
 [repeated scanning patterns](renderer/02-scanning.md). It produces HTML in
 linear memory without host imports or a JavaScript Markdown parser. Its
-2,679-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
+2,975-byte module uses fixed 1.25 MiB memory: at most 256 KiB of input and
 768 KiB of output. Scans keep offsets rather than building an AST. Input and
 output overflow trap; the viewer discards incomplete output.
 Literal strings have one unsigned 8-bit length followed by their bytes, with
@@ -355,20 +355,20 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Twenty-eight transformations are implemented: tools 1–28 in the plan.
-The remaining 22 are pending.
+Twenty-nine transformations are implemented: tools 1–29 in the plan.
+The remaining 21 are pending.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
 UTF-8 scalar decoding, predefined/numeric entities, and text/attribute whitespace
-normalization. These support tools 26–28, not an additional tool.
+normalization. These support tools 26–29, not an additional tool.
 Tests check every Unicode position's character/name classes and compare decoded
 text and attributes with an independent XML parser. DTDs and external entities
 are outside the reader's scope; no host XML parser ships in the demo.
 
 [XML to an ordered Markdown tree](transforms/26-xml-to-list.md) now reads
 elements, attributes, mixed text, comments, CDATA, processing instructions and
-an initial declaration. Its 2,875-byte module retains repeated siblings and
+an initial declaration. Its 2,893-byte module retains repeated siblings and
 whitespace, validates matching tags and unique attributes, and supports longer
 Markdown fences. Tests compare 600 generated documents with an independent
 parser, exercise 930 single-character edits, and check exact input/output
@@ -406,12 +406,17 @@ emits escaped XML directly without a JSON intermediate. Its tests include
 character references, exact memory bounds and recovery after a trap.
 Try [the OPML writer](http://microwasm.localhost:3030/?tool=28-outline-to-opml).
 
-Preparation for the reverse OPML converter now includes a no-allocation XML
-character iterator and an unfenced document-reading entry point. The existing
-JSON-string output loop uses that same iterator, preserving its normalization
-rules. Raw document spans use the same structural parser and output bounds as
-fenced XML; they do not bypass validation. These helpers are tested separately
-and in the browser, but do not count as another finished transformation.
+The [OPML reader](transforms/29-opml-to-outline.md) is 2,698 bytes plus shared
+XML helpers. It validates XML first, then emits a title and nested labels or
+links without allocating another tree. Link/include destinations use `url`;
+RSS outlines use `xmlUrl`. Metadata outside that selected representation is
+intentionally omitted. Empty labels, Unicode and whitespace survive; blank
+separators prevent empty nested items from becoming Markdown heading underlines.
+Tests cover 500 generated round trips, all 128 empty-label combinations in a
+seven-node tree, punctuation edits, malformed input, exact output limits and
+recovery. The renderer now understands angle-delimited destinations and
+decodes punctuation/reference escapes inside links while keeping them inert.
+Try [the OPML reader](http://microwasm.localhost:3030/?tool=29-opml-to-outline).
 
 ## Provisional byte-list notation
 

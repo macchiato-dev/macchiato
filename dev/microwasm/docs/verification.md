@@ -582,6 +582,40 @@ tests compare both entries and the iterator over the existing 100 XML cases.
 This is preparation for tool 29, not a new transformation. There are still
 28 published tools; the OPML-specific reader has not been completed.
 
+## Checkpoint: OPML reader and rendered outline parity
+
+Tool 29 is now published: the 2,698-byte module validates the fenced OPML
+through the shared XML reader, then emits its selected title/label/link tree.
+The XML reader is now 2,893 bytes with its fence-line check exported for reuse.
+No XML or Markdown implementation in JavaScript ships with the transformation.
+
+Seven new tests cover 500 generated XML trees and Wasm writer round trips,
+128 combinations of empty/nonempty labels, punctuation substitutions,
+normalization, ignored malformed XML, versions and required attributes,
+unsafe/unsupported destinations, fences, Unicode, 30 outline levels, exact
+64 KiB input and 128 KiB final output, intermediate overflow and trap recovery.
+The independent CommonMark checks found that an empty child can be a Setext
+heading underline. The Markdown emitter now separates it from a preceding nonempty item
+without adding a blank line between consecutive empty parents and children.
+
+The browser test found that the partial renderer retained angle delimiters
+and backslash escapes in destinations. Its link scanner now handles the
+angle form and skips escaped delimiters; a small decoded-text helper applies
+punctuation/reference decoding followed by HTML escaping. The destination
+remains `data-href`, never an active URL. One additional renderer test checks
+these paths, escaped closing brackets/parentheses, missing delimiters, and
+quote references that must not create another attribute. The complete renderer
+is 2,975 bytes, still assembled from seven readable Markdown pages.
+
+The suite now has 245 tests. All 29 browser fixtures also exercise independent
+Code/Rendered modes, editable panes, bounds and failure recovery. The OPML
+reader's browser scenario checks decoded title, nested empty item, literal
+markup, inert destination, source preservation and recovery. Its screenshot
+is `dist/browser/opml-to-outline-rendered.png`.
+
+There are 29 published tools and 21 still to implement. This checkpoint does
+not complete the goal.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

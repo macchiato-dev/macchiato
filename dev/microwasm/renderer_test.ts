@@ -85,6 +85,35 @@ Deno.test("Markdown links have only escaped data-href, never active URLs", async
   );
 });
 
+Deno.test("Markdown links: angle destinations and decoded spans stay inert", async () => {
+  const { render } = await renderer();
+  equal(
+    render("[a\\]b&#32;](<https://example.com/a(b)?x=1\\&y=2>)"),
+    '<p><a data-href="https://example.com/a(b)?x=1&amp;y=2">a]b&#32;</a></p>\n',
+  );
+  equal(
+    render("[\\<b\\>](<x&#34; onmouseover=&#34;bad>)"),
+    '<p><a data-href="x&#34; onmouseover=&#34;bad">&lt;b&gt;</a></p>\n',
+  );
+  equal(render("[](<>)"), '<p><a data-href=""></a></p>\n');
+  equal(
+    render("[x](a\\)b)"),
+    '<p><a data-href="a)b">x</a></p>\n',
+  );
+  equal(
+    render("[x](<unfinished)"),
+    "<p>[x](&lt;unfinished)</p>\n",
+  );
+  equal(
+    render("[x](<url>not-a-close)"),
+    "<p>[x](&lt;url&gt;not-a-close)</p>\n",
+  );
+  equal(
+    render("[x\\](" + "a".repeat(50000)),
+    "<p>[x\\](" + "a".repeat(50000) + "</p>\n",
+  );
+});
+
 Deno.test("Markdown tables: header recognition, row widths and block transitions", async () => {
   const { render } = await renderer();
   const table = "<table><thead><tr><th>a</th><th>b</th></tr>\n" +

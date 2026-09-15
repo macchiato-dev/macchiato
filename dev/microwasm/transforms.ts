@@ -291,4 +291,17 @@ export const transforms = [{
     "# Reading\n\n- Web\n  - [WebAssembly](https://webassembly.org/)\n  - [SQLite](<https://sqlite.org/docs.html>)\n- Books & notes",
   expected:
     '```opml\n<opml version="2.0">\n<head><title>Reading</title></head>\n<body>\n  <outline text="Web">\n    <outline text="WebAssembly" type="link" url="https://webassembly.org/">\n    </outline>\n    <outline text="SQLite" type="link" url="https://sqlite.org/docs.html">\n    </outline>\n  </outline>\n  <outline text="Books &amp; notes">\n  </outline>\n</body>\n</opml>\n```\n',
+}, {
+  id: "29-opml-to-outline",
+  title: "OPML to a Markdown link outline",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "x", path: "transforms/00-xml-strings" },
+    { name: "v", path: "transforms/26-xml-to-list" },
+  ],
+  input:
+    '```opml\n<opml version="2.0">\n  <head><title>Reading</title></head>\n  <body>\n    <outline text="Web">\n      <outline text="WebAssembly" type="link" url="https://webassembly.org/"/>\n      <outline text="SQLite" type="link" url="https://sqlite.org/docs.html"/>\n    </outline>\n  </body>\n</opml>\n```\n',
+  expected:
+    "# Reading\n\n- Web\n  - [WebAssembly](<https://webassembly.org/>)\n  - [SQLite](<https://sqlite.org/docs.html>)\n",
 }];
