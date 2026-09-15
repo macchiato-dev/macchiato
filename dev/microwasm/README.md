@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-six transformations are implemented: tools 1–36 in the plan.
-The remaining 14 are pending.
+Thirty-seven transformations are implemented: tools 1–37 in the plan.
+The remaining 13 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -435,7 +435,7 @@ include 250 reader round trips and ICAL.js comparisons, independent folding
 oracles, Unicode boundaries, malformed edits, exact capacities and recovery.
 Try [the calendar writer](http://microwasm.localhost:3030/?tool=35-agenda-to-ical).
 
-The [vCard reader](transforms/36-vcard-to-contacts.md) adds a 2,707-byte
+The [vCard reader](transforms/36-vcard-to-contacts.md) adds a 2,773-byte
 module using the same content-line helper. Multiple contacts become separate
 sections with original headers, decoded text, text lists and structured
 name/address/organization values. Version 3 can place VERSION after other
@@ -444,8 +444,20 @@ decoded. Unknown fields, URI values and encoded binary remain data, never
 fetched or discarded. Seven test groups cover both versions, 240 generated
 cards compared with ICAL.js, escaped delimiters, groups and lexical parameters,
 UTF-8 folds, required fields, exact capacity limits and recovery after failure.
-The reciprocal writer is next.
 Try [the contact reader](http://microwasm.localhost:3030/?tool=36-vcard-to-contacts).
+
+The [contact writer](transforms/37-contacts-to-vcard.md) completes the pair.
+Its 2,159-byte module shares the reader's read-only version inspection,
+header scanner and type decisions. It accepts contact sections without a
+top-level title, preserves grouped/repeated headers, and writes raw, TEXT,
+list and structured values. Two passes handle version 3's late VERSION
+without storing a tree. Output is UTF-8 with CRLF lines folded at 75 octets;
+Markdown fences grow around literal backticks. Eight test groups include
+240 generated versioned examples, independent ICAL.js comparisons, read-only
+inspection, invalid edits, Unicode folding and exact memory boundaries.
+Repeated name variants with ALTID are preserved by both directions.
+Try [the contact writer](http://microwasm.localhost:3030/?tool=37-contacts-to-vcard).
+The SubRip subtitle pair (38–39) is next.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

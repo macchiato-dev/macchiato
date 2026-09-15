@@ -1,5 +1,6 @@
 import ICAL from "npm:ical.js@2.2.1";
 import { assemble, toHex } from "./microwasm.ts";
+import { transforms } from "./transforms.ts";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8", { fatal: true });
@@ -103,6 +104,8 @@ function framed(logical: string) {
 
 Deno.test("Contact writer: exact rows, optional title, grouping and two versions", async () => {
   const p = await pair();
+  const demo = transforms.find((t) => t.id === "37-contacts-to-vcard")!;
+  equal(p.write(demo.input), demo.expected);
   const rows =
     row("N", "structured", [["Doe"], ["Jane", "Janet"], [""], ["Dr."], [""]]) +
     row("item1.EMAIL;TYPE=home", "text", "jane@example.com") +
@@ -419,4 +422,51 @@ Deno.test("Contact writer: code-point folding, escape splits and Markdown fence 
       equal(p.read(result).includes(row("NOTE", "text", note)), true);
     }
   }
+});
+
+Deno.test("Contact writer: exact capacities, bounded expansion and recovery", async () => {
+  const p = await pair();
+  const baseline = contact(row("NOTE", "text", ""));
+  const full = contact(
+    row("NOTE", "text", "a".repeat(65536 - encoder.encode(baseline).length)),
+  );
+  equal(encoder.encode(full).length, 65536);
+  const fullResult = p.write(full);
+  equal(payload(fullResult).replaceAll("\r\n ", "").includes("NOTE:aaa"), true);
+  const literals = p.memory.slice(0x30000, 0x31000);
+  traps(() => p.w.run(65537));
+  traps(() => p.w.run(-1));
+
+  // Long literal backtick runs enlarge both fences. Find the exact boundary
+  // with a separate string oracle rather than guessing from implementation.
+  const logical = (n: number, tail: number) =>
+    "BEGIN:VCARD\nVERSION:4.0\nFN:Jane\nX-RAW:" + "`".repeat(n) +
+    "a".repeat(tail) + "\nEND:VCARD\n";
+  let low = 0, high = 65000;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (encoder.encode(framed(logical(mid, 0))).length <= 131072) low = mid;
+    else high = mid - 1;
+  }
+  let exact: [number, number] | undefined;
+  for (let n = low; n >= low - 5 && !exact; n--) {
+    for (let tail = 0; tail < 24; tail++) {
+      if (encoder.encode(framed(logical(n, tail))).length === 131072) {
+        exact = [n, tail];
+        break;
+      }
+    }
+  }
+  if (!exact) throw Error("No exact expansion fixture");
+  const [n, tail] = exact;
+  const source = (extra: number) =>
+    contact(row("X-RAW", "raw", "`".repeat(n) + "a".repeat(tail + extra)));
+  equal(p.write(source(0)), framed(logical(n, tail)));
+  traps(() => p.write(source(1)));
+  equal(toHex(p.memory.subarray(0x30000, 0x31000)), toHex(literals));
+  equal(p.memory.subarray(0x35000).every((x) => x === 0xa5), true);
+  equal(
+    p.write(contact("")),
+    framed("BEGIN:VCARD\nVERSION:4.0\nFN:Jane\nEND:VCARD\n"),
+  );
 });

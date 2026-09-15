@@ -392,4 +392,17 @@ export const transforms = [{
     "```vcard\nBEGIN:VCARD\nVERSION:4.0\nFN:Jane Doe\nN:Doe;Jane,Janet;;Dr.;\nitem1.EMAIL;TYPE=home:jane@example.com\nORG:Example\\, Inc.;Research\nNICKNAME:Jane,JJ\nEND:VCARD\n```\n",
   expected:
     '# Contacts\n\n## Contact\n\n- "VERSION" text "4.0"\n- "FN" text "Jane Doe"\n- "N" structured [["Doe"],["Jane","Janet"],[""],["Dr."],[""]]\n- "item1.EMAIL;TYPE=home" text "jane@example.com"\n- "ORG" structured [["Example, Inc."],["Research"]]\n- "NICKNAME" text-list ["Jane","JJ"]\n',
+}, {
+  id: "37-contacts-to-vcard",
+  title: "Markdown contact outline to vCard",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "v", path: "transforms/36-vcard-to-contacts" },
+  ],
+  input:
+    '## Contact\n\n- "VERSION" text "4.0"\n- "FN" text "Jane Doe"\n- "N" structured [["Doe"],["Jane","Janet"],[""],["Dr."],[""]]\n- "item1.EMAIL;TYPE=home" text "jane@example.com"\n- "ORG" structured [["Example, Inc."],["Research"]]\n- "NICKNAME" text-list ["Jane","JJ"]\n',
+  expected:
+    "```vcard\nBEGIN:VCARD\r\nVERSION:4.0\r\nFN:Jane Doe\r\nN:Doe;Jane,Janet;;Dr.;\r\nitem1.EMAIL;TYPE=home:jane@example.com\r\nORG:Example\\, Inc.;Research\r\nNICKNAME:Jane,JJ\r\nEND:VCARD\r\n\n```\n",
 }];

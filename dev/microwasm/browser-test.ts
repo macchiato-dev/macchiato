@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "37-contacts-to-vcard",
+        "Inside card: discover once, rewind only this card",
+        "Earlier cards are untouched",
+      ],
+      [
         "36-vcard-to-contacts",
         "Inside card: discover the version before interpreting values",
         "After-END position",

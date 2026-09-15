@@ -2256,6 +2256,80 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
       .includes("Recovered contact")
   );
+  await page.goto(new URL("?tool=37-contacts-to-vcard", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  // The document title is optional; contact headings carry the grouping.
+  const contactRows = contactOutline.replace("# Contacts\n\n", "");
+  await page.locator("#transform-input").fill(contactRows);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  const expectedCards = "```vcard\n" + contactsInput.slice(9, -4) + "\n```\n";
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    expectedCards,
+  );
+  const writtenCards = await page.locator("#transform-output").inputValue();
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre").count() === 1,
+    "Contact writer did not produce one fenced document",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered script, #transform-output-rendered img",
+    ).count() === 0,
+    "Written contact data became active markup",
+  );
+  await page.screenshot({
+    path: artifacts + "/contacts-to-vcard-rendered.png",
+    fullPage: true,
+  });
+  await side("output", "Code");
+  for (
+    const bad of [
+      contactRows.replace('"FN" text', '"FN" raw'),
+      contactRows.replace(
+        '[["Doe"],["Jane","Janet"],[""],[""],[""]]',
+        '[["Doe"],["Jane"]]',
+      ),
+    ]
+  ) {
+    await page.locator("#transform-input").fill(bad);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    check(
+      await page.locator("#transform-output").inputValue() === writtenCards,
+      "Malformed contact rows replaced successful output",
+    );
+  }
+  await page.locator("#transform-input").fill(
+    contactRows.replace("Jane <script>", "Recovered contact"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("Recovered contact")
+  );
+  await page.goto(new URL("?tool=36-vcard-to-contacts", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(writtenCards);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    contactOutline,
+  );
+  check(contactFetches.length === 0, "Contact pair fetched a resource");
   page.off("request", onContactRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
