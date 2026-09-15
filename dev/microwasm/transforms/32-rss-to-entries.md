@@ -21,8 +21,9 @@ strings; this is a structure converter, not a complete RSS semantic validator.
 Singleton fields cannot repeat. Repeated categories, enclosures, hours, days
 and items retain their relative order within arrays. Metadata fields retain
 their input order; arrays follow singleton fields. Interleaving between those
-groups is not preserved. Prefix-qualified extension elements are ignored
-after XML validation, not fetched or interpreted. Namespace binding semantics
+groups is not preserved. Prefix-qualified extension fields within metadata
+and entry objects are ignored after XML validation, not fetched or interpreted.
+Namespace binding semantics
 are not inferred by this lexical reader.
 
 ```rss
@@ -65,7 +66,8 @@ becomes:
 ## Input contract and loss boundaries
 
 The root's lexical name must be `rss`, with a decoded version of `2.0`, and
-exactly one `channel`. Channel title, link and description must be present;
+exactly one `channel`, with no other root children except comments, processing
+instructions and whitespace. Channel title, link and description must be present;
 each item needs title or description. Presence is distinct from nonempty text.
 An image requires url/title/link; textInput requires title/description/name/link.
 Enclosure, source and cloud require their standard attributes. An explicitly
@@ -76,8 +78,9 @@ Text fields may combine XML text, character references and CDATA, separated
 by ignored comments or processing instructions. Actual child markup inside a
 text field is rejected; encoded markup is retained as text. Structural text
 must be XML whitespace. Unknown unqualified fields and fields in the wrong
-standard parent are errors. Qualified extensions and unrepresented attributes
-are omitted after the complete XML pass validates them. This includes
+standard parent are errors. Qualified extension fields in metadata/entry
+objects and unrepresented attributes are omitted after the complete XML pass
+validates them. This includes
 extension content such as `content:encoded`; the result is a selected RSS
 projection, not a backup of all extension data or namespace declarations.
 

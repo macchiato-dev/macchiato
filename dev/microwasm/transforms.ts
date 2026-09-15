@@ -329,4 +329,18 @@ export const transforms = [{
     "# Reading\n\n- Web\n  - [WebAssembly](https://webassembly.org/)\n  - [SQLite](<https://sqlite.org/docs.html>)\n- Empty folder",
   expected:
     '```html\n<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">\n<TITLE>Reading</TITLE>\n<H1>Reading</H1>\n<DL><p>\n  <DT><H3>Web</H3>\n  <DL><p>\n    <DT><A HREF="https://webassembly.org/">WebAssembly</A>\n    <DT><A HREF="https://sqlite.org/docs.html">SQLite</A>\n  </DL><p>\n  <DT><H3>Empty folder</H3>\n  <DL><p>\n  </DL><p>\n</DL><p>\n```\n',
+}, {
+  id: "32-rss-to-entries",
+  title: "RSS feed to Markdown metadata and entries",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "x", path: "transforms/00-xml-strings" },
+    { name: "v", path: "transforms/26-xml-to-list" },
+    { name: "w", path: "transforms/00-xml-walk" },
+  ],
+  input:
+    '```rss\n<rss version="2.0">\n  <channel>\n    <title>News</title>\n    <link>https://example.com/</link>\n    <description>Updates</description>\n    <item>\n      <title>First post</title>\n      <guid isPermaLink="false">post:1</guid>\n      <category>Wasm</category>\n      <category domain="topics">Compilers</category>\n    </item>\n  </channel>\n</rss>\n```\n',
+  expected:
+    '- {}\n  - "title" "News"\n  - "link" "https://example.com/"\n  - "description" "Updates"\n  - "entries" []\n    - {}\n      - "title" "First post"\n      - "guid" {}\n        - "isPermaLink" "false"\n        - "value" "post:1"\n      - "category" []\n        - {}\n          - "value" "Wasm"\n        - {}\n          - "domain" "topics"\n          - "value" "Compilers"\n',
 }];

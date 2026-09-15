@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–31, and the side-by-side
+syntax validation and binary64 parsing, tools 1–32, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 19 tools remain.
+significant-digit formatting are implemented too. The other 18 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–31 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–32 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -117,12 +117,19 @@ title, body and attribute contexts. Omitted DT/P endings and browser-export
 metadata are accepted, but arbitrary browser error recovery is not promised.
 Its diagrams and traces explain the inner loops, not just the call graph.
 
-The RSS pair (32–33) is next. The shared `00-xml-walk` module now supplies a
+The RSS reader (32) is implemented; its writer (33) is next. The shared
+`00-xml-walk` module supplies a
 read-only cursor over already validated XML. Tokens distinguish element
 starts/ends, empty elements, text, CDATA, comments and processing instructions;
 attribute values remain spans for context-correct decoding. This avoids
 another allocated tree and lets repeated RSS fields retain their order.
-It is tested infrastructure, not a published RSS converter yet.
+The RSS layer produces a metadata object and an ordered `entries` array.
+Categories, enclosures, hours and days remain ordered arrays; simple fields
+remain strings and attributed fields retain their selected attributes plus
+text where applicable. Known fields are checked in their parent contexts.
+Required fields and duplicate singletons are checked, but dates, numeric
+ranges and URL schemes are not interpreted. Qualified extensions are omitted.
+This is a selected feed projection rather than generic XML archival.
 
 ## Shared number conversion
 

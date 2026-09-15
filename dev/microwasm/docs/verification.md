@@ -5,6 +5,36 @@ are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler
 is involved. The host code does not implement the filters or Life rules.
 
+## Checkpoint: RSS metadata and entries reader
+
+Tool 32 is now published, with a 3,395-byte module and the existing shared XML
+helpers. It preserves the standard channel structures and item fields in the
+hierarchical data notation. Ordered repeated fields become arrays. Text and
+CDATA are joined into strings; dates and numeric-looking values keep their
+lexical spelling. Qualified extension fields are deliberately omitted rather
+than claiming lossless RSS archival or complete RSS semantic validation.
+
+Seven tests bring the complete suite to 274 passing tests. They cover 500
+generated feeds against an independent SAX/object projection, all standard
+channel structures, required fields and attributed values, duplicate singleton
+fields at different bit positions, declarations and normalization, extension
+isolation, malformed XML, punctuation edits, complete input-page occupancy,
+intermediate overflow, excessive depth and recovery. Both source and literal
+regions remain unchanged after successful calls.
+
+All 32 browser fixtures pass, along with the complete document-reading suite.
+The RSS scenario checks field and array order, preservation of `0012` as a
+string, inert script-looking description text, unchanged source after view
+switches, and previous-output retention/recovery after a duplicate title.
+Its screenshots are `dist/browser/rss-to-entries-rendered.png` and
+`rss-to-entries-last-entry.png`, both visually inspected. The last-entry check
+scrolls the output pane and verifies that the final item fits within it.
+
+The module's walkthrough explains per-call seen masks, required fields,
+singleton emission versus repeated-field rescans, attribute/text ownership,
+and the eight-byte schema records. Rescans are per fixed repeated field kind,
+not per item. The reverse RSS writer is next: 32 tools are complete, 18 remain.
+
 ## Checkpoint: read-only XML cursor for RSS
 
 The shared `00-xml-walk` module is 1,107 bytes. It is used after whole-document

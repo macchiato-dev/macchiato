@@ -1900,6 +1900,97 @@ try {
       ?.value ===
       "- Recovered\n"
   );
+  await page.goto(new URL("?tool=32-rss-to-entries", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const rssInput = '```rss\n<rss version="2.0"><channel>' +
+    "<title>Books &amp; notes</title><link>https://example.com/</link>" +
+    "<description>Updates</description><item><title>One</title>" +
+    "<description><![CDATA[<script>inert</script>]]></description>" +
+    '<category>A</category><category domain="topics">B</category>' +
+    '<enclosure url="https://example.com/a.mp3" length="0012" type="audio/mpeg"/>' +
+    "</item><item><description>Two</description></item></channel></rss>\n```\n";
+  await page.locator("#transform-input").fill(rssInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes('"length" "0012"')
+  );
+  const rssOutput = await page.locator("#transform-output").inputValue();
+  check(
+    rssOutput.includes('"title" "Books & notes"') &&
+      rssOutput.includes('"description" "<script>inert</script>"') &&
+      rssOutput.indexOf('"title" "One"') <
+        rssOutput.indexOf('"description" "Two"') &&
+      rssOutput.indexOf('"value" "A"') < rssOutput.indexOf('"value" "B"'),
+    "RSS field data or entry/category order differs",
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-input-rendered pre code").count() === 1 &&
+      await page.locator("#transform-output-rendered ul ul ul").count() > 0,
+    "RSS input fence or nested output is missing",
+  );
+  check(
+    (await page.locator("#transform-output-rendered").textContent())?.includes(
+      '"description" "<script>inert</script>"',
+    ) && await page.locator(
+          "#transform-output-rendered script, #transform-output-rendered img, #transform-output-rendered a[href]",
+        ).count() === 0,
+    "RSS content or destinations became active markup",
+  );
+  await page.screenshot({
+    path: `${artifacts}/rss-to-entries-rendered.png`,
+    fullPage: true,
+  });
+  const lastEntry = page.locator("#transform-output-rendered li").filter({
+    hasText: '"description" "Two"',
+  }).last();
+  await lastEntry.scrollIntoViewIfNeeded();
+  check(
+    await lastEntry.evaluate((node) => {
+      const item = node.getBoundingClientRect();
+      const pane = node.closest("article")!.getBoundingClientRect();
+      return item.top >= pane.top && item.bottom <= pane.bottom;
+    }),
+    "Last RSS entry cannot be scrolled into its output pane",
+  );
+  await page.screenshot({
+    path: `${artifacts}/rss-to-entries-last-entry.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-input").inputValue() === rssInput,
+    "RSS rendering changed the source",
+  );
+  await page.locator("#transform-input").fill(
+    rssInput.replace(
+      "<title>One</title>",
+      "<title>One</title><title>Duplicate</title>",
+    ),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === rssOutput,
+    "Invalid RSS replaced previous output",
+  );
+  await page.locator("#transform-input").fill(
+    rssInput.replace("<title>One</title>", "<title>Recovered</title>"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes('"title" "Recovered"')
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

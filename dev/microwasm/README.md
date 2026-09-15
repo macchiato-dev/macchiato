@@ -85,7 +85,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 267 tests covering all twenty examples and the supplied
+`deno task test` runs 274 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -363,16 +363,28 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-one transformations are implemented: tools 1–31 in the plan.
-The remaining 19 are pending.
+Thirty-two transformations are implemented: tools 1–32 in the plan.
+The remaining 18 are pending.
 
-The next pair is RSS. A [shared XML cursor](transforms/00-xml-walk.md) now
+The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
 spans without copying a tree or writing memory. Its 1,107-byte module also
 skips whole subtrees with a depth counter. Six test groups compare 500 generated
 trees against an independent XML parser and check exact offsets, boundaries,
 delimiter ownership, reentrancy and unchanged memory. This is groundwork for
-tool 32, not an additional completed transformation.
+the RSS reader, not an additional completed transformation.
+
+The [RSS reader](transforms/32-rss-to-entries.md) is 3,395 bytes plus shared
+XML helpers. It produces feed metadata and an ordered `entries` array in the
+hierarchical data notation, including repeated categories/enclosures and the
+standard nested channel metadata. Dates, dimensions, lengths and URLs remain
+strings. Descriptions combine text and CDATA without activating their markup.
+Qualified extension data is omitted after XML validation; this is not a
+lossless feed archive or a complete semantic RSS validator. Seven test groups
+cover 500 generated feeds, independent XML projections, field requirements,
+duplicate detection, XML normalization, malformed input, bounds and recovery.
+Try [the RSS reader](http://microwasm.localhost:3030/?tool=32-rss-to-entries).
+The reverse RSS writer (33) is next.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
