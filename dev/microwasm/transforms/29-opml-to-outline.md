@@ -1,9 +1,5 @@
 # OPML to a Markdown link outline
 
-Unpublished implementation draft. The module assembles and a nested linked
-outline runs successfully, but the malformed-input, round-trip and boundary
-suite is not complete. It is not yet included in the tool catalogue.
-
 Tool 29 reads an `opml` fence and produces the nested labels and links consumed
 by [the OPML writer](28-outline-to-opml.md). A head title becomes a level-one
 heading. Empty labels and ordered, repeated siblings survive. Link/include
@@ -57,8 +53,8 @@ The intermediate tree is discarded before bounded Markdown output is written
 over the same output region. Input and the literal table remain unchanged.
 
 HTTP(S) destinations use the same lexical check as the writer: a nonempty
-suffix after the scheme, without ASCII whitespace, DEL, quotes, angle brackets
-or backslashes. They are emitted as angle-delimited Markdown destinations.
+suffix after the scheme, without ASCII whitespace, DEL, double quotes, angle
+brackets or backslashes. They are emitted as angle-delimited Markdown destinations.
 Ampersands are backslash-escaped there to prevent Markdown entity decoding.
 Labels and titles escape ASCII punctuation and encode spaces/TAB/LF/CR as
 decimal references. This keeps each record on one physical line without
@@ -118,13 +114,51 @@ encoding. `url` first checks a decoded HTTP(S) prefix, then uses that same
 iteration with destination-specific character checks. A returned prefix cursor
 must be strictly before the value's end; the scheme alone is not a destination.
 
+### Empty items: preserve the list, not a Setext heading
+
+An empty child written as a dash immediately after its parent's label can
+be interpreted as a heading underline. Before an empty, unlinked item, emit
+a blank line if the previous emitted item was nonempty. Do not insert one
+between consecutive empty items: that can end an empty parent's item before
+its children. An empty link label still has a link paragraph and counts as
+nonempty for this rule.
+
+| Previous emitted item | Current item | Extra LF before current item |
+| --- | --- | --- |
+| None or empty unlinked label | Any | No |
+| Nonempty label or link | Empty unlinked label | Yes |
+| Nonempty label or link | Nonempty label or link | No |
+
+`po-outline-empty-separator` checks that state before indentation is written;
+`po-outline-remember` updates it only after the full item line is emitted.
+Recursive returns and ignored metadata do not reset it. It describes the
+last line of the output, not the current XML parent's label.
+
+For example, the blank line after `Parent` below is significant, while no
+blank separates the two empty outline markers:
+
+```text
+- Parent
+
+  -
+    -
+      - Child
+```
+
+Tests check all 128 empty/nonempty label combinations in a seven-node tree
+against a separate CommonMark parser, in addition to 500 generated XML trees
+and round trips through the Wasm writer. Punctuation edits, ignored malformed
+XML, normalization, exact source/output caps, depth, and trap recovery are
+covered separately. The first pass's intermediate output limit is tested too.
+
 ## Module
 
 Imports: XML read-span 0, decoded character 1, name-end 2, fence check 3.
 Definitions: run 4, emit 5, literal 6, take 7, spaces 8, name 9, value 10,
 same 11, prefix 12, text 13, character 14, element 15, misc 16, match 17,
 find 18, whitespace-text 19, url 20, indent 21, outer-noise 22, value-is 23.
-Globals: output 0, input cursor 1, input end 2. The XML reader's literals
+Globals: output 0, input cursor 1, input end 2, previous nonempty item 3.
+The XML reader's literals
 remain at `196608`; this module's u8-length-prefixed table is at `197632`.
 
 `[microwasm]`
@@ -137,7 +171,7 @@ remain at `196608`; this module's u8-length-prefixed table is at `197632`.
 - po-function-section: `03 {{size:po-functions}}`
   - po-functions: `14 02 03 03 03 04 05 05 06 06 07 08 08 04 02 09 0a 08 03 04 06`
 - po-global-section: `06 {{size:po-globals}}`
-  - po-globals: `03 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
+  - po-globals: `04 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - po-export-section: `07 {{size:po-exports}}`
   - po-exports: `02 03 72756e 00 04 06 6d656d6f7279 02 00`
 - po-code-section: `0a {{size:po-code}}`
@@ -151,7 +185,7 @@ remain at `196608`; this module's u8-length-prefixed table is at `197632`.
         - po-run-close-ticks: `02 40 03 40 20 03 20 02 4d 0d 01 20 03 41 01 6b 2d 00 00 41 e000 47 0d 01 20 03 41 01 6b 21 03 20 04 41 01 6a 21 04 0c 00 0b 0b 20 04 20 01 49 04 40 00 0b`
         - po-run-close-line: `20 03 20 02 4d 04 40 00 0b 20 03 41 01 6b 22 03 2d 00 00 41 0a 47 04 40 00 0b 20 03 20 02 4b 04 40 20 03 41 01 6b 2d 00 00 41 0d 46 04 40 20 03 41 01 6b 21 03 0b 0b`
         - po-run-validate: `20 02 20 03 20 01 10 03 20 02 20 03 10 00 1a`
-        - po-run-reset: `41 808004 24 00 20 02 24 01 20 03 24 02`
+        - po-run-reset: `41 808004 24 00 20 02 24 01 20 03 24 02 41 00 24 03`
         - po-run-bom: `23 01 41 02 6a 23 02 49 04 40 23 01 2d 00 00 41 ef01 46 23 01 2d 00 01 41 bb01 46 71 23 01 2d 00 02 41 bf01 46 71 04 40 23 01 41 03 6a 24 01 0b 0b`
         - po-run-document: `10 16 41 00 41 00 10 0f 10 16 23 01 23 02 47 04 40 00 0b 23 00 41 808004 6b 0b`
     - po-emit-record: `{{size:po-emit-body}}`
@@ -193,8 +227,10 @@ remain at `196608`; this module's u8-length-prefixed table is at `197632`.
         - po-title-open: `20 00 41 03 46 04 40 41 8b890c 10 06 0b`
         - po-outline-required: `20 00 41 04 46 04 40 20 08 45 04 40 00 0b`
           - po-outline-linked: `20 0c 04 40 20 0c 20 0d 41 c6880c 10 17 20 0c 20 0d 41 cb880c 10 17 72 04 40 20 0a 45 04 40 00 0b 20 0a 21 16 20 0b 21 17 05 20 0c 20 0d 41 d3880c 10 17 04 40 20 10 45 04 40 00 0b 20 10 21 16 20 11 21 17 0b 0b 0b`
+          - po-outline-empty-separator: `20 08 20 09 46 20 16 45 71 23 03 71 04 40 41 0a 10 05 0b` — An empty item cannot interrupt the preceding paragraph.
           - po-outline-prefix: `20 01 10 15 41 8e890c 10 06 20 16 04 40 41 db00 10 05 0b 20 08 20 09 41 01 41 00 10 0d`
-          - po-outline-destination: `20 16 04 40 41 91890c 10 06 20 16 20 17 10 14 41 95890c 10 06 0b 41 0a 10 05 0b`
+          - po-outline-destination: `20 16 04 40 41 91890c 10 06 20 16 20 17 10 14 41 95890c 10 06 0b 41 0a 10 05`
+          - po-outline-remember: `20 08 20 09 47 20 16 45 45 72 24 03 0b` — Consecutive empty items must not gain intervening blank lines.
         - po-children-open: `20 12 45 04 40 02 40 03 40 10 10 41 85890c 10 11 0d 01`
           - po-child-cdata: `41 f7880c 10 11 04 40 23 01 41 09 6a 24 01 41 81890c 10 12 21 07 21 06 23 01 41 03 6a 24 01 20 00 41 03 46 04 40 20 06 20 07 41 02 41 00 10 0d 05 20 00 41 05 47 04 40 20 06 20 07 41 02 10 13 0b 0b 0c 01 0b`
           - po-child-bound: `23 01 23 02 4f 04 40 00 0b`

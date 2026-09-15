@@ -52,8 +52,8 @@ becomes:
   in angle brackets. Link titles, references and multiline links are not part
   of this outline notation.
 - A decoded destination must begin with HTTP(S), case-insensitively, and have
-  something after `://`. ASCII whitespace, DEL, quotes, angle brackets and
-  backslashes are rejected. No URL normalization or host/network lookup occurs;
+  something after `://`. ASCII whitespace, DEL, double quotes, angle brackets
+  and backslashes are rejected. No URL normalization or host/network lookup occurs;
   this is a lexical destination check, not full URL validation.
 
 LF and CRLF are accepted. Source UTF-8 and XML characters are validated while
