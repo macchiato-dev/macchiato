@@ -23,6 +23,11 @@ The documentation includes a token/span table, the attribute loop's delimiter
 ownership, and a worked subtree-skip trace with fake end tags inside CDATA.
 No RSS tool is counted yet. There remain 31 published tools and 19 to finish.
 
+The browser comparison also walks a feed-shaped XML document and compares
+the ordered events against Chromium's XML DOM: repeated categories, a GUID
+attribute, enclosure attributes, text references, CDATA, comments and a PI.
+The standalone host code in that test is an oracle, not a shipped RSS parser.
+
 ## Checkpoint: bookmark import and function-level walkthroughs
 
 Tool 30 is a 2,989-byte browser-bookmark reader plus the shared HTML character

@@ -5,6 +5,10 @@ in the fifty-tool count. The [XML reader](26-xml-to-list.md) must validate the
 whole document first. This cursor then walks the original bytes and returns
 spans: no allocated nodes, decoded temporary strings, or writes to memory.
 Consumers decode selected spans with [XML characters](00-xml-strings.md).
+After validation, a document-level caller skips an initial UTF-8 BOM before
+walking. The XML declaration appears as kind 7 with target `xml`; its special
+placement and syntax have already been checked. The cursor itself does not
+silently hide document framing or decide which processing instructions matter.
 
 ## Interface and ownership
 
