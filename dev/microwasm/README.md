@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 212 tests covering all twenty examples and the supplied
+`deno task test` runs 218 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -359,7 +359,7 @@ Twenty-six transformations are implemented: tools 1–26 in the plan.
 The remaining 24 are pending.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
-are implemented in a 1,649-byte module: XML 1.0 characters and Unicode names,
+implemented in a 1,649-byte module: XML 1.0 characters and Unicode names,
 UTF-8 scalar decoding, predefined/numeric entities, and text/attribute whitespace
 normalization. These are preparation for tools 26–27, not an additional tool.
 Tests check every Unicode position's character/name classes and compare decoded
@@ -376,6 +376,15 @@ limits, 32-level nesting and recovery. Browser tests compare mixed content
 with Chromium's XML parser and verify inert rendered output.
 Try [the XML reader](http://microwasm.localhost:3030/?tool=26-xml-to-list).
 The reverse XML writer remains to be implemented.
+
+Its [string-output helper](transforms/00-xml-output.md) is implemented in
+888 bytes. It decodes JSON string spans, validates XML names and characters,
+and emits context-appropriate escaped UTF-8. Numeric references retain text
+CR and attribute TAB/LF/CR through parsing; comment, CDATA and PI modes reject
+unrepresentable delimiters rather than change the node structure. Tests cover
+every BMP unit in raw/escaped JSON, astral pairs, 1,000 generated strings with
+independent XML parsing, exact bounds, recovery and browser round trips.
+This helper is preparation for tool 27, not an additional transformation.
 
 ## Provisional byte-list notation
 

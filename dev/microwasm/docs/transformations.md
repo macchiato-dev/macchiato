@@ -78,6 +78,11 @@ The reader requires one root element and matching tags, rejects duplicate
 attributes, DTDs and undeclared entities, and keeps namespace prefixes as names.
 The reverse writer must validate this shape and preserve the normalized data,
 without inventing namespace bindings or fetching resources.
+Its [XML output helper](../transforms/00-xml-output.md) now decodes JSON string
+spans and handles names, text, attributes, comments, CDATA and PI data. It
+preserves whitespace through references where XML permits them, and rejects
+unrepresentable literal-context values. The remaining writer work is tree
+shape validation, document ordering, tag/attribute emission and fence framing.
 
 ## Shared number conversion
 

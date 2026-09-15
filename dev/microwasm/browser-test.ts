@@ -184,6 +184,7 @@ try {
     const n = await load("./numbers/02-json-number.wasm");
     const k = await load("./transforms/00-json-string-keys.wasm", { n });
     const x = await load("./transforms/00-xml-strings.wasm", { k });
+    const o = await load("./transforms/00-xml-output.wasm", { k, x });
     const memory = new Uint8Array((x.memory as WebAssembly.Memory).buffer);
     const string = x.string as (
       start: number,
@@ -191,7 +192,9 @@ try {
       output: number,
       mode: number,
     ) => number;
-    const encoder = new TextEncoder(), decoder = new TextDecoder();
+    const write = o.string as typeof string;
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder("utf-8", { ignoreBOM: true });
     const chunks = [
       "text",
       "猫😀",
@@ -207,6 +210,7 @@ try {
       "\t",
       "\\n",
       "&#x1F600;",
+      "\ufeff",
     ];
     for (let seed = 0; seed < 100; seed++) {
       const source = Array.from(
@@ -221,8 +225,8 @@ try {
         throw new Error("Invalid XML oracle fixture");
       }
       const bytes = encoder.encode(source);
-      memory.set(bytes);
       for (const mode of [0, 1]) {
+        memory.set(bytes);
         const length = string(0, bytes.length, 65536, mode);
         const actual = decoder.decode(memory.subarray(65536, 65536 + length));
         const expected = JSON.stringify(
@@ -233,11 +237,37 @@ try {
         if (actual !== expected) {
           throw new Error("XML decoding differs from DOMParser: " + source);
         }
+        const input = encoder.encode(expected.slice(1, -1));
+        memory.set(input);
+        const outputLength = write(0, input.length, 65536, mode);
+        const output = decoder.decode(
+          memory.subarray(65536, 65536 + outputLength),
+        );
+        const encodedDoc = new DOMParser().parseFromString(
+          mode ? '<r a="' + output + '"/>' : "<r>" + output + "</r>",
+          "application/xml",
+        );
+        const restored = mode
+          ? encodedDoc.documentElement.getAttribute("a")
+          : encodedDoc.documentElement.textContent;
+        if (
+          encodedDoc.querySelector("parsererror") ||
+          JSON.stringify(restored) !== expected
+        ) {
+          throw new Error("XML output changed data after DOMParser: " + output);
+        }
       }
     }
     return 100;
   });
   check(xmlCases === 100, "XML browser comparisons incomplete");
+  const xmlOutputPage = libraryLinks.find((link) =>
+    link.includes("00-xml-output")
+  );
+  check(xmlOutputPage, "Missing XML output documentation");
+  await page.goto(xmlOutputPage!);
+  await page.waitForSelector("#rendered h1");
+  await screenshot("xml-output-light");
   const shortestPage = libraryLinks.find((link) =>
     link.includes("06-shortest-decimal")
   );
