@@ -42,17 +42,81 @@ format(n, radix):
     return length
 ```
 
-```mermaid
-flowchart LR
-    A[Input digits] --> B[Validate digit and overflow]
-    B --> C[Multiply and add]
-    D[Unsigned integer] --> E[Divide and take remainder]
-    E --> F[Reverse emitted digits]
-```
-
 The pre-multiply overflow test avoids wrapped multiplication. Formatting
 emits least-significant digits first, then reverses the short span in place.
 Neither direction allocates or requires a logarithm or a digits table.
+
+### Inside `parse`: classify before accumulating
+
+```mermaid
+flowchart TD
+  A[Check nonempty input bounds and radix; widen radix to i64] --> L[Load byte at position]
+  L --> D{ASCII decimal digit?}
+  D -- yes --> V[Subtract 0x30]
+  D -- no --> C[Fold ASCII case with OR 0x20; subtract 0x61]
+  C --> B{Unsigned result at most 25?}
+  B -- no --> X[Trap]
+  B -- yes --> T[Add ten for letter digit]
+  T --> R{Digit below radix?}
+  V --> R
+  R -- no --> X
+  R -- yes --> O{Accumulator at most unsigned max minus digit, divided by radix?}
+  O -- no --> X
+  O -- yes --> M[Multiply accumulator by radix; add digit]
+  M --> I[Advance position]
+  I --> E{Position below input length?}
+  E -- yes --> L
+  E -- no --> F[Return accumulator bits]
+```
+
+The range checks use unsigned subtraction/comparison. A byte below `0x30`
+wraps to a large value when subtracting `0x30`, so it cannot accidentally
+pass the decimal range check. Case folding alone would accept punctuation
+near the letters; the subsequent `0..25` check is essential.
+
+Let `M = 2^64 - 1`, `n` be the existing accumulator and `d` the digit. With
+radix `r > 0`, the needed condition `n*r+d <= M` is exactly
+`n <= floor((M-d)/r)`. Here `M-d` cannot underflow, because `d < r <= 36`.
+The subtraction and division are safe **before** the multiplication. Testing
+the product afterward would be too late: an i64 multiply wraps without trapping.
+The byte `42 7f` pushes the all-one i64 pattern; unsigned operations interpret
+that pattern as `M`, even though its signed literal spelling is minus one.
+
+The loop invariant is that accumulator-local 4 is the exact value of bytes
+`[0, position)`, and all of them were valid digits in this radix. On a trap
+there is no partially returned value and no memory write. Repeated leading
+zeros are accepted by this primitive; JSON's leading-zero rule lives elsewhere.
+
+### Inside `format`: two loops, two different invariants
+
+```mermaid
+flowchart TD
+  A[Validate and widen radix] --> D[Take unsigned remainder]
+  D --> C[Map digit below ten to 0..9; otherwise a..z]
+  C --> W[Store at output plus length; increment length]
+  W --> Q[Replace value with unsigned quotient]
+  Q --> N{Quotient nonzero?}
+  N -- yes --> D
+  N -- no --> P[Set left to zero; right to length minus one]
+  P --> E{Left below right?}
+  E -- no --> R[Return length]
+  E -- yes --> S[Save left byte; copy right to left; saved byte to right]
+  S --> I[Increment left; decrement right]
+  I --> E
+```
+
+The extraction loop always runs once. That gives zero its one digit and means
+`length - 1` is safe before the reversal. After extracting `k` digits, the
+buffer holds the lowest `k` base-r digits in reverse order; the working value
+holds the still-unwritten higher digits. In base two, at most 64 iterations
+exhaust an unsigned i64. Every larger radix needs no more space, so the output
+region is safe without an individual bounds branch for each store.
+
+For decimal 120, the first loop writes `0`, `2`, `1`. Reversal swaps positions
+0 and 2, then stops when both pointers reach 1. During reversal, bytes outside
+`[left, right]` already have their final positions. The middle byte of an odd
+length needs no move. The formatter's digit local becomes the saved swap byte;
+there is no second temporary buffer.
 
 ## Module and signatures
 

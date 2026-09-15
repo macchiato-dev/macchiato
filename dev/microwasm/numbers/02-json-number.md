@@ -51,13 +51,78 @@ valid(start, end):
     return p == end
 ```
 
+### Inside `validMemory`: zero is deliberately not a digit run
+
 ```mermaid
-flowchart LR
-    A[Optional minus] --> B[Zero or integer digits]
-    B --> C[Optional fraction with digits]
-    C --> D[Optional exponent with digits]
-    D --> E[Require end of span]
+flowchart TD
+  A{Nonempty ordered span within memory?} -- no --> X[Return zero]
+  A -- yes --> S[Consume minus if present]
+  S --> E{Cursor at end?}
+  E -- yes --> X
+  E -- no --> Z{Next byte is zero?}
+  Z -- yes --> O[Consume exactly one byte]
+  Z -- no --> N{Next byte is 1..9?}
+  N -- no --> X
+  N -- yes --> D[Consume digit run]
+  O --> F[Check optional fraction]
+  D --> F
+  F --> P[Check optional exponent]
+  P --> R[Return whether cursor equals end]
 ```
+
+The single-zero branch leaves a second digit unconsumed. On `01`, neither
+the fraction nor exponent branch claims that `1`, and the final end check
+fails. On `0.1`, the dot branch does claim the next byte, so the number is
+accepted. There is no separate scan looking for a forbidden leading zero.
+The minus-only input fails before the next memory load; a leading plus is
+never consumed and fails the `1..9` test.
+
+### Fraction and exponent: optional marker, mandatory following digits
+
+| Stage | Marker/sign consumed | Saved position | Failure condition |
+| --- | --- | --- | --- |
+| Fraction | Dot, only if present before end | Immediately after dot | `digits` returns that same position |
+| Exponent | `e` or `E`, then optional plus/minus | Immediately after optional sign | `digits` returns that same position |
+| End check | Nothing | No new saved position | Any byte remains unconsumed |
+
+Each optional stage checks for remaining input before loading its marker.
+Only recognizing the marker enters the stage; the absence of a marker leaves
+the cursor untouched. Once entered, it cannot silently back out if its digit
+run is empty. Thus `1e+` is rejected, not shortened to `1`.
+
+```mermaid
+flowchart TD
+  A{Exponent marker present?} -- no --> R[Leave cursor unchanged]
+  A -- yes --> E[Consume e or E]
+  E --> S{More input and next byte is plus or minus?}
+  S -- yes --> C[Consume sign]
+  S -- no --> P[Save first-digit position]
+  C --> P
+  P --> D[Run digits from saved position]
+  D --> N{Cursor advanced?}
+  N -- no --> X[Return zero from validator]
+  N -- yes --> F[Continue to whole-span end check]
+```
+
+### Inside `digits`: retain the first non-digit
+
+At the top of each iteration, position is at most end and everything already
+passed was an ASCII digit. Check the bound before loading. Subtract `0x30`
+from the byte and compare the result to nine **unsigned**. A result above
+nine exits the enclosing block without incrementing position; an accepted
+digit increments it and repeats. The result is the first non-digit position,
+not one past it. This lets fraction/exponent markers remain for their callers.
+
+No numeric accumulator exists here, so a long exponent such as `1e9999`
+cannot overflow this scanner. “First digit” in local 3 is a byte offset,
+not a digit value. That local is briefly reused for the optional exponent
+sign byte, then overwritten with the start offset before calling `digits`.
+
+For `-12.50e+3`, position advances to 1 after the minus, 3 after integer
+digits, 6 after fraction digits, and 9 after exponent digits: exactly end.
+For `1.e2`, it stops immediately after the dot when `digits` makes no progress;
+the exponent branch is never reached. For `1e2x`, the exponent succeeds but
+leaves `x`, so the final end comparison returns zero.
 
 ## The module
 
