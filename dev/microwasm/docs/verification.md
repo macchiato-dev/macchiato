@@ -5,7 +5,41 @@ are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler
 is involved. The host code does not implement the filters or Life rules.
 
-## Checkpoint: iCalendar content-line groundwork
+## Checkpoint: agenda reader and deeper function walkthroughs
+
+Tool 34 is published as a 2,286-byte module, using the shared calendar reader.
+Its two-pass component walk retains properties and child components separately
+without allocating a tree. Headers remain lexical; TEXT values and lists are
+decoded explicitly. Dates and recurrence rules are not interpreted.
+The reverse writer (35) remains pending; 34 of 50 tools are implemented.
+
+Seven new test groups bring the suite to 293 passing tests. They include
+200 generated event comparisons against ICAL.js, the documented nested
+component trace, explicit VALUE overrides, quoted parameters, UTF-8 split
+inside physical folds, depth limits, exact 64 KiB input and 128 KiB output,
+malformed input, recovery and immutable literal checks. The catalogue's exact
+expected output is also checked, including its trailing newline.
+
+The function walkthroughs now break down the RSS writer's descriptor dispatch,
+decoded-key comparison, per-object duplicate masks, repeated-field ownership
+and overlapping framing move. Its 2,454-byte binary is unchanged. The agenda
+reader explains local lifetimes, multi-value operand-stack order, both passes'
+cursor transitions, mode overrides and the distinct escaped-comma branch.
+These are qualitative explanations tied to byte-list labels, not generated
+function inventories.
+
+The complete document browser suite passes, including all six display/content
+combinations. The transform suite passes all 34 fixtures, editing, rendering,
+boundaries and recovery. One concurrent browser run closed unexpectedly;
+the standalone rerun passed. The new calendar scenario checks nested headings,
+property ownership, inert script-looking text and failed-run output retention.
+Visually inspected screenshots:
+
+- `dist/browser/33-entries-to-rss-walkthrough.png`
+- `dist/browser/34-ical-to-agenda-walkthrough.png`
+- `dist/browser/ical-to-agenda-rendered.png`
+
+## Earlier checkpoint: iCalendar content-line groundwork
 
 The 1,185-byte `00-calendar-lines` helper is published with its original and
 resolved Markdown, hex, offset map and Wasm. Unfolding copies to a separate

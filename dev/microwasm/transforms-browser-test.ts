@@ -2071,6 +2071,64 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
       .includes("<title>Recovered</title>")
   );
+  await page.goto(new URL("?tool=34-ical-to-agenda", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const ics = "```ics\nBEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\n" +
+    "SUMMARY:<script>inert</script>\nBEGIN:VALARM\nDESCRIPTION:Remember\\nthis\n" +
+    "END:VALARM\nCATEGORIES:Work,Research\\, reading\nEND:VEVENT\n" +
+    "PRODID:After event\nEND:VCALENDAR\n```\n";
+  await page.locator("#transform-input").fill(ics);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes('"PRODID" text "After event"')
+  );
+  const agenda = await page.locator("#transform-output").inputValue();
+  check(
+    agenda.indexOf('"PRODID"') < agenda.indexOf("### VEVENT") &&
+      agenda.indexOf('"CATEGORIES"') < agenda.indexOf("#### VALARM") &&
+      agenda.includes('["Work","Research, reading"]') &&
+      agenda.includes('"DESCRIPTION" text "Remember\\nthis"'),
+    "Calendar component ownership or value decoding differed",
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered h4").textContent() ===
+      "VALARM",
+    "Nested alarm heading missing",
+  );
+  check(
+    await page.locator("#transform-output-rendered script").count() === 0,
+    "Calendar text became active HTML",
+  );
+  await page.screenshot({
+    path: artifacts + "/ical-to-agenda-rendered.png",
+    fullPage: true,
+  });
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    ics.replace("END:VALARM", "END:VEVENT"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === agenda,
+    "Invalid calendar replaced successful output",
+  );
+  await page.locator("#transform-input").fill(
+    ics.replace("After event", "Recovered"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("Recovered")
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

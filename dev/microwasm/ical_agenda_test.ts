@@ -1,5 +1,6 @@
 import ICAL from "npm:ical.js@2.2.1";
 import { assemble, toHex } from "./microwasm.ts";
+import { transforms } from "./transforms.ts";
 
 const encoder = new TextEncoder(),
   decoder = new TextDecoder("utf-8", { fatal: true });
@@ -87,6 +88,8 @@ function outline(markdown: string): Component {
 
 Deno.test("Agenda: parent/child cursor trace and property normalization", async () => {
   const r = await reader();
+  const demo = transforms.find((t) => t.id === "34-ical-to-agenda")!;
+  equal(r.run(demo.input), demo.expected);
   const input = calendar(
     "VERSION:2.0\nBEGIN:VEVENT\nUID:first\nBEGIN:VALARM\nACTION:DISPLAY\n" +
       "DESCRIPTION:Wake up\nEND:VALARM\nSUMMARY:After alarm\nEND:VEVENT\n" +
@@ -246,7 +249,7 @@ Deno.test("Agenda: malformed structures, values, fences and recovery", async () 
     const input of [
       fence("BEGIN:VEVENT\nEND:VEVENT"),
       fence(calendar("") + "\n" + calendar("")),
-    fence(calendar("") + "\n\n"),
+      fence(calendar("") + "\n\n"),
       "```text\n" + calendar("") + "\n```",
       "``ics\n" + calendar("") + "\n``",
       "```ics\n" + calendar("") + "\n ```",

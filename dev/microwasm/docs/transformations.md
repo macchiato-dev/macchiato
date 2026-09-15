@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–33, and the side-by-side
+syntax validation and binary64 parsing, tools 1–34, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 17 tools remain.
+significant-digit formatting are implemented too. The other 16 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–33 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–34 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -140,15 +140,21 @@ Empty repeated arrays emit no elements; the reader restores an empty entries
 array but not other absent arrays. Tests compare independent XML projections,
 300 generated round trips, Unicode and whitespace preservation, decoded-key
 duplicates, full input and output boundaries, and failed-run recovery.
-The next pair is iCalendar and Markdown agendas (34–35).
+The iCalendar reader (34) is implemented; the agenda writer (35) is next.
 
 Their shared `00-calendar-lines` helper is implemented. It unfolds physical
 lines before UTF-8 validation, then exposes bounded name/parameter/value spans.
-Quoted parameter commas and colons remain data. The agenda layer must still
-interpret components and property types, decode TEXT/parameter escapes, and
-preserve date/time forms and TZID without silently applying the host time zone.
-The writer must add value escaping and byte-counted line folding. These two
-tools remain pending; the helper is not counted separately.
+Quoted parameter commas and colons remain data. The agenda layer preserves
+complete lexical headers, including parameter escapes, instead of decoding
+and reconstructing their spelling. Components become nested headings; rows
+carry raw, TEXT or TEXT-list values. Unknown data stays present. Date/time
+forms and TZID remain strings, without applying the host time zone.
+Properties precede child components through a bounded two-pass walk.
+The function documentation traces parent/child cursors, mode overrides,
+escaped delimiters and their branch depths. Tests compare ICAL.js values and
+check the walkthrough's nesting example, split UTF-8 folds, exact capacity,
+invalid structure and recovery. The writer still needs value escaping and
+byte-counted line folding. The shared helper is not counted separately.
 
 ## Shared number conversion
 

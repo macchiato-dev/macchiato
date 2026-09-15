@@ -357,4 +357,15 @@ export const transforms = [{
     '- {}\n  - title "News & notes"\n  - link https://example.com/\n  - description Updates\n  - entries []\n    - {}\n      - title "First post"\n      - guid {}\n        - isPermaLink false\n        - value post:1\n      - category []\n        - {}\n          - value Wasm\n        - {}\n          - domain topics\n          - value Compilers\n',
   expected:
     '```rss\n<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>News &amp; notes</title>\n    <link>https://example.com/</link>\n    <description>Updates</description>\n    <item>\n      <title>First post</title>\n      <guid isPermaLink="false">post:1</guid>\n      <category>Wasm</category>\n      <category domain="topics">Compilers</category>\n    </item>\n  </channel>\n</rss>\n\n```\n',
+}, {
+  id: "34-ical-to-agenda",
+  title: "iCalendar to a Markdown agenda outline",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+  ],
+  input:
+    "```ics\nBEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Microwasm//Agenda//EN\nBEGIN:VEVENT\nUID:planning-1\nDTSTART;TZID=America/Phoenix:20260915T090000\nSUMMARY:Planning\nCATEGORIES:Work,Research\\, reading\nEND:VEVENT\nEND:VCALENDAR\n```\n",
+  expected:
+    '# Agenda\n\n## VCALENDAR\n\n- "VERSION" raw "2.0"\n- "PRODID" text "-//Microwasm//Agenda//EN"\n\n### VEVENT\n\n- "UID" text "planning-1"\n- "DTSTART;TZID=America/Phoenix" raw "20260915T090000"\n- "SUMMARY" text "Planning"\n- "CATEGORIES" text-list ["Work","Research, reading"]\n',
 }];

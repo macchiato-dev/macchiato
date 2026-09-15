@@ -179,6 +179,43 @@ try {
       `./${new URL(link).searchParams.get("doc")!.slice(0, -3)}`,
     );
   }
+  // Inspect internal decision tables, not just a successful top-of-page render.
+  for (
+    const [id, heading, marker] of [
+      [
+        "33-entries-to-rss",
+        "Inside classify and field: what the descriptor actually decides",
+        "Repeated-field flag",
+      ],
+      [
+        "34-ical-to-agenda",
+        "Which state survives a child call?",
+        "Offset immediately after",
+      ],
+    ]
+  ) {
+    const link = libraryLinks.find((url) => url.includes(id));
+    check(link, "Missing function walkthrough: " + id);
+    await page.goto(link!);
+    await page.waitForSelector("#rendered h1");
+    const title = page.getByRole("heading", { name: heading, exact: true });
+    await title.evaluate((element) =>
+      element.scrollIntoView({ block: "start" })
+    );
+    check(
+      (await page.locator("#rendered table").allTextContents()).some((t) =>
+        t.includes(marker)
+      ),
+      "Missing internal state table: " + id,
+    );
+    check(
+      await page.evaluate(() =>
+        document.documentElement.scrollWidth <= innerWidth
+      ),
+      "Walkthrough overflowed the page: " + id,
+    );
+    await page.screenshot({ path: artifacts + "/" + id + "-walkthrough.png" });
+  }
   const calendarPage = libraryLinks.find((link) =>
     link.includes("00-calendar-lines")
   );

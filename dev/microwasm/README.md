@@ -24,6 +24,10 @@ The numeric walkthroughs now unpack the
 [candidate search, suffix scan and carry propagation](numbers/06-shortest-decimal.md).
 Their traces distinguish retained state from overwritten scratch space rather
 than treating a function call as an explanation of its implementation.
+The [RSS writer](transforms/33-entries-to-rss.md) also breaks down descriptor
+dispatch, duplicate masks and the overlapping output move; the
+[calendar reader](transforms/34-ical-to-agenda.md) follows parent and child
+cursors through both passes and distinguishes escaped from separating commas.
 
 Building and running the examples needs no Rust/C compiler, WAT compiler,
 npm dependency, or opcode assembler.
@@ -90,7 +94,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 286 tests covering all twenty examples and the supplied
+`deno task test` runs 293 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -368,8 +372,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-three transformations are implemented: tools 1–33 in the plan.
-The remaining 17 are pending.
+Thirty-four transformations are implemented: tools 1–34 in the plan.
+The remaining 16 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -397,16 +401,26 @@ decoded-key duplicates, XML character escaping, longer fences, exact input
 and output limits, compact-JSON expansion, and recovery. Browser checks also
 parse its XML independently and keep rendered RSS inert.
 Try [the RSS writer](http://microwasm.localhost:3030/?tool=33-entries-to-rss).
-The iCalendar pair (34–35) is next.
+The iCalendar reader (34) is now implemented; its reverse writer (35) is next.
 
 The [calendar content-line helper](transforms/00-calendar-lines.md) is now
 implemented in 1,185 bytes. It unfolds before validating UTF-8, preserving
 characters split across physical lines, and returns spans for property names,
 quoted parameter lists and raw values. Six test groups cover precise cursor
 boundaries, 300 folded calendars compared with ICAL.js, split UTF-8 repair,
-malformed input, full-page bounds and read-only access. It does not yet produce
-an agenda, decode property-specific values or interpret time zones; it is a
-shared prerequisite, not a thirty-fourth completed tool.
+malformed input, full-page bounds and read-only access. This shared helper
+does not itself produce an agenda or interpret property-specific values.
+
+The [agenda reader](transforms/34-ical-to-agenda.md) adds 2,286 bytes.
+Component headings preserve events, alarms, time-zone definitions and unknown
+components. Rows retain lexical property headers and distinguish raw values,
+decoded TEXT and TEXT lists. Date/time spelling, parameters and recurrence
+rules stay intact; no scheduling, fetching or host time-zone conversion occurs.
+Seven test groups cover component ownership, 200 ICAL.js comparisons, escapes,
+split UTF-8 folds, nesting, malformed input, exact capacities and recovery.
+Its function walkthrough traces both component passes, parameter overrides,
+operand-stack return order and escaped versus separating commas.
+Try [the calendar reader](http://microwasm.localhost:3030/?tool=34-ical-to-agenda).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
