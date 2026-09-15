@@ -323,7 +323,7 @@ Deno.test("SubRip writer: edited punctuation either rejects or preserves the par
       for (const line of edited.split(/\r\n|\r|\n/)) {
         if (/^[ \t]*$/.test(line)) continue;
         const m =
-          /^- +([0-9]+)[ \t]+([0-9:,]+)[ \t]+-->[ \t]+([0-9:,]+)[ \t]+(".*")[ \t]*$/
+          /^- [ \t]*([0-9]+)[ \t]+([0-9:,]+)[ \t]+-->[ \t]+([0-9:,]+)[ \t]+(".*")[ \t]*$/
             .exec(line);
         if (!m) throw Error("Accepted an invalid row: " + line);
         model.push({
