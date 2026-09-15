@@ -169,6 +169,75 @@ try {
       `./${new URL(link).searchParams.get("doc")!.slice(0, -3)}`,
     );
   }
+  const xmlPage = libraryLinks.find((link) => link.includes("00-xml-strings"));
+  check(xmlPage, "Missing XML primitive documentation");
+  await page.goto(xmlPage!);
+  await page.waitForSelector("#rendered h1");
+  await screenshot("xml-primitives-light");
+  const xmlCases = await page.evaluate(async () => {
+    async function load(path: string, imports: WebAssembly.Imports = {}) {
+      return (await WebAssembly.instantiateStreaming(
+        await fetch(path),
+        imports,
+      )).instance.exports;
+    }
+    const n = await load("./numbers/02-json-number.wasm");
+    const k = await load("./transforms/00-json-string-keys.wasm", { n });
+    const x = await load("./transforms/00-xml-strings.wasm", { k });
+    const memory = new Uint8Array((x.memory as WebAssembly.Memory).buffer);
+    const string = x.string as (
+      start: number,
+      end: number,
+      output: number,
+      mode: number,
+    ) => number;
+    const encoder = new TextEncoder(), decoder = new TextDecoder();
+    const chunks = [
+      "text",
+      "猫😀",
+      "&amp;",
+      "&lt;",
+      "&gt;",
+      "&quot;",
+      "&#x9;",
+      "&#10;",
+      "&#13;",
+      "\r\n",
+      "\r",
+      "\t",
+      "\\n",
+      "&#x1F600;",
+    ];
+    for (let seed = 0; seed < 100; seed++) {
+      const source = Array.from(
+        { length: 1 + seed % 23 },
+        (_, i) => chunks[(seed + i) % chunks.length],
+      ).join("");
+      const doc = new DOMParser().parseFromString(
+        '<r a="' + source + '">' + source + "</r>",
+        "application/xml",
+      );
+      if (doc.querySelector("parsererror")) {
+        throw new Error("Invalid XML oracle fixture");
+      }
+      const bytes = encoder.encode(source);
+      memory.set(bytes);
+      for (const mode of [0, 1]) {
+        const length = string(0, bytes.length, 65536, mode);
+        const actual = decoder.decode(memory.subarray(65536, 65536 + length));
+        const expected = JSON.stringify(
+          mode
+            ? doc.documentElement.getAttribute("a")
+            : doc.documentElement.textContent,
+        );
+        if (actual !== expected) {
+          throw new Error("XML decoding differs from DOMParser: " + source);
+        }
+      }
+    }
+    return 100;
+  });
+  check(xmlCases === 100, "XML browser comparisons incomplete");
   const shortestPage = libraryLinks.find((link) =>
     link.includes("06-shortest-decimal")
   );

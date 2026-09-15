@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 199 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 205 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -541,6 +541,26 @@ one-byte excesses trap, preserving the source and the scratch boundary.
 The browser checks edit pairs, render a single query fence, retain successful
 output on invalid shapes and recover with an empty query. The screenshot is
 `dist/browser/list-to-query-rendered.png`.
+
+## XML primitives checkpoint (not yet tools 26–27)
+
+The 1,649-byte helper adds six tests. Character, name-start and name-part
+predicates are compared at every Unicode position through U+10FFFF with
+`xmlchars@2.2.0`'s XML 1.0 Fifth Edition rules. Name scanning also checks
+delimiters and names accepted by `saxes@6.0.0`, with namespace processing off.
+Both dependencies are test-only; the shipped helper is entirely Wasm.
+
+Numeric references exercise 10,000 code points in decimal and hexadecimal,
+leading zeros, maximum scalars, invalid characters, overflow and malformed
+names. One thousand generated spans compare text and attribute normalization
+with saxes. Literal mode, raw backslashes, CRLF versus referenced whitespace,
+invalid UTF-8, exact output capacity, final-memory-byte reads and recovery
+after traps are checked separately. Input remains unchanged. Browser tests
+also compare text and attribute normalization with Chromium's DOMParser.
+
+This does not prove an XML document parser: structural parsing, declarations,
+tag matching, duplicate attributes and the reverse tree writer are still to
+be implemented. The transformation count remains 25.
 
 ## Size is the complete module, not memory consumption
 

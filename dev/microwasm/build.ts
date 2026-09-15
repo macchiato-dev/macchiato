@@ -81,6 +81,7 @@ for (
     "transforms/00-json-string-keys",
     "transforms/00-yaml-scalars",
     "transforms/00-toml-strings",
+    "transforms/00-xml-strings",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {
