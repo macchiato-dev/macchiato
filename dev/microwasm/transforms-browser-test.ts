@@ -506,6 +506,74 @@ try {
         ?.value === "```json\n[]\n```\n"
     );
   }
+  for (
+    const [id, input, output, invalid, recovered] of [
+      [
+        "14-json-lines-to-array",
+        '```jsonl\n{ "x":-0, "x":1.2300E+40 }\n"a,b \\n <b>text</b>"\n[1,2]\n```',
+        '```json\n[{"x":-0,"x":1.2300E+40},"a,b \\n <b>text</b>",[1,2]]\n```\n',
+        "```jsonl\n1\n\n2\n```",
+        "```json\n[]\n```\n",
+      ],
+      [
+        "15-array-to-json-lines",
+        '```json\n[{ "x":-0, "x":1.2300E+40 },"a,b \\n <b>text</b>",[1,2]]\n```',
+        '```jsonl\n{"x":-0,"x":1.2300E+40}\n"a,b \\n <b>text</b>"\n[1,2]\n```\n',
+        '```json\n{"not":"an array"}\n```',
+        "```jsonl\n```\n",
+      ],
+    ]
+  ) {
+    await page.goto(new URL(`?tool=${id}`, base).href);
+    await page.waitForFunction(() =>
+      !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+    );
+    await page.locator("#transform-input").fill(input);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(
+      (expected) =>
+        (document.getElementById("transform-output") as HTMLTextAreaElement)
+          ?.value === expected,
+      output,
+    );
+    await side("output", "Rendered");
+    const body = output.slice(output.indexOf("\n") + 1, -4);
+    check(
+      await page.locator("#transform-output-rendered pre code")
+        .textContent() === body,
+      "JSON Lines rendered output differs from its literal records",
+    );
+    check(
+      await page.locator("#transform-output-rendered b").count() === 0,
+      "JSON Lines data was interpreted as HTML",
+    );
+    await page.screenshot({
+      path: `${artifacts}/${id}-mixed.png`,
+      fullPage: true,
+    });
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === output,
+      "Invalid record stream replaced the previous result",
+    );
+    await page.locator("#transform-input").fill(
+      id === "14-json-lines-to-array" ? "```jsonl\n```" : "```json\n[]\n```",
+    );
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(
+      (expected) =>
+        (document.getElementById("transform-output") as HTMLTextAreaElement)
+          ?.value === expected,
+      recovered,
+    );
+  }
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

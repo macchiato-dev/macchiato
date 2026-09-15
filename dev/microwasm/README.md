@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 96 tests covering all twenty examples and the supplied
+`deno task test` runs 102 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -191,8 +191,9 @@ Try [the local list converter](http://microwasm.localhost:3030/?tool=01-list-to-
 [Fenced JSON to hierarchical Markdown](transforms/02-json-to-list.md) is the
 reverse tool. It checks the complete JSON grammar and preserves duplicate
 keys, string escapes and number spellings while emitting the list directly,
-without an intermediate object tree. Its module is 1,245 bytes, plus the
-shared JSON number scanner; it also contains the pretty/compact entries below.
+without an intermediate object tree. Its module is 1,353 bytes, plus the
+shared JSON number scanner; it also contains the pretty/compact entries and
+the bounded compact-span entry used by the JSON Lines tools below.
 
 [Fenced CSV to a Markdown table](transforms/04-csv-to-table.md) handles quoted
 fields, escaped quotes, embedded line breaks and matching row widths. Its
@@ -215,13 +216,23 @@ sizes exclude the dependency.
 descent with different structural output. They preserve duplicate keys,
 numeric spellings and string escapes instead of converting through an object
 tree. Their 61/62-byte adapters directly re-export the shared Wasm entries;
-these sizes exclude the 1,245-byte parser and 340-byte number scanner. The
+these sizes exclude the 1,353-byte parser and 340-byte number scanner. The
 browser downloads dependencies together and instantiates them in dependency
 order, wiring actual Wasm exports without conversion callbacks.
 Try [pretty-printing](http://microwasm.localhost:3030/?tool=12-json-pretty) or
 [compacting](http://microwasm.localhost:3030/?tool=13-json-compact).
-Nine transformations are implemented: tools 1–7 and 12–13 in the plan. The
-remaining 41 are pending.
+
+[JSON Lines to array](transforms/14-json-lines-to-array.md) validates each
+record and appends it directly to the output. [Array to JSON Lines](transforms/15-array-to-json-lines.md)
+compacts and validates the full array, then replaces only top-level commas
+with line endings. Nested values and string escapes stay intact. Empty streams
+and arrays round-trip; blank record lines are rejected. Their shared module is
+896 bytes, plus the parser and scanner above; the reverse entry's adapter is
+60 bytes. Neither direction builds an object tree or copies the input.
+Try [JSON Lines to array](http://microwasm.localhost:3030/?tool=14-json-lines-to-array)
+or [array to JSON Lines](http://microwasm.localhost:3030/?tool=15-array-to-json-lines).
+Eleven transformations are implemented: tools 1–7 and 12–15 in the plan. The
+remaining 39 are pending.
 
 ## Provisional byte-list notation
 

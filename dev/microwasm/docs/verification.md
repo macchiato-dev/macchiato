@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 96 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 102 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are nine implemented transformations out of the planned fifty:
-tools 1–7 and 12–13.
+There are eleven implemented transformations out of the planned fifty:
+tools 1–7 and 12–15.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -218,6 +218,23 @@ preserve the previous output on malformed JSON.
 Both new side-by-side screenshots were inspected. This container's available
 fonts show the CJK fixture as a missing-glyph box; the textarea and rendered
 code text are independently asserted to contain the original Unicode data.
+
+Six JSON Lines tests cover all JSON value kinds, empty streams, CRLF, exact
+lexemes, nested delimiters and escaped quotes. They include 600 generated
+round trips, malformed records and fences, non-array roots, and mutation
+tests against native JSON acceptance. Both directions are tested at 64 KiB
+input, including 32,761 records. Depth tests account for the outer array so
+the forward converter cannot emit an array too deeply nested for the reverse.
+The lower-level compact-span entry is checked for input/output separation,
+invalid bounds, starting depth, exact output capacity, recovery and unchanged
+input. Sentinel bytes guard the shared parser's literals, the JSON Lines
+module's literal and unused memory. Browser checks compare both literal and
+rendered outputs after edits, keep string markup inert, retain successful
+output after malformed records, and recover to an empty stream or array.
+Both side-by-side screenshots were inspected. The browser recovery case
+caught an overly strict minimum length for an empty `jsonl` fence without a
+newline after its closing backticks. The lower bound was corrected, direct
+regressions were added, and the full transformation browser suite passed.
 
 The JSON syntax scanner was compared with the native JSON parser on ten
 thousand generated candidate strings and explicit grammar boundaries. List

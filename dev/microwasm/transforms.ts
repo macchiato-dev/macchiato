@@ -70,4 +70,27 @@ export const transforms = [{
     '```json\n{\n  "name": "Ben",\n  "numbers": [ -0, 1.2300E+40 ],\n  "text": "keep  these spaces"\n}\n```\n',
   expected:
     '```json\n{"name":"Ben","numbers":[-0,1.2300E+40],"text":"keep  these spaces"}\n```\n',
+}, {
+  id: "14-json-lines-to-array",
+  title: "JSON Lines to JSON array",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+  ],
+  input:
+    '```jsonl\n{"name":"Ben","city":"Phoenix"}\n{"name":"Ada","city":"London"}\nnull\n```\n',
+  expected:
+    '```json\n[{"name":"Ben","city":"Phoenix"},{"name":"Ada","city":"London"},null]\n```\n',
+}, {
+  id: "15-array-to-json-lines",
+  title: "JSON array to JSON Lines",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+    { name: "j", path: "transforms/14-json-lines-to-array" },
+  ],
+  input:
+    '```json\n[\n  {"name":"Ben","tags":["wasm","Markdown"]},\n  [1,2],\n  "comma, inside a string",\n  null\n]\n```\n',
+  expected:
+    '```jsonl\n{"name":"Ben","tags":["wasm","Markdown"]}\n[1,2]\n"comma, inside a string"\nnull\n```\n',
 }];
