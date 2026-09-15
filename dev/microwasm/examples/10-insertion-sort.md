@@ -22,14 +22,20 @@ run(count):
 
 ```mermaid
 flowchart TD
-    A[Validate count, i = 1] --> B{i less than count?}
+    V{Unsigned count at most 0x4000?} -- No --> X[Trap before any load or store]
+    V -- Yes --> A[i = 1]
+    A --> B{i less than count?}
     B -- No --> R[Return count]
-    B -- Yes --> C[Save key, j = i]
-    C --> D{j nonzero and previous greater than key?}
-    D -- Yes --> E[Shift previous right, decrement j]
+    B -- Yes --> C[Load key from i; j = i]
+    C --> D{j is zero?}
+    D -- Yes --> F[Store saved key at j]
+    D -- No --> P[Load previous from j minus 1]
+    P --> O{previous at most key, signed?}
+    O -- Yes --> F
+    O -- No --> E[Copy previous into j; decrement j]
     E --> D
-    D -- No --> F[Store key, increment i]
-    F --> B
+    F --> I[Increment i; sorted prefix grows by one]
+    I --> B
 ```
 
 ## A writable memory, no new imports
@@ -54,6 +60,50 @@ all mutation takes place in the module's memory.
 Locals 1..4 are i, j, key, previous. The inner loop checks j before loading
 j-1. Each loop has its own enclosing block: `br_if 1` exits the nearest
 pair, not the entire function. End bytes are written explicitly, too.
+
+### A moving hole, not a sequence of swaps
+
+At the start of an outer iteration, indices below i are sorted. `key` saves
+the value at i before any store can overwrite it. The inner loop moves a
+logical hole left through that sorted prefix; the hole still contains old
+bytes, but they are no longer the value that must be preserved there.
+
+For `[2, 5, 8, 3]` at i = 3:
+
+| Inner step | j | Saved key | Memory after the step | Meaning |
+| --- | --- | --- | --- | --- |
+| Start | 3 | 3 | `[2, 5, 8, 3]` | Hole at 3; prefix `[2, 5, 8]` sorted |
+| Shift 8 | 2 | 3 | `[2, 5, 8, 8]` | Duplicate 8 is temporary; hole at 2 |
+| Shift 5 | 1 | 3 | `[2, 5, 5, 8]` | Hole at 1; key still only needed from its local |
+| Read 2 | 1 | 3 | `[2, 5, 5, 8]` | 2 is at most 3; leave inner loop without shifting |
+| Insert | 1 | 3 | `[2, 3, 5, 8]` | Fill hole, then advance outer i |
+
+The two inner exits have different reasons but the same destination:
+
+- `start-reached` exits before attempting index -1. This happens when the
+  key is smaller than every item in the prefix.
+- `in-order` exits after a valid load. It leaves j immediately after the
+  last value that is at most the key. Equality takes this exit too, which
+  keeps earlier equal values before the inserted one and makes the sort stable.
+
+Both reach `insert`, not `result`. Only `finished`, in the outer loop,
+reaches the result without inserting. `inner-repeat` and `outer-repeat`
+both encode `br 0`, but refer to different nearest loops. No branch crosses
+from the inner loop directly to the next outer iteration.
+
+### One small stack-saving instruction
+
+`previous` ends with `local.tee 4` (`22 04`). This saves the loaded value and
+also leaves it on the operand stack. `in-order` then pushes key and performs
+the signed less-than-or-equal comparison. If shifting is needed, `shift`
+reloads previous from local 4 alongside the destination address. There is
+only one memory load of that predecessor per inner iteration.
+
+Each shift decreases j, and each insertion increases i, so both loops make
+progress. Sorted input takes one predecessor comparison per outer iteration;
+reverse order repeatedly moves the hole to zero. This accounts for the
+linear best case and quadratic worst case without treating the inner scan
+as constant-time work.
 
 `[microwasm]`
 

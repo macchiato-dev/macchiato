@@ -139,6 +139,16 @@ try {
       await page.locator("#rendered ul ul").count() > 0,
       "Missing nested byte lists",
     );
+    if (i === 8 || i === 9) {
+      const trace = page.locator("#rendered table").first();
+      check(await trace.count() === 1, "Missing algorithm state trace");
+      await trace.scrollIntoViewIfNeeded();
+      await page.screenshot({
+        path: `${artifacts}/${
+          i === 8 ? "binary-search" : "insertion-sort"
+        }-trace.png`,
+      });
+    }
     await checkDocumentViews(
       `./examples/${new URL(links[i]).searchParams.get("example")}`,
     );

@@ -19,13 +19,19 @@ run(count, target):
 
 ```mermaid
 flowchart TD
-    A[Set half-open interval] --> B{low less than high?}
+    V{Unsigned count at most 0x4000?} -- No --> X[Trap before any load]
+    V -- Yes --> A[low = 0; high = count]
+    A --> B{low less than high?}
     B -- No --> N[Return -1]
-    B -- Yes --> C[Read middle]
-    C --> D{Equal?}
+    B -- Yes --> M[middle = low + half of high minus low]
+    M --> C[Load signed i32 at middle times 4]
+    C --> D{value equals target?}
     D -- Yes --> R[Return middle]
-    D -- No --> E[Keep lower or upper half]
-    E --> B
+    D -- No --> E{value less than target, signed?}
+    E -- Yes --> U[low = middle + 1; high unchanged]
+    E -- No --> L[high = middle; low unchanged]
+    U --> B
+    L --> B
 ```
 
 ## The two-argument signature
@@ -50,6 +56,29 @@ Keeping indices bounded also makes the middle calculation safe.
 Parameters count and target occupy 0 and 1; low, high, middle, value occupy
 2 through 5. `05` separates the two arms of an if. Every non-returning arm
 makes the interval strictly smaller, including when it contains one item.
+
+The comparison domains are deliberately different. `bounds` and `empty`
+compare unsigned indices; negative counts become large unsigned values and
+trap. `upper-half` compares signed array values, so a negative value belongs
+before a positive one. Neither branch loads at `high`: it is the excluded
+end of the surviving interval, not the last candidate's index.
+
+For `[-7, -2, 4, 4, 9, 15]`, searching for the absent value 5 takes this path:
+
+| Iteration | Candidate interval | Middle and value | Next interval |
+| --- | --- | --- | --- |
+| 1 | `[0, 6)` | Index 3, value 4 | `[4, 6)`; exclude middle and everything below |
+| 2 | `[4, 6)` | Index 5, value 15 | `[4, 5)`; exclude middle and everything above |
+| 3 | `[4, 5)` | Index 4, value 9 | `[4, 4)`; no candidates remain |
+
+The next `empty` branch jumps out of `exit`, then `missing` supplies -1.
+It does not run a final load. Searching for 4 instead returns index 3 in the
+first iteration, directly from `found`; it does not keep scanning left for
+the first duplicate. An empty input takes the same no-load exit immediately.
+
+At `repeat`, branch depth 0 names the loop. At `empty`, branch depth 1 names
+the enclosing exit block. The `return` in `found` leaves the whole function.
+These are three different control transfers, not three spellings of break.
 
 `[microwasm]`
 
