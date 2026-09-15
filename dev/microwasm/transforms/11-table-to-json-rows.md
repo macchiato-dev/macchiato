@@ -80,7 +80,13 @@ this module using `p`. Imports are its actual Wasm `compactSpan` and memory.
 The four-page memory is shared, with separate original-input, output, parser
 literal and scratch regions. There are no host conversion callbacks.
 Functions: compact-span 0, run 1, emit 2, scratch-byte 3, cell 4, Unicode 5,
-row 6, decimal-reference 7. Globals: output cursor 0 and scratch cursor 1.
+row 6, decimal-reference 7, decode 8. Globals: output cursor 0 and scratch
+cursor 1. The exported `decode(start, end)` also makes the cell-unescaping
+pattern available to other Wasm tools: it reads an exclusive span within the
+first page, writes at `0x3000c`, and returns the exclusive scratch end.
+It does not validate JSON or change the output cursor. Source and scratch
+overflow trap; each call resets scratch. No decoded data survives the next
+decode call, so callers must consume it immediately.
 
 `[microwasm]`
 
@@ -90,13 +96,13 @@ row 6, decimal-reference 7. Globals: output cursor 0 and scratch cursor 1.
 - tj-import-section: `02 {{size:tj-imports}}`
   - tj-imports: `02 01 70 0b 636f6d706163745370616e 00 00 01 70 06 6d656d6f7279 02 01 04 04`
 - tj-function-section: `03 {{size:tj-functions}}`
-  - tj-functions: `07 01 02 02 03 02 04 05`
+  - tj-functions: `08 01 02 02 03 02 04 05 05`
 - tj-global-section: `06 {{size:tj-globals}}`
   - tj-globals: `02 7f 01 41 00 0b 7f 01 41 00 0b`
 - tj-export-section: `07 {{size:tj-exports}}`
-  - tj-exports: `02 03 72756e 00 01 06 6d656d6f7279 02 00`
+  - tj-exports: `03 03 72756e 00 01 06 6d656d6f7279 02 00 06 6465636f6465 00 08`
 - tj-code-section: `0a {{size:tj-code}}`
-  - tj-code: `07`
+  - tj-code: `08`
     - tj-run-record: `{{size:tj-run-body}}`
       - tj-run-body: `01 05 7f`
         - tj-run-bound: `20 00 41 808004 4b 04 40 00 0b`
@@ -132,21 +138,8 @@ row 6, decimal-reference 7. Globals: output cursor 0 and scratch cursor 1.
     - tj-scratch-record: `{{size:tj-scratch-body}}`
       - tj-scratch-body: `00 23 01 41 808010 4f 04 40 00 0b 23 01 20 00 3a 00 00 23 01 41 01 6a 24 01 0b`
     - tj-cell-record: `{{size:tj-cell-body}}`
-      - tj-cell-body: `01 03 7f`
-        - tj-cell-reset: `41 8c800c 24 01`
-        - tj-cell-exit: `02 40`
-          - tj-cell-loop: `03 40`
-            - tj-cell-bound: `20 00 20 01 4f 0d 01`
-            - tj-cell-byte: `20 00 2d 00 00 21 02`
-            - tj-cell-slash: `20 02 41 dc00 46 20 00 41 01 6a 20 01 49 71 04 40`
-              - tj-cell-next-byte: `20 00 2d 00 01 21 03`
-              - tj-cell-punctuation: `20 03 41 21 6b 41 0e 4d 20 03 41 3a 6b 41 06 4d 72 20 03 41 db00 6b 41 05 4d 72 20 03 41 fb00 6b 41 03 4d 72 04 40`
-                - tj-cell-escaped: `20 03 10 03 20 00 41 02 6a 21 00 0c 02 0b 0b`
-            - tj-cell-reference: `20 02 41 26 46 04 40`
-              - tj-cell-decoded: `20 00 20 01 10 07 22 04 04 40 20 04 21 00 0c 02 0b 0b`
-            - tj-cell-ordinary: `20 02 10 03 20 00 41 01 6a 21 00 0c 00 0b`
-          - tj-cell-end: `0b`
-        - tj-cell-validate: `23 00 41 8c800c 23 01 23 00 41 02 10 00 6a 24 00 0b`
+      - tj-cell-body: `00`
+        - tj-cell-validate: `23 00 41 8c800c 20 00 20 01 10 08 23 00 41 02 10 00 6a 24 00 0b`
     - tj-unicode-record: `{{size:tj-unicode-body}}`
       - tj-unicode-body: `00`
         - tj-unicode-ascii: `20 00 41 8001 49 04 40 20 00 10 03 0f 0b`
@@ -224,6 +217,23 @@ row 6, decimal-reference 7. Globals: output cursor 0 and scratch cursor 1.
           - tj-reference-end: `0b`
         - tj-reference-range: `20 04 45 20 04 41 ffffc300 4b 72 20 04 41 80b003 6b 41 ff0f 4d 72 04 40 41 00 0f 0b`
         - tj-reference-output: `20 04 10 05 20 02 41 01 6a 0b`
+    - tj-decode-record: `{{size:tj-decode-body}}`
+      - tj-decode-body: `01 03 7f`
+        - tj-decode-bound: `20 00 20 01 4b 20 01 41 808004 4b 72 04 40 00 0b`
+        - tj-cell-reset: `41 8c800c 24 01`
+        - tj-cell-exit: `02 40`
+          - tj-cell-loop: `03 40`
+            - tj-cell-bound: `20 00 20 01 4f 0d 01`
+            - tj-cell-byte: `20 00 2d 00 00 21 02`
+            - tj-cell-slash: `20 02 41 dc00 46 20 00 41 01 6a 20 01 49 71 04 40`
+              - tj-cell-next-byte: `20 00 2d 00 01 21 03`
+              - tj-cell-punctuation: `20 03 41 21 6b 41 0e 4d 20 03 41 3a 6b 41 06 4d 72 20 03 41 db00 6b 41 05 4d 72 20 03 41 fb00 6b 41 03 4d 72 04 40`
+                - tj-cell-escaped: `20 03 10 03 20 00 41 02 6a 21 00 0c 02 0b 0b`
+            - tj-cell-reference: `20 02 41 26 46 04 40`
+              - tj-cell-decoded: `20 00 20 01 10 07 22 04 04 40 20 04 21 00 0c 02 0b 0b`
+            - tj-cell-ordinary: `20 02 10 03 20 00 41 01 6a 21 00 0c 00 0b`
+          - tj-cell-end: `0b`
+        - tj-decode-result: `23 01 0b`
 
 Run locals: length 0, line start/end 1/2, temporary width 3, line index 4,
 header width 5. Row locals: start/end 0/1, data-mode 2, cursor 3, next pipe 4,
