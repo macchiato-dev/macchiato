@@ -152,4 +152,17 @@ export const transforms = [{
     "- {}\n  - name Ben\n  - active = true\n  - location {}\n    - city Phoenix\n  - tags []\n    - wasm\n    - yaml\n  - empty {}",
   expected:
     '```yaml\n"name": "Ben"\n"active": true\n"location":\n  "city": "Phoenix"\n"tags":\n  - "wasm"\n  - "yaml"\n"empty": {}\n```\n',
+}, {
+  id: "17-yaml-to-list",
+  title: "Block YAML to hierarchical Markdown data",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "s", path: "transforms/00-yaml-scalars" },
+  ],
+  input:
+    "```yaml\nname: Ben\nactive: true\nlocation:\n  city: Phoenix\ntags:\n  - wasm\n  - yaml\nempty: {}\n```\n",
+  expected:
+    '- {}\n  - "name" "Ben"\n  - "active" = true\n  - "location" {}\n    - "city" "Phoenix"\n  - "tags" []\n    - "wasm"\n    - "yaml"\n  - "empty" {}\n',
 }];

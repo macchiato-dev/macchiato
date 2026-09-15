@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 137 tests covering all twenty examples and the supplied
+`deno task test` runs 147 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -277,8 +277,17 @@ iteration as well as equality. Tests use `@std/yaml@1.2.0` as an independent
 oracle only; the browser still runs just the handwritten Wasm conversion.
 Try [the YAML writer](http://microwasm.localhost:3030/?tool=16-list-to-yaml).
 
-Sixteen transformations are implemented: tools 1–16 in the plan.
-The remaining 34 are pending, including the reverse YAML reader.
+[Block YAML to a list](transforms/17-yaml-to-list.md) completes the pair for
+the documented block-data subset. Its 1,582-byte module walks indentation;
+a shared 1,681-byte scalar module handles plain and quoted values using the
+existing Wasm JSON parser, number validator and Unicode iterator. It accepts
+the writer's explicit long keys, rejects duplicate decoded keys, and retains
+source key order and number spelling. Tests cover 500 generated round trips,
+exact input/output limits and recovery after errors. Neither helper is counted
+as an additional tool. Try [the YAML reader](http://microwasm.localhost:3030/?tool=17-yaml-to-list).
+
+Seventeen transformations are implemented: tools 1–17 in the plan.
+The remaining 33 are pending.
 
 ## Provisional byte-list notation
 

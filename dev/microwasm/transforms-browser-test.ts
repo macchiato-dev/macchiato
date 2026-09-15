@@ -850,6 +850,63 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === "```yaml\n[]\n```\n"
   );
+  await page.goto(new URL("?tool=17-yaml-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const yamlSource =
+    "```yaml\nname: '<b>Ben</b>'\nitems:\n  - 'it''s fine'\n  - FALSE\n  -\nnested:\n  key: value\n```\n";
+  const yamlList =
+    '- {}\n  - "name" "<b>Ben</b>"\n  - "items" []\n    - "it\'s fine"\n    - = false\n    - = null\n  - "nested" {}\n    - "key" "value"\n';
+  await page.locator("#transform-input").fill(yamlSource);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    yamlList,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered ul ul ul").count() >= 2,
+    "YAML nested data was flattened in rendered output",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "YAML value became executable markup",
+  );
+  await page.screenshot({
+    path: `${artifacts}/yaml-to-list-rendered.png`,
+    fullPage: true,
+  });
+  for (
+    const invalid of [
+      "name: a\nname: b\n",
+      "name:\n   invalid: indent\n",
+      "key: *alias\n",
+    ]
+  ) {
+    await page.locator("#transform-input").fill(
+      "```yaml\n" + invalid + "```\n",
+    );
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === yamlList,
+      "Invalid YAML replaced successful list output",
+    );
+  }
+  await page.locator("#transform-input").fill("```yaml\n[]\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "- []\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

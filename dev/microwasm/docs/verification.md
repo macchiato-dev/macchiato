@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 137 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 147 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are sixteen implemented transformations out of the planned fifty:
-tools 1–16.
+There are seventeen implemented transformations out of the planned fifty:
+tools 1–17.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -319,9 +319,8 @@ Memory tests cover an exact 64 KiB input, a compact intermediate filling the
 last page, an exact 128 KiB result, overflows and reuse. The independent parser
 also reconstructs all 128 levels of the maximum-depth sequence. Lone surrogate
 units are rejected rather than published as nonportable YAML string values.
-These tests establish the writer's stated data subset, not full YAML support
-or completion of the pending reverse reader.
-Chromium passes all sixteen fixtures and edits the new writer's input to
+These tests establish the writer's stated data subset, not full YAML support.
+Chromium passes all seventeen fixtures and edits the writer's input to
 check block indentation, string/boolean distinctions, Unicode decoding and
 literal markup. Duplicate keys and lone-surrogate errors keep the successful
 output; a later empty-sequence input recovers. The screenshot was inspected:
@@ -329,6 +328,28 @@ the two panes and escaped newline are visible. This container's installed
 fonts have no emoji face, so the supplementary-character sample displays a
 missing-glyph box there; its exact `😀` text is verified in the DOM and by the
 independent parser. The complete source-view/example browser suite also passes.
+
+Five YAML scalar tests exercise the shared decoder independently: every
+Boolean/null casing, single-quote doubling, comment and mapping delimiters,
+raw versus escaped controls, Unicode validity, exact output limits, input
+isolation and reuse after traps. The independent oracle collapses negative
+zero; a separate check verifies that our token and numeric value preserve it.
+The 1,681-byte helper imports only actual Wasm functions and shared memory.
+
+Five reverse-reader tests cover block structure, explicit long keys, semantic
+duplicate detection, missing values, LF/CRLF, malformed fences and indentation,
+unsupported YAML features and recovery. Five hundred generated nested values
+pass through the actual Wasm writer and reader; another cycle has identical
+output. Boundary checks include a full 64 KiB input, an exact 128 KiB result,
+one-byte output overflow, 128 nested collections and rejection of a 129th
+empty collection. Source order is tested separately for numeric-looking
+string keys, because JavaScript objects reorder those names.
+
+The reader is 1,582 bytes, plus its documented shared dependencies. Browser
+checks exercise editable YAML, independently rendered nested-list output,
+literal HTML-like strings, preservation of successful output on invalid YAML,
+and subsequent recovery. The inspected screenshot shows both panes, nested
+levels, escaped apostrophes and distinct Boolean/null tokens correctly.
 The rendered side-by-side screenshot was inspected: the embedded pipe remains
 in one cell, markup-like text stays literal, and duplicate keys and exponent
 spelling are visible unchanged in the JSON output.
