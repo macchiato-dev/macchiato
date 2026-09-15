@@ -1302,6 +1302,66 @@ try {
       ?.value ===
       '- []\n  - []\n    - "x"\n    - "+ y"\n'
   );
+  await page.goto(new URL("?tool=25-list-to-query", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const pairInput =
+    '- []\n  - []\n    - tag\n    - "<b>Notes</b>"\n  - []\n    - tag\n    - "wasm + Markdown"\n  - []\n    - ""\n    - "😀\\n```"';
+  const pairOutput =
+    "```query\ntag=%3Cb%3ENotes%3C%2Fb%3E&tag=wasm+%2B+Markdown&=%F0%9F%98%80%0A%60%60%60\n```\n";
+  await page.locator("#transform-input").fill(pairInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    pairOutput,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre").count() === 1,
+    "Query fields broke the output fence",
+  );
+  check(
+    await page.locator("#transform-output-rendered pre").textContent() ===
+      pairOutput.slice(9, -4),
+    "Rendered query text differs from encoded bytes",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "Query output became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/list-to-query-rendered.png`,
+    fullPage: true,
+  });
+  for (
+    const invalid of [
+      "- {}",
+      "- []\n  - []\n    - name",
+      "- []\n  - []\n    - name\n    - = false",
+    ]
+  ) {
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === pairOutput,
+      "Invalid pair shape replaced successful query output",
+    );
+  }
+  await page.locator("#transform-input").fill("- []");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "```query\n\n```\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

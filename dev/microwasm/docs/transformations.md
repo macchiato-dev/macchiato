@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–24, and the side-by-side
+syntax validation and binary64 parsing, tools 1–25, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 26 tools remain.
+significant-digit formatting are implemented too. The other 25 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–24 are now all implemented.
+stable numbering; tools 1–25 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -57,8 +57,11 @@ that this dialect cannot preserve. Both directions support longer Markdown
 fences when literal multiline data contains a closing-fence line.
 Tool 24 reads query strings using form-url-encoded decoding, with standard
 UTF-8 replacement rather than rejection. Arrays of name/value pairs preserve
-order, repeated names and empty names; the reverse tool will use that same
-representation. Percent escapes are decoded after splitting raw separators.
+order, repeated names and empty names. Percent escapes are decoded after
+splitting raw separators. Tool 25 writes that representation using UTF-8 form
+encoding, canonicalizing the query spelling without sorting or dropping pairs.
+It accepts exactly two strings per pair and replaces lone surrogates as the
+browser API does; it neither coerces scalar types nor invents nested names.
 
 ## Shared number conversion
 

@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 193 tests covering all twenty examples and the supplied
+`deno task test` runs 199 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -347,8 +347,16 @@ and every one- and two-byte sequence with `TextDecoder`, plus multibyte
 boundaries, malformed sequences and exact input/output limits.
 Try [the query reader](http://microwasm.localhost:3030/?tool=24-query-to-list).
 
-Twenty-four transformations are implemented: tools 1–24 in the plan.
-The remaining 26 are pending.
+[Ordered pairs to a query string](transforms/25-list-to-query.md) completes
+the pair. Its 830-byte module shares the list compiler and Unicode iterator,
+with UTF-8 percent encoding performed entirely in Wasm. It preserves duplicate
+names and order, replacing lone surrogates as `URLSearchParams` does. Tests
+cover every UTF-16 code unit, combinations of surrogate units, generated
+round trips, Markdown fence integrity and exact memory-region limits.
+Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
+
+Twenty-five transformations are implemented: tools 1–25 in the plan.
+The remaining 25 are pending.
 
 ## Provisional byte-list notation
 

@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 193 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 199 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -170,7 +170,7 @@ rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
 There are nineteen implemented transformations out of the planned fifty:
-tools 1–24.
+tools 1–25.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -524,6 +524,23 @@ The browser suite edits percent-encoded HTML-looking data and repeated names,
 checks rendered output remains text, retains the previous result on malformed
 framing and runs successfully again. Its screenshot is
 `dist/browser/query-to-list-rendered.png`.
+
+The 830-byte query writer adds six more tests, reusing the list compiler and
+Unicode iterator. All 65,536 UTF-16 code units compare with `URLSearchParams`,
+including lone-surrogate replacement. All 2,800 sequences of one through four
+units from a seven-unit alphabet check surrogate pairing and peek behavior;
+1,000 astral scalars check the raw UTF-8 path. One thousand generated pair
+lists round trip through both actual Wasm modules and match the browser API.
+Reading then writing malformed query spellings is checked for canonicalization.
+
+Every ASCII byte, duplicate and empty names, embedded delimiters, controls,
+BOM and Unicode are covered. Wrong types and pair sizes trap and recover.
+CommonMark checks prove encoded field contents cannot close the output fence.
+Exact 64 KiB input, 64 KiB intermediate JSON and 128 KiB output cases pass;
+one-byte excesses trap, preserving the source and the scratch boundary.
+The browser checks edit pairs, render a single query fence, retain successful
+output on invalid shapes and recover with an empty query. The screenshot is
+`dist/browser/list-to-query-rendered.png`.
 
 ## Size is the complete module, not memory consumption
 

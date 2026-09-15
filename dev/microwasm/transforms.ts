@@ -241,4 +241,15 @@ export const transforms = [{
   input: "```query\n?name=Ben+Atkin&tag=wasm&tag=Markdown&flag\n```\n",
   expected:
     '- []\n  - []\n    - "name"\n    - "Ben Atkin"\n  - []\n    - "tag"\n    - "wasm"\n  - []\n    - "tag"\n    - "Markdown"\n  - []\n    - "flag"\n    - ""\n',
+}, {
+  id: "25-list-to-query",
+  title: "Ordered Markdown pairs to a URL query string",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "l", path: "transforms/01-list-to-json" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+  ],
+  input:
+    '- []\n  - []\n    - name\n    - Ben Atkin\n  - []\n    - tag\n    - wasm\n  - []\n    - tag\n    - Markdown\n  - []\n    - flag\n    - ""',
+  expected: "```query\nname=Ben+Atkin&tag=wasm&tag=Markdown&flag=\n```\n",
 }];
