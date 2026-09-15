@@ -65,7 +65,7 @@ combined. Duplicate keys likewise remain distinct list entries.
 
 ## Module
 
-Import `n.valid` as function 0 and `n.memory`. Functions: emit 1, copy 2,
+Import `n.validMemory` as function 0 and `n.memory`. Functions: emit 1, copy 2,
 take 3, skip 4, string 5, prefix 6, value 7, run 8, expect 9. Globals:
 output 0, input position 1, input end 2, output mode 3. Output starts at
 `0x10000` and stops before the fence literals at `0x30000`.
@@ -81,12 +81,15 @@ No intermediate list, JSON object tree, or host conversion is involved.
 `compactSpan(start, end, output, depth)` is function 13, a lower-level entry
 used by the [JSON Lines pair](14-json-lines-to-array.md). It validates one
 complete unfenced value and writes compact JSON directly at the requested
-output cursor, returning the byte length. Input must lie in `0..0x10000`,
-output in `0x10000..0x30000`, and the starting depth in `0..128`. Passing depth
+output cursor, returning the byte length. Input must lie entirely within
+`0..0x10000` or the scratch region `0x3000c..0x40000`; output must lie in
+`0x10000..0x30000`, and the starting depth in `0..128`. Passing depth
 1 reserves room for a surrounding array within the same 128-container limit.
 It resets all parser globals; callers can append many independent records
 without copying them into temporary input buffers. Its input/output regions
-cannot overlap. Partial writes on a trap must still not be published.
+cannot overlap, nor can input touch the parser's literals. Partial writes on
+a trap must still not be published. The typed-table reader uses scratch input
+to validate each decoded cell, avoiding copies back over the source document.
 
 `[microwasm]`
 
@@ -94,7 +97,7 @@ cannot overlap. Partial writes on a trap must still not be published.
 - jl-type-section: `01 {{size:jl-types}}`
   - jl-types: `07 60 02 7f 7f 01 7f 60 01 7f 00 60 00 00 60 00 01 7f 60 01 7f 01 7f 60 02 7f 7f 00 60 04 7f 7f 7f 7f 01 7f`
 - jl-import-section: `02 {{size:jl-imports}}`
-  - jl-imports: `02 01 6e 05 76616c6964 00 00 01 6e 06 6d656d6f7279 02 01 04 04`
+  - jl-imports: `02 01 6e 0b 76616c69644d656d6f7279 00 00 01 6e 06 6d656d6f7279 02 01 04 04`
 - jl-function-section: `03 {{size:jl-functions}}`
   - jl-functions: `0d 01 05 03 02 02 01 01 04 01 04 04 04 06`
 - jl-global-section: `06 {{size:jl-globals}}`
@@ -228,7 +231,8 @@ cannot overlap. Partial writes on a trap must still not be published.
       - jl-compact-body: `00 41 02 24 03 20 00 10 0a 0b`
     - jl-span-record: `{{size:jl-span-body}}`
       - jl-span-body: `00`
-        - jl-span-input-bound: `20 00 20 01 4b 20 01 41 808004 4b 72 04 40 00 0b`
+        - jl-span-input-bound: `20 00 20 01 4b 20 01 41 808010 4b 72 04 40 00 0b`
+        - jl-span-input-region: `20 01 41 808004 4d 20 00 41 8c800c 4f 72 45 04 40 00 0b`
         - jl-span-output-bound: `20 02 41 808004 49 20 02 41 80800c 4b 72 04 40 00 0b`
         - jl-span-depth-bound: `20 03 41 8001 4b 04 40 00 0b`
         - jl-span-reset: `20 00 24 01 20 01 24 02 20 02 24 00 41 02 24 03`

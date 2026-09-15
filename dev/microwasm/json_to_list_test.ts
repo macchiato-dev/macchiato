@@ -31,7 +31,11 @@ async function converter(name = "02-json-to-list") {
   equal(
     JSON.stringify(WebAssembly.Module.imports(module)),
     JSON.stringify([
-      { module: "n", name: "valid", kind: "function" },
+      {
+        module: "n",
+        name: name === "02-json-to-list" ? "validMemory" : "valid",
+        kind: "function",
+      },
       { module: "n", name: "memory", kind: "memory" },
     ]),
   );

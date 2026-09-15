@@ -9,7 +9,10 @@ decimal bytes is useful when converting structured data between formats:
 The span must lie in the first 64 KiB of exported memory. Empty, reversed and
 out-of-bounds spans return zero. The module has four fixed memory pages so a
 calling Microwasm tool can import this memory for input, output and scratch.
-Both functions are byte scanners with no imports or allocations.
+The scanners have no imports or allocations. `validMemory(start, end)` has
+the same grammar but accepts any span within all four memory pages. It is
+used when another Wasm tool has decoded a value into scratch memory; `valid`
+keeps its original first-page restriction.
 
 Accepted examples include `0`, `-0`, `123`, `-12.5`, `1e9`, `1E-9` and `1e+9`.
 Rejected examples include `+1`, `01`, `.5`, `1.`, `1e`, `NaN`, `Infinity`,
@@ -58,9 +61,10 @@ flowchart LR
 
 ## The module
 
-Both functions have type `(i32, i32) -> i32`. Function 1 is `valid`; function 0
+All functions have type `(i32, i32) -> i32`. Function 1 is `validMemory`,
+function 2 is the first-page `valid` wrapper, and function 0
 is also exported as `digits` for other parsers. `digits` is a low-level scan:
-its caller must provide `0 <= start <= end <= 0x10000`. Unlike `valid`, it
+its caller must provide `0 <= start <= end <= 0x40000`. Unlike `valid`, it
 does not check that precondition itself.
 
 `[microwasm]`
@@ -69,13 +73,13 @@ does not check that precondition itself.
 - jn-type-section: `01 {{size:jn-types}}`
   - jn-types: `01 60 02 7f 7f 01 7f`
 - jn-function-section: `03 {{size:jn-functions}}`
-  - jn-functions: `02 00 00`
+  - jn-functions: `03 00 00 00`
 - jn-memory-section: `05 {{size:jn-memories}}`
   - jn-memories: `01 01 04 04`
 - jn-export-section: `07 {{size:jn-exports}}`
-  - jn-exports: `03 05 76616c6964 00 01 06 646967697473 00 00 06 6d656d6f7279 02 00`
+  - jn-exports: `04 05 76616c6964 00 02 06 646967697473 00 00 06 6d656d6f7279 02 00 0b 76616c69644d656d6f7279 00 01`
 - jn-code-section: `0a {{size:jn-code}}`
-  - jn-code: `02`
+  - jn-code: `03`
     - jn-digits-record: `{{size:jn-digits-body}}`
       - jn-digits-body: `00`
         - jn-digits-exit: `02 40`
@@ -87,7 +91,7 @@ does not check that precondition itself.
         - jn-digits-result: `20 00 0b`
     - jn-valid-record: `{{size:jn-valid-body}}`
       - jn-valid-body: `01 02 7f`
-        - jn-valid-bounds: `20 00 20 01 4f 20 01 41 808004 4b 72 04 40 41 00 0f 0b`
+        - jn-valid-bounds: `20 00 20 01 4f 20 01 41 808010 4b 72 04 40 41 00 0f 0b`
         - jn-valid-start: `20 00 21 02`
         - jn-valid-sign: `20 02 2d 00 00 41 2d 46 04 40 20 02 41 01 6a 21 02 0b`
         - jn-valid-after-sign: `20 02 20 01 46 04 40 41 00 0f 0b`
@@ -107,6 +111,8 @@ does not check that precondition itself.
             - jn-exponent-digits: `20 02 21 03 20 02 20 01 10 00 21 02`
             - jn-exponent-empty: `20 02 20 03 46 04 40 41 00 0f 0b 0b 0b`
         - jn-valid-result: `20 02 20 01 46 0b`
+    - jn-page-record: `{{size:jn-page-body}}`
+      - jn-page-body: `00 20 01 41 808004 4b 04 40 41 00 0f 0b 20 00 20 01 10 01 0b`
 
 Validator locals are start 0, end 1, position 2, and temporary/first-digit 3.
 Only bytes `0x30..0x39` are digits; there is no locale-dependent classification.
