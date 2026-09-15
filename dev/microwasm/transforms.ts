@@ -177,4 +177,16 @@ export const transforms = [{
     "- {}\n  - name Ben\n  - active = true\n  - location {}\n    - city Phoenix\n  - tags []\n    - wasm\n    - Markdown\n  - empty {}",
   expected:
     '```toml\n"name" = "Ben"\n"active" = true\n"location" = {"city" = "Phoenix"}\n"tags" = ["wasm", "Markdown"]\n"empty" = {}\n```\n',
+}, {
+  id: "19-toml-to-list",
+  title: "TOML assignments to hierarchical Markdown data",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "s", path: "transforms/00-toml-strings" },
+  ],
+  input:
+    '```toml\nname = "Ben"\nactive = true\nlocation = { city = "Phoenix" }\nports = [\n  +8_080, # development\n  443,\n]\nempty = {}\n```\n',
+  expected:
+    '- {}\n  - "name" "Ben"\n  - "active" = true\n  - "location" {}\n    - "city" "Phoenix"\n  - "ports" []\n    - = 8080\n    - = 443\n  - "empty" {}\n',
 }];

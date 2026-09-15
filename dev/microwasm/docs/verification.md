@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 153 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 164 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are eighteen implemented transformations out of the planned fifty:
-tools 1–18.
+There are nineteen implemented transformations out of the planned fifty:
+tools 1–19.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -320,7 +320,7 @@ last page, an exact 128 KiB result, overflows and reuse. The independent parser
 also reconstructs all 128 levels of the maximum-depth sequence. Lone surrogate
 units are rejected rather than published as nonportable YAML string values.
 These tests establish the writer's stated data subset, not full YAML support.
-Chromium passes all eighteen fixtures and edits the writer's input to
+Chromium passes all nineteen fixtures and edits the writer's input to
 check block indentation, string/boolean distinctions, Unicode decoding and
 literal markup. Duplicate keys and lone-surrogate errors keep the successful
 output; a later empty-sequence input recovers. The screenshot was inspected:
@@ -374,6 +374,35 @@ host conversion callback. Browser checks cover source edits, rendered fenced
 output, literal markup, quoted dotted keys, empty arrays inside inline tables,
 the largest signed integer, invalid-input retention and recovery. The
 side-by-side screenshot is checked separately from text assertions.
+
+Four TOML-string tests verify basic and literal quoting, all short escapes,
+four/eight-digit Unicode escapes and scalar boundaries. They generate 2,000
+candidate code points and compare valid scalars with `smol-toml@1.8.0`.
+Lone surrogates, surrogate pairs encoded as separate TOML escapes, values
+above `0x10ffff` (including values with the high bit set), raw controls and
+malformed UTF-8 trap. Span tests cover exclusive source positions, unchanged
+input, full-page strings, exact destination boundaries and scratch isolation.
+The helper is 833 bytes and imports only the Wasm iterator and memory.
+
+Seven reverse-TOML tests exercise assignments, inline tables, mixed/multiline
+arrays, comments, quoted/bare names, empty containers and the strict TOML 1.0
+inline-table separator rules. Five hundred generated datasets pass through
+both actual Wasm directions with stable output on another cycle. Mutated
+decimal candidates compare acceptance and numeric value with the independent
+parser; signed-zero spelling is checked separately. Two hundred and two
+integer candidates around the signed 64-bit endpoints check range handling
+and accepted BigInt values. Duplicate decoded keys are rejected within their
+table scope; sibling tables may reuse names.
+
+The reader's 2,032-byte module leaves original input and scratch intact.
+Tests fill all 64 KiB of input and exactly 128 KiB of output, then exceed the
+output by one byte. They reach 128 collections including the root, reject
+another level, and reuse the same instances after failures. Invalid comments,
+UTF-8, fences, unsupported table headers and dotted paths are also covered.
+Chromium edits TOML source, checks independently rendered nested list output,
+preserves the last result after invalid input, and recovers. The inspected
+screenshot shows the array/table nesting, normalized port number and literal
+HTML-like string in the side-by-side panes.
 The rendered side-by-side screenshot was inspected: the embedded pipe remains
 in one cell, markup-like text stays literal, and duplicate keys and exponent
 spelling are visible unchanged in the JSON output.

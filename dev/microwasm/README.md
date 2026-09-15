@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 153 tests covering all twenty examples and the supplied
+`deno task test` runs 164 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -295,8 +295,17 @@ are preserved through TOML-compatible escaping and direct numeric copying.
 The test-only TOML parsers do not ship with the browser tool.
 Try [the TOML writer](http://microwasm.localhost:3030/?tool=18-list-to-toml).
 
-Eighteen transformations are implemented: tools 1–18 in the plan.
-The remaining 32 are pending, including the TOML reader.
+[TOML assignments to a list](transforms/19-toml-to-list.md) reads the writer's
+format plus bare/literal keys, literal strings, comments and multiline arrays.
+It removes leading plus signs and numeric digit separators without rounding.
+The 2,032-byte module uses an 833-byte shared TOML string reader, plus the
+existing number and string-key helpers. This is an assignment/inline-table
+subset: table headers, dotted paths, dates and triple-quoted strings are not
+accepted. The docs distinguish that subset from a complete TOML parser.
+Try [the TOML reader](http://microwasm.localhost:3030/?tool=19-toml-to-list).
+
+Nineteen transformations are implemented: tools 1–19 in the plan.
+The remaining 31 are pending.
 
 ## Provisional byte-list notation
 

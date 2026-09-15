@@ -964,6 +964,59 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === '```toml\n"x" = false\n```\n'
   );
+  await page.goto(new URL("?tool=19-toml-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const tomlSource =
+    "```toml\nname = '<b>Ben</b>'\nports = [\n  +8_080, # development\n  443,\n]\nnested = {empty = [], enabled = true}\n```\n";
+  const tomlList =
+    '- {}\n  - "name" "<b>Ben</b>"\n  - "ports" []\n    - = 8080\n    - = 443\n  - "nested" {}\n    - "empty" []\n    - "enabled" = true\n';
+  await page.locator("#transform-input").fill(tomlSource);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    tomlList,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered ul ul ul").count() >= 2,
+    "TOML array/table nesting disappeared in rendered output",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "TOML literal string became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/toml-to-list-rendered.png`,
+    fullPage: true,
+  });
+  for (
+    const invalid of ["x=1\nx=2\n", "x={y=1,}\n", 'x="\\uD800"\n', "x=+-1\n"]
+  ) {
+    await page.locator("#transform-input").fill(
+      "```toml\n" + invalid + "```\n",
+    );
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === tomlList,
+      "Invalid TOML replaced the previous list output",
+    );
+  }
+  await page.locator("#transform-input").fill("```toml\nx=[]\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === '- {}\n  - "x" []\n'
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–18, and the side-by-side
+syntax validation and binary64 parsing, tools 1–19, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 32 tools remain.
+significant-digit formatting are implemented too. The other 31 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–18 are now all implemented.
+stable numbering; tools 1–19 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -34,8 +34,11 @@ JSON and Unicode routines. Both directions validate duplicate decoded keys.
 This completes the pair for the documented block-data subset, not full YAML.
 Tool 18 emits TOML assignments with inline nested tables, mixed arrays and
 quoted string keys. It rejects nulls, non-table roots, duplicate decoded keys
-and out-of-range signed integers. The reverse TOML reader (19) is pending;
-the writer does not imply that TOML input is already supported.
+and out-of-range signed integers. Tool 19 reads that representation plus
+bare/literal keys, comments, multiline arrays, leading plus signs and numeric
+digit separators. A shared Wasm helper handles basic/literal strings and
+Unicode escapes. The pair covers its documented assignment/inline-table
+subset, not every TOML feature; headers and dotted paths remain unsupported.
 
 ## Shared number conversion
 
