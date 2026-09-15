@@ -1029,6 +1029,35 @@ Screenshots `hex-to-text-rendered.png`, `text-to-hex-rendered.png` and
 
 Five transformations remain. This checkpoint is not goal completion.
 
+## Checkpoint: Base64 and shared text framing
+
+Tools 46–47 add an 833-byte Base64 codec and a 61-byte reverse-entry adapter.
+Their shared hex module is now 1,338 bytes after exporting the existing fence
+reader/writer; no duplicate framing code was introduced. Sizes exclude other
+dependencies. The README now distinguishes the handwritten Wasm foundation
+from the intended higher-level Markdown programs and their own compilers.
+
+Six Base64 test groups cover RFC vectors, 1,500 Unicode round trips against
+the native codec, every one/two-byte input, nonzero pad-bit rejection, malformed
+groups, required padding, inert decoded delimiters, BOM/controls, exact source
+capacity, frame overflow and recovery. A seventh hex test checks shared fence
+span reads without memory writes, label bounds and frame failure before its
+overlapping move. Original and resolved documents assemble to equal bytes.
+
+All 383 Deno tests passed in complete partitions of 213 and 170. Both browser
+suites passed, including 47 fixtures. The Base64 browser scenario sends actual
+decoded output back to the encoder, keeps previous output after malformed
+padding or UTF-8, recovers after edits and verifies no embedded URL request.
+Rendered input/output and the internal padding walkthrough were inspected.
+The walkthrough exposed visible table-escape backslashes, so the byte formulas
+were moved to an ordinary code block; a focused browser check verified the
+correct expressions after rebuilding, with the module bytes unchanged.
+
+Screenshots in `dist/browser/`: `base64-to-text-rendered.png`,
+`text-to-base64-rendered.png` and `46-base64-to-text-walkthrough.png`.
+Three transformations remain, followed by the collection's completion review.
+This checkpoint does not complete the goal.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

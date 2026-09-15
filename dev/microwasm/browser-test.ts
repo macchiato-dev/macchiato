@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "46-base64-to-text",
+        "Quartet boundaries and canonical padding",
+        "Whitespace and end",
+      ],
+      [
         "44-hex-to-text",
         "Two small conversion loops",
         "None, or one high nibble",

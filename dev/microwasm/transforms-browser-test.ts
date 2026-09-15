@@ -2906,6 +2906,73 @@ try {
   });
   check(byteRequests.length === 0, "Byte conversion requested an embedded URL");
   page.off("request", onByteRequest);
+  await page.goto(new URL("?tool=46-base64-to-text", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const base64Payload = byteText.replace("bytes.invalid", "base64.invalid");
+  const base64Code = btoa(
+    Array.from(
+      new TextEncoder().encode(base64Payload),
+      (byte) => String.fromCharCode(byte),
+    ).join(""),
+  );
+  const base64Source = "```base64\n" + base64Code + "\n```\n";
+  const base64Text = "````text\n" + base64Payload + "\n````\n";
+  const base64Requests: string[] = [];
+  const onBase64Request = (request: { url(): string }) => {
+    if (request.url().includes("base64.invalid")) {
+      base64Requests.push(request.url());
+    }
+  };
+  page.on("request", onBase64Request);
+  await writeDiff(base64Source, base64Text);
+  const actualBase64Text = await page.locator("#transform-output").inputValue();
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered > pre").count() === 1,
+    "Base64 decoded fence escaped its literal block",
+  );
+  check(
+    await page.locator("#transform-output-rendered img").count() === 0,
+    "Base64 decoded data became an image",
+  );
+  await page.screenshot({
+    path: artifacts + "/base64-to-text-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  for (const malformed of ["Zh==", "ww=="]) {
+    await page.locator("#transform-input").fill(
+      "```base64\n" + malformed + "\n```\n",
+    );
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    check(
+      await page.locator("#transform-output").inputValue() === base64Text,
+      "Invalid Base64 or UTF-8 replaced successful text",
+    );
+  }
+  await writeDiff("```base64\nw6k=\n```\n", "```text\né\n```\n");
+  await page.goto(new URL("?tool=47-text-to-base64", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await writeDiff(actualBase64Text, base64Source);
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  await page.screenshot({
+    path: artifacts + "/text-to-base64-rendered.png",
+    fullPage: true,
+  });
+  check(base64Requests.length === 0, "Base64 payload caused a network request");
+  page.off("request", onBase64Request);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

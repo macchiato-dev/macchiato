@@ -29,9 +29,17 @@ followed by another quartet. Empty input is valid.
 
 | Quartet | Bytes emitted | Required unused bits | What may follow |
 | --- | --- | --- | --- |
-| `abcd` | `a<<2 \| b>>4`, `b<<4 \| c>>2`, `c<<6 \| d` | None | Another quartet or end |
+| `abcd` | All three bytes | None | Another quartet or end |
 | `abc=` | First two bytes | Low two bits of `c` are zero | Whitespace and end |
 | `ab==` | First byte | Low four bits of `b` are zero | Whitespace and end |
+
+The three byte expressions, in order:
+
+```text
+(a << 2) | (b >> 4)
+(b << 4) | (c >> 2)
+(c << 6) | d
+```
 
 The byte store retains the low eight bits of each combined value. Alphabet
 values are six bits; padding is a distinct sentinel, 64, and end is -1.

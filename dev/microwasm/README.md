@@ -4,6 +4,15 @@ An experiment in writing executable WebAssembly binaries as Markdown documents:
 pseudocode, flowcharts, and annotated, nested lists of machine-code bytes.
 The source is the document, not WAT or a program which generates the document.
 
+The larger direction is a way to write full programs in Markdown, including
+their own compilers and domain-specific languages such as rules systems.
+Application authors need not write everything as Wasm bytes: these low-level
+documents establish the parsers, operations and compilation building blocks
+that higher-level Markdown can use. The languages and their meaning should
+remain discernible in rendered Markdown, with errors traceable to the source.
+The workflow below describes the current foundation, not a restriction that
+every application must manually maintain function indices and branch depths.
+
 The workflow is deliberately visible:
 
 1. Explain the algorithm in pseudocode and a flowchart.
@@ -375,8 +384,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty-five transformations are implemented: tools 1–45 in the plan.
-The remaining 5 are pending.
+Forty-seven transformations are implemented: tools 1–47 in the plan.
+The remaining 3 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -516,7 +525,7 @@ cover malformed records, decoded fence runs, exact capacity and trap recovery.
 Try [the diff writer](http://microwasm.localhost:3030/?tool=43-changes-to-diff).
 
 The [hexadecimal decoder](transforms/44-hex-to-text.md) and
-[UTF-8 encoder](transforms/45-text-to-hex.md) share a 1,322-byte module;
+[UTF-8 encoder](transforms/45-text-to-hex.md) share a 1,338-byte module;
 the reverse entry adapter is 61 bytes, excluding its dependencies. They
 preserve exact text bytes, including BOM and terminal newlines. The last LF
 before a closing fence is framing, not payload; output fences grow to contain
@@ -525,6 +534,16 @@ All 65,792 one- and two-byte inputs are compared with strict UTF-8 decoding,
 alongside 1,000 longer Unicode round trips and exact capacity tests.
 Try [hex to text](http://microwasm.localhost:3030/?tool=44-hex-to-text) or
 [text to hex](http://microwasm.localhost:3030/?tool=45-text-to-hex).
+
+The [Base64 decoder](transforms/46-base64-to-text.md) and
+[encoder](transforms/47-text-to-base64.md) reuse those fence routines. Their
+833-byte codec and 61-byte reverse-entry adapter use the standard alphabet,
+required padding and zero unused bits; only space, TAB, CR and LF may be
+ignored on input. Output is unwrapped. Tests include RFC vectors, 1,500
+Unicode round trips against the native Base64 codec, exhaustive one/two-byte
+UTF-8 checks, nonzero pad-bit rejection and decoded-fence capacity boundaries.
+Try [Base64 to text](http://microwasm.localhost:3030/?tool=46-base64-to-text) or
+[text to Base64](http://microwasm.localhost:3030/?tool=47-text-to-base64).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

@@ -503,4 +503,25 @@ export const transforms = [{
   ],
   input: "```text\nHello, 世界!\n```\n",
   expected: "```hex\n48 65 6c 6c 6f 2c 20 e4 b8 96 e7 95 8c 21\n```\n",
+}, {
+  id: "46-base64-to-text",
+  title: "Base64 bytes to UTF-8 text",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "h", path: "transforms/44-hex-to-text" },
+  ],
+  input: "```base64\nSGVsbG8sIHdvcmxkIQ==\n```\n",
+  expected: "```text\nHello, world!\n```\n",
+}, {
+  id: "47-text-to-base64",
+  title: "UTF-8 text to Base64 bytes",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "h", path: "transforms/44-hex-to-text" },
+    { name: "b", path: "transforms/46-base64-to-text" },
+  ],
+  input: "```text\nHello, world!\n```\n",
+  expected: "```base64\nSGVsbG8sIHdvcmxkIQ==\n```\n",
 }];
