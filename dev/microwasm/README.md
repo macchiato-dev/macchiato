@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 205 tests covering all twenty examples and the supplied
+`deno task test` runs 212 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -355,16 +355,27 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Twenty-five transformations are implemented: tools 1–25 in the plan.
-The remaining 25 are pending.
+Twenty-six transformations are implemented: tools 1–26 in the plan.
+The remaining 24 are pending.
 
-The XML pair is next. Its [shared string primitives](transforms/00-xml-strings.md)
+The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 are implemented in a 1,649-byte module: XML 1.0 characters and Unicode names,
 UTF-8 scalar decoding, predefined/numeric entities, and text/attribute whitespace
 normalization. These are preparation for tools 26–27, not an additional tool.
 Tests check every Unicode position's character/name classes and compare decoded
 text and attributes with an independent XML parser. DTDs and external entities
-are outside the planned reader's scope; no host XML parser ships in the demo.
+are outside the reader's scope; no host XML parser ships in the demo.
+
+[XML to an ordered Markdown tree](transforms/26-xml-to-list.md) now reads
+elements, attributes, mixed text, comments, CDATA, processing instructions and
+an initial declaration. Its 2,809-byte module retains repeated siblings and
+whitespace, validates matching tags and unique attributes, and supports longer
+Markdown fences. Tests compare 600 generated documents with an independent
+parser, exercise 930 single-character edits, and check exact input/output
+limits, 32-level nesting and recovery. Browser tests compare mixed content
+with Chromium's XML parser and verify inert rendered output.
+Try [the XML reader](http://microwasm.localhost:3030/?tool=26-xml-to-list).
+The reverse XML writer remains to be implemented.
 
 ## Provisional byte-list notation
 

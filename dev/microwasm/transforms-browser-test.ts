@@ -1362,6 +1362,112 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === "```query\n\n```\n"
   );
+  await page.goto(new URL("?tool=26-xml-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const xmlInput =
+    '<r label="&lt;b&gt;">Hello <b>猫</b> &amp; 😀<!-- comment --><![CDATA[<script>inert</script>]]><?go yes?><b/></r>';
+  // Chromium independently parses the document. Its node types preserve the
+  // mixed-content order that a flattened element-to-object conversion loses.
+  const xmlOutput = await page.evaluate((xml) => {
+    function node(n: Node): unknown {
+      if (n.nodeType === Node.ELEMENT_NODE) {
+        const el = n as Element;
+        return {
+          element: el.tagName,
+          attributes: Object.fromEntries(
+            [...el.attributes].map((a) => [a.name, a.value]),
+          ),
+          children: [...el.childNodes].map(node),
+        };
+      }
+      if (n.nodeType === Node.TEXT_NODE) return { text: n.nodeValue };
+      if (n.nodeType === Node.COMMENT_NODE) return { comment: n.nodeValue };
+      if (n.nodeType === Node.CDATA_SECTION_NODE) return { cdata: n.nodeValue };
+      const pi = n as ProcessingInstruction;
+      return { pi: pi.target, data: pi.data };
+    }
+    function list(value: unknown, depth = 0, key = ""): string {
+      const prefix = "  ".repeat(depth) + "- " + key;
+      if (typeof value === "string") {
+        return prefix + JSON.stringify(value) + "\n";
+      }
+      if (Array.isArray(value)) {
+        return prefix + "[]\n" + value.map((v) => list(v, depth + 1)).join("");
+      }
+      return prefix + "{}\n" + Object.entries(value as Record<string, unknown>)
+        .map(([k, v]) => list(v, depth + 1, JSON.stringify(k) + " ")).join("");
+    }
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    if (doc.querySelector("parsererror")) {
+      throw Error("Invalid XML test fixture");
+    }
+    return list([...doc.childNodes].map(node));
+  }, xmlInput);
+  await page.locator("#transform-input").fill(
+    "```xml\n" + xmlInput + "\n```\n",
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    xmlOutput,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-input-rendered pre").count() === 1,
+    "XML did not render as one code fence",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered b, #transform-output-rendered script",
+    ).count() === 0,
+    "XML values became active HTML",
+  );
+  check(
+    (await page.locator("#transform-output-rendered").textContent())?.includes(
+      "<script>inert</script>",
+    ),
+    "CDATA text was dropped from the rendered tree",
+  );
+  await page.screenshot({
+    path: `${artifacts}/xml-to-list-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  for (
+    const invalid of [
+      "<r></wrong>",
+      '<r a="1" a="2"/>',
+      "<!DOCTYPE r><r/>",
+      "<r><?p?data?></r>",
+    ]
+  ) {
+    await page.locator("#transform-input").fill(
+      "```xml\n" + invalid + "\n```\n",
+    );
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    check(
+      await page.locator("#transform-output").inputValue() === xmlOutput,
+      "Invalid XML replaced successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("```xml\n<r/>\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value ===
+      '- []\n  - {}\n    - "element" "r"\n    - "attributes" {}\n    - "children" []\n'
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

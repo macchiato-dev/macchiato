@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–25, and the side-by-side
+syntax validation and binary64 parsing, tools 1–26, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 25 tools remain.
+significant-digit formatting are implemented too. The other 24 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–25 are now all implemented.
+stable numbering; tools 1–26 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -63,18 +63,19 @@ encoding, canonicalizing the query spelling without sorting or dropping pairs.
 It accepts exactly two strings per pair and replaces lone surrogates as the
 browser API does; it neither coerces scalar types nor invents nested names.
 
-The XML pair (26–27) is in progress, not yet selectable. Its shared
+The XML reader (26) is implemented and selectable; the writer (27) is next.
+Its shared
 [character/name/string helper](../transforms/00-xml-strings.md) is implemented
-and tested. Next is the document parser, retaining ordered element, text,
-comment, CDATA and processing-instruction nodes. The representation will be a
+and tested. The document parser retains ordered element, text,
+comment, CDATA and processing-instruction nodes. The representation is a
 root array of nodes: element objects contain `element` (the lexical name),
 `attributes` (a string-valued object) and `children` (an ordered node array).
 Other node objects carry `text`, `comment` or `cdata` strings; processing
 instructions carry `pi` (target) and `data`. This preserves mixed content,
 repeated sibling names and whitespace rather than flattening XML into a map.
-An optional initial XML declaration needs a distinct, validated record.
-Require one root element and matching tags, reject duplicate attributes,
-DTDs and undeclared entities, and keep namespace prefixes as lexical names.
+An optional initial XML declaration has a distinct, validated record.
+The reader requires one root element and matching tags, rejects duplicate
+attributes, DTDs and undeclared entities, and keeps namespace prefixes as names.
 The reverse writer must validate this shape and preserve the normalized data,
 without inventing namespace bindings or fetching resources.
 
@@ -107,7 +108,8 @@ tables for classifications/state, and byte-list substeps with explanations.
 A list of function names or one top-level pseudocode block is not sufficient
 for a complicated routine. Repeated mechanisms can link to a shared pattern,
 but the routine's differing decisions should remain explained locally. The
-XML helper and query pair now use this fuller form; earlier tools still need
+XML modules, query pair and list-to-JSON compiler now use this fuller form;
+other earlier tools still need
 a documentation-depth review as part of completing the collection.
 
 1. Hierarchical JSON-shaped Markdown list to fenced JSON.

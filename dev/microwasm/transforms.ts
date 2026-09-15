@@ -252,4 +252,16 @@ export const transforms = [{
   input:
     '- []\n  - []\n    - name\n    - Ben Atkin\n  - []\n    - tag\n    - wasm\n  - []\n    - tag\n    - Markdown\n  - []\n    - flag\n    - ""',
   expected: "```query\nname=Ben+Atkin&tag=wasm&tag=Markdown&flag=\n```\n",
+}, {
+  id: "26-xml-to-list",
+  title: "XML to an ordered Markdown tree",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "x", path: "transforms/00-xml-strings" },
+  ],
+  input:
+    '```xml\n<note priority="high">Hello <b>Ben</b> &amp; friends.</note>\n```\n',
+  expected:
+    '- []\n  - {}\n    - "element" "note"\n    - "attributes" {}\n      - "priority" "high"\n    - "children" []\n      - {}\n        - "text" "Hello "\n      - {}\n        - "element" "b"\n        - "attributes" {}\n        - "children" []\n          - {}\n            - "text" "Ben"\n      - {}\n        - "text" " & friends."\n',
 }];
