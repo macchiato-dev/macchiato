@@ -2575,7 +2575,7 @@ try {
       models.map((c) =>
         `${c.id}\n${c.start} --> ${c.end} align:${c.align}\n${c.text}\n`
       ).join("\n");
-    const parsed = await oracle.evaluate(async (source) => {
+    const parseTrack = async (source: string) => {
       const video = document.createElement("video"),
         track = document.createElement("track");
       const url = URL.createObjectURL(new Blob([source], { type: "text/vtt" }));
@@ -2614,7 +2614,8 @@ try {
         video.remove();
         URL.revokeObjectURL(url);
       }
-    }, raw);
+    };
+    const parsed = await oracle.evaluate(parseTrack, raw);
     const expected = models.map(({ id, text, startTime, endTime, align }) => ({
       id,
       text,
@@ -2639,9 +2640,75 @@ try {
           } settings "align:${c.align}"\n`
         ).join(""),
     );
+    const generatedRows = await page.locator("#transform-output").inputValue();
+    // Feed the reader's actual result into the writer, then hand the writer's
+    // actual bytes to Chromium, not a JavaScript recreation of its output.
+    await page.goto(new URL("?tool=41-cues-to-vtt", base).href);
+    await page.waitForFunction(() =>
+      !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+    );
+    await page.locator("#transform-input").fill(generatedRows);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value.startsWith("```vtt\nWEBVTT\n\nNOTE oracle")
+    );
+    const written = await page.locator("#transform-output").inputValue();
+    const rawWritten = written.slice("```vtt\n".length, -"```\n".length);
+    check(
+      JSON.stringify(await oracle.evaluate(parseTrack, rawWritten)) ===
+        JSON.stringify(expected),
+      "Browser parsing of the actual Wasm writer output lost cue data",
+    );
   } finally {
     await oracle.close();
   }
+  const vttWriter = transforms.find((t) => t.id === "41-cues-to-vtt")!;
+  await page.locator("#transform-input").fill(vttWriter.input);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    vttWriter.expected,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  await page.screenshot({
+    path: artifacts + "/cues-to-vtt-rendered.png",
+    fullPage: true,
+  });
+  check(
+    await page.locator("#transform-output-rendered pre").count() === 1,
+    "WebVTT writer output did not remain one literal code block",
+  );
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    vttWriter.input + '- block "STYLE\\n::cue { color: red; }"',
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === vttWriter.expected,
+    "Invalid late STYLE block discarded the successful result",
+  );
+  const escapedCue =
+    '- cue 00:01.000 --> 00:02.000 "\\u0060\\u0060\\u0060\\n雪 😀" settings "align:end" id "demo"\n';
+  const escapedVtt =
+    "````vtt\nWEBVTT\n\ndemo\n00:01.000 --> 00:02.000 align:end\n```\n雪 😀\n````\n";
+  await page.locator("#transform-input").fill(escapedCue);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    escapedVtt,
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

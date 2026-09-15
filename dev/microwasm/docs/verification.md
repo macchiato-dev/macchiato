@@ -916,6 +916,36 @@ is `dist/browser/opml-to-outline-rendered.png`.
 There are 29 published tools and 21 still to implement. This checkpoint does
 not complete the goal.
 
+## Checkpoint: WebVTT reader and writer
+
+Tools 40 and 41 now preserve cue payloads, timestamps, optional identifiers
+and settings, plus ordered NOTE/STYLE/REGION blocks and optional header text.
+The reader is 1,969 bytes; the writer is 2,259 bytes. Both reuse a 630-byte
+timestamp helper that compares arbitrarily long hours as digit spans.
+These are individual module sizes, excluding their shared dependencies.
+
+The writer's seven test groups cover its documented examples, 500 generated
+collections through separate reader/writer machines, field ordering, keyword
+ambiguity, physical-line boundaries, timing order, malformed edits, Unicode
+escape equivalence, every lone surrogate, exact input capacity, framed-output
+overflow, scratch reuse and recovery after traps. Original and resolved
+Markdown assemble to identical bytes. CommonMark sees the output as exactly
+one literal code block, even with decoded backtick lines in the payload.
+
+Playwright runs the reader on generated subtitle data, passes its actual
+Markdown result into the writer, and loads that writer output as a local
+text-track Blob in a separate Chromium page. The browser's VTTCue objects
+match the expected timing, identifiers, text and alignment. No substitute
+WebVTT serializer runs in the application. Invalid edits retain successful
+output; later valid edits recover. Both editable and rendered views work.
+Screenshots `cues-to-vtt-rendered.png` and `41-cues-to-vtt-walkthrough.png`
+were inspected in `dist/browser/`.
+
+Verification: 352 Deno tests passed in two complete file partitions
+(182 and 170). Both browser suites passed, including all 41 transformation
+fixtures and the seven-page Markdown renderer. There are nine transformations
+left; this checkpoint does not complete the goal.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

@@ -442,4 +442,18 @@ export const transforms = [{
     "```vtt\nWEBVTT Interview\n\nNOTE Opening remarks\n\nSTYLE\n::cue { color: lime; }\n\nopening\n00:01.000 --> 00:03.250 align:start\n<v Jane>Hello!\nSecond line.\n\n00:03.000 --> 00:05.000\nAn overlapping cue.\n```\n",
   expected:
     '- header "Interview"\n- block "NOTE Opening remarks"\n- block "STYLE\\n::cue { color: lime; }"\n- cue 00:01.000 --> 00:03.250 "<v Jane>Hello!\\nSecond line." id "opening" settings "align:start"\n- cue 00:03.000 --> 00:05.000 "An overlapping cue."\n',
+}, {
+  id: "41-cues-to-vtt",
+  title: "Markdown cues and ordered blocks to WebVTT",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "r", path: "transforms/38-srt-to-cues" },
+    { name: "v", path: "transforms/00-webvtt-time" },
+  ],
+  input:
+    '- header "Interview"\n- block "NOTE Opening remarks"\n- block "STYLE\\n::cue { color: lime; }"\n- cue 00:01.000 --> 00:03.250 "<v Jane>Hello!\\nSecond line." id "opening" settings "align:start"\n- cue 00:03.000 --> 00:05.000 "An overlapping cue."\n',
+  expected:
+    "```vtt\nWEBVTT Interview\n\nNOTE Opening remarks\n\nSTYLE\n::cue { color: lime; }\n\nopening\n00:01.000 --> 00:03.250 align:start\n<v Jane>Hello!\nSecond line.\n\n00:03.000 --> 00:05.000\nAn overlapping cue.\n```\n",
 }];

@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "41-cues-to-vtt",
+        "Inside run: gather one row, then write it",
+        "Reorder fields without reparsing strings",
+      ],
+      [
         "40-vtt-to-cues",
         "Inside run: find the block once, then classify it",
         "Checks ordering without converting to a number",

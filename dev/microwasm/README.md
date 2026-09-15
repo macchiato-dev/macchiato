@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty transformations are implemented: tools 1–40 in the plan.
-The remaining 10 are pending.
+Forty-one transformations are implemented: tools 1–41 in the plan.
+The remaining 9 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -486,6 +486,14 @@ remain data, not executed content; this is not a full authoring validator.
 Tests cover generated models, original/resolved byte equivalence, chronology,
 Unicode, malformed edits, fence safety, memory limits and browser cue parsing.
 Try [the WebVTT reader](http://microwasm.localhost:3030/?tool=40-vtt-to-cues).
+
+The [WebVTT writer](transforms/41-cues-to-vtt.md) completes that pair with a
+2,259-byte module. It decodes each row's strings into one reusable scratch
+page, then emits identifiers, settings and text in WebVTT order. No cue tree
+or decoded string objects are allocated. Tests cover 500 generated collections,
+Unicode escapes, malformed edits, ambiguous block boundaries, exact capacity
+and recovery. Chromium also parses the writer's actual output in browser tests.
+Try [the WebVTT writer](http://microwasm.localhost:3030/?tool=41-cues-to-vtt).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
