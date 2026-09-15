@@ -484,4 +484,23 @@ export const transforms = [{
     '- meta "diff --git a/message.txt b/message.txt"\n- file "a/message.txt" "b/message.txt"\n- hunk -1,2 +1,3 " greeting"\n- context "Hello"\n- remove "old"\n- add "new"\n- add "last"\n- no-newline\n',
   expected:
     "```diff\ndiff --git a/message.txt b/message.txt\n--- a/message.txt\n+++ b/message.txt\n@@ -1,2 +1,3 @@ greeting\n Hello\n-old\n+new\n+last\n\\ No newline at end of file\n```\n",
+}, {
+  id: "44-hex-to-text",
+  title: "Hexadecimal bytes to UTF-8 text",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+  ],
+  input: "```hex\n48 65 6c 6c 6f 2c 20 e4 b8 96 e7 95 8c 21\n```\n",
+  expected: "```text\nHello, 世界!\n```\n",
+}, {
+  id: "45-text-to-hex",
+  title: "UTF-8 text to hexadecimal bytes",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "h", path: "transforms/44-hex-to-text" },
+  ],
+  input: "```text\nHello, 世界!\n```\n",
+  expected: "```hex\n48 65 6c 6c 6f 2c 20 e4 b8 96 e7 95 8c 21\n```\n",
 }];

@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "44-hex-to-text",
+        "Two small conversion loops",
+        "None, or one high nibble",
+      ],
+      [
         "43-changes-to-diff",
         "Boundary bookkeeping is not a second patch validator",
         "Sum alone is insufficient",

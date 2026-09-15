@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty-three transformations are implemented: tools 1–43 in the plan.
-The remaining 7 are pending.
+Forty-five transformations are implemented: tools 1–45 in the plan.
+The remaining 5 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -514,6 +514,17 @@ a throwaway Markdown result. Actual Wasm pair round trips reconstruct 400
 independent patches, then apply them to verify the intended files. Tests also
 cover malformed records, decoded fence runs, exact capacity and trap recovery.
 Try [the diff writer](http://microwasm.localhost:3030/?tool=43-changes-to-diff).
+
+The [hexadecimal decoder](transforms/44-hex-to-text.md) and
+[UTF-8 encoder](transforms/45-text-to-hex.md) share a 1,322-byte module;
+the reverse entry adapter is 61 bytes, excluding its dependencies. They
+preserve exact text bytes, including BOM and terminal newlines. The last LF
+before a closing fence is framing, not payload; output fences grow to contain
+decoded backticks safely. Hex output uses lowercase pairs, sixteen per line.
+All 65,792 one- and two-byte inputs are compared with strict UTF-8 decoding,
+alongside 1,000 longer Unicode round trips and exact capacity tests.
+Try [hex to text](http://microwasm.localhost:3030/?tool=44-hex-to-text) or
+[text to hex](http://microwasm.localhost:3030/?tool=45-text-to-hex).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

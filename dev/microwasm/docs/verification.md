@@ -1005,6 +1005,30 @@ Screenshots `changes-to-diff-rendered.png` and
 
 Seven transformations remain. This checkpoint is not goal completion.
 
+## Checkpoint: hexadecimal and UTF-8 text
+
+Tools 44–45 share a 1,322-byte module and a 61-byte reverse-entry adapter,
+excluding the existing UTF-8 helper and shared memory. The byte converters
+preserve BOM, controls and terminal newlines. Exactly one LF before a closing
+fence is framing; longer fences contain decoded backticks safely.
+
+Six new test groups compare every one- and two-byte input with fatal native
+UTF-8 decoding, run 1,000 longer Unicode round trips, check explicit malformed
+three/four-byte sequences, reject ambiguous hex syntax and early closing
+fences, and exercise exact input/output capacities and recovery. Input and
+the fourth-page constants remain unchanged. Both adapter and direct reverse
+entry give the same result; original/resolved Markdown produce equal binaries.
+
+All 376 Deno tests passed in complete partitions of 206 and 170. Both browser
+suites passed, including 45 transformation fixtures. Browser checks pass the
+decoder's actual result to the encoder, preserve the final newline, retain
+successful output after truncated UTF-8, and recover after correction. HTML-
+looking decoded text remains in one code block and causes no network request.
+Screenshots `hex-to-text-rendered.png`, `text-to-hex-rendered.png` and
+`44-hex-to-text-walkthrough.png` were inspected in `dist/browser/`.
+
+Five transformations remain. This checkpoint is not goal completion.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

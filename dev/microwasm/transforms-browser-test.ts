@@ -2845,6 +2845,67 @@ try {
   );
   check(diffRequests.length === 0, "Written diff data fetched a resource");
   page.off("request", onDiffRequest);
+  await page.goto(new URL("?tool=44-hex-to-text", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const byteText = "Café\n```\n<img src='https://bytes.invalid/x'>\n";
+  const byteHex = Array.from(
+    new TextEncoder().encode(byteText),
+    (b, i) => (i ? i % 16 ? " " : "\n" : "") + b.toString(16).padStart(2, "0"),
+  ).join("");
+  const hexSource = "```hex\n" + byteHex + "\n```\n";
+  const textSource = "````text\n" + byteText + "\n````\n";
+  const byteRequests: string[] = [];
+  const onByteRequest = (request: { url(): string }) => {
+    if (request.url().includes("bytes.invalid")) {
+      byteRequests.push(request.url());
+    }
+  };
+  page.on("request", onByteRequest);
+  await writeDiff(hexSource, textSource);
+  const actualDecoded = await page.locator("#transform-output").inputValue();
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered > pre").count() === 1,
+    "Decoded bytes broke out of the text fence",
+  );
+  check(
+    await page.locator("#transform-output-rendered img").count() === 0,
+    "Decoded bytes became an image",
+  );
+  await page.screenshot({
+    path: artifacts + "/hex-to-text-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill("```hex\nc3\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === textSource,
+    "Incomplete UTF-8 replaced the previous text",
+  );
+  await writeDiff("```hex\nc3 a9\n```\n", "```text\né\n```\n");
+  await page.goto(new URL("?tool=45-text-to-hex", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await writeDiff(actualDecoded, hexSource);
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  await page.screenshot({
+    path: artifacts + "/text-to-hex-rendered.png",
+    fullPage: true,
+  });
+  check(byteRequests.length === 0, "Byte conversion requested an embedded URL");
+  page.off("request", onByteRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

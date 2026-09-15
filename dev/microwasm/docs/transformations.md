@@ -6,13 +6,13 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–43, and the side-by-side
+syntax validation and binary64 parsing, tools 1–45, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 7 tools remain.
+significant-digit formatting are implemented too. The other 5 tools remain.
 This is not goal completion.
 
 ## Data representation
@@ -33,7 +33,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–43 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–45 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -240,7 +240,16 @@ rejects embedded LF and metadata that could masquerade as structural lines,
 and checks record boundaries with one contribution counter. Its completed diff
 passes through the reader's read-only validator, sharing side-specific count
 and EOF rules. Both Wasm directions are tested with independent generated
-patches and patch application. The hexadecimal/text pair (44–45) is next.
+patches and patch application.
+
+The hexadecimal/text pair (44–45) is implemented. Byte pairs decode into a
+strictly validated UTF-8 span; the reverse path writes lowercase pairs with
+sixteen bytes per line. One LF before the closing fence is framing rather
+than payload, so no metadata block is needed to preserve a final newline.
+Decoded backticks determine the output fence width. Tests compare every
+one- and two-byte input with strict native UTF-8 decoding, preserve BOM and
+controls, and exercise Unicode round trips and exact capacities. Base64/text
+(46–47) is next and will use the same text convention.
 
 ## Shared number conversion
 
