@@ -343,4 +343,18 @@ export const transforms = [{
     '```rss\n<rss version="2.0">\n  <channel>\n    <title>News</title>\n    <link>https://example.com/</link>\n    <description>Updates</description>\n    <item>\n      <title>First post</title>\n      <guid isPermaLink="false">post:1</guid>\n      <category>Wasm</category>\n      <category domain="topics">Compilers</category>\n    </item>\n  </channel>\n</rss>\n```\n',
   expected:
     '- {}\n  - "title" "News"\n  - "link" "https://example.com/"\n  - "description" "Updates"\n  - "entries" []\n    - {}\n      - "title" "First post"\n      - "guid" {}\n        - "isPermaLink" "false"\n        - "value" "post:1"\n      - "category" []\n        - {}\n          - "value" "Wasm"\n        - {}\n          - "domain" "topics"\n          - "value" "Compilers"\n',
+}, {
+  id: "33-entries-to-rss",
+  title: "Markdown feed metadata and entries to RSS",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "x", path: "transforms/00-xml-strings" },
+    { name: "o", path: "transforms/00-xml-output" },
+    { name: "l", path: "transforms/01-list-to-json" },
+  ],
+  input:
+    '- {}\n  - title "News & notes"\n  - link https://example.com/\n  - description Updates\n  - entries []\n    - {}\n      - title "First post"\n      - guid {}\n        - isPermaLink false\n        - value post:1\n      - category []\n        - {}\n          - value Wasm\n        - {}\n          - domain topics\n          - value Compilers\n',
+  expected:
+    '```rss\n<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0">\n  <channel>\n    <title>News &amp; notes</title>\n    <link>https://example.com/</link>\n    <description>Updates</description>\n    <item>\n      <title>First post</title>\n      <guid isPermaLink="false">post:1</guid>\n      <category>Wasm</category>\n      <category domain="topics">Compilers</category>\n    </item>\n  </channel>\n</rss>\n\n```\n',
 }];

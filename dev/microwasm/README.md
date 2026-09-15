@@ -90,7 +90,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 274 tests covering all twenty examples and the supplied
+`deno task test` runs 280 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -368,8 +368,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-two transformations are implemented: tools 1–32 in the plan.
-The remaining 18 are pending.
+Thirty-three transformations are implemented: tools 1–33 in the plan.
+The remaining 17 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -389,7 +389,15 @@ lossless feed archive or a complete semantic RSS validator. Seven test groups
 cover 500 generated feeds, independent XML projections, field requirements,
 duplicate detection, XML normalization, malformed input, bounds and recovery.
 Try [the RSS reader](http://microwasm.localhost:3030/?tool=32-rss-to-entries).
-The reverse RSS writer (33) is next.
+The [RSS writer](transforms/33-entries-to-rss.md) is 2,454 bytes plus the list
+compiler and shared XML string output. It writes the same standard metadata
+and entry shapes, rejecting unknown fields rather than discarding edits.
+Six test groups cover all standard structures, 300 generated round trips,
+decoded-key duplicates, XML character escaping, longer fences, exact input
+and output limits, compact-JSON expansion, and recovery. Browser checks also
+parse its XML independently and keep rendered RSS inert.
+Try [the RSS writer](http://microwasm.localhost:3030/?tool=33-entries-to-rss).
+The iCalendar pair (34–35) is next.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

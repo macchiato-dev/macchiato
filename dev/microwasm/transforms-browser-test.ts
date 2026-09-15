@@ -1991,6 +1991,86 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
       .includes('"title" "Recovered"')
   );
+  await page.goto(new URL("?tool=33-entries-to-rss", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(rssOutput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes('<enclosure url="https://example.com/a.mp3" length="0012"')
+  );
+  const writtenRss = await page.locator("#transform-output").inputValue();
+  const browserFeed = await page.evaluate((output) => {
+    const xml = output.slice(
+      output.indexOf("\n") + 1,
+      output.lastIndexOf("```"),
+    );
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    if (doc.querySelector("parsererror")) {
+      throw Error("Browser rejected RSS XML");
+    }
+    return {
+      title: doc.querySelector("channel > title")?.textContent,
+      items: Array.from(doc.querySelectorAll("item"), (item) => ({
+        description: item.querySelector("description")?.textContent,
+        categories: Array.from(
+          item.querySelectorAll("category"),
+          (el) => el.textContent,
+        ),
+        length: item.querySelector("enclosure")?.getAttribute("length"),
+      })),
+    };
+  }, writtenRss);
+  check(
+    browserFeed.title === "Books & notes" && browserFeed.items.length === 2 &&
+      browserFeed.items[0].description === "<script>inert</script>" &&
+      browserFeed.items[0].categories.join(",") === "A,B" &&
+      browserFeed.items[0].length === "0012" &&
+      browserFeed.items[1].description === "Two",
+    "RSS writer differs from browser XML interpretation",
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").count() === 1 &&
+      await page.locator(
+          "#transform-output-rendered script, #transform-output-rendered img, #transform-output-rendered a[href]",
+        ).count() === 0,
+    "RSS output did not remain an inert code fence",
+  );
+  await page.screenshot({
+    path: `${artifacts}/entries-to-rss-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-input").inputValue() === rssOutput,
+    "RSS writer changed its source textarea",
+  );
+  await page.locator("#transform-input").fill(
+    rssOutput + '  - "unknown" "do not discard"\n',
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === writtenRss,
+    "Unknown RSS field replaced successful output",
+  );
+  await page.locator("#transform-input").fill(
+    rssOutput.replace('"title" "One"', '"title" "Recovered"'),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("<title>Recovered</title>")
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

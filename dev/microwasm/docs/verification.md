@@ -24,6 +24,34 @@ screenshots are `dist/browser/04-json-binary64-walkthrough.png` and
 specified for the partial Markdown renderer. This is a focused documentation
 pass, not a claim that every remaining function has equally deep coverage.
 
+## Checkpoint: RSS writer completes tools 1–33
+
+Tool 33 is published as a 2,454-byte handwritten module. The list compiler
+provides compact JSON, whose source page is reclaimed before RSS output.
+The writer uses fixed field descriptors, per-object duplicate masks and the
+shared XML scalar/string routines. Attributed text retains a source span
+until all attributes have been emitted. Its documentation walks these loops
+and cursor lifetimes, with diagrams and byte-list references.
+
+Six tests cover all standard shapes, 300 generated round trips through the
+Wasm reader and an independent SAX projection, malformed contexts and types,
+escaped-key duplicates, required fields, Unicode and XML normalization,
+backtick-fence isolation, empty-array normalization and recovery. Bounds tests
+exercise a complete 64 KiB input, an independently measured compact JSON
+larger than 64 KiB, exactly 128 KiB of output and one byte too much. Immutable
+tables are checked after the list compiler's 1 KiB stack region, not across
+that deliberately mutable region.
+
+The complete suite passes 280 tests. All 33 transformation fixtures pass in
+Chromium, as does the complete document-view suite. The RSS browser scenario
+converts reader output back to XML, checks it using the browser's DOMParser,
+checks order and string-preserved enclosure length, verifies inert rendered
+output, retains successful output after an unknown field, and recovers after
+editing. `dist/browser/entries-to-rss-rendered.png` was visually inspected.
+
+The iCalendar pair is next. Seventeen planned tools remain; the overall goal
+is not complete.
+
 ## Checkpoint: RSS metadata and entries reader
 
 Tool 32 is now published, with a 3,395-byte module and the existing shared XML

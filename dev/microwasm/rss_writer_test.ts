@@ -16,7 +16,10 @@ function stable(value: unknown): unknown {
 }
 function equal(a: unknown, b: unknown) {
   if (JSON.stringify(stable(a)) !== JSON.stringify(stable(b))) {
-    throw Error(JSON.stringify(a).slice(0, 1600) + " != " + JSON.stringify(b).slice(0, 1600));
+    throw Error(
+      JSON.stringify(a).slice(0, 1600) + " != " +
+        JSON.stringify(b).slice(0, 1600),
+    );
   }
 }
 function traps(fn: () => unknown) {
@@ -93,6 +96,8 @@ async function graph(writer: boolean) {
   return {
     run: (s: string) => call(imports.t, s),
     tree: (s: string) => JSON.parse(call(imports.l, s).slice(8, -5)),
+    compactLength: (s: string) =>
+      encoder.encode(call(imports.l, s)).length - 13,
     memory: m,
     raw: imports.t.run as (n: number) => number,
   };
@@ -376,11 +381,9 @@ Deno.test("RSS writer: input/output limits, schema sentinels and failure recover
   );
   traps(() => w.run(list(feed({ description: content + "a" }))));
   // Short source, but escaping unquoted control bytes expands compact JSON.
-  traps(() =>
-    w.run(
-      "- {}\n  - title n\n  - link x\n  - description " + "\t".repeat(40000) +
-        "x\n",
-    )
-  );
+  const expanded = "- {}\n  - title n\n  - link x\n  - description " +
+    "\t".repeat(40000) + "x\n";
+  equal(w.compactLength(expanded) > 65536, true);
+  traps(() => w.run(expanded));
   equal(fromXml(w.run(empty)), feed({ description: "", entries: [] }));
 });
