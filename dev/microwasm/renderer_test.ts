@@ -65,6 +65,39 @@ Deno.test("Markdown Wasm: paragraphs, headings, lists, code and literal HTML", a
   equal(render("# reset"), "<h1>reset</h1>\n");
 });
 
+Deno.test("Markdown inline code: matching runs retain literal backticks and inert HTML", async () => {
+  const { render } = await renderer();
+  const escape = (s: string) =>
+    s.replaceAll("&", "&amp;").replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  for (let width = 1; width <= 32; width++) {
+    const ticks = "`".repeat(width);
+    const text = '"value" "a' + "`".repeat(width - 1) +
+      'b <img src=https://patch.invalid/x> & [link](bad)"';
+    equal(
+      render("- " + ticks + text + ticks),
+      "<ul><li><code>" + escape(text) + "</code></li>\n</ul>\n",
+    );
+    const mismatched = "a" + "`".repeat(width + 1) + "b";
+    equal(
+      render("- " + ticks + mismatched + ticks),
+      "<ul><li><code>" + mismatched + "</code></li>\n</ul>\n",
+    );
+    equal(
+      render("- " + ticks + "unfinished"),
+      "<ul><li>" + ticks + "unfinished</li>\n</ul>\n",
+    );
+  }
+  equal(
+    render("before ``a`b`` after `c`"),
+    "<p>before <code>a`b</code> after <code>c</code></p>\n",
+  );
+  equal(
+    render("- " + "`".repeat(100000)),
+    "<ul><li>" + "`".repeat(100000) + "</li>\n</ul>\n",
+  );
+});
+
 Deno.test("Markdown links have only escaped data-href, never active URLs", async () => {
   const { render } = await renderer();
   equal(

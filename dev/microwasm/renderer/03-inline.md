@@ -3,7 +3,7 @@
 [Scanning patterns](02-scanning.md) · [Next: block structure](04-blocks.md)
 
 Function 5 scans one span. It recognizes punctuation escapes, decimal character
-references, single-backtick code, double-asterisk strong emphasis and simple
+references, matching-backtick-run code, double-asterisk strong emphasis and simple
 links. Code and strong contents use the escaped-span helper; link contents
 decode punctuation escapes and decimal references without recursive inline
 parsing. Everything else goes through the escaped-byte helper. In particular,
@@ -48,18 +48,36 @@ They do not go around the outer loop again with the same opener.
 | 0: start | Original span start | Never; copied into `i` once |
 | 1: end | Exclusive source bound | Never |
 | 2: i | First byte not yet consumed | At a successful construct, a literal fallback, or the ordinary-byte step |
-| 3: c | Byte originally loaded at `i` | Once per outer iteration |
+| 3: c | Byte originally loaded at `i`, then code delimiter width | Once per outer iteration or after counting an opening run |
 | 4: j | Escape byte, returned reference end, or first delimiter position | Reused by mutually exclusive branches |
-| 5: k | Closing parenthesis position | Only during a possible link |
-| 6/7: target start/end | Destination interior, excluding optional angle delimiters | After the label scan, before emitting the anchor |
+| 5: k | End of a backtick run, or closing parenthesis position | During code or link scanning |
+| 6/7: target start/end | Code content start, or destination interior excluding optional angle delimiters | Reused by mutually exclusive branches |
 
-### Code: a closing backtick commits the span
+### Code: only an equal-width run closes the span
 
-Search from `i + 1` for the next backtick. If found at `j`, emit the fixed
-`<code>` literal, escape `[i + 1, j)`, close the element, and set `i = j + 1`.
-If not found, escape `[i, end)` including the opener and return. This parser
-does not implement matching runs of backticks: adjacent ticks can therefore
-describe an empty code span. Contents are not sent back through `inline`.
+Count the entire opening run; save its width in `c` and its end in local 6.
+Find the next backtick at `j`, then count that entire run through `k`. A run
+with a different width belongs to the content: continue searching from `k`,
+not from its second byte. An equal-width run commits the code span. Emit the
+fixed `<code>` literal, escape `[contentStart, j)`, close the element, and
+continue at `k`. Neither HTML nor Markdown syntax inside it is interpreted.
+
+If there is no closer, escape `[i, end)` including the opener and return.
+Each candidate run is read once; a failed match never restarts at the next
+opening byte. This remains a partial renderer: spans are confined to one
+source line, and surrounding spaces are preserved rather than normalized.
+
+```mermaid
+flowchart TD
+  A[Count opening run; save width and content start] --> B[Find next backtick]
+  B --> C{Found before end?}
+  C -- no --> D[Escape remainder including opener; return]
+  C -- yes --> E[Count the whole candidate run]
+  E --> F{Same width?}
+  F -- no --> G[Search after this run]
+  G --> B
+  F -- yes --> H[Escape content inside code; continue after closer]
+```
 
 ### Links: three separate decisions after the opening bracket
 
@@ -153,12 +171,20 @@ allowlist is a separate step. These examples stay inert without that step:
         - inline-entity: `20 03 41 26 46 04 40`
           - inline-entity-read: `20 02 20 01 10 0a 22 04 04 40 20 04 21 02 0c 02 0b 0b`
         - inline-code: `20 03 41 e000 46 04 40`
-          - inline-code-find: `20 02 41 01 6a 20 01 41 e000 10 03 21 04`
-          - inline-code-missing: `20 04 20 01 46 04 40 20 02 20 01 10 04 0f 0b` — No closer: escape the entire suffix once, then return.
+          - inline-code-start: `20 02 21 04`
+          - inline-code-opening-run: `02 40 03 40 20 04 20 01 4f 0d 01 20 04 2d 00 00 41 e000 47 0d 01 20 04 41 01 6a 21 04 0c 00 0b 0b`
+          - inline-code-width: `20 04 20 02 6b 21 03 20 04 21 06`
+          - inline-code-search: `02 40 03 40`
+            - inline-code-find: `20 04 20 01 41 e000 10 03 21 04`
+            - inline-code-missing: `20 04 20 01 46 04 40 20 02 20 01 10 04 0f 0b` — No closer: escape the entire suffix once, then return.
+            - inline-code-run-start: `20 04 21 05`
+            - inline-code-closing-run: `02 40 03 40 20 05 20 01 4f 0d 01 20 05 2d 00 00 41 e000 47 0d 01 20 05 41 01 6a 21 05 0c 00 0b 0b`
+            - inline-code-match: `20 05 20 04 6b 20 03 46 0d 01`
+            - inline-code-search-next: `20 05 21 04 0c 00 0b 0b`
           - inline-code-open: `41 3c 10 02`
-          - inline-code-text: `20 02 41 01 6a 20 04 10 04`
+          - inline-code-text: `20 06 20 04 10 04`
           - inline-code-close: `41 c300 10 02`
-          - inline-code-next: `20 04 41 01 6a 21 02 0c 01 0b`
+          - inline-code-next: `20 05 21 02 0c 01 0b`
         - inline-link: `20 03 41 db00 46 04 40`
           - inline-label-find: `20 02 41 01 6a 20 01 41 dd00 10 0c 21 04`
           - inline-label-missing: `20 04 20 01 46 04 40 20 02 20 01 10 04 0f 0b`
