@@ -110,6 +110,13 @@ are imported, not calendar semantics. Functions: UTF-8 import 0, decode 1,
 encode 2, read fence 3, write fence 4, nibble 5, emit 6, hex digit 7, label
 length 8. Global 0 is the output cursor. Label lengths are single bytes.
 
+The Base64 pair also imports `fence(length, label)` and `frame(end, label)`.
+`label` points to a length-prefixed literal in the fourth page, supplied by
+the calling module, not by the user's document. `fence` returns a read-only
+`(start, end)` payload span; `frame` encloses bytes already at `0x10000` and
+returns their framed length. The caller validates those bytes as appropriate
+before framing. These exports share the same routines, not copies.
+
 `[microwasm]`
 
 - hx-header: `0061736d 01000000`
@@ -122,7 +129,7 @@ length 8. Global 0 is the output cursor. Label lengths are single bytes.
 - hx-global-section: `06 {{size:hx-globals}}`
   - hx-globals: `01 7f 01 41 00 0b`
 - hx-export-section: `07 {{size:hx-exports}}`
-  - hx-exports: `03 03 72756e 00 01 06 656e636f6465 00 02 06 6d656d6f7279 02 00`
+  - hx-exports: `05 03 72756e 00 01 06 656e636f6465 00 02 06 6d656d6f7279 02 00 05 66656e6365 00 03 05 6672616d65 00 04`
 - hx-code-section: `0a {{size:hx-code}}`
   - hx-code: `08`
     - hx-decode-record: `{{size:hx-decode-body}}`

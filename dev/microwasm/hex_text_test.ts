@@ -81,6 +81,11 @@ async function pair() {
     direct: (s: string) => convert(h.encode, s),
     rawRead: h.run,
     rawWrite: t.run,
+    shared: modules.h as unknown as {
+      fence(n: number, label: number): [number, number];
+      frame(end: number, label: number): number;
+    },
+    memory,
     check() {
       equal(toHex(memory.subarray(196608)), toHex(table));
     },
@@ -127,6 +132,36 @@ Deno.test("Hex/text: documented bytes, empty input, separators and exact final n
       frame(hex(enc.encode("a".repeat(n))), "hex"),
     );
   }
+  p.check();
+});
+
+Deno.test("Shared byte fences: read-only spans, label bounds and frame failure before moving bytes", async () => {
+  const p = await pair();
+  const label = 0x30204;
+  const source = enc.encode(frame("abc\n"));
+  p.memory.set(source);
+  let before = p.memory.slice();
+  equal(p.shared.fence(source.length, label), [8, 12]);
+  equal(toHex(p.memory), toHex(before));
+  for (const ptr of [-1, 0, 196607, 262144, 0x7fffffff]) {
+    traps(() => p.shared.fence(source.length, ptr));
+    traps(() => p.shared.frame(65536, ptr));
+  }
+  equal(toHex(p.memory), toHex(before));
+  // Framing validates the combined size before performing its overlapping move.
+  for (const end of [-1, 0, 65535, 196608, 196609]) {
+    traps(() => p.shared.frame(end, label));
+    equal(toHex(p.memory), toHex(before));
+  }
+  const malformed = enc.encode("```text\n```\nextra\n```\n");
+  p.memory.set(malformed);
+  before = p.memory.slice();
+  traps(() => p.shared.fence(malformed.length, label));
+  equal(toHex(p.memory), toHex(before));
+  equal(
+    p.write(frame("after failure")),
+    frame(hex(enc.encode("after failure")), "hex"),
+  );
   p.check();
 });
 
