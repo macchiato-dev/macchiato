@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 164 tests covering all twenty examples and the supplied
+`deno task test` runs 169 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -304,8 +304,17 @@ subset: table headers, dotted paths, dates and triple-quoted strings are not
 accepted. The docs distinguish that subset from a complete TOML parser.
 Try [the TOML reader](http://microwasm.localhost:3030/?tool=19-toml-to-list).
 
-Nineteen transformations are implemented: tools 1–19 in the plan.
-The remaining 31 are pending.
+[INI sections to a list](transforms/20-ini-to-list.md) reads section headers
+and string-valued assignments. Assignments before any header become an unnamed
+section; named empty sections remain present. The 1,552-byte module shares the
+Wasm Unicode/key comparator. Its documented dialect supports `=` and `:`,
+whole-line comments and LF/CRLF, without interpolation or type inference.
+Duplicate sections/keys, malformed UTF-8 and unsupported lines are rejected.
+The test-only Deno INI parser is not shipped with the browser tool.
+Try [the INI reader](http://microwasm.localhost:3030/?tool=20-ini-to-list).
+
+Twenty transformations are implemented: tools 1–20 in the plan.
+The remaining 30 are pending.
 
 ## Provisional byte-list notation
 

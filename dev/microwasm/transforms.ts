@@ -189,4 +189,15 @@ export const transforms = [{
     '```toml\nname = "Ben"\nactive = true\nlocation = { city = "Phoenix" }\nports = [\n  +8_080, # development\n  443,\n]\nempty = {}\n```\n',
   expected:
     '- {}\n  - "name" "Ben"\n  - "active" = true\n  - "location" {}\n    - "city" "Phoenix"\n  - "ports" []\n    - = 8080\n    - = 443\n  - "empty" {}\n',
+}, {
+  id: "20-ini-to-list",
+  title: "INI sections to hierarchical Markdown data",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+  ],
+  input:
+    "```ini\nname = Ben\n\n[server]\nhost = localhost\nport: 3030\n\n[paths]\nroot = C:\\projects\n```\n",
+  expected:
+    '- {}\n  - "" {}\n    - "name" "Ben"\n  - "server" {}\n    - "host" "localhost"\n    - "port" "3030"\n  - "paths" {}\n    - "root" "C:\\\\projects"\n',
 }];

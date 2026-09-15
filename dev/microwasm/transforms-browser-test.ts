@@ -1017,6 +1017,55 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === '- {}\n  - "x" []\n'
   );
+  await page.goto(new URL("?tool=20-ini-to-list", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const iniSource =
+    '```ini\nname=<b>Ben</b>\n[server]\nenabled=false\nport:3030\nnote="keep # this"\n[empty]\n```\n';
+  const iniList =
+    '- {}\n  - "" {}\n    - "name" "<b>Ben</b>"\n  - "server" {}\n    - "enabled" "false"\n    - "port" "3030"\n    - "note" "\\"keep # this\\""\n  - "empty" {}\n';
+  await page.locator("#transform-input").fill(iniSource);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    iniList,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered ul ul ul").count() === 2,
+    "INI assignments lost their section nesting",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "INI value became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/ini-to-list-rendered.png`,
+    fullPage: true,
+  });
+  for (const invalid of ["[a]\n[a]\n", "x=1\nx=2\n", "[a]\ninvalid\n"]) {
+    await page.locator("#transform-input").fill("```ini\n" + invalid + "```\n");
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === iniList,
+      "Invalid INI replaced the successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("```ini\n[empty]\n```\n");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === '- {}\n  - "empty" {}\n'
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

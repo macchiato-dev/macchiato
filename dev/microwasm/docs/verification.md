@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 164 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 169 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -170,7 +170,7 @@ rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
 There are nineteen implemented transformations out of the planned fifty:
-tools 1–19.
+tools 1–20.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -415,6 +415,27 @@ control-character escape forms, typed scalars, preserved decimal spelling,
 Browser tests edit the tree, render the JSON fence, preserve output after an
 invalid number, and follow the implementation link to the shared numeric
 scanner. The Wasm modules share memory and import functions directly.
+
+## INI reader checkpoint
+
+Five INI tests cover named/unnamed/empty sections, case-sensitive names,
+first-delimiter splitting, LF/CRLF, literal quotes/backslashes, comments and
+string-valued numbers/booleans. Five hundred generated named-section documents
+compare with the independent `@std/ini@0.225.2` parser, which is test-only.
+The colon delimiter and unnamed-section representation are checked against
+explicit fixtures rather than assumed to match that parser's defaults.
+
+Duplicate sections/keys, long names, Unicode, malformed UTF-8 (including
+comments), raw controls and unsupported lines are exercised. Tests fill the
+entire 64 KiB input and exactly 128 KiB output, exceed each boundary, verify
+unchanged scratch memory and recover using the same instance. The module is
+1,552 bytes and imports only the existing Wasm key/Unicode helper and memory.
+
+Chromium runs all 20 transformation fixtures and edits the INI source. It
+checks section nesting, literal HTML-like strings, preservation of the last
+successful output after errors, and recovery. The inspected screenshot shows
+the side-by-side editable source and rendered section/assignment hierarchy.
+There are 30 transformations still pending; this is not goal completion.
 
 ## Size is the complete module, not memory consumption
 
