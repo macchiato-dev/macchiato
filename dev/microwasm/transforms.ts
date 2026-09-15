@@ -165,4 +165,16 @@ export const transforms = [{
     "```yaml\nname: Ben\nactive: true\nlocation:\n  city: Phoenix\ntags:\n  - wasm\n  - yaml\nempty: {}\n```\n",
   expected:
     '- {}\n  - "name" "Ben"\n  - "active" = true\n  - "location" {}\n    - "city" "Phoenix"\n  - "tags" []\n    - "wasm"\n    - "yaml"\n  - "empty" {}\n',
+}, {
+  id: "18-list-to-toml",
+  title: "Hierarchical Markdown data to TOML",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "l", path: "transforms/01-list-to-json" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+  ],
+  input:
+    "- {}\n  - name Ben\n  - active = true\n  - location {}\n    - city Phoenix\n  - tags []\n    - wasm\n    - Markdown\n  - empty {}",
+  expected:
+    '```toml\n"name" = "Ben"\n"active" = true\n"location" = {"city" = "Phoenix"}\n"tags" = ["wasm", "Markdown"]\n"empty" = {}\n```\n',
 }];

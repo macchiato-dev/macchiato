@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 147 tests covering all twenty examples and the supplied
+`deno task test` runs 153 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -286,8 +286,17 @@ source key order and number spelling. Tests cover 500 generated round trips,
 exact input/output limits and recovery after errors. Neither helper is counted
 as an additional tool. Try [the YAML reader](http://microwasm.localhost:3030/?tool=17-yaml-to-list).
 
-Seventeen transformations are implemented: tools 1–17 in the plan.
-The remaining 33 are pending.
+[Hierarchical list to TOML](transforms/18-list-to-toml.md) emits root
+assignments, nested inline tables and mixed arrays. Its 1,377-byte module
+imports the list compiler and string helpers. It rejects null, non-object
+roots, duplicate decoded keys and integers outside the signed 64-bit range.
+Keys stay quoted (a dot is not a table path); strings and numeric spellings
+are preserved through TOML-compatible escaping and direct numeric copying.
+The test-only TOML parsers do not ship with the browser tool.
+Try [the TOML writer](http://microwasm.localhost:3030/?tool=18-list-to-toml).
+
+Eighteen transformations are implemented: tools 1–18 in the plan.
+The remaining 32 are pending, including the TOML reader.
 
 ## Provisional byte-list notation
 

@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 147 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 153 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are seventeen implemented transformations out of the planned fifty:
-tools 1–17.
+There are eighteen implemented transformations out of the planned fifty:
+tools 1–18.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -320,7 +320,7 @@ last page, an exact 128 KiB result, overflows and reuse. The independent parser
 also reconstructs all 128 levels of the maximum-depth sequence. Lone surrogate
 units are rejected rather than published as nonportable YAML string values.
 These tests establish the writer's stated data subset, not full YAML support.
-Chromium passes all seventeen fixtures and edits the writer's input to
+Chromium passes all eighteen fixtures and edits the writer's input to
 check block indentation, string/boolean distinctions, Unicode decoding and
 literal markup. Duplicate keys and lone-surrogate errors keep the successful
 output; a later empty-sequence input recovers. The screenshot was inspected:
@@ -350,6 +350,30 @@ checks exercise editable YAML, independently rendered nested-list output,
 literal HTML-like strings, preservation of successful output on invalid YAML,
 and subsequent recovery. The inspected screenshot shows both panes, nested
 levels, escaped apostrophes and distinct Boolean/null tokens correctly.
+
+Six TOML-writer tests cover assignments, nested inline tables, mixed arrays,
+empty containers, dotted/empty/long names, every code point below 160 and
+supplementary Unicode. Five hundred generated nested datasets are checked
+with `smol-toml@1.8.0`; a simpler dataset is also checked with
+`@std/toml@1.0.11`. Both are test-only imports executed by Deno. The latter
+rejects the valid minimized case `data = {x = []}` unless a space is inserted
+before the closing brace. That oracle limitation is not worked around in the
+Wasm output. The [TOML inline-table syntax](https://toml.io/en/v1.0.0#inline-table)
+and the second parser agree on the emitted structure.
+
+Integer tests cover 402 candidates around both signed 64-bit endpoints,
+comparing accepted output text and the second parser's BigInt result.
+Overflowing accumulation, null at multiple depths, duplicate escaped keys,
+invalid roots and malformed strings trap and allow subsequent recovery.
+Numeric spelling remains exact; the floating-point consumer may round or
+overflow, as documented. Memory tests cover exact 64 KiB input/intermediate
+sizes, exact 128 KiB output, overflows, and all 128 nested collections.
+
+The 1,377-byte TOML module imports actual Wasm functions and memory, with no
+host conversion callback. Browser checks cover source edits, rendered fenced
+output, literal markup, quoted dotted keys, empty arrays inside inline tables,
+the largest signed integer, invalid-input retention and recovery. The
+side-by-side screenshot is checked separately from text assertions.
 The rendered side-by-side screenshot was inspected: the embedded pipe remains
 in one cell, markup-like text stays literal, and duplicate keys and exponent
 spelling are visible unchanged in the JSON output.

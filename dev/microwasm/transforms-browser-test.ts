@@ -907,6 +907,63 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === "- []\n"
   );
+  await page.goto(new URL("?tool=18-list-to-toml", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const tomlInput =
+    '- {}\n  - name "<b>Ben</b>"\n  - "a.b" {}\n    - empty []\n  - max = 9223372036854775807\n  - note "a\\nb"';
+  const tomlOutput =
+    '```toml\n"name" = "<b>Ben</b>"\n"a.b" = {"empty" = []}\n"max" = 9223372036854775807\n"note" = "a\\u000ab"\n```\n';
+  await page.locator("#transform-input").fill(tomlInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    tomlOutput,
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").textContent() ===
+      tomlOutput.slice(8, -4),
+    "Rendered TOML changed quoting, numeric spelling or inline tables",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "TOML string became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/list-to-toml-rendered.png`,
+    fullPage: true,
+  });
+  for (
+    const invalid of [
+      "- {}\n  - x = null",
+      "- {}\n  - x = 9223372036854775808",
+      '- {}\n  - x one\n  - "\\u0078" two',
+      "- []",
+    ]
+  ) {
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === tomlOutput,
+      "Invalid TOML input replaced successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("- {}\n  - x = false");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === '```toml\n"x" = false\n```\n'
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
