@@ -79,6 +79,7 @@ for (
     "numbers/10-whole-number",
     "numbers/11-precision-format",
     "transforms/00-json-string-keys",
+    "transforms/00-yaml-scalars",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {
