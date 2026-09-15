@@ -201,7 +201,7 @@ Formatting returns an explicit byte length at `0x10000`; there is no terminator.
 
 [Hierarchical list to JSON](transforms/01-list-to-json.md) is now the second
 working tool. It handles `{}`/`[]` nesting, quoted keys and strings, typed
-scalars, escaping, and exact decimal spellings. Its 1,505-byte module imports
+scalars, escaping, and exact decimal spellings. Its 1,647-byte module imports
 the [JSON number validator](numbers/02-json-number.md) directly as
 Wasm, sharing its memory. The host performs no JSON conversion.
 Try [the local list converter](http://microwasm.localhost:3030/?tool=01-list-to-json).
@@ -340,9 +340,12 @@ Try [the INI writer](http://microwasm.localhost:3030/?tool=21-list-to-ini).
 
 [Dotenv to a list](transforms/22-dotenv-to-list.md) supports unquoted,
 single-quoted, double-quoted and backtick values, including physical multiline
-text. The 2,046-byte module handles `export`, comments and double-quoted
+text. The 2,016-byte module handles `export`, comments and double-quoted
 newline escapes without setting environment variables or expanding them.
 It rejects duplicates and malformed assignments instead of dropping data.
+Assignments are a flat Markdown list, without a root object item or added
+indentation; an empty environment produces empty Markdown. The reverse
+direction accepts that form as well as the older explicit object wrapper.
 Its documented dialect is tested against the independent dotenv parser,
 which is a test-only dependency and is not shipped to the browser.
 Try [the dotenv reader](http://microwasm.localhost:3030/?tool=22-dotenv-to-list).
@@ -372,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-five transformations are implemented: tools 1–35 in the plan.
-The remaining 15 are pending.
+Thirty-six transformations are implemented: tools 1–36 in the plan.
+The remaining 14 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -431,7 +434,18 @@ Markdown fences into the same bounded output region. Seven test groups
 include 250 reader round trips and ICAL.js comparisons, independent folding
 oracles, Unicode boundaries, malformed edits, exact capacities and recovery.
 Try [the calendar writer](http://microwasm.localhost:3030/?tool=35-agenda-to-ical).
-The vCard pair (36–37) is next.
+
+The [vCard reader](transforms/36-vcard-to-contacts.md) adds a 2,707-byte
+module using the same content-line helper. Multiple contacts become separate
+sections with original headers, decoded text, text lists and structured
+name/address/organization values. Version 3 can place VERSION after other
+fields; a discovery pass selects the right defaults before any value is
+decoded. Unknown fields, URI values and encoded binary remain data, never
+fetched or discarded. Seven test groups cover both versions, 240 generated
+cards compared with ICAL.js, escaped delimiters, groups and lexical parameters,
+UTF-8 folds, required fields, exact capacity limits and recovery after failure.
+The reciprocal writer is next.
+Try [the contact reader](http://microwasm.localhost:3030/?tool=36-vcard-to-contacts).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

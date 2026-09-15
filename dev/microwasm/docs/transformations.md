@@ -6,19 +6,31 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–35, and the side-by-side
+syntax validation and binary64 parsing, tools 1–36, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 15 tools remain.
+significant-digit formatting are implemented too. The other 14 tools remain.
 This is not goal completion.
+
+## Data representation
+
+Choose Markdown structures for the data, not to imitate an implementation's
+object tree. Flat records should read as flat lists. The document itself can
+be the top-level collection; omit wrapper items when they add no meaning.
+Nest only where a relationship needs it. This applies across formats, not
+just the JSON data-list dialect. That dialect also accepts object properties
+directly, without an explicit root marker. Dotenv demonstrates the flat form
+in both directions, including empty input/output for no assignments.
+
+## Implemented tools
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–35 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–36 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -159,7 +171,19 @@ parameters. Its folding pass counts encoded scalar widths and records only
 fold positions, then expands backward into CRLF lines and a longer Markdown
 fence. Independent string/code-point folding tests and ICAL.js comparisons
 cover the format rather than only reader/writer agreement. The shared helper
-is not counted separately. vCard contacts (36–37) are next.
+is not counted separately.
+
+The vCard reader (36) is implemented. Its first pass finds the version and
+checks boundaries and required fields, so version-3 properties preceding
+VERSION still get version-appropriate treatment. The emitting pass preserves
+grouped lexical headers, unknown/raw values, repeated fields, decoded text
+lists and nested name/address components. Organization components are scalar.
+UTF-8 is required; unsupported legacy encodings are rejected, and version-3
+binary fields remain encoded raw data. No URI is loaded. This is a contact
+representation, not a complete registration/cardinality validator. Tests use
+independent ICAL.js comparisons and exact expectations for valid semicolon
+escapes that ICAL.js retains outside structured properties. The reciprocal
+writer (37) is next.
 
 ## Shared number conversion
 

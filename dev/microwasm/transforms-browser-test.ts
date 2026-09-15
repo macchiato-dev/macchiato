@@ -1133,7 +1133,7 @@ try {
   const envSource =
     '```dotenv\nexport TITLE="<b>Notes</b>"\nBODY="first\nsecond"\nLITERAL=\'${TITLE}\'\nPORT=3030 # remains a string\n```\n';
   const envList =
-    '- {}\n  - "TITLE" "<b>Notes</b>"\n  - "BODY" "first\\nsecond"\n  - "LITERAL" "${TITLE}"\n  - "PORT" "3030"\n';
+    '- "TITLE" "<b>Notes</b>"\n- "BODY" "first\\nsecond"\n- "LITERAL" "${TITLE}"\n- "PORT" "3030"\n';
   await page.locator("#transform-input").fill(envSource);
   await page.getByRole("button", { name: "Run", exact: true }).click();
   await page.waitForFunction(
@@ -1144,7 +1144,8 @@ try {
   );
   await side("output", "Rendered");
   check(
-    await page.locator("#transform-output-rendered ul ul > li").count() === 4,
+    await page.locator("#transform-output-rendered > ul > li").count() === 4 &&
+      await page.locator("#transform-output-rendered ul ul").count() === 0,
     "Dotenv multiline text split an assignment into multiple items",
   );
   check(
@@ -1181,14 +1182,14 @@ try {
   await page.getByRole("button", { name: "Run", exact: true }).click();
   await page.waitForFunction(() =>
     (document.getElementById("transform-output") as HTMLTextAreaElement)
-      ?.value === '- {}\n  - "OK" "yes"\n'
+      ?.value === '- "OK" "yes"\n'
   );
   await page.goto(new URL("?tool=23-list-to-dotenv", base).href);
   await page.waitForFunction(() =>
     !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
   );
   const dotenvTree =
-    '- {}\n  - TITLE "<b>Notes</b>"\n  - GREETING "Hello # friend"\n  - BODY "literal\\\\n\\n```\\nafter"\n  - LITERAL "${TITLE}"';
+    '- TITLE "<b>Notes</b>"\n- GREETING "Hello # friend"\n- BODY "literal\\\\n\\n```\\nafter"\n- LITERAL "${TITLE}"';
   const dotenvOutput =
     "````dotenv\nTITLE=<b>Notes</b>\nGREETING=\"Hello # friend\"\nBODY='literal\\n\n```\nafter'\nLITERAL=${TITLE}\n````\n";
   await page.locator("#transform-input").fill(dotenvTree);
@@ -2189,6 +2190,73 @@ try {
         ?.value === expected,
     agenda,
   );
+  await page.goto(new URL("?tool=36-vcard-to-contacts", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const contactsInput = "```vcard\nBEGIN:VCARD\nVERSION:4.0\n" +
+    "FN:Jane <script>\nN:Doe;Jane,Janet;;;\n" +
+    "item1.EMAIL;TYPE=home:jane@example.com\n" +
+    "PHOTO:https://example.invalid/never-fetch.png\nEND:VCARD\n" +
+    "BEGIN:VCARD\nFN:Ben\nN:Atkin;Ben\nVERSION:3.0\nEND:VCARD\n```\n";
+  const contactFetches: string[] = [];
+  const onContactRequest = (request: { url(): string }) => {
+    if (request.url().includes("example.invalid")) {
+      contactFetches.push(request.url());
+    }
+  };
+  page.on("request", onContactRequest);
+  await page.locator("#transform-input").fill(contactsInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent === "Done."
+  );
+  const contactOutline = await page.locator("#transform-output").inputValue();
+  check(
+    contactOutline.includes('"N" structured [["Doe"],["Jane","Janet"]') &&
+      contactOutline.includes('"item1.EMAIL;TYPE=home" text') &&
+      contactOutline.includes('"VERSION" text "3.0"'),
+    "Contact output lost structured or versioned fields",
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered h2").count() === 2,
+    "Multiple contacts were not separate sections",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered script, #transform-output-rendered img",
+    ).count() === 0,
+    "Contact data created active markup",
+  );
+  check(contactFetches.length === 0, "Contact resource was fetched");
+  await page.screenshot({
+    path: artifacts + "/vcard-to-contacts-rendered.png",
+    fullPage: true,
+  });
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    contactsInput.replace("N:Doe;Jane,Janet;;;", "N:Doe;Jane"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === contactOutline,
+    "Malformed contact discarded the last successful output",
+  );
+  await page.locator("#transform-input").fill(
+    contactsInput.replace("Jane <script>", "Recovered contact"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("Recovered contact")
+  );
+  page.off("request", onContactRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

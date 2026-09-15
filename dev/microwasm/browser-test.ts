@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "36-vcard-to-contacts",
+        "Inside card: discover the version before interpreting values",
+        "After-END position",
+      ],
+      [
         "09-radix-format",
         "The two candidate tests and the temporary denominator",
         "D temporarily becomes",
