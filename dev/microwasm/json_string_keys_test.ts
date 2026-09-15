@@ -27,7 +27,16 @@ async function comparator() {
     bytes.set(y, 131072);
     return run(0, x.length, 131072, 131072 + y.length);
   }
-  return { bytes, run, compare };
+  return {
+    bytes,
+    run,
+    compare,
+    next: instance.exports.next as (
+      cursor: number,
+      end: number,
+      pending: number,
+    ) => number[],
+  };
 }
 function escaped(text: string) {
   let result = '"';
@@ -186,4 +195,41 @@ Deno.test("JSON keys: full memory spans, no writes, no retained state", async ()
   assert(c.compare(long, long) === 1);
   assert(c.compare(long, long.slice(0, -2) + 'b"') === 0);
   assert(c.compare('"\\u0000"', '""') === 0);
+});
+
+Deno.test("JSON string iterator: borrowed cursors, pending units and bounded API", async () => {
+  const c = await comparator();
+  const source = new TextEncoder().encode("😀\\u0000\\n猫");
+  c.bytes.set(source);
+  let cursor = 0, pending = 0;
+  const units: number[] = [];
+  for (;;) {
+    const result = c.next(cursor, source.length, pending);
+    cursor = result[1];
+    pending = result[2];
+    if (result[0] === -1) break;
+    units.push(result[0]);
+  }
+  assert(
+    JSON.stringify(units) === JSON.stringify([0xd83d, 0xde00, 0, 10, 0x732b]),
+  );
+  assert(
+    JSON.stringify(c.next(4, 4, 0xde00)) === JSON.stringify([0xde00, 4, 0]),
+  );
+  assert(
+    JSON.stringify(c.next(0x40000, 0x40000, 0)) ===
+      JSON.stringify([-1, 0x40000, 0]),
+  );
+  for (
+    const [a, b, p] of [
+      [-1, 1, 0],
+      [2, 1, 0],
+      [0, 0x40001, 0],
+      [0, 0, -1],
+      [0, 0, 1],
+      [0, 0, 0xd800],
+      [0, 0, 0xe000],
+    ]
+  ) trap(() => c.next(a, b, p));
+  assert(JSON.stringify(c.next(0, 0, 0)) === JSON.stringify([-1, 0, 0]));
 });

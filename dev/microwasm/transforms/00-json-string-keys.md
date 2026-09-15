@@ -63,10 +63,18 @@ surrogates are valid JSON code units; raw UTF-8 encodings of surrogates are not.
 ## Module
 
 Import `n.memory`, a fixed four-page memory such as the number scanner's.
-The input spans may lie anywhere in that memory. Only `equal` and `memory`
-are exported. Functions: next-unit 0, equal 1, hex-four 2, check-span 3,
-short-escape 4. The iterator returns three i32 values directly on the Wasm
-stack; there are no result buffers, calls into JavaScript, or globals.
+The input spans may lie anywhere in that memory. Exports are `equal`,
+`next`, and `memory`. Functions: next-unit 0, equal 1, hex-four 2, check-span 3,
+short-escape 4, bounded-next 5. The iterator returns three i32 values directly
+on the Wasm stack; there are no result buffers, calls into JavaScript, or globals.
+
+`next(cursor, end, pending)` exposes that pattern to string emitters. It reads
+inside an already validated JSON string, excluding its surrounding quotes.
+It returns `(codeUnit, nextCursor, pendingLowSurrogate)`. The caller starts
+with pending zero and carries the returned pending value into the next call.
+At end it returns `(-1, cursor, 0)`, after yielding any pending low surrogate.
+The public wrapper checks the memory span and requires pending to be zero or
+a low surrogate. As with `equal`, this is not whole-string validation.
 
 `[microwasm]`
 
@@ -76,11 +84,11 @@ stack; there are no result buffers, calls into JavaScript, or globals.
 - jk-import-section: `02 {{size:jk-imports}}`
   - jk-imports: `01 01 6e 06 6d656d6f7279 02 01 04 04`
 - jk-function-section: `03 {{size:jk-functions}}`
-  - jk-functions: `05 00 01 02 03 02`
+  - jk-functions: `06 00 01 02 03 02 00`
 - jk-export-section: `07 {{size:jk-exports}}`
-  - jk-exports: `02 05 657175616c 00 01 06 6d656d6f7279 02 00`
+  - jk-exports: `03 05 657175616c 00 01 06 6d656d6f7279 02 00 04 6e657874 00 05`
 - jk-code-section: `0a {{size:jk-code}}`
-  - jk-code: `05`
+  - jk-code: `06`
     - jk-next-record: `{{size:jk-next-body}}`
       - jk-next-body: `01 05 7f`
         - jk-next-pending: `20 02 04 40 20 02 20 00 41 00 0f 0b`
@@ -147,6 +155,11 @@ stack; there are no result buffers, calls into JavaScript, or globals.
         - jk-short-return: `20 00 41 f200 46 04 40 41 0d 0f 0b`
         - jk-short-tab: `20 00 41 f400 46 04 40 41 09 0f 0b`
         - jk-short-invalid: `00 0b`
+    - jk-bounded-record: `{{size:jk-bounded-body}}`
+      - jk-bounded-body: `00`
+        - jk-bounded-span: `20 00 20 01 4b 20 01 41 808010 4b 72 04 40 00 0b`
+        - jk-bounded-pending: `20 02 04 40 20 02 41 80b803 6b 41 ff07 4b 04 40 00 0b 0b`
+        - jk-bounded-next: `20 00 20 01 20 02 10 00 0b`
 
 Next-unit locals: cursor 0, end 1, pending 2, leading/escape byte 3, width 4,
 scalar 5, remaining bytes 6, continuation byte 7. Equal locals: start/end
