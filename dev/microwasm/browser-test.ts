@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "43-changes-to-diff",
+        "Boundary bookkeeping is not a second patch validator",
+        "Sum alone is insufficient",
+      ],
+      [
         "42-diff-to-changes",
         "Inside run: counts decide whether a header is content",
         "Cleared after use",

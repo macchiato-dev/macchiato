@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty-two transformations are implemented: tools 1–42 in the plan.
-The remaining 8 are pending.
+Forty-three transformations are implemented: tools 1–43 in the plan.
+The remaining 7 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -497,13 +497,23 @@ Try [the WebVTT writer](http://microwasm.localhost:3030/?tool=41-cues-to-vtt).
 
 The [unified-diff reader](transforms/42-diff-to-changes.md) preserves file
 labels, hunk ranges, changed/context lines, metadata and missing-newline
-markers as flat records. Its 1,895-byte module uses a
+markers as flat records. Its 1,968-byte module uses a
 [315-byte range/line helper](transforms/00-patch-lines.md). Hunk counts
 distinguish real file headers from header-looking changed text. UTF-8 payloads
 retain CR and other control bytes through escapes. Tests reconstruct 400
 independently generated patches byte-for-byte and apply them to their source
 files; malformed edits, exact capacity and recovery are also checked.
 Try [the diff reader](http://microwasm.localhost:3030/?tool=42-diff-to-changes).
+
+The [diff writer](transforms/43-changes-to-diff.md) completes that pair with
+a 1,557-byte module. Strings stream directly into output; a small contribution
+counter prevents records from being reinterpreted as another kind of line.
+The reader now exposes read-only validation of the completed bare patch,
+sharing its separate-side counts and missing-newline checks without creating
+a throwaway Markdown result. Actual Wasm pair round trips reconstruct 400
+independent patches, then apply them to verify the intended files. Tests also
+cover malformed records, decoded fence runs, exact capacity and trap recovery.
+Try [the diff writer](http://microwasm.localhost:3030/?tool=43-changes-to-diff).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

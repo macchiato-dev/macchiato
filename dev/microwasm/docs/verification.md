@@ -978,6 +978,33 @@ screenshots were inspected (`diff-to-changes-rendered.png` and
 
 There are eight transformations left. This checkpoint is not goal completion.
 
+## Checkpoint: unified-diff writer and shared validation
+
+Tool 43 is a 1,557-byte handwritten module. The reader is now 1,968 bytes
+after exposing its scanner as a read-only `validate(start, end)` entry.
+These sizes exclude shared dependencies. The writer streams decoded strings
+directly into the output, validates the resulting bare diff, then frames it.
+It preserves flat records without adding a root item.
+
+Seven writer test groups cover lexical spelling, controls and Unicode,
+record-kind ambiguity, separate old/new counts, missing-newline ownership,
+malformed edits, exact capacities, decoded backtick fences and recovery.
+Four hundred independently generated patches pass through the actual Wasm
+reader and writer byte-for-byte and apply to the expected files. Mutated
+records either fail or stabilize through both modules. The additional reader
+test verifies that validation never writes memory, even on failure, and can
+check a bare patch larger than its regular fenced-input limit.
+
+All 370 Deno tests passed in complete partitions of 200 and 170. Both browser
+suites passed, including all 43 transformation fixtures. The writer's browser
+check consumes actual reader output, tests both rendered panes, rejects wrong-
+side counts without replacing successful output, and recovers with decoded
+backticks. Embedded markup stays literal and causes no resource request.
+Screenshots `changes-to-diff-rendered.png` and
+`43-changes-to-diff-walkthrough.png` were inspected in `dist/browser/`.
+
+Seven transformations remain. This checkpoint is not goal completion.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

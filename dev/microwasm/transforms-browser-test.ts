@@ -2786,6 +2786,64 @@ try {
     headerLikeRecords,
   );
   check(diffRequests.length === 0, "Diff data fetched a resource");
+  await page.goto(new URL("?tool=43-changes-to-diff", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  async function writeDiff(records: string, expected: string) {
+    await page.locator("#transform-input").fill(records);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(
+      (value) =>
+        (document.getElementById("transform-output") as HTMLTextAreaElement)
+          ?.value === value,
+      expected,
+    );
+  }
+  await writeDiff(headerLikeRecords, headerLike);
+  await writeDiff(diffRecords, diffSource);
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered > pre").count() === 1,
+    "Written diff did not remain one literal code block",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered img, #transform-output-rendered script",
+    )
+      .count() === 0,
+    "Written diff activated its payload",
+  );
+  await page.screenshot({
+    path: artifacts + "/changes-to-diff-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    headerLikeRecords.replace(
+      '- add "++ added text"',
+      '- remove "++ added text"',
+    ),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === diffSource,
+    "Wrong-side hunk counts replaced successful output",
+  );
+  await writeDiff('- meta "\\u0060\\u0060\\u0060"\n', "````diff\n```\n````\n");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered > pre").count() === 1,
+    "Decoded backticks escaped the written diff fence",
+  );
+  check(diffRequests.length === 0, "Written diff data fetched a resource");
   page.off("request", onDiffRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(

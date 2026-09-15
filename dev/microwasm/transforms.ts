@@ -469,4 +469,19 @@ export const transforms = [{
     "```diff\ndiff --git a/message.txt b/message.txt\n--- a/message.txt\n+++ b/message.txt\n@@ -1,2 +1,3 @@ greeting\n Hello\n-old\n+new\n+last\n\\ No newline at end of file\n```\n",
   expected:
     '- meta "diff --git a/message.txt b/message.txt"\n- file "a/message.txt" "b/message.txt"\n- hunk -1,2 +1,3 " greeting"\n- context "Hello"\n- remove "old"\n- add "new"\n- add "last"\n- no-newline\n',
+}, {
+  id: "43-changes-to-diff",
+  title: "Markdown file, hunk and change records to unified diff",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "r", path: "transforms/38-srt-to-cues" },
+    { name: "p", path: "transforms/00-patch-lines" },
+    { name: "d", path: "transforms/42-diff-to-changes" },
+  ],
+  input:
+    '- meta "diff --git a/message.txt b/message.txt"\n- file "a/message.txt" "b/message.txt"\n- hunk -1,2 +1,3 " greeting"\n- context "Hello"\n- remove "old"\n- add "new"\n- add "last"\n- no-newline\n',
+  expected:
+    "```diff\ndiff --git a/message.txt b/message.txt\n--- a/message.txt\n+++ b/message.txt\n@@ -1,2 +1,3 @@ greeting\n Hello\n-old\n+new\n+last\n\\ No newline at end of file\n```\n",
 }];
