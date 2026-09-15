@@ -179,6 +179,67 @@ try {
       `./${new URL(link).searchParams.get("doc")!.slice(0, -3)}`,
     );
   }
+  const calendarPage = libraryLinks.find((link) =>
+    link.includes("00-calendar-lines")
+  );
+  check(calendarPage, "Missing calendar content-line documentation");
+  await page.goto(calendarPage!);
+  await page.waitForSelector("#rendered h1");
+  await screenshot("calendar-lines-light");
+  const calendarLines = await page.evaluate(async () => {
+    const n = (await WebAssembly.instantiateStreaming(
+      fetch("./numbers/02-json-number.wasm"),
+    )).instance.exports;
+    const c = (await WebAssembly.instantiateStreaming(
+      fetch("./transforms/00-calendar-lines.wasm"),
+      { n },
+    )).instance.exports as unknown as {
+      memory: WebAssembly.Memory;
+      unfold(s: number, e: number): number;
+      line(s: number, e: number): [number, number, number, number, number];
+    };
+    const memory = new Uint8Array(c.memory.buffer);
+    const bytes = new TextEncoder().encode(
+      'ATTENDEE;CN="Doe, Jane":mailto:jane@example.com\r\n' +
+        "SUMMARY:Folded\r\n  title\r\n",
+    );
+    memory.set(bytes);
+    const end = 65536 + c.unfold(0, bytes.length);
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    const text = (s: number, e: number) =>
+      decoder.decode(memory.subarray(s, e));
+    const rows = [];
+    let start = 65536;
+    while (start < end) {
+      const [nameEnd, parametersEnd, valueStart, valueEnd, next] = c.line(
+        start,
+        end,
+      );
+      if (next <= start || next > end) {
+        throw Error("Non-advancing calendar cursor");
+      }
+      rows.push([
+        text(start, nameEnd),
+        text(nameEnd, parametersEnd),
+        text(valueStart, valueEnd),
+      ]);
+      start = next;
+    }
+    // The fold lies inside U+1F600's UTF-8 bytes, not between characters.
+    memory.set([0xf0, 0x9f, 13, 10, 32, 0x98, 0x80]);
+    const length = c.unfold(0, 7);
+    if (text(65536, 65536 + length) !== "😀") {
+      throw Error("Split UTF-8 fold lost data");
+    }
+    return rows;
+  });
+  check(
+    JSON.stringify(calendarLines) === JSON.stringify([
+      ["ATTENDEE", ';CN="Doe, Jane"', "mailto:jane@example.com"],
+      ["SUMMARY", "", "Folded title"],
+    ]),
+    "Calendar content-line spans differ in Chromium",
+  );
   const htmlPage = libraryLinks.find((link) =>
     link.includes("00-html-characters")
   );

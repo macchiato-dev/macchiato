@@ -142,6 +142,14 @@ array but not other absent arrays. Tests compare independent XML projections,
 duplicates, full input and output boundaries, and failed-run recovery.
 The next pair is iCalendar and Markdown agendas (34–35).
 
+Their shared `00-calendar-lines` helper is implemented. It unfolds physical
+lines before UTF-8 validation, then exposes bounded name/parameter/value spans.
+Quoted parameter commas and colons remain data. The agenda layer must still
+interpret components and property types, decode TEXT/parameter escapes, and
+preserve date/time forms and TZID without silently applying the host time zone.
+The writer must add value escaping and byte-counted line folding. These two
+tools remain pending; the helper is not counted separately.
+
 ## Shared number conversion
 
 Start with exact integer digit accumulation and formatting for bases 2..36.

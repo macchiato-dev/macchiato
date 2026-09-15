@@ -90,7 +90,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 280 tests covering all twenty examples and the supplied
+`deno task test` runs 286 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -398,6 +398,15 @@ and output limits, compact-JSON expansion, and recovery. Browser checks also
 parse its XML independently and keep rendered RSS inert.
 Try [the RSS writer](http://microwasm.localhost:3030/?tool=33-entries-to-rss).
 The iCalendar pair (34–35) is next.
+
+The [calendar content-line helper](transforms/00-calendar-lines.md) is now
+implemented in 1,185 bytes. It unfolds before validating UTF-8, preserving
+characters split across physical lines, and returns spans for property names,
+quoted parameter lists and raw values. Six test groups cover precise cursor
+boundaries, 300 folded calendars compared with ICAL.js, split UTF-8 repair,
+malformed input, full-page bounds and read-only access. It does not yet produce
+an agenda, decode property-specific values or interpret time zones; it is a
+shared prerequisite, not a thirty-fourth completed tool.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

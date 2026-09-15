@@ -79,7 +79,7 @@ The byte copy cannot grow its input; output is at most 64 KiB.
 
 Each pass parses one value, then decides whether a comma introduces another.
 A quoted value scans to a closing quote; the next byte must be a delimiter
-or end. An unquoted value stops *before* a comma, semicolon or colon.
+or end. An unquoted value stops before a comma, semicolon or colon.
 Neither branch consumes the semicolon/colon: that delimiter belongs to the
 content-line parser.
 
