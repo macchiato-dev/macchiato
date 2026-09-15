@@ -554,4 +554,19 @@ export const transforms = [{
     '```json\n[{"op":"add","path":"/pets/-","value":{"name":"Milo"}},\n {"op":"move","from":"/old","path":"/new","note":"retain me"}]\n```\n',
   expected:
     '- add\n  - `"path" "/pets/-"`\n  - `"value" {"name":"Milo"}`\n- move\n  - `"from" "/old"`\n  - `"path" "/new"`\n  - `"note" "retain me"`\n',
+}, {
+  id: "50-list-to-json-patch",
+  title: "Operation records to JSON Patch",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "q", path: "transforms/00-json-pointer" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "r", path: "transforms/49-json-patch-to-list" },
+  ],
+  input:
+    '- add\n  - `"path" "/pets/-"`\n  - `"value" {"name":"Milo"}`\n- move\n  - `"from" "/old"`\n  - `"path" "/new"`\n  - `"note" "retain me"`\n',
+  expected:
+    '```json\n[{"op":"add","path":"/pets/-","value":{"name":"Milo"}},{"op":"move","from":"/old","path":"/new","note":"retain me"}]\n```\n',
 }];

@@ -264,3 +264,61 @@ Deno.test("JSON Patch writer: source/depth bounds, unchanged memory and repeated
     ),
   );
 });
+
+Deno.test("JSON Patch writer: punctuation edits reject or remain valid round-trippable data", async () => {
+  const t = await tool();
+  const source = records([
+    { op: "move", path: "/b", from: "/a" },
+    { op: "add", path: "/x", value: { text: 'a`b"c', number: 42 } },
+  ]);
+  for (let at = 0; at < source.length; at++) {
+    for (
+      const ch of [
+        '"',
+        "`",
+        ":",
+        ",",
+        "{",
+        "}",
+        "[",
+        "]",
+        "~",
+        "/",
+        "\\",
+        "\n",
+        " ",
+        "",
+      ]
+    ) {
+      const changed = source.slice(0, at) + ch + source.slice(at + 1);
+      let result: string;
+      try {
+        result = t.run(changed);
+      } catch (e) {
+        if (!(e instanceof WebAssembly.RuntimeError)) throw e;
+        continue;
+      }
+      const ops = JSON.parse(result.slice(8, -5));
+      equal(Array.isArray(ops), true);
+      for (const op of ops) {
+        equal(
+          ["add", "remove", "replace", "move", "copy", "test"].includes(op.op),
+          true,
+        );
+        equal(typeof op.path, "string");
+        equal(op.path === "" || op.path.startsWith("/"), true);
+        equal(/~(?![01])/.test(op.path), false);
+        if (["add", "replace", "test"].includes(op.op)) {
+          equal(Object.hasOwn(op, "value"), true);
+        }
+        if (["move", "copy"].includes(op.op)) {
+          equal(typeof op.from, "string");
+          equal(op.from === "" || op.from.startsWith("/"), true);
+          equal(/~(?![01])/.test(op.from), false);
+        }
+        if (op.op === "move") equal(op.path.startsWith(op.from + "/"), false);
+      }
+      equal(t.run(t.read(result)), result);
+    }
+  }
+});

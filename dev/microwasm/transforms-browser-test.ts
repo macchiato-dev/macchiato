@@ -2759,6 +2759,51 @@ try {
     "JSON Patch value caused a network request",
   );
   page.off("request", onPatchRequest);
+  await page.goto(new URL("?tool=50-list-to-json-patch", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const writtenPatch =
+    '```json\n[{"op":"add","value":"a`b <img src=https://patch.invalid/x>","path":"/a~1b"},{"op":"move","from":"/a","path":"/ab"}]\n```\n';
+  page.on("request", onPatchRequest);
+  await writeDiff(patchRecords, writtenPatch);
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-input-rendered code").count() === 4 &&
+      await page.locator("#transform-output-rendered pre code").count() === 1,
+    "JSON Patch writer lost input records or the output fence",
+  );
+  const browserPatch = JSON.parse(
+    (await page.locator("#transform-output-rendered pre code").textContent())!,
+  );
+  check(
+    browserPatch[0].value === "a`b <img src=https://patch.invalid/x>" &&
+      browserPatch[1].from === "/a",
+    "Rendered patch bytes differ from their JSON meaning",
+  );
+  await page.screenshot({
+    path: artifacts + "/records-to-json-patch-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    patchRecords.replace('"/ab"', '"/a/b"'),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === writtenPatch,
+    "Invalid records replaced the previously saved patch",
+  );
+  await writeDiff(patchRecords, writtenPatch);
+  check(patchRequests.length === 0, "Patch writer activated a resource URL");
+  page.off("request", onPatchRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   const diff = transforms.find((t) => t.id === "42-diff-to-changes")!;
   await page.goto(new URL("?tool=42-diff-to-changes", base).href);
