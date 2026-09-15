@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 85 tests covering all twenty examples and the supplied
+`deno task test` runs 91 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -196,13 +196,19 @@ shared JSON number scanner.
 
 [Fenced CSV to a Markdown table](transforms/04-csv-to-table.md) handles quoted
 fields, escaped quotes, embedded line breaks and matching row widths. Its
-948-byte module emits Markdown-safe cell text. The Wasm reader now renders
+1,004-byte module emits Markdown-safe cell text. The Wasm reader now renders
 pipe tables and decimal character references, so the tool's Rendered view
 shows an actual table.
 [Markdown table to CSV](transforms/05-table-to-csv.md) is the reverse tool:
 it decodes escaped cells, quotes CSV fields, and chooses a long enough code
-fence to preserve embedded backticks. Its 1,387-byte module needs no imports.
-The remaining 45 transformations are pending.
+fence to preserve embedded backticks. Its 1,479-byte module needs no imports.
+
+[TSV to table](transforms/06-tsv-to-table.md) and
+[table to TSV](transforms/07-table-to-tsv.md) share those implementations using
+explicit TSV entries. Quotes stay literal, tabs delimit fields, and exporting
+a field containing a decoded tab or line ending is rejected. Each 58-byte
+adapter directly re-exports its dependency's Wasm function and memory; those
+sizes exclude the dependency. The remaining 43 transformations are pending.
 
 ## Provisional byte-list notation
 

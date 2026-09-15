@@ -396,6 +396,64 @@ try {
     document.querySelector("#transform-output-rendered pre code")
       ?.textContent === '"x"\n'
   );
+  for (
+    const [id, input, expected, invalid] of [
+      [
+        "06-tsv-to-table",
+        '```tsv\nname\tnote\nBen\t"quoted", literal\n```',
+        '| name | note |\n| --- | --- |\n| Ben | "quoted",&#32;literal |\n',
+        "```tsv\na\tb\nx\n```",
+      ],
+      [
+        "07-table-to-tsv",
+        '|name|note|\n|---|---|\n|Ben|"quoted", literal|',
+        '```tsv\nname\tnote\nBen\t"quoted", literal\n```\n',
+        "|name|note|\n|---|---|\n|Ben|line&#10;break|",
+      ],
+    ]
+  ) {
+    await page.goto(new URL(`?tool=${id}`, base).href);
+    await page.waitForFunction(() =>
+      !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+    );
+    await page.locator("#transform-input").fill(input);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(
+      (value) =>
+        (document.getElementById("transform-output") as HTMLTextAreaElement)
+          ?.value === value,
+      expected,
+    );
+    await side("output", "Rendered");
+    const content = id === "06-tsv-to-table"
+      ? await page.locator("#transform-output-rendered td").last().textContent()
+      : await page.locator("#transform-output-rendered pre code").textContent();
+    check(
+      content?.includes('"quoted", literal'),
+      "TSV quote handling changed in the rendered view",
+    );
+    await page.screenshot({
+      path: `${artifacts}/${id}-mixed.png`,
+      fullPage: true,
+    });
+    await page.locator("#transform-input").fill(invalid);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === expected,
+      "Invalid TSV input replaced output",
+    );
+    await page.locator("#transform-input").fill(input);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent === "Done."
+    );
+  }
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

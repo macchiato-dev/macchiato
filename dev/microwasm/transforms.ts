@@ -35,4 +35,17 @@ export const transforms = [{
     '| name | note |\n| --- | --- |\n| Ben | hello,&#32;world |\n| Ada | said "hi" |',
   expected:
     '```csv\n"name","note"\n"Ben","hello, world"\n"Ada","said ""hi"""\n```\n',
+}, {
+  id: "06-tsv-to-table",
+  title: "TSV to Markdown table",
+  dependencies: [{ name: "d", path: "transforms/04-csv-to-table" }],
+  input: "```tsv\nname\tcity\nBen\tPhoenix\nAda\tLondon\n```\n",
+  expected:
+    "| name | city |\n| --- | --- |\n| Ben | Phoenix |\n| Ada | London |\n",
+}, {
+  id: "07-table-to-tsv",
+  title: "Markdown table to TSV",
+  dependencies: [{ name: "d", path: "transforms/05-table-to-csv" }],
+  input: "| name | city |\n| --- | --- |\n| Ben | Phoenix |\n| Ada | London |",
+  expected: "```tsv\nname\tcity\nBen\tPhoenix\nAda\tLondon\n```\n",
 }];

@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 85 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 91 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,7 +169,7 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are five implemented transformations out of the planned fifty.
+There are seven implemented transformations out of the planned fifty.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -191,6 +191,15 @@ checks long fences, shorter apparent closing fences inside CSV, escaped pipes
 and punctuation. Browser tests edit both valid and invalid tables, compare
 decoded input cells, and verify that CSV with embedded triple backticks remains
 one complete rendered code block. Its side-by-side screenshot was inspected.
+
+Six TSV tests cover its distinct quote and delimiter rules, empty fields,
+Unicode, 500 generated round trips and rejection of unrepresentable decoded
+tabs/line endings. They check grammar and capacity errors, full-size inputs,
+memory isolation, and repeated CSV/TSV switching on the same instances after
+traps. The adapters are verified to re-export the actual dependency function
+and memory, without a second allocation or a host conversion callback. Browser
+tests edit both TSV tools, check literal quotes in rendered results and
+preserve previous output on invalid input. Both screenshots were inspected.
 
 The JSON syntax scanner was compared with the native JSON parser on ten
 thousand generated candidate strings and explicit grammar boundaries. List
