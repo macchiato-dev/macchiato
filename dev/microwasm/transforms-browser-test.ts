@@ -454,6 +454,58 @@ try {
       document.getElementById("transform-status")?.textContent === "Done."
     );
   }
+  for (const id of ["12-json-pretty", "13-json-compact"]) {
+    await page.goto(new URL(`?tool=${id}`, base).href);
+    await page.waitForFunction(() =>
+      !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+    );
+    const input =
+      '```json\n{ "x" : -0, "x": 1.2300E+40, "tags": [ "猫", "<b>```</b>" ] }\n```';
+    const body = id === "12-json-pretty"
+      ? '{\n  "x": -0,\n  "x": 1.2300E+40,\n  "tags": [\n    "猫",\n    "<b>```</b>"\n  ]\n}'
+      : '{"x":-0,"x":1.2300E+40,"tags":["猫","<b>```</b>"]}';
+    const expected = "```json\n" + body + "\n```\n";
+    await page.locator("#transform-input").fill(input);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(
+      (value) =>
+        (document.getElementById("transform-output") as HTMLTextAreaElement)
+          ?.value === value,
+      expected,
+    );
+    await side("output", "Rendered");
+    check(
+      await page.locator("#transform-output-rendered pre code")
+        .textContent() === body + "\n",
+      "JSON tokens changed in the rendered output",
+    );
+    check(
+      await page.locator("#transform-output-rendered b").count() === 0,
+      "JSON string became HTML",
+    );
+    await page.screenshot({
+      path: `${artifacts}/${id}-mixed.png`,
+      fullPage: true,
+    });
+    await page.locator("#transform-input").fill('```json\n{"x":1,}\n```');
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    await side("output", "Code");
+    check(
+      await page.locator("#transform-output").inputValue() === expected,
+      "Invalid JSON replaced successful output",
+    );
+    await page.locator("#transform-input").fill("```json\n[]\n```");
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === "```json\n[]\n```\n"
+    );
+  }
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

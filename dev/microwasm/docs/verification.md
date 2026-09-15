@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 91 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 96 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,7 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are seven implemented transformations out of the planned fifty.
+There are nine implemented transformations out of the planned fifty:
+tools 1–7 and 12–13.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -200,6 +201,23 @@ traps. The adapters are verified to re-export the actual dependency function
 and memory, without a second allocation or a host conversion callback. Browser
 tests edit both TSV tools, check literal quotes in rendered results and
 preserve previous output on invalid input. Both screenshots were inspected.
+
+Five JSON-formatting tests cover exact string/number tokens, duplicate keys,
+empty containers, scalar roots, LF/CRLF fences and 800 generated nested
+documents. Both modes are compared with native formatting where lexical
+identity is not at issue; separate hand-written fixtures assert duplicate
+keys and unusual numeric/escape spellings that native object conversion would
+lose. Idempotence, pretty/compact round trips and alternating list/JSON modes
+on the same parser instance are checked. Truncated and perturbed inputs use
+native parsing as an acceptance oracle. Tests cover malformed fences, invalid
+controls/escapes, 128-container depth, exact 64 KiB input, output overflow,
+unchanged input, sentinel bytes and recovery. Adapters are checked to export
+the dependency's actual function and memory. Browser checks edit both tools,
+keep JSON-like markup inert, compare rendered code with exact tokens, and
+preserve the previous output on malformed JSON.
+Both new side-by-side screenshots were inspected. This container's available
+fonts show the CJK fixture as a missing-glyph box; the textarea and rendered
+code text are independently asserted to contain the original Unicode data.
 
 The JSON syntax scanner was compared with the native JSON parser on ten
 thousand generated candidate strings and explicit grammar boundaries. List

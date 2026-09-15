@@ -56,14 +56,16 @@ export async function startTransform(entry) {
   }
   // Wire Wasm exports directly: shared memory and native Wasm calls, not JS
   // implementations or wrapper functions for the numeric parsing routines.
-  const imports = Object.fromEntries(
-    await Promise.all(dependencies.map(async (item, i) => {
-      const { instance } = await WebAssembly.instantiateStreaming(
-        responses[i + 1],
-      );
-      return [item.name, instance.exports];
-    })),
-  );
+  // Catalogue dependencies precede their consumers. Downloads are parallel;
+  // instantiation is ordered so a parser can import the numeric scanner.
+  const imports = {};
+  for (const [i, item] of dependencies.entries()) {
+    const { instance } = await WebAssembly.instantiateStreaming(
+      responses[i + 1],
+      imports,
+    );
+    imports[item.name] = instance.exports;
+  }
   const { instance } = await WebAssembly.instantiateStreaming(
     responses[0],
     imports,

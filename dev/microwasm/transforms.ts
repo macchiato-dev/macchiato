@@ -48,4 +48,26 @@ export const transforms = [{
   dependencies: [{ name: "d", path: "transforms/05-table-to-csv" }],
   input: "| name | city |\n| --- | --- |\n| Ben | Phoenix |\n| Ada | London |",
   expected: "```tsv\nname\tcity\nBen\tPhoenix\nAda\tLondon\n```\n",
+}, {
+  id: "12-json-pretty",
+  title: "Pretty-print JSON",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+  ],
+  input:
+    '```json\n{"name":"Ben","tags":["wasm","Markdown"],"settings":{}}\n```\n',
+  expected:
+    '```json\n{\n  "name": "Ben",\n  "tags": [\n    "wasm",\n    "Markdown"\n  ],\n  "settings": {}\n}\n```\n',
+}, {
+  id: "13-json-compact",
+  title: "Compact JSON",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+  ],
+  input:
+    '```json\n{\n  "name": "Ben",\n  "numbers": [ -0, 1.2300E+40 ],\n  "text": "keep  these spaces"\n}\n```\n',
+  expected:
+    '```json\n{"name":"Ben","numbers":[-0,1.2300E+40],"text":"keep  these spaces"}\n```\n',
 }];
