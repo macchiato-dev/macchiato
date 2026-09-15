@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–27, and the side-by-side
+syntax validation and binary64 parsing, tools 1–28, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 23 tools remain.
+significant-digit formatting are implemented too. The other 22 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–27 are now all implemented.
+stable numbering; tools 1–28 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -90,9 +90,15 @@ checks the complete framed size and moves it forward for a sufficiently long
 Markdown fence. It reclaims the first memory page for compact JSON after list
 compilation, without modifying the browser's editable input.
 
-The OPML pair (28–29) is next: nested Markdown links and labels map to outline
-elements, reusing the tested XML string handling. This needs real outline/link
-conversion, not merely another label on the generic XML tree tools.
+The OPML writer (28) maps nested Markdown links and labels to outline elements,
+including linked parents, an optional title, empty labels and ordered siblings.
+It scans brackets/parentheses before decoding punctuation escapes and decimal
+references, then uses the shared XML character writer for escaping. No JSON
+intermediate or node tree is allocated. Complete invalid character references
+trap, including values that would otherwise wrap i32. HTTP(S) destinations
+are stored as data, never fetched. A longer output fence contains backticks.
+The reverse OPML reader (29) is next: it needs real outline/link conversion,
+not merely another label on the generic XML tree tools.
 
 ## Shared number conversion
 

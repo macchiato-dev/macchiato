@@ -278,4 +278,17 @@ export const transforms = [{
     '- []\n  - {}\n    - element note\n    - attributes {}\n      - priority high\n    - children []\n      - {}\n        - text "Hello "\n      - {}\n        - element b\n        - attributes {}\n        - children []\n          - {}\n            - text Ben\n      - {}\n        - text " & friends."\n',
   expected:
     '```xml\n<note priority="high">Hello <b>Ben</b> &amp; friends.</note>\n```\n',
+}, {
+  id: "28-outline-to-opml",
+  title: "Markdown link outline to OPML",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "x", path: "transforms/00-xml-strings" },
+    { name: "o", path: "transforms/00-xml-output" },
+  ],
+  input:
+    "# Reading\n\n- Web\n  - [WebAssembly](https://webassembly.org/)\n  - [SQLite](<https://sqlite.org/docs.html>)\n- Books & notes",
+  expected:
+    '```opml\n<opml version="2.0">\n<head><title>Reading</title></head>\n<body>\n  <outline text="Web">\n    <outline text="WebAssembly" type="link" url="https://webassembly.org/">\n    </outline>\n    <outline text="SQLite" type="link" url="https://sqlite.org/docs.html">\n    </outline>\n  </outline>\n  <outline text="Books &amp; notes">\n  </outline>\n</body>\n</opml>\n```\n',
 }];

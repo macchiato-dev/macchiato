@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 225 tests covering all twenty examples and the supplied
+`deno task test` runs 233 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -355,13 +355,13 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Twenty-seven transformations are implemented: tools 1–27 in the plan.
-The remaining 23 are pending.
+Twenty-eight transformations are implemented: tools 1–28 in the plan.
+The remaining 22 are pending.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,649-byte module: XML 1.0 characters and Unicode names,
 UTF-8 scalar decoding, predefined/numeric entities, and text/attribute whitespace
-normalization. These are preparation for tools 26–27, not an additional tool.
+normalization. These support tools 26–28, not an additional tool.
 Tests check every Unicode position's character/name classes and compare decoded
 text and attributes with an independent XML parser. DTDs and external entities
 are outside the reader's scope; no host XML parser ships in the demo.
@@ -387,13 +387,24 @@ Markdown is unchanged.
 Try [the XML writer](http://microwasm.localhost:3030/?tool=27-list-to-xml).
 
 Its [string-output helper](transforms/00-xml-output.md) is implemented in
-888 bytes. It decodes JSON string spans, validates XML names and characters,
+963 bytes. It decodes JSON string spans, validates XML names and characters,
 and emits context-appropriate escaped UTF-8. Numeric references retain text
 CR and attribute TAB/LF/CR through parsing; comment, CDATA and PI modes reject
 unrepresentable delimiters rather than change the node structure. Tests cover
 every BMP unit in raw/escaped JSON, astral pairs, 1,000 generated strings with
 independent XML parsing, exact bounds, recovery and browser round trips.
-This helper is shared infrastructure for tool 27, not another transformation.
+Its scalar entry also emits already-decoded characters as text or attributes,
+with the same character checks and bounds. This helper is shared infrastructure
+for tools 27–28, not another transformation.
+
+The [OPML writer](transforms/28-outline-to-opml.md) is 2058 bytes. It maps
+two-space-indented Markdown labels and inline links to nested outlines, with
+an optional heading for the title. It retains order and empty labels, checks
+link delimiters, decodes punctuation escapes and decimal references, and
+emits escaped XML directly without a JSON intermediate. Its tests include
+500 generated trees, edited punctuation, malformed UTF-8, overflow-resistant
+character references, exact memory bounds and recovery after a trap.
+Try [the OPML writer](http://microwasm.localhost:3030/?tool=28-outline-to-opml).
 
 ## Provisional byte-list notation
 

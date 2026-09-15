@@ -1564,6 +1564,98 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)
       ?.value === "```xml\n<recovered/>\n```\n"
   );
+  await page.goto(new URL("?tool=28-outline-to-opml", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const outlineInput =
+    "# A & B\n- [Tools](https://example.com/?a=1&b=2)\n  - 猫 &#10; notes\n  - ``` <script>inert</script>\n- \\[literal\\]";
+  await page.locator("#transform-input").fill(outlineInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .startsWith("````opml\n")
+  );
+  const opmlOutput = await page.locator("#transform-output").inputValue();
+  const opmlBody = opmlOutput.slice("````opml\n".length, -"\n````\n".length);
+  const decodedOutline = await page.evaluate((source) => {
+    const doc = new DOMParser().parseFromString(source, "application/xml");
+    if (doc.querySelector("parsererror")) throw Error("Invalid OPML XML");
+    return {
+      title: doc.querySelector("head > title")?.textContent,
+      texts: [...doc.querySelectorAll("outline")].map((n) =>
+        n.getAttribute("text")
+      ),
+      url: doc.querySelector("outline")?.getAttribute("url"),
+      roots: doc.querySelectorAll("body > outline").length,
+    };
+  }, opmlBody);
+  check(
+    JSON.stringify(decodedOutline) === JSON.stringify({
+      title: "A & B",
+      texts: [
+        "Tools",
+        "猫 \n notes",
+        "``` <script>inert</script>",
+        "[literal]",
+      ],
+      url: "https://example.com/?a=1&b=2",
+      roots: 2,
+    }),
+    "OPML data differed in the browser XML parser",
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").textContent() ===
+      opmlBody + "\n",
+    "OPML fence did not retain literal XML",
+  );
+  check(
+    await page.locator("#transform-output-rendered pre").count() === 1,
+    "OPML backticks broke the Markdown fence",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered script, #transform-output-rendered outline, #transform-output-rendered a[href], #transform-input-rendered a[href]",
+    ).count() === 0,
+    "OPML or input links became active markup",
+  );
+  await page.screenshot({
+    path: `${artifacts}/outline-to-opml-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-input").inputValue() === outlineInput,
+    "OPML conversion modified editable input",
+  );
+  for (
+    const bad of [
+      "- parent\n    - skipped",
+      "- [bad](javascript:alert(1))",
+      "- &#4294967361;",
+    ]
+  ) {
+    await page.locator("#transform-input").fill(bad);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    check(
+      await page.locator("#transform-output").inputValue() === opmlOutput,
+      "Invalid outline replaced successful output",
+    );
+  }
+  await page.locator("#transform-input").fill("- recovered");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes('text="recovered"')
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
