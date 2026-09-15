@@ -58,6 +58,11 @@ Deno.test("Mad libs: exact substitution, Unicode, duplicates and retained Markdo
       ["before [a] after\n\n- a:", "before  after"],
       ["[pet] [unknown]\r\n\r\n- pet:dog\r\n", "dog [unknown]"],
       ["[x]\n\n- x: [y]\n- y: no recursion", "[y]"],
+      [
+        "[pet] [missing] [empty]\n\n- pet: cat\n- pet: dog\n- empty:",
+        "dog [missing] ",
+      ],
+      ["[outer[pet]\n\n- pet: cat", "[outercat"],
       ["# Heading\n\n**[name]**\n\n- name: Ben", "# Heading\n\n**Ben**"],
       ["ordinary\n\n- list\n", "ordinary\n\n- list\n"],
       ["nothing\n", "nothing\n"],

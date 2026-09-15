@@ -143,6 +143,15 @@ the instruction branches, rather than only their function names:
 - [CSV reader](../transforms/04-csv-to-table.md): all four field states,
   doubled quotes, CRLF cursor movement, the final-record flag, width checks,
   and decimal escaping. TSV's unreachable quote states are explicit.
+- [Mad libs](../transforms/03-mad-libs.md): the binding-list boundary,
+  reverse lookup, successful/missing/unterminated placeholder paths, a byte
+  position trace, and which repeated scans remain possible.
+- [Table writer](../transforms/05-table-to-csv.md): delimiter scanning versus
+  cell decoding, decimal-reference recognition, the shared CSV/TSV field-byte
+  policy, and the exact memory ranges for the one-time fence insertion.
+- [JSON key comparison](../transforms/00-json-string-keys.md): pending-unit
+  delivery before end-of-input, UTF-8 continuation and scalar validation,
+  independent cursors, and a raw-versus-escaped surrogate-pair trace.
 - [Inline renderer](../renderer/03-inline.md) and its
   [scan helpers](../renderer/02-scanning.md): actual dispatch order, distinct
   failed-scan outcomes, cursor progress, and nested Wasm branch targets.

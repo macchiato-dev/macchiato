@@ -35,6 +35,12 @@ Markdown cell escaping, width checks and header rule are shared unchanged.
 This module directly re-exports that Wasm entry and its memory. No JavaScript
 function performs or wraps the transformation.
 
+See “Inside `convert`” in the [shared reader](04-csv-to-table.md) for its
+field-state table. In TSV mode, only field-start and unquoted-field states
+are reachable; a quote takes the ordinary-data path. “Inside `finish-row`”
+on that page explains why an ending record separator does not manufacture
+another row.
+
 Both formats accept UTF-8 input up to 64 KiB and produce at most 128 KiB of
 Markdown at `0x10000`. Unsupported controls, bare CR record endings, malformed
 fences and mismatched widths trap. A new call resets state after a trap.

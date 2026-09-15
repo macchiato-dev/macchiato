@@ -62,6 +62,7 @@ Deno.test("Table to CSV: quoting, escapes, Unicode references and separator rule
         [["name", "note"], ["Ben", "hello, world"], ["Ada", 'said "hi"']],
       ],
       ["||\n|---|", [[""]]],
+      ["| a\\|b &#34;hi&#34; |\n|---|", [['a|b "hi"']]],
       ["| a | b |\r\n| :--- | ---: |\r\n| x | y |\r\n\t ", [["a", "b"], [
         "x",
         "y",

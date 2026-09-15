@@ -56,6 +56,119 @@ shift body by fence_length + length('csv' + newline)
 write opening fence, then closing fence after the body
 ```
 
+## Inside `row`: locate boundaries before decoding data
+
+`convert` finds each LF and calls `row(start, end, dataMode)`. Row zero sets
+the expected width, row one validates the hyphen rule without emitting data,
+and subsequent rows emit records. Every returned width must match row zero.
+At least two source rows are required, so a lone header cannot pass.
+
+```mermaid
+flowchart TD
+    A[Trim trailing SP/TAB/CR; require outer pipes] --> B[Position just after first pipe]
+    B --> C{Position before row end?}
+    C -- no --> Z[Emit record LF in data mode; return column count]
+    C -- yes --> D[Scan to an unescaped pipe]
+    D --> E[Trim SP/TAB from the cell span]
+    E --> F{Data row?}
+    F -- yes --> G[Emit separator if not first cell; call cell]
+    F -- no --> H[Remove optional edge colons; require at least three hyphens only]
+    G --> I[Increment column count; position = pipe + 1]
+    H --> I
+    I --> C
+```
+
+The `tc-pipe-*` loop is a boundary scanner, not a Markdown decoder. An
+unescaped pipe finishes the span. A backslash skips the following byte while
+looking for that boundary. Reaching the row end without a delimiter traps.
+The paired skip handles backslash parity: two backslashes leave the following
+pipe available as a delimiter; three hide it. The later `cell` call decides
+whether the backslash is an actual punctuation escape.
+
+`tc-leading-*` and `tc-trailing-*` adjust copies of the cell boundaries.
+They do not edit input or change the delimiter's position. This distinction
+preserves significant spaces encoded as `&#32;`: trimming sees the ampersand,
+not a space. A decoded `&#124;` becomes field data, never another column.
+`tc-row-next` always advances using the original delimiter pointer.
+
+## Inside `cell`: three paths, one field-byte policy
+
+```mermaid
+flowchart TD
+    A[Emit opening quote in CSV mode] --> B{Cursor before cell end?}
+    B -- no --> Z[Emit closing quote in CSV mode; return]
+    B -- yes --> C{Backslash followed by ASCII punctuation?}
+    C -- yes --> D[Send punctuation to field-byte; advance by two]
+    C -- no --> E{Ampersand begins a valid decimal reference?}
+    E -- yes --> F[Encode scalar through field-byte; advance past semicolon]
+    E -- no --> G[Send current byte to field-byte; advance by one]
+    D --> B
+    F --> B
+    G --> B
+```
+
+`tc-cell-*` implements that dispatch. Each successful special case branches
+back to the loop after setting the new cursor, so its source bytes are not
+also emitted by the ordinary-byte path. `reference` returns zero on a
+non-reference and leaves output unchanged; otherwise it emits the scalar
+and returns the source offset after `;`. `cell` adopts that offset.
+
+The reference reader (`tc-reference-*`) recognizes `&#`, at most seven
+decimal digits, and a semicolon. It accumulates `value = value * 10 + digit`.
+Zero, surrogates and values beyond `0x10ffff` fail recognition and remain
+literal source, as do missing semicolons or nondecimal forms. The digit cap
+keeps this i32 accumulation from wrapping. Recognition and representability
+are separate: a recognized tab reaches the field-byte policy and traps in
+TSV mode, rather than falling back to literal `&#9;` text.
+
+| Decoded field byte | CSV action | TSV action |
+| --- | --- | --- |
+| Quote | Emit twice | Emit once |
+| TAB, LF or CR | Emit inside the quoted field | Trap |
+| Other byte below `0x20` | Trap | Trap |
+| Any other byte | Emit once | Emit once |
+
+`Unicode scalar` encodes a decoded reference as one to four UTF-8 bytes,
+feeding all of them through this same policy. Ordinary source bytes and
+backslash-unescaped bytes use it too. Delimiters and record endings instead
+call `emit` directly: a TSV tab separating fields is legal, even though a
+tab inside a field is not. CSV's enclosing quotes likewise must not double
+themselves.
+
+### Trace: an escaped pipe and a quoted word
+
+For the cell source ` a\|b &#34;hi&#34; `:
+
+- `row` finds the final delimiter without stopping at the escaped pipe.
+  Trimming yields `a\|b &#34;hi&#34;`.
+- `cell` opens a CSV quote, writes `a`, consumes `\|` as one literal pipe,
+  then writes `b` and the interior space.
+- Each `&#34;` is recognized completely before it emits one quote scalar.
+  The field-byte writer doubles that quote; `hi` takes the ordinary path.
+- `cell` closes the CSV quote. Its output is `"a|b ""hi"""`.
+  In TSV mode the same decoded field is `a|b "hi"`, with no enclosing quotes.
+
+## Inside `convert`: shifting once, after the body is complete
+
+`emit` tracks a current backtick run and its maximum while writing each byte.
+A non-backtick resets only the current run. The finished body length and
+maximum are captured before any fence bytes are written (`tc-body-length`
+and `tc-fence-length`). No second scan for backticks is needed.
+
+Let `B = 0x10000`, body length be `L`, and chosen fence length be `F`.
+The opening prefix has `P = F + 4` bytes: backticks, `csv` or `tsv`, and LF.
+The layout changes from body at `[B, B + L)` to:
+
+- Opening fence and label: `[B, B + P)`.
+- Moved body: `[B + P, B + P + L)`.
+- Closing fence and LF: `[B + P + L, B + P + L + F + 1)`.
+
+`tc-final-bound` checks that entire final extent before `tc-shift-body` uses
+overlap-safe `memory.copy`. The output cursor is then reset for the prefix
+and repositioned for the suffix; it does not walk across and rewrite the body.
+Writing the fence does update the emitter's backtick counters, but `F` is
+already saved in a local. It cannot change the fence midway through emission.
+
 ## Module
 
 Functions: convert 0, emit 1, field byte 2, cell 3, Unicode scalar 4, row 5,

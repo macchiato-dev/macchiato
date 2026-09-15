@@ -48,16 +48,112 @@ run(length):
     return output_length
 ```
 
+## Inside `run`: finding where the template stops
+
+The first loop is over physical lines, not placeholders. `lineStart` points
+at the next unread line; `lineEnd` excludes its LF and optional preceding CR.
+`templateEnd` initially equals the input length. Only the first successfully
+parsed binding changes it, to that binding's line start.
+
 ```mermaid
-flowchart LR
-    A[Template and binding list] --> B[Record input spans]
-    B --> C[Scan template]
-    C --> D{Known placeholder?}
-    D -- Yes --> E[Copy value span]
-    D -- No --> F[Copy template bytes]
-    E --> C
-    F --> C
+flowchart TD
+    A{lineStart before input end?} -- no --> T[Trim template CR/LF only if bindings exist]
+    A -- yes --> B[Find LF; exclude preceding CR from lineEnd]
+    B --> C{Line starts with dash-space and contains a colon?}
+    C -- yes --> D{Nonempty name and fewer than 256 records?}
+    D -- no --> X[Trap]
+    D -- yes --> E[First binding fixes templateEnd; store four span fields]
+    E --> N[Advance lineStart past LF, or one past input end]
+    C -- no --> F{Bindings already started and line is nonempty?}
+    F -- yes --> X
+    F -- no --> N
+    N --> A
 ```
+
+The byte groups `ml-lines-*` find line boundaries. `ml-binding-*` recognizes
+and stores a binding. `ml-binding-invalid` rejects nonempty trailing prose
+after bindings have begun; a line of spaces is nonempty too. Before the first
+binding, an ordinary line is still template text. A dash-space line with a
+colon but an empty name traps even there. No whitespace is trimmed from names.
+
+Each record is 16 bytes: name start, name length, value start, value end.
+`record = 0x30000 + (bindingCount << 4)`. Skipping the optional single space
+after `:` changes only value start. A blank value needs no special record.
+The input stays untouched, so later records and template reads cannot
+invalidate earlier spans. `ml-trim-*` then removes only CR/LF immediately
+before the binding list, not spaces belonging to the template.
+
+## Inside `run`: consuming a placeholder or preserving its source
+
+```mermaid
+flowchart TD
+    A{position before templateEnd?} -- no --> Z[Return output length]
+    A -- yes --> B{Current byte is opening bracket?}
+    B -- no --> C[Emit current byte; position += 1]
+    B -- yes --> D[Find first closing bracket before templateEnd]
+    D --> E{Closing bracket found?}
+    E -- no --> F[Copy entire remaining suffix; finish template loop]
+    E -- yes --> G[Search records newest first by length, then bytes]
+    G --> H{Binding found?}
+    H -- yes --> I[Copy value; position = closing bracket + 1]
+    H -- no --> C
+    C --> A
+    I --> A
+    F --> Z
+```
+
+`ml-template-*` owns the template position. `ml-placeholder-*` locates the
+candidate name, while `ml-lookup-*` searches records without changing that
+position. The lookup starts at `bindingCount`, decrements before reading,
+and stops on its first equal name. That is why the last duplicate wins.
+Length mismatches skip the byte comparison entirely.
+
+A successful replacement skips both brackets, even if its value is empty.
+Value bytes go directly to output: `[other]` inside a value is not rescanned.
+On a miss, only the opening bracket is copied at that iteration; following
+bytes return through the normal loop. Thus nested-looking input such as
+`[outer[pet]` can still substitute the inner `[pet]` after the outer lookup
+misses. This is bracket scanning, not a nested-placeholder grammar.
+
+An opening bracket with no later close is different: `ml-placeholder-missing`
+copies the whole suffix and exits. This avoids rescanning every remaining
+opening bracket in an unterminated suffix. It does not make every possible
+input linear: many opening brackets sharing a later close can repeat scans.
+The binding search is bounded to 256 records, but name comparisons still
+depend on the names' lengths.
+
+### Trace: duplicate bindings, an unknown name, and an empty value
+
+For template `[pet] [missing] [empty]`, let the records be `pet: cat`, then
+`pet: dog`, then `empty:`. The position is a byte offset into that template.
+
+| Position | Decision | Output added | Next position |
+| --- | --- | --- | --- |
+| 0 | Reverse lookup finds the second `pet` | `dog` | 5 |
+| 5 | Ordinary space | one space | 6 |
+| 6 | No `missing` record; preserve opening bracket | `[` | 7 |
+| 7–14 | Ordinary bytes, including the closing bracket | `missing]` | 15 |
+| 15 | Ordinary space | one space | 16 |
+| 16 | `empty` matches a zero-length value | nothing | 23 |
+
+The result ends with a space: `dog [missing] `. The source, not the output,
+determines where the next lookup begins.
+
+## Small helpers: who advances which cursor?
+
+- `find(start, end, byte)` advances its local start until a match or end,
+  returning an offset. It does not consume the matching byte for its caller.
+- `equal(a, b, length)` stops on the first mismatch; otherwise both local
+  pointers advance together while the remaining length decreases to zero.
+  An empty comparison succeeds without reading memory.
+- `copy(start, end)` advances its own source pointer, calling `emit` once per
+  byte. It does not mutate any of `run`'s source cursors.
+- `emit(byte)` checks the output limit before storing and then advances the
+  sole global cursor. Even a large replacement cannot overwrite the records.
+
+These are the `ml-find-*`, `ml-equal-*`, `ml-copy-*` and `ml-emit-*` groups
+below. Their loops either advance an input pointer or decrease a counter;
+their exit blocks are separate from the loops so `br_if 1` can finish them.
 
 ## Module
 

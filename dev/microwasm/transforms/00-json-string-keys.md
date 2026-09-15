@@ -60,6 +60,98 @@ actually reads. Empty/reversed/out-of-memory spans, incomplete escapes, bad
 continuations and invalid scalar encodings trap when encountered. Escaped
 surrogates are valid JSON code units; raw UTF-8 encodings of surrogates are not.
 
+## Inside `next-unit`: pending output comes before the source bound
+
+```mermaid
+flowchart TD
+    A{Pending low surrogate?} -- yes --> P[Return pending; keep cursor; clear pending]
+    A -- no --> B{Cursor equals end?}
+    B -- yes --> E[Return -1 with unchanged cursor]
+    B -- no --> C[Read leading byte; advance cursor]
+    C --> D{Which encoding?}
+    D -- backslash --> S[Read escape; decode short escape or four hex digits]
+    D -- ASCII --> T[Reject control or unescaped quote; return code unit]
+    D -- UTF-8 --> U[Determine width; check remaining span]
+    U --> V[Read continuation bytes; accumulate scalar]
+    V --> W[Reject overlong, surrogate or out-of-range scalar]
+    W --> X{Scalar above 0xffff?}
+    X -- no --> R[Return scalar with no pending unit]
+    X -- yes --> H[Return high surrogate and retain low surrogate]
+    S --> R
+```
+
+The groups `jk-next-pending` and `jk-next-end` must stay in that order.
+After reading a four-byte scalar at the very end, the byte cursor is already
+at end but one UTF-16 unit remains to be returned. Checking end first would
+silently lose that unit. A pending-only call reads no input bytes.
+
+The escape branch consumes `\` and its following escape letter. A short
+escape returns immediately through `short-escape`; `\u` checks room for four
+digits and calls `hex-four`. Escaped high and low surrogates are returned
+individually, including lone surrogates. They do not use the pending slot.
+
+### Inside the UTF-8 continuation loop
+
+`jk-utf8-two`, `jk-utf8-three` and `jk-utf8-four` select the width and mask
+the payload bits from the leading byte. The remaining count is width minus
+one. The span check happens before the first continuation load.
+
+- Every iteration checks `(byte & 0xc0) == 0x80`.
+- Accumulation is `scalar = (scalar << 6) | (byte & 0x3f)`.
+- The cursor increases and the remaining count decreases together.
+  A zero remaining count exits; no sentinel byte is read.
+- The decoded value must reach the minimum for its width: `0x80`, `0x800`
+  or `0x10000`. This rejects overlong encodings even when all continuation
+  bytes have the correct shape.
+- Reject a value above `0x10ffff` or in `0xd800..0xdfff`. Only then turn a
+  supplementary scalar into high/low UTF-16 surrogates.
+
+These correspond to `jk-utf8-loop`, `jk-utf8-minimum`, `jk-utf8-scalar` and
+`jk-utf8-pair`. The loop never expands a string in memory. At most two code
+units represent the scalar, one returned now and one in the result tuple.
+
+## Inside `equal`: pair the results, not the source positions
+
+```mermaid
+flowchart TD
+    A[Check spans and quotes; move to both interiors] --> B[Advance A using its cursor and pending unit]
+    B --> C[Advance B using its separate cursor and pending unit]
+    C --> D{Returned units differ?}
+    D -- yes --> N[Return false]
+    D -- no --> E{Returned unit is -1?}
+    E -- yes --> Y[Return true]
+    E -- no --> B
+```
+
+One string may consume more bytes per iteration than the other. There is no
+test for equal source lengths or equal cursor movement. `jk-equal-a` stores
+three Wasm results in reverse stack order: pending, cursor, then code unit;
+`jk-equal-b` does the same in its own locals. `jk-equal-difference` runs
+before the end test, so ending only one string returns false.
+
+### Trace: raw supplementary character versus two escapes
+
+Offsets below are relative to each string's interior, excluding quotes.
+The left interior is the four UTF-8 bytes of `😀`; the right is the twelve
+ASCII bytes of `\uD83D\uDE00`. Pending starts at zero on both sides.
+
+| Call | Left result `(unit, cursor, pending)` | Right result `(unit, cursor, pending)` |
+| --- | --- | --- |
+| First | `(0xd83d, 4, 0xde00)` | `(0xd83d, 6, 0)` |
+| Second | `(0xde00, 4, 0)` | `(0xde00, 12, 0)` |
+| Third | `(-1, 4, 0)` | `(-1, 12, 0)` |
+
+All three unit pairs agree. Notice the left cursor stays at 4 on its second
+call: progress here means either consuming source bytes or draining pending
+output, not necessarily increasing the cursor every time.
+
+The short helpers have narrower responsibilities. `check-span` verifies
+bounds and outer quotes, not the string interior. `hex-four` runs exactly
+four iterations, shifting its accumulator four bits per digit and accepting
+both hex cases. `bounded-next`, the exported iterator wrapper, checks its
+span and pending-unit range before entering `next-unit`. None changes the
+input or shares iteration state with another caller.
+
 ## Module
 
 Import `n.memory`, a fixed four-page memory such as the number scanner's.

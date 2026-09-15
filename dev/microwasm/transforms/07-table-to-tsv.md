@@ -38,6 +38,11 @@ decoding, omits quote doubling and emits tabs between fields. Its `tsv` entry
 sets the mode on every call. Fence selection remains collision-free even if
 data contains backtick runs. There are no host parsing or formatting imports.
 
+See “Inside `cell`” in the [shared writer](05-table-to-csv.md) for where a
+numeric reference turns into field data and reaches that policy. “Inside
+`convert`” on that page shows the final memory layout for fence insertion.
+Those loops live in the shared implementation, not in this re-export adapter.
+
 Input is at most 64 KiB of valid UTF-8. Output starts at `0x10000` with a
 128 KiB cap. A trap discards the partial result; subsequent calls reset state.
 
