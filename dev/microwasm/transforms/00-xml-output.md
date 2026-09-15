@@ -17,6 +17,11 @@ for the caller's compact JSON after the list compiler finishes.
 - `string(start, end, output, mode) -> length`: emit the decoded interior,
   without adding quotes or markup delimiters. All input must already be a
   validated JSON string, excluding its outer quotes. Ends are exclusive.
+- `character(scalar, output, mode) -> length`: emit one already-decoded
+  character in text mode 0 or attribute mode 1. This lets the outline parser
+  decode Markdown escapes without constructing an intermediate JSON string.
+  It validates the XML character and output bounds before using the same
+  escaping routine as `string`; other modes are rejected.
 
 | Mode | Context | Escaping or additional checks |
 | --- | --- | --- |
@@ -110,24 +115,25 @@ or persistent entity table is needed for these three fixed cases.
 ## Module
 
 Imports: `k.next` 0, `x.character` 1, `x.nameStart` 2, `x.namePart` 3.
-Definitions: scalar 4, string 5, emit 6, UTF-8 7, escaped 8, reference 9.
+Definitions: scalar 4, string 5, emit 6, UTF-8 7, escaped 8, reference 9,
+character 10.
 Memory is `x.memory`, the same memory used by `k`. Global 0 is the output cursor.
 
 `[microwasm]`
 
 - xo-header: `0061736d 01000000`
 - xo-type-section: `01 {{size:xo-types}}`
-  - xo-types: `06 60 03 7f 7f 7f 03 7f 7f 7f 60 01 7f 01 7f 60 02 7f 7f 02 7f 7f 60 04 7f 7f 7f 7f 01 7f 60 01 7f 00 60 02 7f 7f 00`
+  - xo-types: `07 60 03 7f 7f 7f 03 7f 7f 7f 60 01 7f 01 7f 60 02 7f 7f 02 7f 7f 60 04 7f 7f 7f 7f 01 7f 60 01 7f 00 60 02 7f 7f 00 60 03 7f 7f 7f 01 7f`
 - xo-import-section: `02 {{size:xo-imports}}`
   - xo-imports: `05 01 6b 04 6e657874 00 00 01 78 09 636861726163746572 00 01 01 78 09 6e616d655374617274 00 01 01 78 08 6e616d6550617274 00 01 01 78 06 6d656d6f7279 02 01 04 04`
 - xo-function-section: `03 {{size:xo-functions}}`
-  - xo-functions: `06 02 03 04 04 05 04`
+  - xo-functions: `07 02 03 04 04 05 04 06`
 - xo-global-section: `06 {{size:xo-globals}}`
   - xo-globals: `01 7f 01 41 00 0b`
 - xo-export-section: `07 {{size:xo-exports}}`
-  - xo-exports: `03 06 7363616c6172 00 04 06 737472696e67 00 05 06 6d656d6f7279 02 00`
+  - xo-exports: `04 06 7363616c6172 00 04 06 737472696e67 00 05 09 636861726163746572 00 0a 06 6d656d6f7279 02 00`
 - xo-code-section: `0a {{size:xo-code}}`
-  - xo-code: `06`
+  - xo-code: `07`
     - xo-scalar-record: `{{size:xo-scalar-body}}`
       - xo-scalar-body: `01 04 7f`
         - xo-scalar-first: `20 00 20 01 41 00 10 00 21 02 21 04 21 03`
@@ -181,3 +187,9 @@ Memory is `x.memory`, the same memory used by `k`. Global 0 is the output cursor
         - xo-reference-open: `41 26 10 06 41 23 10 06`
         - xo-reference-tens: `20 00 41 09 4b 04 40 41 31 10 06 20 00 41 0a 6b 21 00 0b`
         - xo-reference-last: `20 00 41 30 6a 10 06 41 3b 10 06 0b`
+    - xo-character-record: `{{size:xo-character-body}}`
+      - xo-character-body: `00`
+        - xo-character-mode: `20 02 41 01 4b 04 40 00 0b`
+        - xo-character-valid: `20 00 10 01 45 04 40 00 0b`
+        - xo-character-bound: `20 01 41 808004 49 20 01 41 80800c 4b 72 04 40 00 0b`
+        - xo-character-emit: `20 01 24 00 20 00 20 02 10 08 23 00 20 01 6b 0b`

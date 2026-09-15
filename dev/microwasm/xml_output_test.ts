@@ -49,6 +49,7 @@ async function helper() {
     memory: WebAssembly.Memory;
     scalar(start: number, end: number): [number, number];
     string(start: number, end: number, out: number, mode: number): number;
+    character(scalar: number, out: number, mode: number): number;
   };
   const memory = new Uint8Array(o.memory.buffer);
   const put = (s: string, offset = 0) => {
@@ -66,6 +67,32 @@ async function helper() {
     raw(JSON.stringify(s).slice(1, -1), mode, out);
   return { o, memory, put, raw, string };
 }
+
+Deno.test("XML output: scalar entry agrees with string escaping and enforces its own bounds", async () => {
+  const { o, memory, string } = await helper();
+  for (let cp = 0; cp <= 0x10ffff; cp += cp < 0x10000 ? 1 : 997) {
+    for (const mode of [0, 1]) {
+      if (!isChar(cp)) traps(() => o.character(cp, 65536, mode));
+      else {
+        const expected = string(String.fromCodePoint(cp), mode);
+        const n = o.character(cp, 65536, mode);
+        equal(decoder.decode(memory.subarray(65536, 65536 + n)), expected);
+      }
+    }
+  }
+  for (const cp of [-1, 0x110000, 0x7fffffff]) {
+    traps(() => o.character(cp, 65536, 0));
+  }
+  for (const mode of [-1, 2, 7]) traps(() => o.character(65, 65536, mode));
+  for (const out of [-1, 0, 65535, 196609]) {
+    traps(() => o.character(65, out, 0));
+  }
+  equal(o.character(65, 196607, 0), 1);
+  traps(() => o.character(65, 196608, 0));
+  equal(o.character(38, 196603, 1), 5);
+  traps(() => o.character(38, 196604, 1));
+  equal(string("recover &", 1), "recover &amp;");
+});
 
 function parsed(xml: string) {
   let text = "", attrs: unknown;
