@@ -192,6 +192,11 @@ try {
         "Which state survives a child call?",
         "Offset immediately after",
       ],
+      [
+        "35-agenda-to-ical",
+        "Inside frame: count bytes, record folds, expand backward",
+        "fold count",
+      ],
     ]
   ) {
     const link = libraryLinks.find((url) => url.includes(id));

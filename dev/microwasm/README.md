@@ -94,7 +94,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 293 tests covering all twenty examples and the supplied
+`deno task test` runs 300 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -372,8 +372,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-four transformations are implemented: tools 1–34 in the plan.
-The remaining 16 are pending.
+Thirty-five transformations are implemented: tools 1–35 in the plan.
+The remaining 15 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -401,7 +401,7 @@ decoded-key duplicates, XML character escaping, longer fences, exact input
 and output limits, compact-JSON expansion, and recovery. Browser checks also
 parse its XML independently and keep rendered RSS inert.
 Try [the RSS writer](http://microwasm.localhost:3030/?tool=33-entries-to-rss).
-The iCalendar reader (34) is now implemented; its reverse writer (35) is next.
+The iCalendar reader (34) and reverse writer (35) are implemented too.
 
 The [calendar content-line helper](transforms/00-calendar-lines.md) is now
 implemented in 1,185 bytes. It unfolds before validating UTF-8, preserving
@@ -411,7 +411,7 @@ boundaries, 300 folded calendars compared with ICAL.js, split UTF-8 repair,
 malformed input, full-page bounds and read-only access. This shared helper
 does not itself produce an agenda or interpret property-specific values.
 
-The [agenda reader](transforms/34-ical-to-agenda.md) adds 2,286 bytes.
+The [agenda reader](transforms/34-ical-to-agenda.md) adds 2,342 bytes.
 Component headings preserve events, alarms, time-zone definitions and unknown
 components. Rows retain lexical property headers and distinguish raw values,
 decoded TEXT and TEXT lists. Date/time spelling, parameters and recurrence
@@ -421,6 +421,17 @@ split UTF-8 folds, nesting, malformed input, exact capacities and recovery.
 Its function walkthrough traces both component passes, parameter overrides,
 operand-stack return order and escaped versus separating commas.
 Try [the calendar reader](http://microwasm.localhost:3030/?tool=34-ical-to-agenda).
+
+The [calendar writer](transforms/35-agenda-to-ical.md) adds 2,040 bytes plus
+the reader's read-only name/mode helpers and the shared JSON code-unit iterator.
+It preserves the outline's component hierarchy, validates row modes against
+their headers, escapes TEXT values, and folds CRLF lines to at most 75 bytes
+without splitting UTF-8. A measured backward expansion fits folding and
+Markdown fences into the same bounded output region. Seven test groups
+include 250 reader round trips and ICAL.js comparisons, independent folding
+oracles, Unicode boundaries, malformed edits, exact capacities and recovery.
+Try [the calendar writer](http://microwasm.localhost:3030/?tool=35-agenda-to-ical).
+The vCard pair (36–37) is next.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

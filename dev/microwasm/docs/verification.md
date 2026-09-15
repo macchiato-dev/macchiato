@@ -5,7 +5,49 @@ are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler
 is involved. The host code does not implement the filters or Life rules.
 
-## Checkpoint: agenda reader and deeper function walkthroughs
+## Checkpoint: calendar pair completes tools 1–35
+
+Tool 35 is a 2,040-byte handwritten writer. It consumes component headings
+and property rows, validates decoded headers, shares the reader's value-mode
+decision, and writes escaped logical iCalendar lines. A separate pass measures
+UTF-8 widths and stores fold positions; backward expansion adds CRLF line
+endings, 75-octet folding and a sufficiently long Markdown fence without a
+second output buffer.
+
+The reader now exports two read-only helpers and folds ASCII letters only.
+An unconditional OR with 0x20 was unsuitable when reused for punctuation in
+the agenda title: it could equate NUL with space or CR with hyphen.
+All 65,536 byte pairs are checked against ASCII-only case folding. Reader
+size is now 2,342 bytes; its previously published 2,286-byte size predates
+these exports and the comparison correction.
+
+Seven writer test groups cover exact fixtures, 250 generated reader round
+trips compared independently with ICAL.js, nested time zones and alarms,
+unknown properties, quote/caret-preserving headers, mode mismatches, sibling
+closure, invalid heading depth, JSON/UTF-8 errors, every forbidden control,
+surrogate pairs, folds around each scalar width, and long Markdown fences.
+An independent string/code-point oracle checks folding, including continuation
+spaces. Capacity cases exercise exactly 64 KiB of input and 128 KiB of output,
+overflow, immutable input/literals and repeated-run recovery.
+The complete suite passes 300 tests. The writer's catalogue fixture is also
+checked byte-for-byte and includes UID, DTSTAMP and a UTC DTSTART.
+
+All 35 browser fixtures pass, along with editor/view switching and failure
+recovery. The calendar scenario writes the reader's agenda, checks component
+closing order and TEXT escapes, keeps an invalid edit from replacing output,
+then reads the emitted calendar back through the UI. Textarea comparisons
+account for native CRLF-to-LF normalization; module tests check exact CRLF bytes.
+The complete document-view browser suite passes too. These screenshots were
+visually inspected:
+
+- `dist/browser/35-agenda-to-ical-walkthrough.png`
+- `dist/browser/agenda-to-ical-rendered.png`
+
+The internal explanations cover heading look-ahead and cursor restoration,
+decoded-header boundary checks, scalar/escape state, fold measurement and the
+overlapping backward move. Fifteen tools remain; vCard contacts are next.
+
+## Earlier checkpoint: agenda reader and deeper function walkthroughs
 
 Tool 34 is published as a 2,286-byte module, using the shared calendar reader.
 Its two-pass component walk retains properties and child components separately

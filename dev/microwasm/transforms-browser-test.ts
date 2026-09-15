@@ -40,7 +40,8 @@ try {
       (expected) =>
         (document.getElementById("transform-output") as HTMLTextAreaElement)
           ?.value === expected,
-      tool.expected,
+      // Textareas normalize CRLF to LF; byte-exact output is tested in Wasm.
+      tool.expected.replaceAll("\r\n", "\n").replaceAll("\r", "\n"),
     );
     for (const name of ["input", "output"] as const) {
       await side(name, "Rendered");
@@ -2128,6 +2129,65 @@ try {
   await page.waitForFunction(() =>
     (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
       .includes("Recovered")
+  );
+  await page.goto(new URL("?tool=35-agenda-to-ical", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(agenda);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("END:VCALENDAR")
+  );
+  const writtenCalendar = await page.locator("#transform-output").inputValue();
+  check(
+    writtenCalendar.includes("CATEGORIES:Work,Research\\, reading") &&
+      writtenCalendar.indexOf("BEGIN:VALARM") <
+        writtenCalendar.indexOf("END:VALARM") &&
+      writtenCalendar.indexOf("END:VALARM") <
+        writtenCalendar.indexOf("END:VEVENT"),
+    "Calendar writer lost escaped values or nested closing order",
+  );
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre code").count() === 1,
+    "Calendar output is not one inert code fence",
+  );
+  await page.screenshot({
+    path: artifacts + "/agenda-to-ical-rendered.png",
+    fullPage: true,
+  });
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    agenda.replace('"SUMMARY" text', '"SUMMARY" raw'),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === writtenCalendar,
+    "Inconsistent calendar mode replaced successful output",
+  );
+  await page.locator("#transform-input").fill(agenda);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent === "Done."
+  );
+  await page.goto(new URL("?tool=34-ical-to-agenda", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(writtenCalendar);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    agenda,
   );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(

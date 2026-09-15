@@ -368,4 +368,17 @@ export const transforms = [{
     "```ics\nBEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Microwasm//Agenda//EN\nBEGIN:VEVENT\nUID:planning-1\nDTSTART;TZID=America/Phoenix:20260915T090000\nSUMMARY:Planning\nCATEGORIES:Work,Research\\, reading\nEND:VEVENT\nEND:VCALENDAR\n```\n",
   expected:
     '# Agenda\n\n## VCALENDAR\n\n- "VERSION" raw "2.0"\n- "PRODID" text "-//Microwasm//Agenda//EN"\n\n### VEVENT\n\n- "UID" text "planning-1"\n- "DTSTART;TZID=America/Phoenix" raw "20260915T090000"\n- "SUMMARY" text "Planning"\n- "CATEGORIES" text-list ["Work","Research, reading"]\n',
+}, {
+  id: "35-agenda-to-ical",
+  title: "Markdown agenda outline to iCalendar",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "a", path: "transforms/34-ical-to-agenda" },
+  ],
+  input:
+    '# Agenda\n\n## VCALENDAR\n\n- "VERSION" raw "2.0"\n- "PRODID" text "-//Microwasm//Agenda//EN"\n\n### VEVENT\n\n- "UID" text "planning-1"\n- "DTSTAMP" raw "20260915T120000Z"\n- "DTSTART" raw "20260916T160000Z"\n- "SUMMARY" text "Planning, then lunch"\n- "CATEGORIES" text-list ["Work","Research, reading"]\n',
+  expected:
+    "```ics\nBEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Microwasm//Agenda//EN\r\nBEGIN:VEVENT\r\nUID:planning-1\r\nDTSTAMP:20260915T120000Z\r\nDTSTART:20260916T160000Z\r\nSUMMARY:Planning\\, then lunch\r\nCATEGORIES:Work,Research\\, reading\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n\n```\n",
 }];

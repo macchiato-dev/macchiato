@@ -20,6 +20,8 @@ header, a mode, and a JSON string or nonempty array of JSON strings:
 ### VEVENT
 
 - "UID" text "planning-1"
+- "DTSTAMP" raw "20260915T120000Z"
+- "DTSTART" raw "20260916T160000Z"
 - "SUMMARY" text "Planning, then lunch"
 - "CATEGORIES" text-list ["Work","Research, reading"]
 ```
@@ -28,6 +30,8 @@ Blank lines are allowed. Headings must not skip levels. Each row belongs to
 the nearest preceding heading at its level of nesting. Component names are
 ASCII tokens and are written uppercase. Header spelling, including parameter
 quotes and caret escapes, is preserved. BEGIN and END cannot be property rows.
+As with the reader, this validates structure and encoding, not every calendar
+property's cardinality, date grammar or component-specific requirements.
 
 Mode must agree with the header's default property type or explicit VALUE
 parameter, using the reader's same decision routine. To author an extension
@@ -49,6 +53,9 @@ character. The limit follows
 [RFC 5545 section 3.1](https://www.rfc-editor.org/rfc/rfc5545.html#section-3.1).
 Folding may split an escape pair: unfolding restores it before TEXT decoding.
 The outer Markdown fence is longer than every backtick run in the output.
+These are the Wasm output bytes. Native HTML textareas normalize line endings
+to LF in their editable value; the browser checks account for that separately
+from byte-exact module tests. The matching reader accepts either line ending.
 
 ## Memory and helper reuse
 
