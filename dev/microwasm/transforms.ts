@@ -456,4 +456,17 @@ export const transforms = [{
     '- header "Interview"\n- block "NOTE Opening remarks"\n- block "STYLE\\n::cue { color: lime; }"\n- cue 00:01.000 --> 00:03.250 "<v Jane>Hello!\\nSecond line." id "opening" settings "align:start"\n- cue 00:03.000 --> 00:05.000 "An overlapping cue."\n',
   expected:
     "```vtt\nWEBVTT Interview\n\nNOTE Opening remarks\n\nSTYLE\n::cue { color: lime; }\n\nopening\n00:01.000 --> 00:03.250 align:start\n<v Jane>Hello!\nSecond line.\n\n00:03.000 --> 00:05.000\nAn overlapping cue.\n```\n",
+}, {
+  id: "42-diff-to-changes",
+  title: "Unified diff to Markdown file, hunk and change records",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+    { name: "r", path: "transforms/38-srt-to-cues" },
+    { name: "p", path: "transforms/00-patch-lines" },
+  ],
+  input:
+    "```diff\ndiff --git a/message.txt b/message.txt\n--- a/message.txt\n+++ b/message.txt\n@@ -1,2 +1,3 @@ greeting\n Hello\n-old\n+new\n+last\n\\ No newline at end of file\n```\n",
+  expected:
+    '- meta "diff --git a/message.txt b/message.txt"\n- file "a/message.txt" "b/message.txt"\n- hunk -1,2 +1,3 " greeting"\n- context "Hello"\n- remove "old"\n- add "new"\n- add "last"\n- no-newline\n',
 }];

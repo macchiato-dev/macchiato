@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Forty-one transformations are implemented: tools 1–41 in the plan.
-The remaining 9 are pending.
+Forty-two transformations are implemented: tools 1–42 in the plan.
+The remaining 8 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -494,6 +494,16 @@ or decoded string objects are allocated. Tests cover 500 generated collections,
 Unicode escapes, malformed edits, ambiguous block boundaries, exact capacity
 and recovery. Chromium also parses the writer's actual output in browser tests.
 Try [the WebVTT writer](http://microwasm.localhost:3030/?tool=41-cues-to-vtt).
+
+The [unified-diff reader](transforms/42-diff-to-changes.md) preserves file
+labels, hunk ranges, changed/context lines, metadata and missing-newline
+markers as flat records. Its 1,895-byte module uses a
+[315-byte range/line helper](transforms/00-patch-lines.md). Hunk counts
+distinguish real file headers from header-looking changed text. UTF-8 payloads
+retain CR and other control bytes through escapes. Tests reconstruct 400
+independently generated patches byte-for-byte and apply them to their source
+files; malformed edits, exact capacity and recovery are also checked.
+Try [the diff reader](http://microwasm.localhost:3030/?tool=42-diff-to-changes).
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

@@ -183,6 +183,16 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "42-diff-to-changes",
+        "Inside run: counts decide whether a header is content",
+        "Cleared after use",
+      ],
+      [
+        "00-patch-lines",
+        "Inside range: distinguish absent count from explicit zero",
+        "Empty file side",
+      ],
+      [
         "41-cues-to-vtt",
         "Inside run: gather one row, then write it",
         "Reorder fields without reparsing strings",

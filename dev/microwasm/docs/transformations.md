@@ -6,13 +6,13 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–41, and the side-by-side
+syntax validation and binary64 parsing, tools 1–42, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 9 tools remain.
+significant-digit formatting are implemented too. The other 8 tools remain.
 This is not goal completion.
 
 ## Data representation
@@ -33,7 +33,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–41 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–42 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -225,7 +225,15 @@ The reverse WebVTT writer (41) decodes each row's strings into reusable scratch
 and emits them in WebVTT order. Header and block ordering, ambiguous IDs,
 empty physical lines, Unicode and timing are checked before returning output.
 Generated round trips, mutated rows, exact capacity and Chromium text-track
-parsing exercise both directions. Unified diff records (42–43) are next.
+parsing exercise both directions.
+
+The unified-diff reader (42) is implemented. It retains ordered metadata,
+file labels, hunk range spellings and suffixes, context/add/remove lines and
+missing-newline markers. Remaining counts decide whether `---`/`+++` are
+headers or changed text. Side-specific EOF flags reject misplaced markers.
+LF is the physical separator; CR/control bytes remain escaped content.
+Tests use 400 independent jsdiff patches, reconstruct them byte-for-byte and
+apply them to their source text. The reverse writer (43) is next.
 
 ## Shared number conversion
 

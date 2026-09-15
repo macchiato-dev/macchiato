@@ -946,6 +946,38 @@ Verification: 352 Deno tests passed in two complete file partitions
 fixtures and the seven-page Markdown renderer. There are nine transformations
 left; this checkpoint does not complete the goal.
 
+## Checkpoint: counted unified-diff reader
+
+Tool 42 is a 1,895-byte handwritten module using a 315-byte line/range helper,
+plus the existing shared memory, whitespace and UTF-8 helpers. It emits flat
+file/hunk/context/remove/add records, ordered metadata and explicit missing-
+newline records. The parser owns no filesystem access and never applies a
+patch. Git binary patch bodies and combined hunks are outside this reader.
+
+Seven reader tests and three helper tests exercise count/indicator ambiguity,
+zero-length sides, omitted counts, large start positions, missing-newline
+ownership, malformed file/hunk boundaries, Unicode, control bytes, Markdown
+fence conflicts, exact 64 KiB input and 128 KiB output, constant-table guards
+and recovery. Single-byte mutations either trap or retain all accepted bytes.
+The count helper leaves its entire memory unchanged, including on failure.
+
+The independent jsdiff library creates 400 varied patches in test tooling.
+The reader's output is reconstructed in the test, compared byte-for-byte to
+the generated patch, parsed independently, and applied to the original text.
+The result must equal the intended text, including CRLF and incomplete final
+lines. This test-only reconstruction is not shipped as tool 43; the reverse
+Wasm writer is still to be implemented.
+
+All 362 Deno tests passed in complete partitions of 192 and 170. Both browser
+suites passed, including 42 transformation fixtures. The diff-specific browser
+check edits actual input, compares records, switches both views, retains output
+after a count error and recovers with header-looking payload lines. An embedded
+image URL remains text and triggers no request. The rendered and walkthrough
+screenshots were inspected (`diff-to-changes-rendered.png` and
+`42-diff-to-changes-walkthrough.png` under `dist/browser/`).
+
+There are eight transformations left. This checkpoint is not goal completion.
+
 ## Size is the complete module, not memory consumption
 
 | Example | Wasm bytes |

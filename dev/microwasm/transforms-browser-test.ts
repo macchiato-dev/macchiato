@@ -2710,6 +2710,84 @@ try {
     escapedVtt,
   );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
+  const diff = transforms.find((t) => t.id === "42-diff-to-changes")!;
+  await page.goto(new URL("?tool=42-diff-to-changes", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const changedText = '<img src="https://diff.invalid/x"> 雪 😀';
+  const diffSource = diff.input.replace("Hello", changedText);
+  const diffRecords = diff.expected.replace(
+    '"Hello"',
+    JSON.stringify(changedText),
+  );
+  const diffRequests: string[] = [];
+  const onDiffRequest = (request: { url(): string }) => {
+    if (request.url().includes("diff.invalid")) {
+      diffRequests.push(request.url());
+    }
+  };
+  page.on("request", onDiffRequest);
+  await page.locator("#transform-input").fill(diffSource);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    diffRecords,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered > ul > li").count() === 8,
+    "Diff records unexpectedly nested or disappeared",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered img, #transform-output-rendered script",
+    ).count() === 0,
+    "Diff payload became active markup",
+  );
+  check(
+    (await page.locator("#transform-output-rendered").textContent())?.includes(
+      "no-newline",
+    ),
+    "Incomplete-line record disappeared in rendered mode",
+  );
+  await page.screenshot({
+    path: artifacts + "/diff-to-changes-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    diffSource.replace("+last\n", ""),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === diffRecords,
+    "Incomplete diff replaced successful output",
+  );
+  const headerLike =
+    "```diff\n--- before\n+++ after\n@@ -1 +1 @@\n--- removed text\n+++ added text\n```\n";
+  const headerLikeRecords =
+    '- file "before" "after"\n- hunk -1 +1 ""\n- remove "-- removed text"\n- add "++ added text"\n';
+  await page.locator("#transform-input").fill(headerLike);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    headerLikeRecords,
+  );
+  check(diffRequests.length === 0, "Diff data fetched a resource");
+  page.off("request", onDiffRequest);
+  check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
   );

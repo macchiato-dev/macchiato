@@ -86,6 +86,7 @@ for (
     "transforms/00-xml-walk",
     "transforms/00-calendar-lines",
     "transforms/00-webvtt-time",
+    "transforms/00-patch-lines",
     "transforms/00-html-characters",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
