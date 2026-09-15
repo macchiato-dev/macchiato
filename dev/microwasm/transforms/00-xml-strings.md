@@ -22,6 +22,11 @@ checks belong to a namespace-aware consumer, not this helper.
   it through `;`. Named references are case-sensitive. Hexadecimal references
   use lowercase `x`, with either case for their digits. A numeric reference
   must contain digits and resolve to an allowed XML character.
+- `next(start, end, mode) -> (scalar, next)`: decode one XML text, attribute
+  or literal character using modes 0, 1 and 2 below. It handles references
+  and line-ending/attribute normalization, but writes nothing. The span must
+  be nonempty; callers stop when their cursor reaches end. This lets a format
+  converter consume decoded XML without constructing JSON strings first.
 - `string(start, end, output, mode) -> length`: emit a JSON-quoted string,
   including both quotes. Mode 0 decodes text, 1 decodes an attribute value,
   and 2 handles literal content such as CDATA or comments. The caller removes
@@ -183,14 +188,12 @@ flowchart TD
 - The terminating semicolon is consumed in the returned cursor. Following
   text remains unread. No recursive entity substitution takes place.
 
-### `string`: entity characters must bypass literal-space normalization
+### `next` and `string`: references bypass literal-space normalization
 
 ```mermaid
 flowchart TD
-  A[Check spans, output region and mode; emit opening quote] --> B{Input remains?}
-  B -- no --> Z[Emit closing quote; return byte length]
-  B -- yes --> C{Entity-enabled mode and ampersand?}
-  C -- yes --> D[Decode entity and retain its scalar unchanged]
+  A[Check nonempty span and mode] --> C{Entity-enabled mode and ampersand?}
+  C -- yes --> D[Decode entity; return its scalar and next cursor]
   C -- no --> E[Reject markup forbidden in this mode]
   E --> F[Decode one raw XML scalar]
   F --> G{Literal CR?}
@@ -199,20 +202,30 @@ flowchart TD
   H --> I
   I -- yes --> J[Use space]
   I -- no --> K[Keep scalar]
-  D --> O[JSON-escape and emit scalar]
-  J --> O
+  J --> O[Return scalar and next cursor]
   K --> O
-  O --> B
 ```
 
-The split at `xs-string-entity` is the important semantic boundary: `&#13;`
+The early return at `xs-next-entity` is the important semantic boundary: `&#13;`
 in an attribute must remain a CR, while a literal CR becomes a space. The
-entity branch jumps past both `xs-string-cr` and `xs-string-attribute-space`.
+entity branch bypasses both `xs-next-cr` and `xs-next-attribute-space`.
 
-`xs-string-cdata-close` checks the raw bytes for `]]>` before decoding. Thus
+`xs-next-cdata-close` checks the raw bytes for `]]>` before decoding. Thus
 `]]&gt;` is allowed in text even though it produces the same decoded characters.
 Literal mode skips both markup checks and entity decoding, but still checks
 XML characters and normalizes line endings.
+
+`next` uses only locals and returns two integers. It never updates the string
+output cursor or changes memory. A raw CRLF consumes two source bytes while
+returning one LF (or space in attribute mode). `&#13;` consumes its full
+reference and returns CR in either mode. An escaped less-than character is
+data; a raw less-than character traps in text/attribute modes.
+
+`string` is now the bounded output loop around this iterator: emit the opening
+quote, call `next` while the input cursor is below end, JSON-escape each returned
+scalar, then emit the closing quote. Store the returned cursor before calling
+the output helper. Empty strings never call `next`, but still emit two quotes.
+This keeps the normalization decisions in one implementation for both APIs.
 
 ### `emit` and `JSON-scalar`: storage versus representation
 
@@ -239,23 +252,24 @@ not itself decide whether hexadecimal digits are allowed in the current radix.
 
 Import the JSON iterator as `k.next` (function 0) and `k.memory`. Definitions:
 scalar 1, character 2, name-start 3, name-part 4, name-end 5, entity 6,
-string 7, emit 8, JSON-scalar 9, hex-value 10. Global 0 is the output cursor.
+string 7, emit 8, JSON-scalar 9, hex-value 10, next 11.
+Global 0 is the output cursor.
 
 `[microwasm]`
 
 - xs-header: `0061736d 01000000`
 - xs-type-section: `01 {{size:xs-types}}`
-  - xs-types: `06 60 03 7f 7f 7f 03 7f 7f 7f 60 02 7f 7f 02 7f 7f 60 01 7f 01 7f 60 02 7f 7f 01 7f 60 04 7f 7f 7f 7f 01 7f 60 01 7f 00`
+  - xs-types: `07 60 03 7f 7f 7f 03 7f 7f 7f 60 02 7f 7f 02 7f 7f 60 01 7f 01 7f 60 02 7f 7f 01 7f 60 04 7f 7f 7f 7f 01 7f 60 01 7f 00 60 03 7f 7f 7f 02 7f 7f`
 - xs-import-section: `02 {{size:xs-imports}}`
   - xs-imports: `02 01 6b 04 6e657874 00 00 01 6b 06 6d656d6f7279 02 01 04 04`
 - xs-function-section: `03 {{size:xs-functions}}`
-  - xs-functions: `0a 01 02 02 02 03 01 04 05 05 02`
+  - xs-functions: `0b 01 02 02 02 03 01 04 05 05 02 06`
 - xs-global-section: `06 {{size:xs-globals}}`
   - xs-globals: `01 7f 01 41 00 0b`
 - xs-export-section: `07 {{size:xs-exports}}`
-  - xs-exports: `08 06 7363616c6172 00 01 09 636861726163746572 00 02 09 6e616d655374617274 00 03 08 6e616d6550617274 00 04 07 6e616d65456e64 00 05 06 656e74697479 00 06 06 737472696e67 00 07 06 6d656d6f7279 02 00`
+  - xs-exports: `09 06 7363616c6172 00 01 09 636861726163746572 00 02 09 6e616d655374617274 00 03 08 6e616d6550617274 00 04 07 6e616d65456e64 00 05 06 656e74697479 00 06 06 737472696e67 00 07 06 6d656d6f7279 02 00 04 6e657874 00 0b`
 - xs-code-section: `0a {{size:xs-code}}`
-  - xs-code: `0a`
+  - xs-code: `0b`
     - xs-scalar-record: `{{size:xs-scalar-body}}`
       - xs-scalar-body: `01 02 7f`
         - xs-scalar-bound: `20 00 20 01 4f 20 01 41 808010 4b 72 04 40 00 0b` — Require start before end and end within memory.
@@ -305,19 +319,11 @@ string 7, emit 8, JSON-scalar 9, hex-value 10. Global 0 is the output cursor.
           - xs-entity-apos: `05 20 06 2d 00 00 41 e100 47 20 06 41 01 6a 2d 00 00 41 f000 47 72 20 06 41 02 6a 2d 00 00 41 ef00 47 72 20 06 41 03 6a 2d 00 00 41 f300 47 72 04 40 00 0b 41 27 21 02 0b 0b 0b`
         - xs-entity-result: `20 02 20 00 41 01 6a 0b`
     - xs-string-record: `{{size:xs-string-body}}`
-      - xs-string-body: `01 01 7f`
+      - xs-string-body: `00`
         - xs-string-bound: `20 00 20 01 4b 20 01 41 808010 4b 72 20 02 41 808004 49 72 20 02 41 80800c 4b 72 20 03 41 02 4b 72 04 40 00 0b 20 02 24 00 41 22 10 08`
         - xs-string-loop: `02 40 03 40 20 00 20 01 4f 0d 01`
-          - xs-string-entity: `20 03 41 02 49 20 00 2d 00 00 41 26 46 71 04 40 20 00 20 01 10 06 21 00 21 04` — Entity characters bypass the raw-character normalization branch.
-          - xs-string-raw: `05`
-            - xs-string-less: `20 03 41 02 49 20 00 2d 00 00 41 3c 46 71 04 40 00 0b`
-            - xs-string-cdata-close: `20 03 45 20 00 41 02 6a 20 01 49 71 04 40 20 00 2d 00 00 41 dd00 46 20 00 41 01 6a 2d 00 00 41 dd00 46 71 20 00 41 02 6a 2d 00 00 41 3e 46 71 04 40 00 0b 0b`
-            - xs-string-scalar: `20 00 20 01 10 01 21 00 21 04`
-            - xs-string-cr: `20 04 41 0d 46 04 40` — Only literal CR enters this branch.
-              - xs-string-crlf: `20 00 20 01 49 04 40 20 00 2d 00 00 41 0a 46 04 40 20 00 41 01 6a 21 00 0b 0b` — Consume a following LF once, if present.
-              - xs-string-cr-normalized: `41 0a 21 04 0b` — Both CR and CRLF now represent one LF.
-            - xs-string-attribute-space: `20 03 41 01 46 20 04 41 09 46 20 04 41 0a 46 72 71 04 40 41 20 21 04 0b 0b`
-          - xs-string-output: `20 04 10 09 0c 00 0b 0b 41 22 10 08 23 00 20 02 6b 0b`
+          - xs-string-next: `20 00 20 01 20 03 10 0b 21 00` — Retain the returned scalar on the operand stack while committing its next cursor.
+          - xs-string-output: `10 09 0c 00 0b 0b 41 22 10 08 23 00 20 02 6b 0b`
     - xs-emit-record: `{{size:xs-emit-body}}`
       - xs-emit-body: `00 23 00 41 80800c 4f 04 40 00 0b 23 00 20 00 3a 00 00 23 00 41 01 6a 24 00 0b`
     - xs-json-scalar-record: `{{size:xs-json-scalar-body}}`
@@ -332,8 +338,21 @@ string 7, emit 8, JSON-scalar 9, hex-value 10. Global 0 is the output cursor.
         - xs-json-last: `20 00 41 3f 71 41 8001 72 10 08 0b`
     - xs-hex-record: `{{size:xs-hex-body}}`
       - xs-hex-body: `00 20 00 41 30 6b 41 09 4d 04 40 20 00 41 30 6b 0f 0b 20 00 41 20 72 41 e100 6b 41 05 4d 04 40 20 00 41 20 72 41 d700 6b 0f 0b 41 7f 0b`
+    - xs-next-record: `{{size:xs-next-body}}`
+      - xs-next-body: `01 01 7f`
+        - xs-next-bound: `20 00 20 01 4f 20 01 41 808010 4b 72 20 02 41 02 4b 72 04 40 00 0b` — Require one source character and a recognized context.
+        - xs-next-entity: `20 02 41 02 49 20 00 2d 00 00 41 26 46 71 04 40 20 00 20 01 10 06 0f 0b` — Return references before raw whitespace normalization.
+        - xs-next-less: `20 02 41 02 49 20 00 2d 00 00 41 3c 46 71 04 40 00 0b`
+        - xs-next-cdata-close: `20 02 45 20 00 41 02 6a 20 01 49 71 04 40 20 00 2d 00 00 41 dd00 46 20 00 41 01 6a 2d 00 00 41 dd00 46 71 20 00 41 02 6a 2d 00 00 41 3e 46 71 04 40 00 0b 0b`
+        - xs-next-scalar: `20 00 20 01 10 01 21 00 21 03`
+        - xs-next-cr: `20 03 41 0d 46 04 40`
+          - xs-next-crlf: `20 00 20 01 49 04 40 20 00 2d 00 00 41 0a 46 04 40 20 00 41 01 6a 21 00 0b 0b` — Consume a following LF only on the literal CR path.
+          - xs-next-cr-normalized: `41 0a 21 03 0b`
+        - xs-next-attribute-space: `20 02 41 01 46 20 03 41 09 46 20 03 41 0a 46 72 71 04 40 41 20 21 03 0b`
+        - xs-next-result: `20 03 20 00 0b`
 
 Scalar locals: start/end 0/1, scalar 2, pending surrogate 3. Name scanner:
 cursor/end 0/1, candidate next cursor 2. Entity decoder:
 cursor/end 0/1, value 2, radix 3, digit 4, digit count 5, name start 6,
-name length 7. String decoder: start/end/output/mode 0..3, scalar 4.
+name length 7. String decoder: start/end/output/mode 0..3.
+Decoded iterator: start/end/mode 0..2, scalar 3.

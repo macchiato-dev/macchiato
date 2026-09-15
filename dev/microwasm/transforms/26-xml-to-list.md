@@ -67,6 +67,14 @@ change. A trap may leave partial output, which the UI must not publish.
 The next call resets all parsing state. This is a document reader, not an
 HTML parser or an error-recovering XML editor.
 
+`readSpan(start, end)` reads an unfenced XML document from a half-open span
+within the first 64 KiB and returns the same output length. It is for other
+format converters that have already removed their own Markdown framing.
+It still checks UTF-8, XML syntax, one root, nesting and output capacity;
+it does not accept an XML fragment or skip validation. It writes the ordinary
+ordered tree at `65536`, just as `run` does. Callers may discard that tree
+after validation, but its output-capacity limit still applies.
+
 ## Function walkthroughs
 
 ### `run`: framing, validation and the one-root condition
@@ -90,6 +98,32 @@ only up to three leading spaces for a Markdown closing fence, not arbitrary
 backticks embedded in text. `node` increments the root count only when an
 element is encountered at document depth. Comments and PIs do not count as
 roots; top-level text must contain only XML whitespace.
+
+Both entry points join at `document(start, end)`. That function resets the
+cursor/end globals, skips an optional leading BOM, records the declaration's
+only allowed start position, and resets the root count and output cursor.
+It then dispatches nodes until the cursor reaches end and requires one root.
+No parser state is carried from a preceding successful or failed call.
+
+```mermaid
+flowchart TD
+  R[run: parse xml fence] --> F[Check closing-fence lines and XML characters]
+  S[readSpan: check source bounds] --> V[Check XML characters without fence recognition]
+  F --> D[document: reset cursor and end; skip optional BOM]
+  V --> D
+  D --> I[Reset declaration start, root count and output]
+  I --> N{Cursor before end?}
+  N -- yes --> P[Parse and emit one document node]
+  P --> N
+  N -- no --> C{Exactly one root?}
+  C -- no --> X[Trap]
+  C -- yes --> O[Return output byte length]
+```
+
+The raw-span entry reuses the character-validation scan with a fence threshold
+of 65,537, greater than any possible backtick run in its input. Backticks are
+therefore just XML data in this entry. It does not rewrite a caller's language
+label to `xml`, move their source, or mistake a literal fence for framing.
 
 ### `element`: attributes finish before child recursion begins
 
@@ -210,11 +244,13 @@ spelling. It does not route through a locale or general case-conversion table.
 
 ## Module
 
-The seven reader tests cover generated documents against Saxes, single-byte
+The nine reader tests cover generated documents against Saxes, single-byte
 edits, malformed markup, Unicode/character errors in every node context,
 fence boundaries, 32-level nesting, 500 attributes, and exact memory limits.
 Successful and failed runs preserve the source and literal-data regions.
 Browser tests independently compare the mixed-content tree with `DOMParser`.
+Raw-span tests also compare both entry points at varied offsets, preserve
+surrounding source bytes and literal storage, and alternate calls after traps.
 
 Oracle differences are explicit: Saxes drops initial whitespace before markup,
 while this tree retains it. Saxes 6 also accepts `<?p?data?>`; this reader and
@@ -226,7 +262,8 @@ Imports: name-end 0, string 1, scalar 2, shared memory. Definitions: run 3,
 emit 4, literal 5, prefix 6, quote 7, spaces 8, take 9, match 10, same 11,
 unique 12, node 13, element 14, text 15, special 16, instruction 17,
 declaration 18, attribute-value 19, read-name 20, whitespace 21,
-span-literal 22, fence-lines 23. Globals: output 0, cursor 1, end 2,
+span-literal 22, fence-lines 23, read-span 24, document 25.
+Globals: output 0, cursor 1, end 2,
 root count 3, document start 4, opening-fence length 5.
 
 `[microwasm]`
@@ -237,13 +274,13 @@ root count 3, document start 4, opening-fence length 5.
 - xl-import-section: `02 {{size:xl-imports}}`
   - xl-imports: `04 01 78 07 6e616d65456e64 00 00 01 78 06 737472696e67 00 01 01 78 06 7363616c6172 00 02 01 78 06 6d656d6f7279 02 01 04 04`
 - xl-function-section: `03 {{size:xl-functions}}`
-  - xl-functions: `15 03 04 04 04 05 06 04 03 01 05 04 04 04 07 04 04 08 08 03 09 05`
+  - xl-functions: `17 03 04 04 04 05 06 04 03 01 05 04 04 04 07 04 04 08 08 03 09 05 00 00`
 - xl-global-section: `06 {{size:xl-globals}}`
   - xl-globals: `06 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b 7f 01 41 00 0b`
 - xl-export-section: `07 {{size:xl-exports}}`
-  - xl-exports: `02 03 72756e 00 03 06 6d656d6f7279 02 00`
+  - xl-exports: `03 03 72756e 00 03 06 6d656d6f7279 02 00 08 726561645370616e 00 18`
 - xl-code-section: `0a {{size:xl-code}}`
-  - xl-code: `15`
+  - xl-code: `17`
     - xl-run-record: `{{size:xl-run-body}}`
       - xl-run-body: `01 03 7f`
         - xl-run-bound: `20 00 41 0a 49 20 00 41 808004 4b 72 04 40 00 0b`
@@ -254,10 +291,7 @@ root count 3, document start 4, opening-fence length 5.
         - xl-run-closing-ticks: `02 40 03 40 23 02 20 02 4d 0d 01 23 02 41 01 6b 2d 00 00 41 e000 47 0d 01 23 02 41 01 6b 24 02 20 03 41 01 6a 21 03 0c 00 0b 0b 20 03 23 05 49 04 40 00 0b`
         - xl-run-framing: `23 02 20 02 4b 04 40 23 02 41 01 6b 24 02 23 02 2d 00 00 41 0a 47 04 40 00 0b 23 02 20 02 4b 04 40 23 02 41 01 6b 2d 00 00 41 0d 46 04 40 23 02 41 01 6b 24 02 0b 0b 0b`
         - xl-run-validate: `20 02 23 02 23 05 10 17`
-        - xl-run-bom: `23 01 41 02 6a 23 02 49 04 40 23 01 2d 00 00 41 ef01 46 23 01 41 01 6a 2d 00 00 41 bb01 46 71 23 01 41 02 6a 2d 00 00 41 bf01 46 71 04 40 23 01 41 03 6a 24 01 0b 0b`
-        - xl-run-reset: `23 01 24 04 41 00 24 03 41 808004 24 00 41 00 10 06 41 84800c 10 05`
-        - xl-run-nodes: `02 40 03 40 23 01 23 02 4f 0d 01 41 01 10 0d 0c 00 0b 0b`
-        - xl-run-result: `23 03 41 01 47 04 40 00 0b 23 00 41 808004 6b 0b`
+        - xl-run-document: `23 01 23 02 10 19 0b` — Framing is finished; join the unfenced document path.
     - xl-emit-record: `{{size:xl-emit-body}}`
       - xl-emit-body: `00 23 00 41 80800c 4f 04 40 00 0b 23 00 20 00 3a 00 00 23 00 41 01 6a 24 00 0b`
     - xl-literal-record: `{{size:xl-literal-body}}`
@@ -354,6 +388,17 @@ root count 3, document start 4, opening-fence length 5.
         - xl-fence-line-ticks: `02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 41 e000 47 0d 01 20 00 41 01 6a 21 00 20 04 41 01 6a 21 04 0c 00 0b 0b`
         - xl-fence-line-tail: `20 04 20 02 4f 04 40 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 41 20 46 20 00 2d 00 00 41 09 46 72 45 0d 01 20 00 41 01 6a 21 00 0c 00 0b 0b 20 00 20 01 46 04 40 00 0b 20 00 2d 00 00 41 0a 46 20 00 2d 00 00 41 0d 46 72 04 40 00 0b 0b`
         - xl-fence-line-scan: `02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 41 0a 46 20 00 2d 00 00 41 0d 46 72 0d 01 20 00 20 01 10 02 21 00 1a 0c 00 0b 0b 20 00 41 01 6a 21 00 0c 00 0b 0b 0b`
+    - xl-span-record: `{{size:xl-span-body}}`
+      - xl-span-body: `00`
+        - xl-span-bounds: `20 00 20 01 4b 20 01 41 808004 4b 72 04 40 00 0b` — Reject reversed and out-of-input spans before scanning.
+        - xl-span-characters: `20 00 20 01 41 818004 10 17` — Validate XML characters; the fence threshold is larger than the whole input region.
+        - xl-span-document: `20 00 20 01 10 19 0b`
+    - xl-document-record: `{{size:xl-document-body}}`
+      - xl-document-body: `00 20 00 24 01 20 01 24 02`
+        - xl-run-bom: `23 01 41 02 6a 23 02 49 04 40 23 01 2d 00 00 41 ef01 46 23 01 41 01 6a 2d 00 00 41 bb01 46 71 23 01 41 02 6a 2d 00 00 41 bf01 46 71 04 40 23 01 41 03 6a 24 01 0b 0b` — A BOM belongs only at this span's start.
+        - xl-run-reset: `23 01 24 04 41 00 24 03 41 808004 24 00 41 00 10 06 41 84800c 10 05`
+        - xl-run-nodes: `02 40 03 40 23 01 23 02 4f 0d 01 41 01 10 0d 0c 00 0b 0b`
+        - xl-run-result: `23 03 41 01 47 04 40 00 0b 23 00 41 808004 6b 0b`
 - xl-data-section: `0b {{size:xl-data}}`
   - xl-data: `01 00 41 80800c 0b {{size:xl-literals}}`
     - xl-literals:

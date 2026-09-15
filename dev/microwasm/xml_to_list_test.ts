@@ -82,6 +82,7 @@ async function reader() {
     (imports.t.memory as WebAssembly.Memory).buffer,
   );
   const run = imports.t.run as (length: number) => number;
+  const readSpan = imports.t.readSpan as (start: number, end: number) => number;
   const literals = memory.slice(196608);
   function bytes(input: Uint8Array) {
     memory.set(input);
@@ -94,8 +95,80 @@ async function reader() {
     }
   }
   const convert = (input: string) => bytes(encoder.encode(input));
-  return { memory, run, bytes, convert };
+  return { memory, run, readSpan, bytes, convert };
 }
+
+Deno.test("XML bare spans: same tree as fenced input at different offsets with full validation", async () => {
+  const { memory, readSpan, convert } = await reader();
+  const cases = [
+    "<r/>",
+    "\ufeff<?xml version='1.0'?><r/>",
+    " \n<!--before--><r a='&amp;'>&#13;<![CDATA[x]]><?p y?></r> \n",
+    "<r>\n```\n</r>",
+    "<r>\n   ````\n</r>",
+  ];
+  for (let i = 0; i < 100; i++) {
+    cases.push(`<r n="${i}"><a>é猫😀 &amp; ${i}</a><!--${i}--><b/></r>`);
+  }
+  for (const source of cases) {
+    const expected = convert(fence(source, 8));
+    for (const start of [0, 37, 1001]) {
+      const input = encoder.encode(source);
+      memory.fill(0x5a, 0, 65536);
+      memory.set(input, start);
+      const before = memory.slice(0, 65536), literals = memory.slice(196608);
+      const n = readSpan(start, start + input.length);
+      equal(decoder.decode(memory.subarray(65536, 65536 + n)), expected);
+      equal(toHex(memory.subarray(0, 65536)), toHex(before));
+      equal(toHex(memory.subarray(196608)), toHex(literals));
+    }
+  }
+});
+
+Deno.test("XML bare spans: boundaries, invalid documents and alternating-entry recovery", async () => {
+  const { memory, readSpan, convert } = await reader();
+  const span = (source: string, start = 0) => {
+    const bytes = encoder.encode(source);
+    memory.set(bytes, start);
+    const n = readSpan(start, start + bytes.length);
+    return decoder.decode(memory.subarray(65536, 65536 + n));
+  };
+  for (
+    const source of [
+      "",
+      " \n",
+      "<r/><s/>",
+      "<r></s>",
+      "<r a='1' a='2'/>",
+      "<!DOCTYPE r><r/>",
+      "<?p?data?><r/>",
+      " \n<?xml version='1.0'?><r/>",
+      "<r>&unknown;</r>",
+      "<r><!--a--b--></r>",
+      "<r>\u0000</r>",
+      "<r><![CDATA[\u0001]]></r>",
+    ]
+  ) {
+    traps(() => span(source, 11));
+    equal(span("<ok/>"), convert(fence("<ok/>")));
+  }
+  for (const [start, end] of [[-1, 1], [1, 0], [0, 65537], [65536, 65536]]) {
+    traps(() => readSpan(start, end));
+  }
+  equal(span("<r/>", 65532), convert(fence("<r/>")));
+  equal(
+    span("<r>" + "a".repeat(65529) + "</r>").includes("a".repeat(65529)),
+    true,
+  );
+  equal(span("<a>".repeat(32) + "</a>".repeat(32)).startsWith("- []\n"), true);
+  traps(() => span("<a>".repeat(33) + "</a>".repeat(33)));
+  // Raw-span calls must not inherit the preceding fenced call's tick count.
+  convert(fence("<r/>", 3));
+  equal(span("<r>\n```\n</r>"), convert(fence("<r>\n```\n</r>", 4)));
+  memory.set([60, 114, 62, 0xed, 0xa0, 0x80, 60, 47, 114, 62]);
+  traps(() => readSpan(0, 10));
+  equal(span("<done/>"), convert(fence("<done/>")));
+});
 
 Deno.test("XML reader: ordered nodes, attributes, mixed content and normalization", async () => {
   const r = await reader();

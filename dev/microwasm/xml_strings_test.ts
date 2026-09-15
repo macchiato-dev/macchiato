@@ -45,6 +45,7 @@ async function helper() {
     nameEnd(start: number, end: number): number;
     scalar(start: number, end: number): [number, number];
     entity(start: number, end: number): [number, number];
+    next(start: number, end: number, mode: number): [number, number];
     string(start: number, end: number, output: number, mode: number): number;
   };
   const memory = new Uint8Array(x.memory.buffer);
@@ -61,6 +62,131 @@ async function helper() {
   }
   return { x, memory, put, string };
 }
+
+Deno.test("XML iterator: context normalization and exact cursor movement without writes", async () => {
+  const { x, put, memory } = await helper();
+  const cases: [string, number, [number, number]][] = [
+    ["\r\nX", 0, [10, 2]],
+    ["\r\nX", 1, [32, 2]],
+    ["\rX", 2, [10, 1]],
+    ["\t", 1, [32, 1]],
+    ["&#13;X", 1, [13, 5]],
+    ["&#10;", 1, [10, 5]],
+    ["&amp;", 0, [38, 5]],
+    ["&amp;", 2, [38, 1]],
+    ["&lt;", 1, [60, 4]],
+    ["<", 2, [60, 1]],
+    ["\\n", 0, [92, 1]],
+    ["é", 0, [233, 2]],
+    ["😀", 0, [0x1f600, 4]],
+    ["&#x10ffff;", 0, [0x10ffff, 10]],
+  ];
+  for (const [source, mode, [cp, consumed]] of cases) {
+    for (const start of [0, 173, 262144 - encoder.encode(source).length]) {
+      const end = put(source, start), before = memory.slice();
+      equal(x.next(start, end, mode), [cp, start + consumed]);
+      equal(toHex(memory), toHex(before));
+    }
+  }
+  const parts = [
+    "A",
+    "é猫😀",
+    "\r\n",
+    "\t",
+    " ",
+    "&#13;",
+    "&amp;",
+    "&#x1f600;",
+    "\\",
+    "'",
+    "]]",
+    "&gt;",
+  ];
+  let state = 1907;
+  for (let i = 0; i < 500; i++) {
+    let source = "";
+    for (let j = 0; j < i % 29; j++) {
+      state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+      source += parts[state % parts.length];
+    }
+    for (const mode of [0, 1, 2]) {
+      const end = put(source), points: number[] = [];
+      let cursor = 0;
+      while (cursor < end) {
+        const [cp, next] = x.next(cursor, end, mode);
+        equal(next > cursor && next <= end, true);
+        points.push(cp);
+        cursor = next;
+      }
+      const parser = new SaxesParser({ xmlns: false });
+      let text = "";
+      parser.on("text", (s) => text += s);
+      parser.on("cdata", (s) => text += s);
+      parser.on("opentag", (tag) => {
+        if (mode === 1) text = String(tag.attributes.a);
+      });
+      parser.write(
+        mode === 1
+          ? '<r a="' + source + '"/>'
+          : mode === 2
+          ? "<r><![CDATA[" + source + "]]></r>"
+          : "<r>" + source + "</r>",
+      ).close();
+      equal(String.fromCodePoint(...points), text);
+    }
+  }
+});
+
+Deno.test("XML iterator: malformed spans, references and context delimiters cannot bypass checks", async () => {
+  const { x, put, memory } = await helper();
+  for (
+    const [start, end, mode] of [
+      [0, 0, 0],
+      [1, 0, 0],
+      [-1, 1, 0],
+      [0, 262145, 0],
+      [262144, 262144, 0],
+      [0, 1, -1],
+      [0, 1, 3],
+    ]
+  ) {
+    traps(() => x.next(start, end, mode));
+  }
+  for (
+    const input of [
+      "&",
+      "&unknown;",
+      "&#;",
+      "&#0;",
+      "&#x110000;",
+      "&#4294967361;",
+      "&#" + "9".repeat(1000) + ";",
+      "<",
+    ]
+  ) {
+    const end = put(input);
+    for (const mode of [0, 1]) traps(() => x.next(0, end, mode));
+  }
+  const close = put("]]>");
+  traps(() => x.next(0, close, 0));
+  equal(x.next(0, close, 1), [93, 1]);
+  equal(x.next(0, close, 2), [93, 1]);
+  for (
+    const bytes of [
+      [0],
+      [0xff],
+      [0xc0, 0x80],
+      [0xe2, 0x82],
+      [0xed, 0xa0, 0x80],
+      [0xf4, 0x90, 0x80, 0x80],
+    ]
+  ) {
+    memory.set(bytes);
+    for (const mode of [0, 1, 2]) traps(() => x.next(0, bytes.length, mode));
+  }
+  const end = put("OK");
+  equal(x.next(0, end, 0), [79, 1]);
+});
 
 Deno.test("XML primitives: character and name classes match XML 1.0 across Unicode", async () => {
   const { x } = await helper();
