@@ -264,4 +264,18 @@ export const transforms = [{
     '```xml\n<note priority="high">Hello <b>Ben</b> &amp; friends.</note>\n```\n',
   expected:
     '- []\n  - {}\n    - "element" "note"\n    - "attributes" {}\n      - "priority" "high"\n    - "children" []\n      - {}\n        - "text" "Hello "\n      - {}\n        - "element" "b"\n        - "attributes" {}\n        - "children" []\n          - {}\n            - "text" "Ben"\n      - {}\n        - "text" " & friends."\n',
+}, {
+  id: "27-list-to-xml",
+  title: "An ordered Markdown tree to XML",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "l", path: "transforms/01-list-to-json" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "x", path: "transforms/00-xml-strings" },
+    { name: "o", path: "transforms/00-xml-output" },
+  ],
+  input:
+    '- []\n  - {}\n    - element note\n    - attributes {}\n      - priority high\n    - children []\n      - {}\n        - text "Hello "\n      - {}\n        - element b\n        - attributes {}\n        - children []\n          - {}\n            - text Ben\n      - {}\n        - text " & friends."\n',
+  expected:
+    '```xml\n<note priority="high">Hello <b>Ben</b> &amp; friends.</note>\n```\n',
 }];

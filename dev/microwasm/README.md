@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 218 tests covering all twenty examples and the supplied
+`deno task test` runs 225 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -355,8 +355,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Twenty-six transformations are implemented: tools 1–26 in the plan.
-The remaining 24 are pending.
+Twenty-seven transformations are implemented: tools 1–27 in the plan.
+The remaining 23 are pending.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,649-byte module: XML 1.0 characters and Unicode names,
@@ -375,7 +375,16 @@ parser, exercise 930 single-character edits, and check exact input/output
 limits, 32-level nesting and recovery. Browser tests compare mixed content
 with Chromium's XML parser and verify inert rendered output.
 Try [the XML reader](http://microwasm.localhost:3030/?tool=26-xml-to-list).
-The reverse XML writer remains to be implemented.
+The [reverse XML writer](transforms/27-list-to-xml.md) is implemented in
+2,528 bytes plus its shared helpers. It accepts node properties in any order,
+checks exact field combinations and duplicate decoded attributes, and emits
+declarations in their required order. A final framing pass chooses a fence
+long enough for the document's literal backticks. Tests round-trip 500 generated
+trees through both Wasm directions and compare with an independent XML parser,
+then check invalid shapes, exact memory bounds and recovery. The writer
+reclaims its Wasm input page after list compilation; the browser's editable
+Markdown is unchanged.
+Try [the XML writer](http://microwasm.localhost:3030/?tool=27-list-to-xml).
 
 Its [string-output helper](transforms/00-xml-output.md) is implemented in
 888 bytes. It decodes JSON string spans, validates XML names and characters,
@@ -384,7 +393,7 @@ CR and attribute TAB/LF/CR through parsing; comment, CDATA and PI modes reject
 unrepresentable delimiters rather than change the node structure. Tests cover
 every BMP unit in raw/escaped JSON, astral pairs, 1,000 generated strings with
 independent XML parsing, exact bounds, recovery and browser round trips.
-This helper is preparation for tool 27, not an additional transformation.
+This helper is shared infrastructure for tool 27, not another transformation.
 
 ## Provisional byte-list notation
 

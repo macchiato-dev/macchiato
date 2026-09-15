@@ -1468,6 +1468,102 @@ try {
       ?.value ===
       '- []\n  - {}\n    - "element" "r"\n    - "attributes" {}\n    - "children" []\n'
   );
+  await page.goto(new URL("?tool=27-list-to-xml", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const xmlTree =
+    '- []\n  - {}\n    - children []\n      - {}\n        - text "A & B\\r\\n"\n      - {}\n        - cdata "\\n```\\n<em>literal</em>"\n      - {}\n        - data yes\n        - pi go\n    - attributes {}\n      - label "<script>inert</script>"\n    - element r';
+  const writtenXml =
+    '<r label="&lt;script&gt;inert&lt;/script&gt;">A &amp; B&#13;\n<![CDATA[\n```\n<em>literal</em>]]><?go yes?></r>';
+  const writtenFence = "````xml\n" + writtenXml + "\n````\n";
+  await page.locator("#transform-input").fill(xmlTree);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    writtenFence,
+  );
+  const decodedXml = await page.evaluate((xml) => {
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    if (doc.querySelector("parsererror")) {
+      throw Error("Writer produced malformed XML");
+    }
+    return {
+      label: doc.documentElement.getAttribute("label"),
+      text: doc.documentElement.firstChild?.nodeValue,
+      cdata: doc.documentElement.childNodes[1]?.nodeValue,
+      target: (doc.documentElement.lastChild as ProcessingInstruction).target,
+    };
+  }, writtenXml);
+  check(
+    await page.locator("#transform-input").inputValue() === xmlTree,
+    "Reclaiming Wasm input memory changed the editable Markdown",
+  );
+  check(
+    JSON.stringify(decodedXml) ===
+      JSON.stringify({
+        label: "<script>inert</script>",
+        text: "A & B\r\n",
+        cdata: "\n```\n<em>literal</em>",
+        target: "go",
+      }),
+    "XML writer failed browser data preservation",
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-output-rendered pre").count() === 1,
+    "Literal backticks escaped the XML fence",
+  );
+  check(
+    await page.locator("#transform-output-rendered pre").textContent() ===
+      writtenXml + "\n",
+    "Rendered XML changed source bytes",
+  );
+  check(
+    await page.locator(
+      "#transform-output-rendered script, #transform-output-rendered em",
+    ).count() === 0,
+    "XML writer output became HTML",
+  );
+  await page.screenshot({
+    path: `${artifacts}/list-to-xml-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  for (
+    const bad of [
+      "- []",
+      xmlTree.replace("        - pi go", "        - pi XML"),
+      xmlTree.replace(
+        "    - element r",
+        "    - element r\n    - unknown ignored",
+      ),
+    ]
+  ) {
+    await page.locator("#transform-input").fill(bad);
+    await page.getByRole("button", { name: "Run", exact: true }).click();
+    await page.waitForFunction(() =>
+      document.getElementById("transform-status")?.textContent?.includes(
+        "Previous output kept",
+      )
+    );
+    check(
+      await page.locator("#transform-output").inputValue() === writtenFence,
+      "Invalid XML tree replaced successful output",
+    );
+  }
+  const recoveryTree =
+    "- []\n  - {}\n    - element recovered\n    - attributes {}\n    - children []";
+  await page.locator("#transform-input").fill(recoveryTree);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value === "```xml\n<recovered/>\n```\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

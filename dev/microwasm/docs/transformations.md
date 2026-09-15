@@ -6,19 +6,19 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–26, and the side-by-side
+syntax validation and binary64 parsing, tools 1–27, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 24 tools remain.
+significant-digit formatting are implemented too. The other 23 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–26 are now all implemented.
+stable numbering; tools 1–27 are now all implemented.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
 validates each decoded cell separately. The first row is the header.
@@ -63,7 +63,7 @@ encoding, canonicalizing the query spelling without sorting or dropping pairs.
 It accepts exactly two strings per pair and replaces lone surrogates as the
 browser API does; it neither coerces scalar types nor invents nested names.
 
-The XML reader (26) is implemented and selectable; the writer (27) is next.
+The XML reader (26) and writer (27) are implemented and selectable.
 Its shared
 [character/name/string helper](../transforms/00-xml-strings.md) is implemented
 and tested. The document parser retains ordered element, text,
@@ -76,13 +76,23 @@ repeated sibling names and whitespace rather than flattening XML into a map.
 An optional initial XML declaration has a distinct, validated record.
 The reader requires one root element and matching tags, rejects duplicate
 attributes, DTDs and undeclared entities, and keeps namespace prefixes as names.
-The reverse writer must validate this shape and preserve the normalized data,
-without inventing namespace bindings or fetching resources.
+The reverse writer validates this shape and preserves the normalized data,
+without inventing namespace bindings or fetching resources. Node properties
+may occur in any order, but the exact field combination and decoded attribute
+uniqueness are checked. Empty text nodes disappear and adjacent text nodes
+merge on reparse, as XML has no separator between them. Other node boundaries
+are preserved. Declarations are emitted in their required field order.
 Its [XML output helper](../transforms/00-xml-output.md) now decodes JSON string
 spans and handles names, text, attributes, comments, CDATA and PI data. It
 preserves whitespace through references where XML permits them, and rejects
-unrepresentable literal-context values. The remaining writer work is tree
-shape validation, document ordering, tag/attribute emission and fence framing.
+unrepresentable literal-context values. The writer emits the XML first, then
+checks the complete framed size and moves it forward for a sufficiently long
+Markdown fence. It reclaims the first memory page for compact JSON after list
+compilation, without modifying the browser's editable input.
+
+The OPML pair (28–29) is next: nested Markdown links and labels map to outline
+elements, reusing the tested XML string handling. This needs real outline/link
+conversion, not merely another label on the generic XML tree tools.
 
 ## Shared number conversion
 
