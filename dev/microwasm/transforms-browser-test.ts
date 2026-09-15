@@ -1831,6 +1831,75 @@ try {
     (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
       .includes("<H3>Recovered</H3>")
   );
+  await page.goto(new URL("?tool=30-bookmarks-to-outline", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  await page.locator("#transform-input").fill(bookmarkOutput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)?.value
+      .includes("Books&#32;")
+  );
+  const importedBookmarks = await page.locator("#transform-output")
+    .inputValue();
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-input-rendered pre code").count() === 1,
+    "Imported bookmark HTML did not remain a code fence",
+  );
+  check(
+    await page.locator("#transform-output-rendered h1").textContent() ===
+      "Books & notes",
+    "Imported bookmark title differs",
+  );
+  const importedLink = page.locator("#transform-output-rendered a");
+  check(
+    await importedLink.count() === 1 &&
+      await importedLink.textContent() === "<script>inert</script>" &&
+      await importedLink.getAttribute("data-href") ===
+        "https://example.com/?x=1&y=2" &&
+      await importedLink.getAttribute("href") === null,
+    "Imported bookmark label or inert destination differs",
+  );
+  check(
+    await page.locator("#transform-output-rendered li").count() === 3 &&
+      await page.locator("#transform-output-rendered script").count() === 0,
+    "Imported folders or literal markup were lost",
+  );
+  await page.screenshot({
+    path: `${artifacts}/bookmarks-to-outline-rendered.png`,
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-input").inputValue() === bookmarkOutput,
+    "Rendering mutated the original bookmark export",
+  );
+  await page.locator("#transform-input").fill(
+    "```html\n<DL><H3>Missing child list</H3></DL>\n```\n",
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === importedBookmarks,
+    "An incomplete folder replaced successful output",
+  );
+  await page.locator("#transform-input").fill(
+    "```html\n<DL><H3>Recovered</H3><DL></DL></DL>\n```\n",
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+      ?.value ===
+      "- Recovered\n"
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

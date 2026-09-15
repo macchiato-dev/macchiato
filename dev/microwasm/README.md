@@ -85,7 +85,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 255 tests covering all twenty examples and the supplied
+`deno task test` runs 261 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -363,8 +363,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty transformations are implemented: tools 1–29 and 31 in the plan.
-The remaining 21 are pending.
+Thirty-one transformations are implemented: tools 1–31 in the plan.
+The remaining 19 are pending.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
@@ -442,7 +442,16 @@ have children. It preserves non-HTTP destinations without activating them.
 Tests cover 500 generated trees through an independent HTML parser, edited
 punctuation, exact output capacity, nesting limits and recovery after errors.
 Try [the bookmark writer](http://microwasm.localhost:3030/?tool=31-outline-to-bookmarks).
-Its reverse direction, tool 30, remains in progress; twenty tools remain overall.
+The [bookmark reader](transforms/30-bookmarks-to-outline.md) completes this
+pair. It scans browser-export HTML without constructing a DOM, retaining
+titles, folder hierarchy, labels and destinations. It handles omitted DT/P
+end tags, quoted/unquoted attributes and HTML references; unsupported markup
+is rejected and metadata is discarded without loading resources. Six test
+groups include 500 generated documents, independent HTML/CommonMark oracles,
+Wasm round trips, empty folders, exact bounds and recovery after errors.
+Its function breakdowns trace list-depth transitions, delimiter ownership
+inside attribute loops, and source movement versus decoded-character movement.
+Try [the bookmark reader](http://microwasm.localhost:3030/?tool=30-bookmarks-to-outline).
 
 ## Provisional byte-list notation
 

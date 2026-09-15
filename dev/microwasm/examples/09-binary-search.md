@@ -65,7 +65,7 @@ end of the surviving interval, not the last candidate's index.
 
 For `[-7, -2, 4, 4, 9, 15]`, searching for the absent value 5 takes this path:
 
-| Iteration | Candidate interval | Middle and value | Next interval |
+| Step | Candidate interval | Middle and value | Next interval |
 | --- | --- | --- | --- |
 | 1 | `[0, 6)` | Index 3, value 4 | `[4, 6)`; exclude middle and everything below |
 | 2 | `[4, 6)` | Index 5, value 15 | `[4, 5)`; exclude middle and everything above |

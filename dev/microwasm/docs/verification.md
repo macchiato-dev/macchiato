@@ -5,6 +5,35 @@ are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler
 is involved. The host code does not implement the filters or Life rules.
 
+## Checkpoint: bookmark import and function-level walkthroughs
+
+Tool 30 is a 2,989-byte browser-bookmark reader plus the shared HTML character
+and UTF-8 helpers. Its six test groups bring the suite to 261 passing tests.
+They compare 500 generated documents with independent parse5 and CommonMark
+trees and round-trip through the handwritten Wasm bookmark writer. They also
+exercise empty-label hierarchies, quoted and unquoted attributes, title
+preference, malformed input hidden in discarded metadata, exact memory bounds,
+depth limits and reuse after a trap. It does not emulate all browser HTML repair.
+
+The browser transformation suite passes all 31 catalogue fixtures. The new
+import scenario checks a decoded title, literal script-looking label text,
+nested folders, inert `data-href`, unchanged source across display switches,
+and retention of the prior output after malformed input. Its screenshot is
+`dist/browser/bookmarks-to-outline-rendered.png` and was visually inspected.
+The complete documentation browser suite also passes all examples, helper
+and transformation documents in Original/Filled counts/Hex and both display
+modes. Mermaid stays readable source rather than requiring a diagram library.
+
+The reader's walkthroughs now expose inner branches and state owners, with a
+folder/list trace and separate attribute and character-decoding loops. Binary
+search and insertion sort also have expanded branch diagrams and traces:
+half-open bounds and signed value comparisons for search; the moving hole,
+two inner exits, and operand-stack reuse for insertion sort. Those two
+documentation-only changes preserve their compiled bytes (139 and 163 bytes).
+
+There are 31 published transformations and 19 remaining. This is a progress
+checkpoint, not completion of the fifty-tool goal.
+
 ## Repeat the checks
 
 From `dev/microwasm`:

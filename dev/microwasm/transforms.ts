@@ -305,6 +305,18 @@ export const transforms = [{
   expected:
     "# Reading\n\n- Web\n  - [WebAssembly](<https://webassembly.org/>)\n  - [SQLite](<https://sqlite.org/docs.html>)\n",
 }, {
+  id: "30-bookmarks-to-outline",
+  title: "Browser bookmark HTML to a Markdown outline",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "k", path: "transforms/00-json-string-keys" },
+    { name: "h", path: "transforms/00-html-characters" },
+  ],
+  input:
+    '```html\n<!DOCTYPE NETSCAPE-Bookmark-file-1>\n<TITLE>Reading</TITLE>\n<H1>Reading</H1>\n<DL><p>\n  <DT><H3>Web</H3>\n  <DL><p>\n    <DT><A HREF="https://webassembly.org/">WebAssembly</A>\n    <DT><A HREF="https://sqlite.org/docs.html">SQLite</A>\n  </DL><p>\n  <DT><H3>Empty folder</H3>\n  <DL><p></DL><p>\n</DL><p>\n```\n',
+  expected:
+    "# Reading\n\n- Web\n  - [WebAssembly](<https://webassembly.org/>)\n  - [SQLite](<https://sqlite.org/docs.html>)\n- Empty&#32;folder\n",
+}, {
   id: "31-outline-to-bookmarks",
   title: "Markdown bookmark outline to browser HTML",
   dependencies: [

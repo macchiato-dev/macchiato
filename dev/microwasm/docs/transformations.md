@@ -6,23 +6,23 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–29 and 31, and the side-by-side
+syntax validation and binary64 parsing, tools 1–31, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 20 tools remain.
+significant-digit formatting are implemented too. The other 19 tools remain.
 This is not goal completion.
 
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–29 are now all implemented. Bookmark export (31)
-is also implemented before its reader (30). Plain items are folders, linked
+stable numbering; tools 1–31 are now all implemented. Bookmark export (31)
+and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
-The HTML character helper for the pending import direction has a complete
+The HTML character helper for the import direction has a complete
 named-reference table, but is not itself a counted tool.
 The JSON-table group now has tools 10–11: rectangular arrays of rows become
 a table whose cells are explicitly JSON values, and the reverse converter
@@ -110,7 +110,12 @@ first pass's tree and its bounds still apply; the tree is discarded before
 final output. This is an outline projection, not a lossless OPML archive.
 It preserves empty labels in ordinary Markdown with carefully placed blank
 lines, tested against an independent CommonMark parser and the Wasm writer.
-Tool 30, browser bookmark HTML to a folder/link outline, is next.
+Tool 30 scans the browser bookmark vocabulary directly, without an HTML tree
+or intermediate JSON. H3 supplies a folder name; its following DL changes
+depth. The reader preserves empty labels and uses HTML reference rules for
+title, body and attribute contexts. Omitted DT/P endings and browser-export
+metadata are accepted, but arbitrary browser error recovery is not promised.
+Its diagrams and traces explain the inner loops, not just the call graph.
 
 ## Shared number conversion
 
