@@ -80,6 +80,7 @@ for (
     "numbers/11-precision-format",
     "transforms/00-json-string-keys",
     "transforms/00-yaml-scalars",
+    "transforms/00-toml-strings",
     ...transforms.map((entry) => `transforms/${entry.id}`),
   ]
 ) {
