@@ -5,6 +5,25 @@ are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler
 is involved. The host code does not implement the filters or Life rules.
 
+## Checkpoint: explanations inside numeric functions
+
+The JSON binary64 parser and shortest-decimal formatter now have worked
+inner-function breakdowns, not just pipeline summaries. These cover the
+coefficient cursor and digit budgets, power countdown, quotient-bit subtraction,
+rounding and subnormal boundary, candidate-buffer reuse, half-way suffix scan,
+carry propagation and final notation branches. Examples follow the actual
+memory representation, including the parser's unreduced decimal ratio.
+
+Both assembled binaries are byte-for-byte identical to the preceding commit:
+1,009 bytes for the parser and 1,067 bytes for the shortest formatter. All
+eight binary64 tests pass. The rebuilt site passes the complete browser
+document suite, including original/filled/hex and source/rendered combinations.
+The inner-loop sections were also opened and visually checked at 1440×900;
+screenshots are `dist/browser/04-json-binary64-walkthrough.png` and
+`06-shortest-decimal-walkthrough.png`. Mermaid remains visible source, as
+specified for the partial Markdown renderer. This is a focused documentation
+pass, not a claim that every remaining function has equally deep coverage.
+
 ## Checkpoint: RSS metadata and entries reader
 
 Tool 32 is now published, with a 3,395-byte module and the existing shared XML

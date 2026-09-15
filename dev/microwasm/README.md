@@ -19,6 +19,11 @@ the [bracket checker's stack trace](examples/15-balanced-brackets.md), and
 These connect decisions to byte-list labels, identify what advances on each
 path, and explain early returns, traps and loop invariants. Simple routines
 need less ceremony; a diagram box that hides the interesting loop needs more.
+The numeric walkthroughs now unpack the
+[coefficient scan and bit-by-bit division](numbers/04-json-binary64.md) and
+[candidate search, suffix scan and carry propagation](numbers/06-shortest-decimal.md).
+Their traces distinguish retained state from overwritten scratch space rather
+than treating a function call as an explanation of its implementation.
 
 Building and running the examples needs no Rust/C compiler, WAT compiler,
 npm dependency, or opcode assembler.

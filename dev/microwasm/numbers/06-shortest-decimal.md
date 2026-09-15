@@ -56,6 +56,125 @@ the start of memory. Thus formatting overwrites input space, unlike the exact
 expansion primitive; preserve an input document elsewhere before calling it.
 Final output is at most 25 bytes. The shared memory remains fixed at 256 KiB.
 
+## Inside format: search state survives destructive candidate tests
+
+The exact formatter initially writes at `0x10000`. Before trying any
+candidates, `sd-format-copy-loop` copies its digits, without the point, to
+`0x30000`. That is the stable source for every trial: the decimal parser may
+overwrite its scratch slots, and the next trial overwrites the previous
+candidate at address zero. Neither overwrites the saved exact digits.
+
+`order` is the point position relative to the first significant digit, not
+the scientific exponent. For `0.00125`, it is -2; for `125`, it is 3.
+`sd-format-order` corrects for the point byte when the first significant
+digit occurs after it. Removing the point must not accidentally count that
+byte as a leading zero.
+
+### The precision loop and its half-way suffix scan
+
+```mermaid
+flowchart TD
+    A[Precision p = 1; retain exact digits and order] --> B{p equals exact digit count?}
+    B -- yes --> X[Choose exact prefix without increment]
+    B -- no --> C[Exponent = order - p]
+    C --> D[Build lower token; parse it; retain match flag]
+    D --> E[Rebuild prefix plus one; parse it; retain match flag]
+    E --> F{Either matches input?}
+    F -- no --> N[Increment p; trap if beyond 17]
+    N --> B
+    F -- yes --> G{Both match?}
+    G -- no --> H[Increment only if upper is the matching one]
+    G -- yes --> I{First discarded digit compared with 5?}
+    I -- below --> L[Choose lower]
+    I -- above --> U[Choose upper]
+    I -- equal --> J[Start with parity of last retained digit]
+    J --> K{More suffix digits?}
+    K -- no --> P[Keep parity choice: choose even neighbor]
+    K -- yes --> Q{Next suffix digit nonzero?}
+    Q -- no --> R[Advance suffix cursor]
+    R --> K
+    Q -- yes --> U
+    X --> Z[Rebuild chosen coefficient from saved digits]
+    H --> Z
+    L --> Z
+    U --> Z
+    P --> Z
+```
+
+`sd-format-test-lower` saves its Boolean before the upper test replaces the
+token. `sd-format-chosen` must build the selected candidate again: memory
+still contains the upper candidate, even when lower won. This is why the
+increment flag is retained instead of treating the last parsed buffer as
+the answer.
+
+Only `sd-format-both` compares decimal distances. If one neighbor fails to
+round-trip, closeness cannot make it eligible. If both succeed, a discarded
+suffix beginning with 4 lies below half, and one beginning with 6 lies above.
+A suffix beginning with 5 needs the inner `sd-format-tail-loop`: `5000`
+is an exact tie, whereas `5001` must choose upper. The loop stops at the
+first nonzero byte; otherwise it advances to the end and keeps the parity
+choice made by `sd-format-even`.
+
+For the binary64 value normally written `0.1`, the exact saved expansion
+starts with `10000000000000000555...`, and order is zero. At precision one,
+the two candidates are `1e-1` and `2e-1`. Only the first parses back to the
+input, so the search ends immediately. It does not output the lengthy exact
+expansion and does not inspect its half-way suffix.
+
+### Inside candidate: carry moves right to left, copying moves left to right
+
+`candidate(p, increment, exponent)` first copies exactly `p` saved digits
+to address zero. The source index increases during that copy. If increment
+is requested, a separate cursor starts at `p` and moves backward *before*
+each digit access. The candidate's coefficient length initially equals `p`.
+
+```mermaid
+flowchart TD
+    A[Copy p digits; coefficient length = p] --> B{Increment requested?}
+    B -- no --> Z[Record length; append e and exponent; return token end]
+    B -- yes --> C[Cursor = p]
+    C --> D[Decrement cursor; read digit]
+    D --> E{Digit is 9?}
+    E -- no --> F[Increment digit; exit carry block]
+    F --> Z
+    E -- yes --> G[Write zero at cursor]
+    G --> H{Cursor nonzero?}
+    H -- yes --> D
+    H -- no --> I[Write leading 1 and one extra trailing zero; length = p + 1]
+    I --> Z
+```
+
+For prefix `1299`, upper becomes `1300`: two zero writes, then the 2 becomes
+3 and `sd-candidate-no-carry` exits the enclosing carry block. For `999`,
+all three positions become zero before `sd-candidate-leading-carry` writes
+`1000`. The fourth byte is within the candidate buffer, not the saved source.
+There is no backward read at index -1: when the cursor reaches zero on a 9,
+the loop falls through to leading carry instead of repeating.
+
+### Finishing does not restart the search
+
+After rebuilding the winner, `sd-format-carry-order` adds the extra
+coefficient length to order. Then `sd-format-trim-loop` removes trailing
+zeros from the *length*, keeping at least one digit; it does not move bytes
+or alter order. Thus a carry from a three-digit prefix to `1000` can leave
+coefficient `1` with the corrected order still intact.
+
+Let `n` be the trimmed coefficient length and `k` the corrected order.
+The final branches are independent of how many candidate tests were needed:
+
+| Condition | Output construction | Byte-list branch |
+| --- | --- | --- |
+| `0 < k <= 21`, `n <= k` | All digits, then `k - n` zeros | `sd-format-integral` |
+| `0 < k <= 21`, `n > k` | First `k` digits, point, remaining digits | `sd-format-mixed` |
+| `-6 < k <= 0` | `0.`, then `-k` zeros, then digits | `sd-format-small` |
+| Otherwise | First digit, optional fractional digits, `e`, exponent `k - 1` | `sd-format-scientific` |
+
+For example, `k = -5` produces ordinary `0.000001` for coefficient `1`;
+`k = -6` produces `1e-7`. The two zero-padding loops consume a countdown.
+`span` instead advances a start offset up to an exclusive end. Exponent
+formatting stores remainders in reverse order, then counts backward to emit
+them; even exponent zero goes through the digit loop once.
+
 ## Module and helpers
 
 Imports: parse 0, exact format 1. Functions: emit 2, exponent 3, candidate 4,

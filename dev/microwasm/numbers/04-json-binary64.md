@@ -53,14 +53,120 @@ round(sign, sticky):
     assemble the sign, exponent and fraction bits; reinterpret as f64
 ```
 
+### Inside decimal: which bytes change which state?
+
+`parse` validates first; `decimal` then walks an already valid token. In the
+byte list, this conversion still has the historical `jf-parse-body` label.
+The public validator is `jf-strict-body`. The distinction matters: the loop
+below is not independently deciding whether a byte is legal number syntax.
+
 ```mermaid
-flowchart LR
-    A[Validate JSON token] --> B[Exact coefficient and decimal scale]
-    B --> C[Exact numerator and denominator]
-    C --> D[Extract binary significand and remainder]
-    D --> E[Nearest-even rounding]
-    E --> F[Assemble f64 bits]
+flowchart TD
+    A[Clear coefficient; consume optional minus] --> B{End or exponent marker?}
+    B -- yes --> Z{Any significant digits kept?}
+    B -- no --> C{Decimal point?}
+    C -- yes --> D[Set after-dot flag]
+    C -- no --> E[Decode digit; count it if after dot]
+    E --> F{Kept digits or nonzero digit?}
+    F -- no --> N[Advance source cursor once]
+    F -- yes --> G{Fewer than 1100 kept digits?}
+    G -- yes --> H[Coefficient = coefficient * 10 + digit; increment kept]
+    G -- no --> I[Increment discarded; OR nonzero digit into sticky]
+    D --> N
+    H --> N
+    I --> N
+    N --> B
+    Z -- no --> R[Return signed zero]
+    Z -- yes --> J[Scan optional exponent with saturation]
+    J --> K[Scale = explicit exponent - fractional + discarded]
+    K --> L{Decimal order outside coarse bounds?}
+    L -- yes --> S[Return signed zero or infinity]
+    L -- no --> M[Start denominator at one; choose numerator or denominator]
+    M --> P{Power countdown is zero?}
+    P -- no --> Q[Multiply chosen slot by ten; decrement countdown]
+    Q --> P
+    P -- yes --> T[Call round with sign and sticky]
 ```
+
+Every coefficient byte reaches `jf-coefficient-next` exactly once, except an
+exponent marker: `jf-coefficient-exponent` exits with the cursor still on it.
+The exponent stage consumes that marker itself. A point changes a flag but
+does not count as a fractional digit. A leading fractional zero counts toward
+scale but not toward the 1100-digit budget. After significance begins, zeros
+do count toward that budget. Once full, even a discarded zero increments the
+discard count; only a nonzero discarded digit changes sticky.
+
+For `-0.001250e+2`, the state at these boundaries is:
+
+| Just consumed | Coefficient | Fractional digits | Kept digits | Next action |
+| --- | --- | --- | --- | --- |
+| `-0.` | 0 | 0 | 0 | Read fractional digits |
+| First two fractional zeros | 0 | 2 | 0 | Still skip leading zeros |
+| `1250` | 1250 | 6 | 4 | Leave coefficient loop at `e` |
+| `e+2` | 1250 | 6 | 4 | Compute scale `2 - 6 + 0 = -4` |
+
+`jf-power-direction` selects denominator slot 1. Four passes through
+`jf-power-multiply` make it 10000; slot 0 remains 1250. The ratio is 0.125,
+with the minus retained separately until the result bits are assembled.
+The source cursor never rewinds and no decimal substring is copied.
+
+### Inside round: one quotient bit per subtraction opportunity
+
+First, bit lengths give a tentative binary exponent. The comparison in
+`jf-round-correct-positive` or `jf-round-correct-negative` either keeps it or
+decrements it once; this is not a logarithm approximation loop. Scaling then
+changes slot 0 or slot 1, so the quotient fits the intended significand.
+
+The division loop has three pieces of persistent state: remainder `R` in
+slot 0, denominator `D` in slot 1, and trial divisor `T` in slot 2. Local 5
+is the bit index `k`; local 6 is the initially zero u64 quotient `q`.
+
+```mermaid
+flowchart TD
+    A[Copy D to T; shift T left 52; k = 52; q = 0] --> B{R at least T?}
+    B -- yes --> C[R = R - T; set bit k in q]
+    B -- no --> D[Leave R and q unchanged]
+    C --> E[Shift T right one; decrement k]
+    D --> E
+    E --> F{k nonnegative?}
+    F -- yes --> B
+    F -- no --> G[Compare twice R with D]
+    G --> H{Above half?}
+    H -- yes --> U[Increment q]
+    H -- no --> I{Exactly half?}
+    I -- no --> V[Keep q]
+    I -- yes --> J{Sticky or q odd?}
+    J -- yes --> U
+    J -- no --> V
+    U --> K{Subnormal scale?}
+    V --> K
+    K -- yes --> S[Combine sign and q bits; return]
+    K -- no --> L{q carried to bit 53?}
+    L -- yes --> M[Shift q right; increment binary exponent]
+    L -- no --> O[Assemble normal exponent and fraction]
+    M --> N{Exponent overflow?}
+    N -- yes --> X[Return signed infinity]
+    N -- no --> O
+```
+
+At each comparison, `T = D * 2^k`. Subtracting it sets precisely that
+quotient bit; skipping it leaves that bit zero. The original scaled numerator
+equals `q * D + R` throughout. After 53 comparisons, `R < D`, which is why
+one comparison of `2 * R` with `D` suffices for rounding. The final shift of
+slot 2 is harmless: it is not used by the remainder comparison.
+
+For input `1.5`, decimal accumulation gives `N = 15`, `D = 10`.
+Scaling shifts the numerator to `15 * 2^52`, keeping `D = 10`; this code
+does not reduce the fraction first. At `k = 52`, subtracting `10 * 2^52`
+leaves `R = 5 * 2^52` and sets bit 52. At `k = 51`, subtracting
+`10 * 2^51` leaves zero and sets bit 51. Every remaining comparison fails.
+The zero remainder leaves `q = 3 * 2^51` unchanged; no carry is needed.
+
+The exact-half branch is different: `jf-round-up-test` keeps an even `q`
+but increments an odd one, unless sticky says the discarded decimal suffix
+puts the true input above the midpoint. Subnormal results return directly
+at `jf-round-subnormal-result`: a rounded `q` of `2^52` already has the bit
+pattern of the smallest normal, so that boundary needs no separate repair.
 
 This entry point remains strict JSON parsing. The more permissive
 [integer-prefix](07-parse-integer.md) and [decimal-prefix](08-parse-float.md)
