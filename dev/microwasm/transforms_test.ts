@@ -172,6 +172,49 @@ Deno.test("Hierarchical list to JSON: objects, arrays, keys, typed values and ex
   ) equal(transform(source), "```json\n" + expected + "\n```\n");
 });
 
+Deno.test("Data list to JSON: optional object root, genuine nesting and unambiguous scalars", async () => {
+  const { transform } = await listToJSON();
+  for (
+    const [source, body] of [
+      ["", "{}"],
+      [" \r\n\n  ", "{}"],
+      ["- NAME Ben\n- PORT 3030", '{"NAME":"Ben","PORT":"3030"}'],
+      ['- "full name" "Ben Atkin"\n- "" ""', '{"full name":"Ben Atkin","":""}'],
+      [
+        "- location {}\n  - city Phoenix\n- tags []\n  - cat\n  - dog\n- enabled = true",
+        '{"location":{"city":"Phoenix"},"tags":["cat","dog"],"enabled":true}',
+      ],
+      ["- empty \n- other value", '{"empty":"","other":"value"}'],
+      ["- name first\n- name second", '{"name":"first","name":"second"}'],
+      ['- "two words"', '"two words"'],
+      ["- two words", '{"two":"words"}'],
+      ["- = false", "false"],
+      ["- []\n  - two words", '["two words"]'],
+    ]
+  ) equal(transform(source), "```json\n" + body + "\n```\n");
+  for (
+    const source of [
+      "  - name value",
+      "- name value\n  - impossible child",
+      "- parent {}\n    - skipped level",
+      "- name value\n- missing",
+      '- "key"without-separator',
+      '- "bad\\q" value',
+    ]
+  ) traps(() => transform(source));
+  const nested = Array.from(
+    { length: 127 },
+    (_, i) => "  ".repeat(i) + (i === 0 ? "- key []" : "- []"),
+  ).join("\n");
+  equal(
+    transform(nested),
+    '```json\n{"key":' + "[".repeat(127) +
+      "]".repeat(127) + "}\n```\n",
+  );
+  traps(() => transform(nested + "\n" + "  ".repeat(127) + "- []"));
+  equal(transform("- recovered yes"), '```json\n{"recovered":"yes"}\n```\n');
+});
+
 Deno.test("Hierarchical list to JSON: native differential, escaping and repeated trees", async () => {
   const { transform } = await listToJSON();
   type JSONValue = null | boolean | number | string | JSONValue[] | {
@@ -204,6 +247,11 @@ Deno.test("Hierarchical list to JSON: native differential, escaping and repeated
       JSON.stringify(JSON.parse(transform(list(value)).slice(8, -5))),
       JSON.stringify(value),
     );
+    // Omit the object marker and its indentation, without changing the data.
+    const implicit = list(value).slice(5).split("\n").map((line) =>
+      line.startsWith("  ") ? line.slice(2) : line
+    ).join("\n");
+    equal(transform(implicit), transform(list(value)));
   }
   for (let byte = 0; byte < 32; byte++) {
     if (byte === 10 || byte === 13) continue; // Record delimiters require quoted escapes.
@@ -220,7 +268,6 @@ Deno.test("Hierarchical list to JSON: malformed structure, escapes, stack and ou
   const { transform, run, memory } = await listToJSON();
   for (
     const text of [
-      "",
       "plain",
       "- {}\n- {}",
       "- {}\n    - x skip",

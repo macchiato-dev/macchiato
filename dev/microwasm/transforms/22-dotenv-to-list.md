@@ -15,13 +15,12 @@ EMPTY=
 becomes:
 
 ```text
-- {}
-  - "NAME" "Ben"
-  - "PORT" "3030"
-  - "GREETING" "Hello # friend"
-  - "LINES" "first\nsecond"
-  - "LITERAL" "${NAME}"
-  - "EMPTY" ""
+- "NAME" "Ben"
+- "PORT" "3030"
+- "GREETING" "Hello # friend"
+- "LINES" "first\nsecond"
+- "LITERAL" "${NAME}"
+- "EMPTY" ""
 ```
 
 ## Dialect and strict error handling
@@ -54,7 +53,8 @@ The fence is at least three backticks plus `dotenv`, followed by LF or CRLF,
 with a closing fence of at least the same length on a separate line and no
 surrounding prose. Longer fences can surround literal backtick lines in values.
 An earlier closing-fence line is an error, not silently treated as value text.
-An empty body produces `- {}`. Source order is retained; numeric-looking and
+An empty body produces an empty list, with no wrapper item. Source order is
+retained; numeric-looking and
 Boolean-looking values remain strings. JSON quoting keeps multiline values
 on one physical Markdown list line.
 
@@ -62,7 +62,6 @@ on one physical Markdown list line.
 
 ```text
 bound and validate the fenced UTF-8 body
-emit the root object marker
 skip blank lines and comments
 for each assignment:
   read a name, optionally following 'export'; require a delimiter
@@ -116,7 +115,7 @@ Globals: output 0, cursor 1, body end 2, opening fence length 3.
         - dl-run-closing-bound: `20 02 23 03 49 20 01 23 01 49 72 04 40 00 0b 20 01 24 02`
         - dl-run-closing-line: `23 02 23 01 47 04 40 23 02 41 01 6b 2d 00 00 22 02 41 0a 47 20 02 41 0d 47 71 04 40 00 0b 0b`
         - dl-run-validate: `23 01 23 02 10 0b 23 01 23 02 10 0f`
-        - dl-run-root: `41 808004 24 00 41 2d 10 03 41 20 10 03 41 fb00 10 03 41 fd00 10 03 41 0a 10 03`
+        - dl-run-output: `41 808004 24 00`
         - dl-run-loop: `02 40 03 40`
           - dl-run-spaces: `10 05 23 01 23 02 4f 0d 01`
           - dl-run-blank: `23 01 2d 00 00 22 02 41 0a 46 20 02 41 0d 46 72 04 40 10 0c 0c 01 0b`
@@ -124,7 +123,7 @@ Globals: output 0, cursor 1, body end 2, opening fence length 3.
           - dl-run-key: `10 07 21 04 21 03`
           - dl-run-export: `20 03 20 04 10 0e 23 01 2d 00 00 22 02 41 20 46 20 02 41 09 46 72 71 04 40 10 05 10 07 21 04 21 03 0b`
           - dl-run-separator: `10 05 23 01 2d 00 00 21 02 20 02 41 3d 47 04 40 20 02 41 3a 47 04 40 00 0b 23 01 41 01 6a 2d 00 00 22 02 41 20 47 20 02 41 09 47 71 04 40 00 0b 0b 23 01 41 01 6a 24 01 10 05`
-          - dl-run-key-prefix: `23 00 21 05 41 20 10 03 41 20 10 03 41 2d 10 03 41 20 10 03 23 00 21 06 41 22 10 03 20 03 21 02`
+          - dl-run-key-prefix: `23 00 21 05 41 2d 10 03 41 20 10 03 23 00 21 06 41 22 10 03 20 03 21 02`
           - dl-run-key-copy: `03 40 20 02 2d 00 00 10 03 20 02 41 01 6a 22 02 20 04 49 0d 00 0b 41 22 10 03 23 00 21 07`
           - dl-run-unique: `20 05 20 06 20 07 10 0a 41 20 10 03 10 08`
           - dl-run-tail: `10 05 23 01 23 02 49 04 40 23 01 2d 00 00 41 23 46 04 40 10 09 0b 0b 23 01 23 02 49 04 40 10 0c 0b 41 0a 10 03 0c 00 0b 0b`
@@ -161,10 +160,10 @@ Globals: output 0, cursor 1, body end 2, opening fence length 3.
     - dl-comment-record: `{{size:dl-comment-body}}`
       - dl-comment-body: `00 02 40 03 40 23 01 23 02 4f 0d 01 23 01 2d 00 00 41 0a 46 23 01 2d 00 00 41 0d 46 72 0d 01 23 01 41 01 6a 24 01 0c 00 0b 0b 0b`
     - dl-unique-record: `{{size:dl-unique-body}}`
-      - dl-unique-body: `01 02 7f 41 858004 21 03`
-        - dl-unique-exit: `02 40 03 40 20 03 20 00 4f 0d 01 20 03 41 05 6a 21 04`
+      - dl-unique-body: `01 02 7f 41 808004 21 03`
+        - dl-unique-exit: `02 40 03 40 20 03 20 00 4f 0d 01 20 03 41 03 6a 21 04`
           - dl-unique-key: `03 40 20 04 2d 00 00 41 22 46 04 40 05 20 04 41 01 6a 21 04 0c 01 0b 0b`
-          - dl-unique-compare: `20 03 41 04 6a 20 04 41 01 6a 20 01 20 02 10 00 04 40 00 0b`
+          - dl-unique-compare: `20 03 41 02 6a 20 04 41 01 6a 20 01 20 02 10 00 04 40 00 0b`
           - dl-unique-line: `03 40 20 04 2d 00 00 41 0a 46 04 40 05 20 04 41 01 6a 21 04 0c 01 0b 0b 20 04 41 01 6a 21 03 0c 00 0b 0b 0b`
     - dl-validate-record: `{{size:dl-validate-body}}`
       - dl-validate-body: `01 01 7f 02 40 03 40 20 00 20 01 4f 0d 01 20 00 2d 00 00 21 02`

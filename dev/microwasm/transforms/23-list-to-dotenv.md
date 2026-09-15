@@ -4,13 +4,12 @@ Tool 23 writes a flat object of strings as a `dotenv` fenced block. It pairs
 with [the dotenv reader](22-dotenv-to-list.md); no environment is modified.
 
 ```text
-- {}
-  - NAME Ben
-  - PORT "3030"
-  - GREETING "Hello # friend"
-  - LINES "first\nsecond"
-  - LITERAL "${NAME}"
-  - EMPTY ""
+- NAME Ben
+- PORT "3030"
+- GREETING "Hello # friend"
+- LINES "first\nsecond"
+- LITERAL "${NAME}"
+- EMPTY ""
 ```
 
 becomes:
@@ -31,6 +30,10 @@ Names are case-sensitive and duplicates are errors. Root arrays, nested
 objects/arrays and typed non-string values are rejected. All strings are
 decoded from the list's JSON quoting, including surrogate pairs. Lone
 surrogates, C0 controls other than tab/LF/CR, and DEL are rejected.
+
+The list itself holds the properties. An empty document means no assignments.
+The older explicit `- {}` root with indented properties remains accepted, but
+is unnecessary here.
 
 Unquoted values are preferred when they have no `#` or line breaks, no outer
 space/tab and do not begin with a quote delimiter. Empty strings use `NAME=`.

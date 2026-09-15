@@ -196,8 +196,11 @@ Deno.test("List to YAML: 500 nested datasets checked by an independent YAML pars
 
 Deno.test("YAML: reject duplicate mapping keys, lone surrogates and malformed trees", async () => {
   const c = await converter();
+  equal(c.convert(""), c.convert("- {}"));
+  equal(c.convert("- x ok"), fence('"x": "ok"\n'));
   for (
     const input of [
+      "- x a\n- x b",
       "- {}\n  - x a\n  - x b",
       '- {}\n  - x a\n  - "\\u0078" b',
       "- {}\n  - nested {}\n    - a []\n      - 1\n    - a 2",
@@ -208,7 +211,6 @@ Deno.test("YAML: reject duplicate mapping keys, lone surrogates and malformed tr
       '- "\\ud800\\ud800"',
       '- {}\n  - "\\ud800" x',
       '- {}\n  - x "\\udc00"',
-      "",
       "- {}\n    - x 1",
       "- = 01",
       '- "\\q"',

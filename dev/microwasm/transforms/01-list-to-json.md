@@ -3,14 +3,14 @@
 The indentation is the structure. `{}` opens an object and `[]` opens an
 array. Object items contain a key followed by one space and their value;
 array items contain just a value. Indentation grows by two spaces per level.
-The first item is the root. Its container may be empty.
+An object can begin directly with its properties; no root item is needed.
+An explicit root is still accepted, and is needed for an array or scalar.
 
 ```text
-- {}
-  - name Ben
-  - location {}
-    - city Phoenix
-    - state AZ
+- name Ben
+- location {}
+  - city Phoenix
+  - state AZ
 ```
 
 This becomes a JSON fence containing
@@ -18,6 +18,13 @@ This becomes a JSON fence containing
 Unquoted leaves are strings. Prefix a scalar with `= ` for a JSON number,
 `true`, `false` or `null`. Use a JSON-quoted string for special cases, including
 keys with spaces, empty strings, literal `{}`/`[]`, or escaped newlines.
+
+The first line decides the root form: a key followed by a space and a value
+starts an implicit object. A quoted string ending at the line end, a single
+word, `{}`, `[]`, or a typed scalar is an explicit root value. Quote a root
+string containing spaces to distinguish it from a property. An empty or
+blank-only document is an empty object. This shorthand is for this data
+dialect, not a requirement that other Markdown data formats mimic JSON.
 
 ```text
 - {}
@@ -50,7 +57,8 @@ There is no node allocation and values remain spans into the input.
 
 ```text
 for each nonblank list line:
-    level = indentation / 2
+    on the first line, open an implicit object if it contains a key/value pair
+    level = indentation / 2 + (1 if the root is implicit, otherwise 0)
     require level <= depth, and only the first item has level 0
     while depth > level: emit and pop the closing delimiter
     if level > 0:
@@ -90,7 +98,8 @@ flowchart TD
   B --> C{Line contains only spaces?}
   C -- yes --> N[Advance past physical line]
   C -- no --> D[Require list marker and even indentation]
-  D --> E{Level exceeds open depth, or another root?}
+  D --> O[First property may open an implicit root; adjust level]
+  O --> E{Level exceeds open depth, or another root?}
   E -- yes --> X[Trap]
   E -- no --> F{Open depth exceeds line level?}
   F -- yes --> G[Pop one container and emit its closing delimiter]
@@ -105,7 +114,7 @@ flowchart TD
   V --> N
   N --> L{More input?}
   L -- yes --> A
-  L -- no --> Z[Require root; close remaining containers; finish fence]
+  L -- no --> Z[Empty input becomes an object; otherwise close containers; finish fence]
 ```
 
 `lj-list-level` rejects skipped levels **before** the closing loop changes the
@@ -114,7 +123,8 @@ The address is `0x30000 + depth * 8`: four bytes for the closing delimiter,
 then four for the child count. Once the stack matches the line level,
 `lj-parent-record` indexes `level - 1`, the still-open parent.
 
-Here is the stack evolution for the first example, with one extra sibling:
+Here is the stack evolution with an explicit root and one extra sibling.
+Omitting the root item and two leading spaces gives the same effective levels:
 
 | Incoming line | Level | Action before value | Stack after value, outermost first |
 | --- | --- | --- | --- |
@@ -160,7 +170,8 @@ branch depths differ because their surrounding `if` blocks differ.
 | --- | --- | --- |
 | Physical line start / LF position | Locals 1 / 16 | Local 16 is retained even when CR is excluded from content. |
 | Content end / first non-space byte | Locals 2 / 3 | Bounds for marker, key and value reads. |
-| Space count / line level | Locals 4 / 5 | Even space count divided by two gives level. |
+| Space count / line level | Locals 4 / 5 | Half the even space count, plus the implicit-root flag. |
+| Implicit root | Local 17 | One when the document starts directly with object properties. |
 | Open depth / root seen | Locals 6 / 7 | Distinguishes a new child from a skipped level or second root. |
 | Value start | Local 8 | Moves past the key and separator only for object children. |
 | Stack-record address | Local 11 | Reused for parent counting and a newly opened container. |
@@ -298,7 +309,7 @@ The output cursor is global 0 and starts at `0x10000`.
           - lj-find-end: `0b`
         - lj-find-result: `20 01 0b`
     - lj-run-record: `{{size:lj-run-body}}`
-      - lj-run-body: `01 10 7f`
+      - lj-run-body: `01 11 7f`
         - lj-run-bound: `20 00 41 808004 4b 04 40 00 0b`
         - lj-run-reset: `41 808004 24 00`
         - lj-run-fence: `41 e000 10 01 41 e000 10 01 41 e000 10 01 41 ea00 10 01 41 f300 10 01 41 ef00 10 01 41 ee00 10 01 41 0a 10 01`
@@ -319,6 +330,13 @@ The output cursor is global 0 and starts at `0x10000`.
             - lj-list-room: `20 02 20 03 6b 41 02 49 04 40 00 0b`
             - lj-list-marker: `20 03 2d 00 00 41 2d 47 20 03 2d 00 01 41 20 47 72 04 40 00 0b`
             - lj-list-indent: `20 04 41 01 71 04 40 00 0b 20 04 41 01 76 21 05`
+            - lj-implicit-first: `20 07 45 20 05 45 71 04 40 02 40`
+              - lj-implicit-span: `20 03 41 02 6a 21 08 20 08 20 02 4f 0d 00`
+              - lj-implicit-typed: `20 02 20 08 6b 41 02 4f 04 40 20 08 2d 00 00 41 3d 46 20 08 2d 00 01 41 20 46 71 0d 01 0b`
+              - lj-implicit-key: `20 08 2d 00 00 41 22 46 04 40 20 08 20 02 10 05 21 0a 05 20 08 20 02 41 20 10 06 21 0a 0b`
+              - lj-implicit-pair: `20 0a 20 02 4f 0d 00`
+              - lj-implicit-open: `41 fb00 10 01 41 80800c 41 fd00 36 02 00 41 80800c 41 00 36 02 04 41 01 21 06 41 01 21 11 0b 0b`
+            - lj-implicit-level: `20 05 20 11 6a 21 05`
             - lj-list-level: `20 05 20 06 4b 04 40 00 0b`
             - lj-list-root: `20 07 20 05 45 71 04 40 00 0b 41 01 21 07`
             - lj-close-exit: `02 40`
@@ -365,7 +383,7 @@ The output cursor is global 0 and starts at `0x10000`.
             - lj-plain-value: `20 08 20 02 10 04`
             - lj-lines-next: `20 10 41 01 6a 21 01 0c 00 0b`
           - lj-lines-end-block: `0b`
-        - lj-root-required: `20 07 45 04 40 00 0b`
+        - lj-empty-object: `20 07 45 04 40 41 fb00 10 01 41 fd00 10 01 0b`
         - lj-finish-exit: `02 40`
           - lj-finish-loop: `03 40`
             - lj-finish-bound: `20 06 45 0d 01`
@@ -390,4 +408,10 @@ after the 128 stack records, at `0x30400`.
 Run locals are input length 0, line position 1, line end 2, content start 3,
 indent 4, level 5, depth 6, root seen 7, value start 8, key start/end 9/10,
 record 11, container kind 12, scalar-valid flag 13, temporary word 14,
-quoted-key flag 15, and next newline 16. All are i32.
+quoted-key flag 15, next newline 16, and implicit-root flag 17. All are i32.
+
+The implicit root uses the same first stack record as an explicit `{}` item.
+Only the effective indentation changes; input bytes are not rewritten or
+copied. It counts toward the same 128-container limit. The first-line probe
+reuses the normal quoted-key scanner, so escaped spaces and quotes cannot
+accidentally change the root interpretation.

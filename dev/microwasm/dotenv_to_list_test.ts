@@ -47,10 +47,9 @@ async function reader() {
   return { memory, run, convert };
 }
 function list(data: Record<string, string>) {
-  return "- {}\n" +
-    Object.entries(data).map(([k, v]) =>
-      "  - " + JSON.stringify(k) + " " + JSON.stringify(v) + "\n"
-    ).join("");
+  return Object.entries(data).map(([k, v]) =>
+    "- " + JSON.stringify(k) + " " + JSON.stringify(v) + "\n"
+  ).join("");
 }
 
 Deno.test("Dotenv reader: assignments, export, quoting, comments and literal variables", async () => {
@@ -69,8 +68,8 @@ Deno.test("Dotenv reader: assignments, export, quoting, comments and literal var
   });
   equal(r.convert(fence(source)), expected);
   equal(r.convert(fence(source).replaceAll("\n", "\r\n")), expected);
-  equal(r.convert(fence("")), "- {}\n");
-  equal(r.convert(fence("# no assignments\n\t\n")), "- {}\n");
+  equal(r.convert(fence("")), "");
+  equal(r.convert(fence("# no assignments\n\t\n")), "");
   equal(
     r.convert(
       fence(
@@ -88,11 +87,11 @@ Deno.test("Dotenv reader: assignments, export, quoting, comments and literal var
   );
   equal(
     r.convert(fence("10=first\n2=second\nA=yes\na=no\n")),
-    '- {}\n  - "10" "first"\n  - "2" "second"\n  - "A" "yes"\n  - "a" "no"\n',
+    '- "10" "first"\n- "2" "second"\n- "A" "yes"\n- "a" "no"\n',
   );
   equal(
     r.convert(fence("__proto__=literal\nconstructor=also literal\n")),
-    '- {}\n  - "__proto__" "literal"\n  - "constructor" "also literal"\n',
+    '- "__proto__" "literal"\n- "constructor" "also literal"\n',
   );
 });
 
@@ -242,7 +241,9 @@ Deno.test("Dotenv reader: exact source and output bounds, scratch isolation and 
   equal(encoder.encode(full).length, 65536);
   equal(r.convert(full), list({ A: value }));
   traps(() => r.convert(full + " "));
-  const expanded = fence("B=\nC=\nD=\nE=\nA=" + "\\".repeat(65506) + "\n");
+  const expanded = fence(
+    "B=\nC=\nD=\nE=\nF=\nG=\nH=\nI=\nJ=\nA=" + "\\".repeat(65491) + "\n",
+  );
   equal(encoder.encode(expanded).length, 65535);
   equal(encoder.encode(r.convert(expanded)).length, 131072);
   traps(() => r.convert(expanded.replace("\n```", "x\n```")));

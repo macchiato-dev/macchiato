@@ -222,7 +222,7 @@ export const transforms = [{
   input:
     '```dotenv\nexport NAME=Ben\nPORT=3030\nGREETING="Hello # friend"\nLINES="first\\nsecond"\nLITERAL=\'${NAME}\'\nEMPTY=\n```\n',
   expected:
-    '- {}\n  - "NAME" "Ben"\n  - "PORT" "3030"\n  - "GREETING" "Hello # friend"\n  - "LINES" "first\\nsecond"\n  - "LITERAL" "${NAME}"\n  - "EMPTY" ""\n',
+    '- "NAME" "Ben"\n- "PORT" "3030"\n- "GREETING" "Hello # friend"\n- "LINES" "first\\nsecond"\n- "LITERAL" "${NAME}"\n- "EMPTY" ""\n',
 }, {
   id: "23-list-to-dotenv",
   title: "Markdown string properties to dotenv",
@@ -232,7 +232,7 @@ export const transforms = [{
     { name: "k", path: "transforms/00-json-string-keys" },
   ],
   input:
-    '- {}\n  - NAME Ben\n  - PORT "3030"\n  - GREETING "Hello # friend"\n  - LINES "first\\nsecond"\n  - LITERAL "${NAME}"\n  - EMPTY ""',
+    '- NAME Ben\n- PORT "3030"\n- GREETING "Hello # friend"\n- LINES "first\\nsecond"\n- LITERAL "${NAME}"\n- EMPTY ""',
   expected:
     '```dotenv\nNAME=Ben\nPORT=3030\nGREETING="Hello # friend"\nLINES="first\\nsecond"\nLITERAL=${NAME}\nEMPTY=\n```\n',
 }, {

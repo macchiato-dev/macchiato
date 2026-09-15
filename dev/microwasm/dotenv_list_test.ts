@@ -19,10 +19,9 @@ function traps(fn: () => unknown) {
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 const fence = (body: string) => "```dotenv\n" + body + "```\n";
 function list(data: Record<string, string>) {
-  return "- {}\n" +
-    Object.entries(data).map(([k, v]) =>
-      "  - " + JSON.stringify(k) + " " + JSON.stringify(v) + "\n"
-    ).join("");
+  return Object.entries(data).map(([k, v]) =>
+    "- " + JSON.stringify(k) + " " + JSON.stringify(v) + "\n"
+  ).join("");
 }
 async function converter(write: boolean) {
   const imports: Record<string, WebAssembly.Exports> = {};
@@ -74,6 +73,10 @@ Deno.test("Dotenv writer: canonical assignments and value-preserving quote selec
   equal(w.convert(list(data)), output);
   equal(r.convert(output), list(data));
   equal(w.convert("- {}"), fence(""));
+  equal(w.convert(""), fence(""));
+  equal(w.convert("- NAME Ben\n- PORT 3030"), fence("NAME=Ben\nPORT=3030\n"));
+  traps(() => w.convert("- A first\n- A second"));
+  equal(w.convert("- A recovered"), fence("A=recovered\n"));
   const fixtures = [
     ["a # b", '"a # b"'],
     [" x ", '" x "'],
