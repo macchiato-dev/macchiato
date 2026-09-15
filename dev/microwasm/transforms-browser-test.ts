@@ -574,6 +574,57 @@ try {
       recovered,
     );
   }
+  await page.goto(new URL("?tool=10-json-rows-to-table", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const typedInput =
+    '```json\n[["name","value"],["a|b",{"x":1,"x":2}],["<b>text</b>","12"]]\n```';
+  const typedOutput =
+    '| "name" | "value" |\n| --- | --- |\n| "a&#124;b" | {"x":1,"x":2} |\n| "&#60;b&#62;text&#60;/b&#62;" | "12" |\n';
+  await page.locator("#transform-input").fill(typedInput);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    typedOutput,
+  );
+  await side("output", "Rendered");
+  check(
+    JSON.stringify(
+      await page.locator("#transform-output-rendered td").allTextContents(),
+    ) ===
+      JSON.stringify(['"a|b"', '{"x":1,"x":2}', '"<b>text</b>"', '"12"']),
+    "Typed JSON cells lost their source spelling or escaping",
+  );
+  check(
+    await page.locator("#transform-output-rendered b").count() === 0,
+    "JSON cell markup escaped the table",
+  );
+  await page.screenshot({
+    path: `${artifacts}/json-rows-to-table-mixed.png`,
+    fullPage: true,
+  });
+  await page.locator("#transform-input").fill("```json\n[[1],[2,3]]\n```");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  await side("output", "Code");
+  check(
+    await page.locator("#transform-output").inputValue() === typedOutput,
+    "Ragged rows replaced the previous table",
+  );
+  await page.locator("#transform-input").fill("```json\n[]\n```");
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === "" &&
+    document.getElementById("transform-status")?.textContent === "Done."
+  );
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,

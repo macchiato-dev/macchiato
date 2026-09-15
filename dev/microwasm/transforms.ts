@@ -49,6 +49,17 @@ export const transforms = [{
   input: "| name | city |\n| --- | --- |\n| Ben | Phoenix |\n| Ada | London |",
   expected: "```tsv\nname\tcity\nBen\tPhoenix\nAda\tLondon\n```\n",
 }, {
+  id: "10-json-rows-to-table",
+  title: "JSON rows to Markdown table",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "p", path: "transforms/02-json-to-list" },
+  ],
+  input:
+    '```json\n[\n  ["name","score","metadata"],\n  ["Ben",12.50,{"active":true}],\n  ["Ada",null,["wasm","Markdown"]]\n]\n```\n',
+  expected:
+    '| "name" | "score" | "metadata" |\n| --- | --- | --- |\n| "Ben" | 12.50 | {"active":true} |\n| "Ada" | null | &#91;"wasm","Markdown"&#93; |\n',
+}, {
   id: "12-json-pretty",
   title: "Pretty-print JSON",
   dependencies: [

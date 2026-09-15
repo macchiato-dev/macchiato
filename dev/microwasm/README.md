@@ -77,7 +77,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 102 tests covering all twenty examples and the supplied
+`deno task test` runs 107 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -231,8 +231,17 @@ and arrays round-trip; blank record lines are rejected. Their shared module is
 60 bytes. Neither direction builds an object tree or copies the input.
 Try [JSON Lines to array](http://microwasm.localhost:3030/?tool=14-json-lines-to-array)
 or [array to JSON Lines](http://microwasm.localhost:3030/?tool=15-array-to-json-lines).
-Eleven transformations are implemented: tools 1–7 and 12–15 in the plan. The
-remaining 39 are pending.
+
+[JSON rows to table](transforms/10-json-rows-to-table.md) converts rectangular
+arrays of row arrays, using the first row as the header. Cells remain explicit
+JSON values, preserving string/number distinctions, nested structures and
+original number spellings. Its 782-byte module (plus the shared parser and
+number scanner) validates once using the shared parser,
+makes one bounded scratch copy, and scans row/cell boundaries while escaping
+Markdown. Input is never changed, and empty outer arrays produce empty output.
+Try [the typed row converter](http://microwasm.localhost:3030/?tool=10-json-rows-to-table).
+Twelve transformations are implemented: tools 1–7, 10 and 12–15 in the plan.
+The remaining 38, including the reverse typed-table conversion, are pending.
 
 ## Provisional byte-list notation
 

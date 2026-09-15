@@ -76,7 +76,7 @@ cost is separate from the module's byte size.
 
 ## Transformation work, current checkpoint
 
-The suite now has 102 tests. The first eight additions cover unsigned 64-bit parsing
+The suite now has 107 tests. The first eight additions cover unsigned 64-bit parsing
 and formatting in bases 2..36, JSON number syntax, Mad libs, and hierarchical
 Markdown list to JSON conversion.
 The numeric tests compare more than ten thousand value/radix combinations
@@ -169,8 +169,8 @@ The new transformation browser suite checks editable input/output, independent
 rendered views, literal substitution, failure recovery and inert user links.
 Desktop light/dark and mobile screenshots were inspected. The existing
 twenty-example/seven-renderer-page browser suite still passes.
-There are eleven implemented transformations out of the planned fifty:
-tools 1–7 and 12–15.
+There are twelve implemented transformations out of the planned fifty:
+tools 1–7, 10 and 12–15.
 
 Four CSV-to-table tests cover quoted commas, doubled quotes, embedded record
 endings, empty fields, width checks, forbidden controls, malformed fences and
@@ -235,6 +235,19 @@ Both side-by-side screenshots were inspected. The browser recovery case
 caught an overly strict minimum length for an empty `jsonl` fence without a
 newline after its closing backticks. The lower bound was corrected, direct
 regressions were added, and the full transformation browser suite passed.
+
+Five JSON-row tests cover explicit cell types, exact numeric/string lexemes,
+nested structures, duplicate keys, Markdown-active bytes and every ASCII
+character in strings. An independent table encoder checks 600 generated
+rectangular datasets. Tests reject ragged, non-array and zero-column rows,
+malformed JSON and invalid fences; they check the 128-container boundary and
+recovery. A 64 KiB input exercises every available scratch byte, a 13,000-cell
+header exercises large output, and larger/escape-heavy rows trap at the output
+limit. Input preservation, untouched scratch tails and the shared parser's
+literals are verified. The browser flow checks typed rendered cells, inert
+markup, retention after a ragged-row error and recovery to empty output.
+The side-by-side screenshot was inspected: quoted strings, an embedded pipe,
+duplicate object keys and markup-like string text all remain distinct cells.
 
 The JSON syntax scanner was compared with the native JSON parser on ten
 thousand generated candidate strings and explicit grammar boundaries. List
