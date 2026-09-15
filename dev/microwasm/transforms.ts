@@ -405,4 +405,15 @@ export const transforms = [{
     '## Contact\n\n- "VERSION" text "4.0"\n- "FN" text "Jane Doe"\n- "N" structured [["Doe"],["Jane","Janet"],[""],["Dr."],[""]]\n- "item1.EMAIL;TYPE=home" text "jane@example.com"\n- "ORG" structured [["Example, Inc."],["Research"]]\n- "NICKNAME" text-list ["Jane","JJ"]\n',
   expected:
     "```vcard\nBEGIN:VCARD\r\nVERSION:4.0\r\nFN:Jane Doe\r\nN:Doe;Jane,Janet;;Dr.;\r\nitem1.EMAIL;TYPE=home:jane@example.com\r\nORG:Example\\, Inc.;Research\r\nNICKNAME:Jane,JJ\r\nEND:VCARD\r\n\n```\n",
+}, {
+  id: "38-srt-to-cues",
+  title: "SubRip subtitles to a Markdown cue list",
+  dependencies: [
+    { name: "n", path: "numbers/02-json-number" },
+    { name: "c", path: "transforms/00-calendar-lines" },
+  ],
+  input:
+    "```srt\n1\n00:00:01,000 --> 00:00:03,250\nHello, world!\nSecond line.\n\n2\n00:00:03,000 --> 00:00:05,000\n<i>Overlapping subtitles</i>\n```\n",
+  expected:
+    '- 1 00:00:01,000 --> 00:00:03,250 "Hello, world!\\nSecond line."\n- 2 00:00:03,000 --> 00:00:05,000 "<i>Overlapping subtitles</i>"\n',
 }];

@@ -6,13 +6,13 @@ Microwasm. Browser JavaScript copies input/output and handles the UI; it does
 not substitute JavaScript implementations of the conversions.
 
 Current checkpoint: unsigned 64-bit radix primitives, strict JSON-number
-syntax validation and binary64 parsing, tools 1–37, and the side-by-side
+syntax validation and binary64 parsing, tools 1–38, and the side-by-side
 editor are implemented and tested. Exact binary64 decimal expansion is also
 implemented as a formatting primitive, with shortest finite decimal output
 built on it. `parseInt`-style radix parsing and `parseFloat`-style decimal
 prefix parsing are also implemented, as is shortest binary64 formatting in
 every radix 2..36 and whole-string numeric conversion. Fixed, exponential and
-significant-digit formatting are implemented too. The other 13 tools remain.
+significant-digit formatting are implemented too. The other 12 tools remain.
 This is not goal completion.
 
 ## Data representation
@@ -33,7 +33,7 @@ in both directions, including empty input/output for no assignments.
 Tools 12–15 reuse the JSON descent already needed by tool 2, so they were
 implemented before the JSON-table group. They preserve duplicate keys, exact
 number lexemes and string escapes. The numbering below remains the plan's
-stable numbering; tools 1–37 are now all implemented. Bookmark export (31)
+stable numbering; tools 1–38 are now all implemented. Bookmark export (31)
 and its reader (30) are paired. Plain items are folders, linked
 items are leaves, and the result is fenced browser bookmark HTML. Empty
 folders, titles and non-HTTP destinations are preserved; metadata is omitted.
@@ -196,8 +196,15 @@ No rows, mode tables or decoded JSON trees are retained. CRLF lines fold on
 UTF-8 boundaries, and a backward framing pass enlarges the Markdown fence.
 Tests cover actual Wasm round trips, independent ICAL.js comparisons, scoped
 inspection without writes, forbidden header injections, malformed arrays and
-surrogates, exact source/output caps and recovery. SubRip subtitles (38–39)
-are next; that pair is not implemented yet.
+surrogates, exact source/output caps and recovery.
+
+The SubRip reader (38) emits flat cue rows: original number, start timestamp,
+arrow, end timestamp and JSON-quoted text. It scans spans, not a cue tree.
+Exact timestamp comparison works on validated digit strings without integer
+overflow; overlaps and out-of-order cues remain valid. UTF-8 and physical
+line boundaries are validated, and multiline text is normalized to LF.
+Generated cue models, large hour values, malformed syntax, fence ambiguity,
+capacity and recovery are tested. The reverse subtitle writer (39) is next.
 
 ## Shared number conversion
 

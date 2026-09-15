@@ -375,8 +375,8 @@ cover every UTF-16 code unit, combinations of surrogate units, generated
 round trips, Markdown fence integrity and exact memory-region limits.
 Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
-Thirty-seven transformations are implemented: tools 1–37 in the plan.
-The remaining 13 are pending.
+Thirty-eight transformations are implemented: tools 1–38 in the plan.
+The remaining 12 are pending.
 
 The RSS pair uses a [shared XML cursor](transforms/00-xml-walk.md) that
 walks validated source directly, returning tag, attribute, text and CDATA
@@ -457,7 +457,17 @@ Markdown fences grow around literal backticks. Eight test groups include
 inspection, invalid edits, Unicode folding and exact memory boundaries.
 Repeated name variants with ALTID are preserved by both directions.
 Try [the contact writer](http://microwasm.localhost:3030/?tool=37-contacts-to-vcard).
-The SubRip subtitle pair (38–39) is next.
+
+The [SubRip reader](transforms/38-srt-to-cues.md) emits one flat list row per
+cue, without a root marker. Its 1,874-byte module shares the calendar helper's
+read-only UTF-8 validator. Cue numbers and timestamps keep their spelling;
+multiline text uses JSON quoting, with physical line endings normalized to LF.
+Overlaps, repeated numbers and out-of-order cues survive. End-before-start
+times, malformed input and unsupported timing extensions fail explicitly.
+Tests exercise generated cues, exact ordering with very large hours, controls,
+fence boundaries, capacity limits and recovery; browser tests cover both views.
+Try [the subtitle reader](http://microwasm.localhost:3030/?tool=38-srt-to-cues).
+The reverse subtitle writer (39) is next.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,

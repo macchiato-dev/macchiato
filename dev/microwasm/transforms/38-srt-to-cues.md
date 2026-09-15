@@ -58,7 +58,7 @@ as many backticks. The fence may be longer to surround literal backtick
 lines in cue text. An earlier line that would close the fence in a generic
 Markdown renderer is rejected, even with up to three leading spaces.
 
-## Inside run: three spans instead of a cue object
+## Inside run: header spans and a text span instead of a cue object
 
 The outer loop skips separators, reads a number line, then a timing line.
 The text loop stops before the next separator. It retains only the beginning

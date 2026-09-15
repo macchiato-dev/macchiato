@@ -183,6 +183,11 @@ try {
   for (
     const [id, heading, marker] of [
       [
+        "38-srt-to-cues",
+        "Inside run: header spans and a text span instead of a cue object",
+        "Distinguishes missing text from empty input",
+      ],
+      [
         "37-contacts-to-vcard",
         "Inside card: discover once, rewind only this card",
         "Earlier cards are untouched",

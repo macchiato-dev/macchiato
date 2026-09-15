@@ -2331,6 +2331,79 @@ try {
   );
   check(contactFetches.length === 0, "Contact pair fetched a resource");
   page.off("request", onContactRequest);
+  await page.goto(new URL("?tool=38-srt-to-cues", base).href);
+  await page.waitForFunction(() =>
+    !(document.getElementById("transform-run") as HTMLButtonElement)?.disabled
+  );
+  const subtitles = transforms.find((t) => t.id === "38-srt-to-cues")!;
+  const subtitleSource = subtitles.input.replace(
+    "<i>Overlapping subtitles</i>",
+    '<img src="https://subtitle.invalid/tile">\n雪 😀',
+  );
+  const subtitleRows = subtitles.expected.replace(
+    '"<i>Overlapping subtitles</i>"',
+    JSON.stringify('<img src="https://subtitle.invalid/tile">\n雪 😀'),
+  );
+  const subtitleFetches: string[] = [];
+  const onSubtitleRequest = (request: { url(): string }) => {
+    if (request.url().includes("subtitle.invalid")) {
+      subtitleFetches.push(request.url());
+    }
+  };
+  page.on("request", onSubtitleRequest);
+  await page.locator("#transform-input").fill(subtitleSource);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    subtitleRows,
+  );
+  await side("input", "Rendered");
+  await side("output", "Rendered");
+  check(
+    await page.locator("#transform-input-rendered pre").count() === 1 &&
+      await page.locator("#transform-output-rendered > ul > li").count() === 2,
+    "Subtitle views must show a fenced source and two flat cue rows",
+  );
+  check(
+    await page.locator("#transform-output-rendered img").count() === 0,
+    "Subtitle text became an active image",
+  );
+  check(
+    (await page.locator("#transform-output-rendered").textContent())
+      ?.includes("雪 😀"),
+    "Subtitle Unicode text disappeared from the rendered view",
+  );
+  await page.screenshot({
+    path: artifacts + "/srt-to-cues-rendered.png",
+    fullPage: true,
+  });
+  await side("input", "Code");
+  await side("output", "Code");
+  await page.locator("#transform-input").fill(
+    subtitleSource.replace("00:00:03,250", "00:00:00,250"),
+  );
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(() =>
+    document.getElementById("transform-status")?.textContent?.includes(
+      "Previous output kept",
+    )
+  );
+  check(
+    await page.locator("#transform-output").inputValue() === subtitleRows,
+    "Invalid subtitle timing replaced successful output",
+  );
+  await page.locator("#transform-input").fill(subtitles.input);
+  await page.getByRole("button", { name: "Run", exact: true }).click();
+  await page.waitForFunction(
+    (expected) =>
+      (document.getElementById("transform-output") as HTMLTextAreaElement)
+        ?.value === expected,
+    subtitles.expected,
+  );
+  check(subtitleFetches.length === 0, "Subtitle data fetched a resource");
+  page.off("request", onSubtitleRequest);
   check(errors.length === 0, `Browser errors: ${errors.join("\n")}`);
   console.log(
     `${transforms.length} transformation fixtures, editing, rendering, limits and recovery passed`,
