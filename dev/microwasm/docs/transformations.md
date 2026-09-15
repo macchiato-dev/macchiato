@@ -117,6 +117,13 @@ title, body and attribute contexts. Omitted DT/P endings and browser-export
 metadata are accepted, but arbitrary browser error recovery is not promised.
 Its diagrams and traces explain the inner loops, not just the call graph.
 
+The RSS pair (32–33) is next. The shared `00-xml-walk` module now supplies a
+read-only cursor over already validated XML. Tokens distinguish element
+starts/ends, empty elements, text, CDATA, comments and processing instructions;
+attribute values remain spans for context-correct decoding. This avoids
+another allocated tree and lets repeated RSS fields retain their order.
+It is tested infrastructure, not a published RSS converter yet.
+
 ## Shared number conversion
 
 Start with exact integer digit accumulation and formatting for bases 2..36.

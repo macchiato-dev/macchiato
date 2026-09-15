@@ -378,6 +378,96 @@ try {
         throw Error("XML raw and fenced entry points disagree in browser");
       }
     }
+    const walk = await load("./transforms/00-xml-walk.wasm", { x });
+    const token = walk.next as (
+      start: number,
+      end: number,
+    ) => [number, number, number, number, number, number];
+    const attribute = walk.attribute as (
+      start: number,
+      end: number,
+    ) => [number, number, number, number, number];
+    const raw = (start: number, end: number) =>
+      decoder.decode(memory.subarray(start, end));
+    const decoded = (start: number, end: number, mode: number) => {
+      const length = string(start, end, 65536, mode);
+      return JSON.parse(raw(65536, 65536 + length));
+    };
+    const feed =
+      '<rss version="2.0"><channel><title>Books &amp; notes</title>' +
+      "<link>https://example.com/</link><description>News</description>" +
+      '<item><title>猫</title><category domain="a&gt;b">Research</category>' +
+      '<category>Wasm</category><guid isPermaLink="false">id:1</guid>' +
+      "<description><![CDATA[<b>Literal markup</b>]]></description>" +
+      '<enclosure url="https://example.com/a.mp3" length="123" type="audio/mpeg"/>' +
+      "</item><!--tail--><?ready yes?></channel></rss>";
+    const source = encoder.encode(feed);
+    memory.set(source);
+    (reader.readSpan as (start: number, end: number) => number)(
+      0,
+      source.length,
+    );
+    const walked: unknown[] = [];
+    let cursor = 0;
+    while (cursor < source.length) {
+      const [kind, ns, ne, vs, ve, next] = token(cursor, source.length);
+      if (next <= cursor) throw Error("XML cursor did not advance in browser");
+      if (kind === 1 || kind === 3) {
+        const attrs: Record<string, string> = {};
+        let position = vs;
+        while (position < ve) {
+          const [as, ae, start, end, after] = attribute(position, ve);
+          if (as === 0 && ae === 0) break;
+          attrs[raw(as, ae)] = decoded(start, end, 1);
+          position = after;
+        }
+        walked.push(["open", raw(ns, ne), attrs]);
+        if (kind === 3) walked.push(["close", raw(ns, ne)]);
+      } else if (kind === 2) walked.push(["close", raw(ns, ne)]);
+      else if (kind === 4) walked.push(["text", decoded(vs, ve, 0)]);
+      else if (kind === 5) walked.push(["cdata", decoded(vs, ve, 2)]);
+      else if (kind === 6) walked.push(["comment", decoded(vs, ve, 2)]);
+      else if (kind === 7) walked.push(["pi", raw(ns, ne), decoded(vs, ve, 2)]);
+      else throw Error("Unexpected XML token in browser");
+      cursor = next;
+    }
+    const browserEvents: unknown[] = [];
+    function visit(node: Node) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as Element;
+        browserEvents.push([
+          "open",
+          element.tagName,
+          Object.fromEntries(
+            Array.from(element.attributes, (a) => [a.name, a.value]),
+          ),
+        ]);
+        for (const child of node.childNodes) visit(child);
+        browserEvents.push(["close", element.tagName]);
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        browserEvents.push(["text", node.nodeValue]);
+      } else if (node.nodeType === Node.CDATA_SECTION_NODE) {
+        browserEvents.push(["cdata", node.nodeValue]);
+      } else if (node.nodeType === Node.COMMENT_NODE) {
+        browserEvents.push(["comment", node.nodeValue]);
+      } else if (node.nodeType === Node.PROCESSING_INSTRUCTION_NODE) {
+        browserEvents.push(["pi", node.nodeName, node.nodeValue]);
+      }
+    }
+    visit(
+      new DOMParser().parseFromString(feed, "application/xml").documentElement,
+    );
+    if (JSON.stringify(walked) !== JSON.stringify(browserEvents)) {
+      throw Error("Wasm XML walk differs from the browser's feed DOM");
+    }
+    if (
+      (walk.skip as (start: number, end: number) => number)(
+        0,
+        source.length,
+      ) !== source.length
+    ) {
+      throw Error("Wasm subtree skip did not stop at the RSS root end");
+    }
     return 100;
   });
   check(xmlCases === 100, "XML browser comparisons incomplete");

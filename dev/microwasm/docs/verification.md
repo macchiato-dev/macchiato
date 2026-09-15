@@ -5,6 +5,24 @@ are handwritten hex; tooling resolves only lengths/counts, copies source,
 emits offset maps and validates the binary. No WAT or source-language compiler
 is involved. The host code does not implement the filters or Life rules.
 
+## Checkpoint: read-only XML cursor for RSS
+
+The shared `00-xml-walk` module is 1,107 bytes. It is used after whole-document
+XML validation, not in place of it. Six test groups cover exact token and
+attribute offsets, 500 generated trees compared to independent SAX events,
+subtree boundaries, normalization deferred to the caller, invalid intervals
+and incomplete delimiters, 32-level depth, full 64 KiB input, reentrant calls,
+and byte-for-byte unchanged memory. The suite has 267 tests at this checkpoint.
+
+An initial source-boundary test had its fixture one byte short; the corrected
+fixture now fills the first memory page exactly. Another check made the empty
+element case at depth 32 explicit: although it has no separate end token, it
+still adds one XML level and must not bypass the nesting bound.
+
+The documentation includes a token/span table, the attribute loop's delimiter
+ownership, and a worked subtree-skip trace with fake end tags inside CDATA.
+No RSS tool is counted yet. There remain 31 published tools and 19 to finish.
+
 ## Checkpoint: bookmark import and function-level walkthroughs
 
 Tool 30 is a 2,989-byte browser-bookmark reader plus the shared HTML character

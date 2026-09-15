@@ -85,7 +85,7 @@ documented zero-input behavior.
 
 ## Verification and boundaries
 
-`deno task test` runs 261 tests covering all twenty examples and the supplied
+`deno task test` runs 267 tests covering all twenty examples and the supplied
 externref module. Cases include numeric bounds, memory sentinels, repeated
 calls, malformed UTF-8, CSV quoting, output overflow and multi-generation Life.
 Every document is assembled, round-tripped through resolved Markdown and hex,
@@ -365,6 +365,14 @@ Try [the query writer](http://microwasm.localhost:3030/?tool=25-list-to-query).
 
 Thirty-one transformations are implemented: tools 1–31 in the plan.
 The remaining 19 are pending.
+
+The next pair is RSS. A [shared XML cursor](transforms/00-xml-walk.md) now
+walks validated source directly, returning tag, attribute, text and CDATA
+spans without copying a tree or writing memory. Its 1,107-byte module also
+skips whole subtrees with a depth counter. Six test groups compare 500 generated
+trees against an independent XML parser and check exact offsets, boundaries,
+delimiter ownership, reentrancy and unchanged memory. This is groundwork for
+tool 32, not an additional completed transformation.
 
 The XML pair uses [shared string primitives](transforms/00-xml-strings.md)
 implemented in a 1,699-byte module: XML 1.0 characters and Unicode names,
