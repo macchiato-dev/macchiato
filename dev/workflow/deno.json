@@ -2,7 +2,7 @@
   "tasks": {
     "build": "deno run --allow-read=. --allow-write=build,dist --allow-run=cargo workflow.ts",
     "test": "deno test --allow-read=. workflow_test.ts",
-    "browser-test": "deno run --allow-read --allow-write=dist --allow-env --allow-run browser-test.ts"
+    "browser-test": "deno run --allow-read --allow-write=dist --allow-env --allow-run --allow-sys browser-test.ts"
   },
   "nodeModulesDir": "none"
 }

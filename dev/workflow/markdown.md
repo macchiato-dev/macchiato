@@ -64,6 +64,7 @@ impl Default for Options {
 
 fn inline(out: &mut String, text: &str, options: &Options) {
     let mut i = 0;
+    let mut links_possible = true;
     while i < text.len() {
         let tail = &text[i..];
         let code_ticks = tail.bytes().take_while(|&b| b == b'`').count();
@@ -84,7 +85,7 @@ fn inline(out: &mut String, text: &str, options: &Options) {
             i += delimiter.len();
             continue;
         }
-        if tail.starts_with('[') {
+        if links_possible && tail.starts_with('[') {
             if let Some(label_end) = tail.find("](") {
                 if let Some(url_end) = tail[label_end + 2..].find(')') {
                     out.push_str("<span class=\"link-text\">");
@@ -94,7 +95,9 @@ fn inline(out: &mut String, text: &str, options: &Options) {
                     continue;
                 }
             }
-            // An unmatched '[' is plain text. The block size is bounded by input.
+            // No later opener can find a complete close if this one could not.
+            // Do not rescan a long run of unmatched brackets on every character.
+            links_possible = false;
         }
         let ch = tail.chars().next().unwrap();
         escape_into(out, &tail[..ch.len_utf8()]);

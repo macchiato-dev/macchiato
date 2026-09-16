@@ -17,6 +17,17 @@ the same documents with dark customization; `/sample.html` is the two-column
 composition example. No navigation is added by the renderers. These pages are
 directly addressable for testing; a later trusted host may add local navigation.
 
+For this repository's running declarative gateway, install an ordinary proxy
+from the repository root (the Deno server still owns all demo serving):
+
+```sh
+node packages/macchiato/src/macchiato.js site add-proxy workflow http://127.0.0.1:8787
+```
+
+That makes the local demo available at `http://workflow.localhost:3030/` when
+the gateway runs on port 3030. This uses its existing proxy implementation, not
+a special workflow handler or a dependency of the standalone demo.
+
 ## Request flow
 
 ```mermaid
@@ -32,6 +43,11 @@ flowchart LR
 Pseudocode: reject unsupported methods, look up the decoded URL pathname without
 joining it to the filesystem, read that single allowed artifact, and respond.
 The host has filesystem and listen permissions; the rendering Wasm has neither.
+
+The demo sends `no-transform` so Deno does not automatically gzip responses. The
+current local gateway otherwise decompresses its fetch response while preserving
+the original compression headers. Fixing that general proxy behavior is separate
+from this standalone server; these small demo artifacts need no compression yet.
 
 `server.ts`
 
@@ -55,7 +71,7 @@ Deno.serve({ hostname: "0.0.0.0", port: 8787 }, async (request) => {
       headers: {
         "Content-Type": artifact[1],
         "Content-Length": String(bytes.length),
-        "Cache-Control": "no-store",
+        "Cache-Control": "no-store, no-transform",
         "X-Content-Type-Options": "nosniff",
         "Referrer-Policy": "no-referrer",
       },

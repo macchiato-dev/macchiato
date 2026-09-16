@@ -14,6 +14,9 @@ document. Nothing executable is hidden in HTML comments.
 
 ## Run
 
+Local preview: `http://workflow.localhost:3030/` through the repository gateway,
+with `/dark.html` and `/sample.html` as directly addressable variants.
+
 From this directory:
 
 ```sh
@@ -94,3 +97,22 @@ is displayed as escaped text rather than partly interpreted HTML. Customization
 expands through explicit options and examples. See each document for its exact
 subset and tests. Keep generated files out of version control; change and review
 the documents instead.
+
+## Verification checkpoint
+
+The initial artifact is 25,697 bytes, including its test exports. It has no Wasm
+imports. Five Deno extraction/hash tests and 42 Rust cases running inside Wasm
+pass. Browser checks cover both themes at 1440 and 390 pixel widths, exact text
+preservation of every extracted source block (including the JavaScript/TypeScript
+server), repeated arena reuse, recovery after invalid UTF-8, and loading/navigation
+probes with and without CSP. Screenshots are written beneath ignored `dist/`.
+
+To include the live server in browser verification:
+
+```sh
+WORKFLOW_URL=http://workflow.localhost:3030/ deno task browser-test
+```
+
+These are prototype regression checks, not a complete security audit. Mermaid
+diagrams deliberately render as source. The future external token-type/length
+representation and richer interactive documents are not implemented yet.

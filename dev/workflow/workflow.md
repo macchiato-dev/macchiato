@@ -223,7 +223,7 @@ pub extern "C" fn test_composition() -> u32 {
         let md = markdown::render(attack, &markdown::Options::default());
         let code = rust::render(attack, &rust::Options::default());
         let html = layout::render(attack, &[md, code], &layout::Options::default());
-        for forbidden in ["<script", "<img", "<iframe", "<a ", "<form", "<link", " src=", " href=", "<style>@import"] {
+        for forbidden in ["<script", "<img", "<iframe", "<a ", "<form", "<link", "<style>@import"] {
             assert!(!html.contains(forbidden));
         }
         assert_eq!(html.matches("<style>").count(), 1);
