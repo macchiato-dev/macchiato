@@ -7,11 +7,11 @@ the document-driven workflows, and the Macchiato machine work.
 ## The idea
 
 A go-between that a person, their assistant, and an isolated AI agent can use
-to exchange selected information and capabilities. Its easiest useful form could
+to exchange selected information and capabilities. An easily adopted form could
 be a glorified clipboard: put something here, choose who gets it, and receive
 something back. A fully connected agent environment is not the entry requirement.
 
-The canvas can grow beyond visual objects to contain running machines,
+Another form is a canvas that contains more than visual objects: running machines,
 proxies, documents, editors, resources, and connections between them. A machine
 may have a visual surface, or it may do useful work without displaying anything.
 
@@ -31,7 +31,36 @@ state, subject to their own grants. With manual handoffs, they exchange explicit
 snapshots instead. Neither needs to operate exclusively through screenshots or
 simulated mouse input. Human interaction remains first-class.
 
-## Start as a glorified clipboard
+## Build a good version, and introduce the idea
+
+There are two aims: make a well-crafted implementation worth using, and explain
+the idea clearly enough that people can vibe code their own versions. The
+explanation should stand on its own, not just teach people to configure our app.
+Small examples, explicit boundaries, and understandable design decisions can
+give others a starting point without requiring our whole architecture.
+
+The clipboard-like go-between and the machine canvas may be separate apps:
+
+- A selective clipboard for someone who already has an isolated agent and wants
+  to hand things back and forth. Simplicity is its value, not a temporary stage
+  before acquiring orchestration features.
+- A shared machine canvas that composes tools and proxies, and can facilitate an
+  agent running in a smolvm with no direct network access, including mediating
+  its model connection.
+
+They share a principle—make deliberate exchanges across boundaries visible—but
+need not share a UI, runtime, release schedule, or mandatory protocol. Sharing
+code can follow actual overlap rather than forcing both into a framework. Which
+implementation to build first remains open; neither is the other's required
+upgrade path.
+
+Introduce each with a concrete walkthrough: what crosses the boundary, who
+authorizes it, where secrets live, and what happens on failure or revocation.
+Include small tests of these properties so independently built variants have
+more to check than whether the happy-path demo works. Vibe coding makes the
+idea easier to explore; it does not itself verify an isolation boundary.
+
+## A clipboard-like go-between
 
 The early audience includes security-conscious and DIY developers who keep an
 agent client off their main machine. They may run it in a disposable VM,
@@ -58,7 +87,7 @@ instruction to execute it on the main machine. Text exchange needs no special
 OS clipboard permission beyond the user's ordinary paste/copy actions.
 
 Cards and connections can make these handoffs easier to inspect and repeat, but
-the initial value is the selective exchange, not an elaborate canvas UI.
+the value is the selective exchange, not an elaborate canvas UI.
 
 ## Isolated agents and selected secrets
 
@@ -84,11 +113,11 @@ the value. Retention and persistence need explicit treatment; do not promise
 secure erasure merely because an item was dismissed. Putting a key in a model
 prompt is not the default way to configure a tool.
 
-The stronger networkless setup below is another possible deployment. It is not
+The machine canvas below can support a networkless setup. It is not
 literally air-gapped when stdin/stdout carries live messages to external services;
 its property is no direct guest network access and explicitly mediated traffic.
 
-## What can be on it
+## What can be on the machine canvas
 
 - A document or note, including a document that defines a runnable program.
 - An editor and the source or resource set it is allowed to change.
@@ -235,7 +264,7 @@ The canvas need not preserve a live runtime for every object. A stopped machine
 can remain as source, settings, connections, and explicit checkpoints. Removing
 or stopping one revokes its routes; replacing one does not reset the whole canvas.
 
-## A first experiment
+## A clipboard experiment
 
 Begin with a clipboard-like exchange to an already isolated agent:
 
@@ -248,12 +277,13 @@ Begin with a clipboard-like exchange to an already isolated agent:
    implicitly. Test reconnects and stale recipients so a retry cannot redirect
    a secret to a different agent session.
 
-This first version need not implement model proxying, live collaboration,
+This app need not implement model proxying, live collaboration,
 machine orchestration, or a VM supervisor to be useful.
 
-## A follow-on networkless experiment
+## A separate machine-canvas experiment
 
-Use the document workflow to explore the fuller machine composition:
+Use the document workflow to explore machine composition, independently of the
+clipboard experiment:
 
 1. Place a Markdown document, Rust highlighter, layout renderer, and output
    surface on the canvas. Their source and relationships are inspectable.
@@ -276,6 +306,8 @@ smolvm run, not only a fake pipe pair, is needed for that claim.
 
 ## Decisions still open
 
+- Which implementation to develop first, and which small examples best introduce
+  the idea to people building their own variants.
 - The smallest useful manual exchange UI and optional isolated-side adapter.
 - How recipient identity and secret delivery are confirmed without requiring a
   privileged client on the main machine.
