@@ -1,4 +1,4 @@
-# Canvas: a shared workspace of machines
+# Canvas: a go-between for people, agents, and machines
 
 Concept draft, not an implementation or a claim that the isolation described
 here has already been verified. This experiment may grow alongside MicroWasm,
@@ -6,8 +6,12 @@ the document-driven workflows, and the Macchiato machine work.
 
 ## The idea
 
-A canvas that a person, their assistant, and a sandboxed AI agent can work on
-together. It contains more than visual objects: it can contain running machines,
+A go-between that a person, their assistant, and an isolated AI agent can use
+to exchange selected information and capabilities. Its easiest useful form could
+be a glorified clipboard: put something here, choose who gets it, and receive
+something back. A fully connected agent environment is not the entry requirement.
+
+The canvas can grow beyond visual objects to contain running machines,
 proxies, documents, editors, resources, and connections between them. A machine
 may have a visual surface, or it may do useful work without displaying anything.
 
@@ -17,9 +21,72 @@ permission granted to everything on the page. An agent is another participant
 with explicitly granted capabilities, not the owner of the entire canvas.
 
 The surrounding assistant could use a canvas tool/bridge while a separate agent
-runs inside a networkless smolvm. Both work with the same authoritative canvas
-state, subject to their own grants. Neither needs to operate exclusively through
-screenshots or simulated mouse input. Human interaction remains first-class.
+runs in an isolated environment. That environment may already have networking
+and its own model connection. Alternatively, a networkless smolvm can obtain
+even that connection through the go-between. These are distinct useful setups,
+not a requirement that everyone adopt the more restrictive one.
+
+With a live integration, participants work with the same authoritative canvas
+state, subject to their own grants. With manual handoffs, they exchange explicit
+snapshots instead. Neither needs to operate exclusively through screenshots or
+simulated mouse input. Human interaction remains first-class.
+
+## Start as a glorified clipboard
+
+The early audience includes security-conscious and DIY developers who keep an
+agent client off their main machine. They may run it in a disposable VM,
+container, or another computer. They want to give it a particular document,
+selected files, a result, or one credential without exposing their home directory,
+browser profile, environment, SSH agent, or collection of host secrets.
+
+The main-machine side could be an ordinary browser page. There need not be an
+installed agent client, a daemon with broad host access, automatic clipboard
+monitoring, or a filesystem mirror. A small bridge can run on the isolated side;
+manual copy and paste should remain a useful path without any bridge at all.
+
+A first handoff can be deliberately simple:
+
+1. Paste text or select a file into a holding area.
+2. See what is included, select its recipient, and explicitly hand it over.
+3. Receive a result in a separate area, with its source and purpose visible.
+4. Inspect it before copying it out, saving it, or applying it to another object.
+
+Pasting into a holding area need not immediately send content to the agent or
+model. There is no implicit clipboard history, synchronization of unrelated
+content, or broadcast to every participant. Returned text is data, not an
+instruction to execute it on the main machine. Text exchange needs no special
+OS clipboard permission beyond the user's ordinary paste/copy actions.
+
+Cards and connections can make these handoffs easier to inspect and repeat, but
+the initial value is the selective exchange, not an elaborate canvas UI.
+
+## Isolated agents and selected secrets
+
+An isolated agent can have outbound networking while lacking access to the
+main machine's secrets. For this setup, the go-between does not need to carry
+all network traffic or replace the agent's existing model connection. Its job
+is to supply just the resources and credentials the user chooses.
+
+There are two different handoffs, and the UI should distinguish them:
+
+- **Deliver a secret:** give a selected credential to the selected agent or tool
+  environment. This is useful with existing clients that expect a key. The agent
+  can read and potentially retain or transmit it; removal from the canvas cannot
+  recall a copy. Expiry or provider-side rotation/revocation handles that case.
+- **Grant use without delivery:** keep the key at a proxy and give the agent a
+  bounded service handle. The proxy injects the credential for approved requests.
+  This needs more integration, but avoids exposing the key bytes to the agent.
+
+Neither mode implies importing all host credentials. Secret payloads should be
+separate from ordinary shared notes, conversation content, exports, and activity
+logs. A secret handoff can record who received which grant without recording
+the value. Retention and persistence need explicit treatment; do not promise
+secure erasure merely because an item was dismissed. Putting a key in a model
+prompt is not the default way to configure a tool.
+
+The stronger networkless setup below is another possible deployment. It is not
+literally air-gapped when stdin/stdout carries live messages to external services;
+its property is no direct guest network access and explicitly mediated traffic.
 
 ## What can be on it
 
@@ -43,7 +110,7 @@ where its capabilities, lifetime, or failure isolation need one.
 
 ## Shared access without shared authority
 
-The canvas service owns identities, component descriptions, revisions, and
+For the connected composition, the canvas service owns identities, component descriptions, revisions, and
 accepted changes. Participants can receive a scoped snapshot and subscribe to
 subsequent changes. They can propose or apply operations within their grants:
 create a note, edit a source document, move a surface, invoke a machine, connect
@@ -62,7 +129,7 @@ right to use that proxy or broaden its destination scope.
 
 ## A networkless smolvm can still run a connected agent
 
-The proposed VM has no network interface or other ungranted network path. Programs
+In this optional setup, the VM has no network interface or other ungranted network path. Programs
 inside it exchange all external requests and results through their standard
 input and output. This includes the agent's model-provider connection: the agent
 does not need a network stack or provider credential of its own.
@@ -170,7 +237,23 @@ or stopping one revokes its routes; replacing one does not reset the whole canva
 
 ## A first experiment
 
-Use the document workflow as a concrete task, not a generic agent demo:
+Begin with a clipboard-like exchange to an already isolated agent:
+
+1. Provide one source document, leaving unrelated host files inaccessible.
+2. Let the agent return a proposed change and a rendered result to the canvas.
+   Review them before applying or copying anything back.
+3. Demonstrate a separate selected-secret handoff using a disposable test
+   credential, without copying it into ordinary notes or the model conversation.
+4. Show that other canvas items, recipients, and host credentials are not included
+   implicitly. Test reconnects and stale recipients so a retry cannot redirect
+   a secret to a different agent session.
+
+This first version need not implement model proxying, live collaboration,
+machine orchestration, or a VM supervisor to be useful.
+
+## A follow-on networkless experiment
+
+Use the document workflow to explore the fuller machine composition:
 
 1. Place a Markdown document, Rust highlighter, layout renderer, and output
    surface on the canvas. Their source and relationships are inspectable.
@@ -193,6 +276,9 @@ smolvm run, not only a fake pipe pair, is needed for that claim.
 
 ## Decisions still open
 
+- The smallest useful manual exchange UI and optional isolated-side adapter.
+- How recipient identity and secret delivery are confirmed without requiring a
+  privileged client on the main machine.
 - Exact smolvm supervisor and host/guest byte transport.
 - Agent implementation and how little adaptation its provider transport needs.
 - Which canvas operations initially require confirmation rather than a standing
