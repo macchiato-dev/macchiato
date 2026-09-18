@@ -55,15 +55,91 @@ The table lives on the runner side for now, so no Wasm transformation or Walrus
 dependency is necessary. Hosts and guests remain independently built: adding
 host-side dependencies later need not add them to a guest.
 
-Communication with the external sandboxed agent will use only process exec;
-that command and protocol remain undefined. Function registration above is not
-that future agent transport.
+Communication with the external sandboxed agent will use only process exec.
+The proposed startup and transport are sketched below, not implemented yet.
+Function registration above is not that future agent transport.
 
 For now the backend guest supplies a minimal HTML page through its host, and the
 frontend guest supplies introductory text through its host. The HTML is a trusted
 fixture, not yet a safe renderer for arbitrary guest HTML. There is no file
 handling, agent execution, persistence, or authentication yet. The server listens
 only on loopback.
+
+## Sketch: exec-backed web server
+
+The backend guest should be able to request the application's command-line
+arguments from the backend host. The host supplies the argument list, not the
+whole environment or the runner's Deno permission flags. Parsing the application
+arguments and deciding the mode belongs in the guest; process and HTTP I/O belong
+in its host.
+
+Split the application arguments at the first `--`:
+
+- With no arguments before `--`, the guest selects web-server mode.
+- Everything after `--` is the executable and its arguments, preserved as an
+  argument vector. Later `--` arguments belong to that executable.
+- Other application modes or options before `--` are not designed yet.
+- A missing executable should produce a useful error in this mode, not silently
+  choose a shell or an agent. This is proposed behavior, not the current scaffold.
+
+Conceptual invocation, omitting the Deno permission flags:
+
+```text
+backend.js -- <exec command> <arguments for entering the existing sandbox>
+```
+
+The guest requests that the host start the configured command and listen for
+browser requests. The host spawns the command directly, without shell string
+interpolation, with piped stdin, stdout, and stderr. Start one child for the
+session, not one per HTTP request. Browser input does not choose the executable
+or supply extra process arguments.
+
+The intended communication path is:
+
+```text
+browser ↔ local HTTP server ↔ backend guest ↔ backend host
+                                                ↕ child stdin/stdout
+                                         exec into existing sandbox
+                                                ↕
+                                         agent-side endpoint
+```
+
+The host delivers HTTP requests and child output to the guest through messages.
+The guest decides what to forward, and asks the host to write child input or
+respond to the browser. It never receives raw Deno process or server objects.
+This needs a host-to-guest delivery path beyond the current startup-only `run()`.
+The frontend host/guest pair remains the browser-side boundary.
+
+### No direct sandbox network
+
+The exec command can enter an **existing** Podman container or smolvm where the
+agent is running. Canvas Lite need not create the sandbox, install an HTTP server
+inside it, or connect to an agent TCP port. The agent-side endpoint might be a
+small adapter to the running agent rather than a new agent instance.
+
+The existing sandbox must actually have no network access; using exec alone does
+not remove networking from it. For a VM, its supervisor must provide a suitable
+exec/stdio transport. The privileged container or VM control connection stays
+outside the sandbox. Neither it nor host network sockets are passed to the agent.
+
+The browser-facing server lives outside that boundary. All agent communication
+passes through exec's pipes, including any explicitly granted model-service
+traffic if that is added later. No direct network does not mean air-gapped:
+these pipes are intentional, mediated communication channels.
+
+### Leave these choices open
+
+- What the endpoint speaks: HTTP messages over stdio, or a smaller framed
+  request/response protocol translated into HTTP by the backend guest.
+- File framing and request IDs: pipe reads are arbitrary chunks, not message
+  boundaries. Keep diagnostics on stderr, separate from protocol stdout.
+- Streaming and backpressure, rather than buffering whole files or unbounded
+  output. The current no-op-free allocator is not yet suitable for sustained
+  traffic without a buffer-reuse strategy.
+- Browser authentication, allowed operations, and how the user approves a
+  transfer. Command-line arguments must not be exposed to the browser by default.
+- Cancellation, EOF, child failure, and shutdown: stopping the exec session must
+  not accidentally stop the pre-existing sandbox or its independent agent.
 
 ## Build and run
 
