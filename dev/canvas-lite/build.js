@@ -1,6 +1,6 @@
-// Two standalone, dependency-free libraries; never build native executables.
+// Four standalone, dependency-free libraries; never build native executables.
 await Deno.mkdir("dist", { recursive: true });
-for (const name of ["frontend", "backend"]) {
+for (const name of ["frontend-host", "frontend-guest", "backend-host", "backend-guest"]) {
   const result = await new Deno.Command("rustc", {
     args: [
       `${name}.rs`, "--edition=2021", "--crate-type=cdylib",

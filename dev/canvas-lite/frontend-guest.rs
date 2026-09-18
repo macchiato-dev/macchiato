@@ -2,14 +2,14 @@
 
 static TEXT: &str = "Canvas Lite — a place to hand files to and from an agent.";
 
-#[no_mangle]
-pub extern "C" fn text_ptr() -> *const u8 {
-    TEXT.as_ptr()
+#[link(wasm_import_module = "host")]
+extern "C" {
+    fn msg(ptr: *const u8, len: usize);
 }
 
 #[no_mangle]
-pub extern "C" fn text_len() -> usize {
-    TEXT.len()
+pub extern "C" fn run() {
+    unsafe { msg(TEXT.as_ptr(), TEXT.len()) }
 }
 
 #[panic_handler]

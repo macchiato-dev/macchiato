@@ -15,14 +15,14 @@ static PAGE: &str = r#"<!doctype html>
 </html>
 "#;
 
-#[no_mangle]
-pub extern "C" fn text_ptr() -> *const u8 {
-    PAGE.as_ptr()
+#[link(wasm_import_module = "host")]
+extern "C" {
+    fn msg(ptr: *const u8, len: usize);
 }
 
 #[no_mangle]
-pub extern "C" fn text_len() -> usize {
-    PAGE.len()
+pub extern "C" fn run() {
+    unsafe { msg(PAGE.as_ptr(), PAGE.len()) }
 }
 
 #[panic_handler]
