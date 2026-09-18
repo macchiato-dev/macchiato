@@ -65,6 +65,43 @@ fixture, not yet a safe renderer for arbitrary guest HTML. There is no file
 handling, agent execution, persistence, or authentication yet. The server listens
 only on loopback.
 
+## Sketch: agent-owned canvas
+
+The canvas lives in the agent's environment:
+
+- `~/canvas-lite/canvas.md` is the canvas document.
+- Other files may live at any other path beneath `~/canvas-lite/`, including
+  subdirectories. There is no required assets-only directory.
+- `~` means the agent's home directory, not the browser server operator's home.
+
+This directory is the source of truth. The agent can edit it with its ordinary
+file tools, while the browser reads and edits it through the exec connection.
+The browser is not maintaining a separate authoritative canvas database. File
+handoffs into the canvas land beneath this directory; exports come back through
+the same connection. References in the document should be relative to this root.
+
+The browser presents an **infinite canvas**, with pan and zoom rather than a
+fixed page. HTML custom elements provide the visual components. Initial
+essentials are:
+
+- Code snippets with syntax highlighting.
+- Image previews.
+- Freehand drawing.
+- Shapes.
+- Text.
+
+The document will describe the items, their placement, and references to files.
+The exact Markdown representation, element names, and interaction model remain
+to be designed. Use readable document data rather than making the browser DOM
+the persistent format. Custom elements are supplied by the app; a document does
+not get to register arbitrary JavaScript or activate arbitrary HTML. File paths
+are data, not shell fragments or unrestricted URLs.
+
+The file-serving boundary will need to enforce the canvas root, including when
+symlinks are involved. Concurrent agent and browser edits also need an explicit
+conflict policy rather than silently overwriting each other. Those are design
+requirements, not implemented guarantees of this scaffold.
+
 ## Sketch: exec-backed web server
 
 The backend guest should be able to request the application's command-line
@@ -121,6 +158,12 @@ The existing sandbox must actually have no network access; using exec alone does
 not remove networking from it. For a VM, its supervisor must provide a suitable
 exec/stdio transport. The privileged container or VM control connection stays
 outside the sandbox. Neither it nor host network sockets are passed to the agent.
+
+For testing, the server and agent-side endpoint can run in the **same instance**,
+using a local child command and the same stdin/stdout interface. A second VM or
+container is not required to work on the canvas. This exercises the transport and
+UI, not the no-network isolation claim. The two Wasm instances per side (host and
+guest) remain separate regardless of where the external command runs.
 
 The browser-facing server lives outside that boundary. All agent communication
 passes through exec's pipes, including any explicitly granted model-service
