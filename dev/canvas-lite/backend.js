@@ -1,59 +1,31 @@
-const root = new URL("./", import.meta.url);
+// The runner loads only the trusted host. The host decides what else to load.
+const refs = new WebAssembly.Table({ element: "externref", initial: 1 });
 const decoder = new TextDecoder("utf-8", { fatal: true });
-let host, guest, page;
-function text(memory, ptr, len) {
-  return decoder.decode(new Uint8Array(memory.buffer, ptr, len));
-}
-
-({ instance: { exports: host } } = await WebAssembly.instantiate(
-  await Deno.readFile(new URL("dist/backend-host.wasm", root)),
+const env = { root: new URL("./", import.meta.url) };
+const keep = (value) => value === undefined ? 0 : refs.grow(1, value);
+const { instance } = await WebAssembly.instantiate(
+  await Deno.readFile(new URL("dist/backend-host.wasm", env.root)),
   {
     runner: {
-      exec(code, codeLen, data, dataLen) {
-        // The host is trusted and can use the runner's full Deno authority.
-        const run = new Function("data", text(host.memory, code, codeLen));
-        page = run(text(host.memory, data, dataLen));
+      compile(ptr, len) {
+        const source = decoder.decode(
+          new Uint8Array(env.wasm.memory.buffer, ptr >>> 0, len >>> 0),
+        );
+        // Compile a trusted function expression once; calls use its reference.
+        const fn = new Function(`return (${source}\n);`)();
+        if (typeof fn !== "function") throw Error("Expected function source");
+        return keep(fn);
       },
-    },
-    guest: { run: () => guest.run() },
-  },
-));
-({ instance: { exports: guest } } = await WebAssembly.instantiate(
-  await Deno.readFile(new URL("dist/backend-guest.wasm", root)),
-  {
-    host: {
-      msg(ptr, len) {
-        if ((len >>> 0) > host.inbox_capacity()) throw Error("Host inbox full");
-        const bytes = new Uint8Array(guest.memory.buffer, ptr >>> 0, len >>> 0);
-        new Uint8Array(host.memory.buffer, host.inbox_ptr(), bytes.length).set(bytes);
-        host.onmsg(bytes.length);
+      call(ref, ptr, len) {
+        return keep(refs.get(ref >>> 0)(env, ptr >>> 0, len >>> 0));
       },
     },
   },
-));
-
-// Explicit routes only: request paths never become filesystem paths.
-const assets = new Map([
-  ["/frontend.js", ["frontend.js", "text/javascript"]],
-  ["/frontend-host.wasm", ["dist/frontend-host.wasm", "application/wasm"]],
-  ["/frontend-guest.wasm", ["dist/frontend-guest.wasm", "application/wasm"]],
-]);
-
-Deno.serve({ hostname: "127.0.0.1", port: 8788 }, async (request) => {
-  if (request.method !== "GET") {
-    return new Response("Method not allowed", { status: 405 });
-  }
-  const path = new URL(request.url).pathname;
-  const headers = { "Cache-Control": "no-store" };
-  if (path === "/") {
-    host.start();
-    return new Response(page, {
-      headers: { ...headers, "Content-Type": "text/html; charset=utf-8" },
-    });
-  }
-  const asset = assets.get(path);
-  if (!asset) return new Response("Not found", { status: 404 });
-  return new Response(await Deno.readFile(new URL(asset[0], root)), {
-    headers: { ...headers, "Content-Type": asset[1] },
-  });
-});
+);
+env.wasm = instance.exports;
+const startup = env.wasm.start();
+try {
+  await refs.get(startup);
+} finally {
+  refs.set(startup, null);
+}
