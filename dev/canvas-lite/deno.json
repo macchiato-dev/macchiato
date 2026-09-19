@@ -1,6 +1,6 @@
 {
   "tasks": {
     "build": "deno run --allow-write=dist --allow-run=rustc build.js",
-    "start": "deno run --allow-read=dist,frontend.js --allow-net=127.0.0.1:8788 backend.js"
+    "start": "deno run --allow-read=dist,frontend.js --allow-net=127.0.0.1:8788 --allow-run=deno backend.js -- deno run --allow-read=dist backend.js agent"
   }
 }

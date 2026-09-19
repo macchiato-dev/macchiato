@@ -1,6 +1,9 @@
 #![no_std]
 
-static PAGE: &str = r#"<!doctype html>
+// Message 4 carries the page; it is produced by the agent process, not the server.
+static PAGE: &str = concat!(
+    "\x04",
+    r#"<!doctype html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -9,11 +12,13 @@ static PAGE: &str = r#"<!doctype html>
 </head>
 <body>
     <main></main>
+    <p>The canvas agent supplied this page over stdin/stdout.</p>
     <noscript>This app needs JavaScript and WebAssembly.</noscript>
     <script type="module" src="./frontend.js"></script>
 </body>
 </html>
-"#;
+"#
+);
 
 #[link(wasm_import_module = "host")]
 extern "C" {
@@ -22,7 +27,66 @@ extern "C" {
 
 #[no_mangle]
 pub extern "C" fn run() {
-    unsafe { msg(PAGE.as_ptr(), PAGE.len()) }
+    send(&[0]); // Ask the host for application argv, without Deno's own flags.
+}
+
+fn send(bytes: &[u8]) {
+    unsafe { msg(bytes.as_ptr(), bytes.len()) }
+}
+
+fn word(bytes: &[u8], pos: &mut usize) -> usize {
+    let value = u32::from_le_bytes(bytes[*pos..*pos + 4].try_into().unwrap());
+    *pos += 4;
+    value as usize
+}
+
+fn argument<'a>(bytes: &'a [u8], pos: &mut usize) -> &'a [u8] {
+    let len = word(bytes, pos);
+    let value = &bytes[*pos..*pos + len];
+    *pos += len;
+    value
+}
+
+// Argv is a u32 count followed by u32-length-prefixed UTF-8 strings.
+#[no_mangle]
+pub unsafe extern "C" fn arguments(ptr: *const u8, len: usize) {
+    let bytes = core::slice::from_raw_parts(ptr, len);
+    let mut pos = 0;
+    let count = word(bytes, &mut pos);
+    let first = if count > 0 {
+        argument(bytes, &mut pos)
+    } else {
+        b""
+    };
+    let mut command = false;
+    for index in 1..count {
+        let arg = argument(bytes, &mut pos);
+        if index == 1 {
+            command = !arg.is_empty();
+        }
+    }
+    assert!(pos == bytes.len());
+    if count == 1 && first == b"agent" {
+        send(&[1]);
+    } else if first == b"--" && command {
+        send(&[2]);
+    } else {
+        send(&[3]);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn request() {
+    send(&[5]); // Ask the host to exchange a request with the configured child.
+}
+
+#[no_mangle]
+pub extern "C" fn input(byte: u32) {
+    if byte == 0 {
+        send(PAGE.as_bytes());
+    } else {
+        send(&[3]);
+    }
 }
 
 // Byte-only arena: no alignment promise for typed allocations or GlobalAlloc.

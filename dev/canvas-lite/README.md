@@ -20,8 +20,9 @@ The guest imports only `host.msg(pointer, length)`. Its host supplies the bridge
 that copies those bytes into a temporary host allocation, calls
 `onmsg(pointer, length)`, and calls `free` (currently a no-op). There is no shared memory
 or direct guest access to Deno, the DOM, the other guest, or JavaScript execution.
-After instantiation, the host calls the guest's exported `run()` function. A
-richer return-message ABI is not defined yet.
+After instantiation, the host calls the guest's exported `run()` function. The
+backend guest requests argv, selects its mode, and handles the small protocol
+described below. A general return-message ABI is not defined yet.
 
 ## Host function references
 
@@ -46,8 +47,8 @@ code gets this capability. Guest messages never become function source.
 
 The functions can use the runner environment's full authority, within Deno's
 granted permissions or the browser's normal origin restrictions. This is not a
-sandbox for the host. The start task grants only the permissions the scaffold
-currently uses; it does not yet grant subprocess execution. HTTP serving and
+sandbox for the host. The start task grants the server permission to launch Deno;
+the child agent receives no network or subprocess permission. HTTP serving and
 guest instantiation now live in the backend host's registered startup function,
 not as application-specific logic in the runner.
 
@@ -55,15 +56,63 @@ The table lives on the runner side for now, so no Wasm transformation or Walrus
 dependency is necessary. Hosts and guests remain independently built: adding
 host-side dependencies later need not add them to a guest.
 
-Communication with the external sandboxed agent will use only process exec.
-The proposed startup and transport are sketched below, not implemented yet.
-Function registration above is not that future agent transport.
+Communication with the agent uses only process exec and stdin/stdout. The local
+mode is implemented; entering a separate sandbox uses an operator-supplied exec
+command. Function registration above is distinct from that process transport.
 
-For now the backend guest supplies a minimal HTML page through its host, and the
-frontend guest supplies introductory text through its host. The HTML is a trusted
-fixture, not yet a safe renderer for arbitrary guest HTML. There is no file
-handling, agent execution, persistence, or authentication yet. The server listens
-only on loopback.
+For now the agent process's backend guest supplies a minimal HTML page through
+the pipes, and the frontend guest supplies introductory text through its host.
+The HTML is a trusted fixture, not yet a safe renderer for arbitrary guest HTML.
+There is no canvas file handling, persistence, authentication, or AI model client
+yet. The server listens only on loopback. The agent is a canvas endpoint, not a
+new AI session.
+
+## Current exec/proxy slice
+
+`deno task start` runs the server with this child command after `--`:
+
+```sh
+deno run --allow-read=dist backend.js agent
+```
+
+Both processes instantiate their own backend host and guest Wasm pair. The
+backend guest receives argv as a u32 little-endian count followed by
+u32-length-prefixed UTF-8 arguments. It selects `agent` for that single argument,
+or server mode when argv starts with `--` followed by a nonempty executable.
+Other forms fail with usage information. The host keeps the original argv for
+spawning; it does not interpret it as a shell command.
+
+The backend guest-to-host messages currently begin with one byte:
+
+| Byte | Meaning |
+| --- | --- |
+| 0 | Request argv; host replies through the guest's `arguments` export. |
+| 1 | Run the stdin/stdout canvas agent. |
+| 2 | Run the web server and configured child. |
+| 3 | Reject the invocation or unsupported agent input. |
+| 4 | Remaining bytes are the placeholder HTML response. |
+| 5 | Exchange a page request with the child. |
+
+The **process pipe** protocol is separate: request byte `0` asks for the page;
+the response is a u32 little-endian byte length followed by the HTML bytes.
+Stdout carries only this protocol; diagnostics use stderr. Replies are currently
+capped at 1 MiB, requests time out after ten seconds, and only one page exchange
+is allowed at a time. This is a starter endpoint, not the file-transfer protocol.
+
+The declarative `canvas-lite` app uses the existing generic `proxy` handler,
+forwarding paths, queries, methods, and bodies to `http://127.0.0.1:8788`.
+There is no Canvas-specific gateway code and no shared-asset route. Frontend
+assets come from this server; the root page comes from the agent. From the
+repository root, install the declaration with:
+
+```sh
+node packages/macchiato/src/macchiato.js app install canvas-lite
+```
+
+With the gateway on port 3030, open <http://canvas-lite.localhost:3030/>.
+The fixed upstream port is for this initial proxy setup. Random-port/path launch
+authentication below is still a design sketch. Do not expose canvas files or
+mutations before implementing access control.
 
 ## Sketch: agent-owned canvas
 
@@ -164,9 +213,9 @@ to an existing sandbox without giving the sandbox a network interface. The
 browser authentication technique above protects the outside-facing endpoint;
 the exec technique supplies the inside-facing transport. Details follow.
 
-## Sketch: exec-backed web server
+## Exec-backed web server direction
 
-The backend guest should be able to request the application's command-line
+The backend guest can request the application's command-line
 arguments from the backend host. The host supplies the argument list, not the
 whole environment or the runner's Deno permission flags. Parsing the application
 arguments and deciding the mode belongs in the guest; process and HTTP I/O belong
@@ -177,9 +226,9 @@ Split the application arguments at the first `--`:
 - With no arguments before `--`, the guest selects web-server mode.
 - Everything after `--` is the executable and its arguments, preserved as an
   argument vector. Later `--` arguments belong to that executable.
-- Other application modes or options before `--` are not designed yet.
+- `agent` selects the stdin/stdout endpoint. Other options are not designed yet.
 - A missing executable should produce a useful error in this mode, not silently
-  choose a shell or an agent. This is proposed behavior, not the current scaffold.
+  choose a shell or an agent.
 
 Conceptual invocation, omitting the Deno permission flags:
 
@@ -206,7 +255,8 @@ browser ↔ local HTTP server ↔ backend guest ↔ backend host
 The host delivers HTTP requests and child output to the guest through messages.
 The guest decides what to forward, and asks the host to write child input or
 respond to the browser. It never receives raw Deno process or server objects.
-This needs a host-to-guest delivery path beyond the current startup-only `run()`.
+The current implementation delivers argv and agent request bytes through guest
+exports; more general request/event delivery is still to be designed.
 The frontend host/guest pair remains the browser-side boundary.
 
 ### No direct sandbox network
@@ -234,8 +284,8 @@ these pipes are intentional, mediated communication channels.
 
 ### Leave these choices open
 
-- What the endpoint speaks: HTTP messages over stdio, or a smaller framed
-  request/response protocol translated into HTTP by the backend guest.
+- How the tiny placeholder protocol grows into file requests and canvas edits;
+  it currently returns an HTML body, not an entire HTTP message over stdio.
 - File framing and request IDs: pipe reads are arbitrary chunks, not message
   boundaries. Keep diagnostics on stderr, separate from protocol stdout.
 - Streaming and backpressure, rather than buffering whole files or unbounded

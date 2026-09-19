@@ -27,6 +27,14 @@ const websiteRoot = join(repoRoot, "packages", "website");
 
 export const BUILTIN_APPS = [
   {
+    name: "Canvas Lite",
+    subdomain: "canvas-lite",
+    kind: "exec-backed canvas scaffold",
+    description: "A browser canvas connected to a local agent over stdin/stdout.",
+    declarativeHandler: "proxy",
+    appOptions: { proxy: { origin: "http://127.0.0.1:8788" } },
+  },
+  {
     name: "Macchiato EVM Playground",
     pluginId: "evm-playground",
     subdomain: "evm",
