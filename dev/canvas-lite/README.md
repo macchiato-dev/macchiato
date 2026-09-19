@@ -102,6 +102,68 @@ symlinks are involved. Concurrent agent and browser edits also need an explicit
 conflict policy rather than silently overwriting each other. Those are design
 requirements, not implemented guarantees of this scaffold.
 
+## Two reusable techniques
+
+These ideas should be useful independently of Canvas Lite: a low-configuration
+local web-app launch URL, and an exec/stdio connection to a sandbox. Neither
+requires adopting the canvas UI or its document format.
+
+### Local launch URL and authentication
+
+Proposed behavior, not implemented in the scaffold:
+
+1. Listen on an available, randomly selected loopback port. Bind before printing
+   the URL; a random choice alone cannot guarantee a free port.
+2. Generate a random seven-hex namespace, `/canvas-lite-<randomhex7>`, and an
+   independent cryptographically random bearer token (for example, 32 bytes).
+   The short path is for namespacing, not the authentication secret.
+3. Print a launch URL such as
+   `http://localhost:<port>/canvas-lite-<randomhex7>/?token=<secret>`.
+4. Validate the query token before serving the app, set a host-only `HttpOnly`
+   cookie scoped to that canvas path, and redirect immediately to the same path
+   without the token query. Use the trailing slash consistently for relative
+   asset URLs. Include `SameSite=Strict`; use `Secure` when serving over HTTPS.
+5. Keep all app routes beneath that prefix and require authentication for app
+   assets, files, APIs, and event streams. The random path alone grants nothing.
+6. Expire the token after seven days, enforced by the server. Cookie sessions
+   must expire no later than that same deadline; exchanging the token again must
+   not extend it. Rotation or stopping a non-persisted session may invalidate it
+   earlier. After expiry, require a fresh launch credential.
+
+This resembles the token-URL-to-cookie flow documented by
+[Jupyter Server](https://jupyter-server.readthedocs.io/en/latest/operators/security.html).
+It is a simple local-app launch technique, not a claim of equivalence to all of
+JupyterHub's deployment or security features.
+
+Path scoping avoids sending this cookie on ordinary visits to unrelated paths
+when a port is later reused. It does **not** make cookies port-specific: a request
+to the matching path on another port of the same hostname can carry the cookie
+too. Revisiting a stale history URL can therefore send it to a replacement
+server. Path scoping reduces accidental overlap, not exposure to a malicious
+local service. These limitations follow from
+[the cookie specification](https://www.rfc-editor.org/rfc/rfc6265.html#section-8.5).
+
+The query token reaches the HTTP server, unlike a fragment token. Keep it out of
+request logs, use `Cache-Control: no-store` and `Referrer-Policy: no-referrer` on
+the bootstrap response, and serve no app content before redirecting. Removing
+it from the address bar does not erase previous copies in history or logs. The
+printed launch URL itself is a secret.
+
+Validate the expected Host and Origin for requests, protect state-changing
+operations against CSRF, and do not treat different localhost ports as isolated
+by SameSite cookies. Loopback binding remains the default; this sketch is not a
+recipe for exposing an unaudited HTTP service to the network. Authentication and
+bootstrap credentials stay outside the agent's sandbox.
+
+### Exec as the sandbox connection
+
+The command after `--` provides the connection, not an agent HTTP address. Spawn
+it with pipes and give the backend guest scoped access to that child's
+stdin/stdout through host messages. This can support other browser tools talking
+to an existing sandbox without giving the sandbox a network interface. The
+browser authentication technique above protects the outside-facing endpoint;
+the exec technique supplies the inside-facing transport. Details follow.
+
 ## Sketch: exec-backed web server
 
 The backend guest should be able to request the application's command-line
@@ -179,8 +241,9 @@ these pipes are intentional, mediated communication channels.
 - Streaming and backpressure, rather than buffering whole files or unbounded
   output. The current no-op-free allocator is not yet suitable for sustained
   traffic without a buffer-reuse strategy.
-- Browser authentication, allowed operations, and how the user approves a
-  transfer. Command-line arguments must not be exposed to the browser by default.
+- The authentication implementation described above, allowed operations, and how
+  the user approves a transfer. Command-line arguments must not be exposed to
+  the browser by default.
 - Cancellation, EOF, child failure, and shutdown: stopping the exec session must
   not accidentally stop the pre-existing sandbox or its independent agent.
 
