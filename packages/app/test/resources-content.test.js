@@ -32,7 +32,7 @@ test("content schema caps the site at 50,000 projects", () => {
   assert.match(CONTENT_SCHEMA.join("\n"), /COUNT\(\*\) FROM resource_projects\) >= 50000/);
 });
 
-test("only the latest successful output is retained, apart from source history", async () => {
+test("working and published builds are retained separately from source history", async () => {
   const { content, account, db } = await stores();
   const source = text => ({ files: [{ path: "index.html", content: text }], config: {} });
   const first = source("first"), second = source("second"), broken = source("<unfinished");
@@ -50,8 +50,10 @@ test("only the latest successful output is retained, apart from source history",
   await content.saveProjectSnapshot(account.id, project.id, second);
   await content.saveProjectBuildOutput(account.id, project.id, second, output(second));
   assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_build_output").get().n, 1);
-  assert.equal((await content.getPublicProjectWorkspace("latte", "cached")).savedOutput, null,
-    "an unpublished successful build is never returned to public visitors");
+  assert.deepEqual((await content.getPublicProjectWorkspace("latte", "cached")).savedOutput, output(first),
+    "visitors keep the published build, never the unpublished successful build");
+  assert.deepEqual(await content.getProjectBuildOutput(project.id), output(first));
+  assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_published_output").get().n, 1);
   assert.deepEqual(await content.saveProjectBuildOutput(account.id, project.id, first, output(first)), { saved: false });
   await content.saveProjectSnapshot(account.id, project.id, broken);
   assert.deepEqual((await content.getProjectWorkspace("latte", "cached", account.id)).savedOutput, output(second));
@@ -63,6 +65,7 @@ test("only the latest successful output is retained, apart from source history",
     "legacy key ordering does not make an unchanged source look stale");
   await content.deleteProject(account.id, project.id);
   assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_build_output").get().n, 0);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM resource_project_published_output").get().n, 0);
 });
 
 test("content store creates organizations and namespaced projects", async () => {
