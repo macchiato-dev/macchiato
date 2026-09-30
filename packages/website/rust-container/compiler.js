@@ -65,6 +65,14 @@ function filesFor(input) {
   if (!input.entry.endsWith(".rs") || !files.has(input.entry)) {
     throw new CompileError("Entry must name a supplied Rust source file");
   }
+  for (const path of files.keys()) {
+    const parts = path.split("/");
+    for (let i = 1; i < parts.length; i++) {
+      if (files.has(parts.slice(0, i).join("/"))) {
+        throw new CompileError("A project path cannot be both a file and a directory");
+      }
+    }
+  }
   return files;
 }
 
@@ -90,7 +98,7 @@ export class RustCompiler {
         await Deno.writeFile(name, bytes, { createNew: true, mode: 0o600 });
       }
       // Only compiler/runtime libraries are readable outside /work. No host
-      // home, environment, /proc, devices, sockets, or sibling jobs are visible.
+      // home, environment, /proc, host devices, sockets, or sibling jobs are visible.
       // Do not replace this with cwd-only isolation if namespaces fail.
       const args = [
         "--as=2147483648", "--cpu=20", "--fsize=8388608", "--nofile=128",

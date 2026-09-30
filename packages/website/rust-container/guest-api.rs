@@ -21,3 +21,19 @@ pub fn remove(id: u32) { request(7, id, 0, 0, &[]); }
 pub fn click(id: u32, token: u32) { request(8, id, token, 0, &[]); }
 pub fn png(bytes: &[u8]) -> u32 { request(9, 0, 0, 0, bytes) }
 pub fn image(id: u32, resource: u32) { request(10, id, resource, 0, &[]); }
+pub fn shadows(id: u32, unit: u32, records: &[[i32; 5]]) {
+    let mut bytes = [0; 80];
+    assert!(records.len() <= 4);
+    for (i, record) in records.iter().enumerate() {
+        for (j, value) in record.iter().enumerate() {
+            let at = i * 20 + j * 4;
+            bytes[at..at+4].copy_from_slice(&value.to_le_bytes());
+        }
+    }
+    request(11, id, unit, 0, &bytes[..records.len()*20]);
+}
+pub fn transition(id: u32, prop: u32, duration: u32, delay: u32, easing: u8) {
+    let mut bytes = [0; 5];
+    bytes[..4].copy_from_slice(&delay.to_le_bytes()); bytes[4] = easing;
+    request(12, id, prop, duration, &bytes);
+}

@@ -34,7 +34,7 @@ addEventListener("message", async e => {
     const g = await W.instantiate(e.data.guest, { sandbox: { call } });
     guest = g.instance.exports;
     guest.start(crypto.getRandomValues(new Uint32Array(1))[0]);
-    setInterval(() => guest.event(0), 1000);
+    setInterval(() => guest.event(0, performance.now()), 50);
     port.postMessage({ ready: true });
   } catch (error) { port.postMessage({ error: String(error) }); }
 });

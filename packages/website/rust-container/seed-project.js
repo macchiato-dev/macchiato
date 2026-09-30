@@ -18,11 +18,13 @@ try {
     files: ["mahjong.rs", "guest-api.rs"].map(path => ({
       path, content: readFileSync(new URL(path, root), "utf8"),
     })).concat({ path: "tiles.png", content: "data:image/png;base64," +
-      readFileSync(new URL("../../../examples/mahjong/tiles/ExampleRegular.png", root)).toString("base64") }),
+      readFileSync(new URL("../../../examples/mahjong/tiles/ExampleRegular.png", root)).toString("base64") },
+      { path: "bonus.png", content: "data:image/png;base64," +
+        readFileSync(new URL("bonus.png", root)).toString("base64") }),
     config: { entry: "mahjong.rs", runtime: "rust", template: "html",
       output: { iframe: true } },
   };
-  const created = await store.createProject(user.id, {
+  await store.createProject(user.id, {
     namespace: "user", userSlug: "benatkin", slug: "rust-mahjong",
     name: "Rust Mahjong", description: "Mahjong in two Rust WebAssembly machines. Work in progress.",
     visibility: "public", template: "html", snapshot,

@@ -17,6 +17,7 @@ static mut NEXT: usize = 1;
 static mut FREE: [u32; REFERENCES] = [0; REFERENCES];
 static mut FREE_COUNT: usize = 0;
 static mut IMAGE_BYTES: usize = 0;
+static mut IMAGE_PIXELS: u64 = 0;
 
 #[link(wasm_import_module = "browser")]
 extern "C" {
@@ -52,9 +53,9 @@ fn send(op: u32, id: u32, arg: u32, name: &str, value: &str) {
     unsafe { emit(op, id, arg, name.as_ptr(), name.len(), value.as_ptr(), value.len()); }
 }
 
-struct Text { bytes: [u8; 96], len: usize }
+struct Text { bytes: [u8; 256], len: usize }
 impl Text {
-    fn new() -> Self { Self { bytes: [0; 96], len: 0 } }
+    fn new() -> Self { Self { bytes: [0; 256], len: 0 } }
     fn str(&self) -> &str { core::str::from_utf8(&self.bytes[..self.len]).unwrap() }
 }
 impl Write for Text {
@@ -152,9 +153,14 @@ pub extern "C" fn call(op: u32, id: u32, a: u32, b: u32, len: usize) -> u32 {
                 let Some(unit) = ["", "px", "%", "cqw", "vh", "vw"].get(bytes[0] as usize)
                     else { return DENIED; };
                 // Fixed-point thousandths avoid floats and their formatting code.
-                if write!(value, "{}{}.{:03}{}", if number < 0 { "-" } else { "" },
-                    number.unsigned_abs() / 1000, number.unsigned_abs() % 1000, unit).is_err()
-                    { return DENIED; }
+                // Integer-valued CSS such as z-index rejects a decimal token.
+                let result = if number % 1000 == 0 {
+                    write!(value, "{}{}", number / 1000, unit)
+                } else {
+                    write!(value, "{}{}.{:03}{}", if number < 0 { "-" } else { "" },
+                        number.unsigned_abs() / 1000, number.unsigned_abs() % 1000, unit)
+                };
+                if result.is_err() { return DENIED; }
             } else if op == 3 {
                 let Some(word) = KEYWORDS.get(b as usize) else { return DENIED; };
                 if value.write_str(word).is_err() { return DENIED; }
@@ -193,11 +199,31 @@ pub extern "C" fn call(op: u32, id: u32, a: u32, b: u32, len: usize) -> u32 {
             let height = u32::from_be_bytes(bytes[20..24].try_into().unwrap());
             if width == 0 || height == 0 || width > 4096 || height > 4096 ||
                 width as u64 * height as u64 > 4_194_304 { return DENIED; }
+            // Check chunk boundaries and reject animation. The browser decodes
+            // pixels, but cannot be handed an unbounded sequence of PNG frames.
+            let mut at = 8;
+            let mut data = false;
+            let mut end = false;
+            while at + 12 <= len {
+                let size = u32::from_be_bytes(bytes[at..at+4].try_into().unwrap()) as usize;
+                if size > len - at - 12 { return DENIED; }
+                match &bytes[at+4..at+8] {
+                    b"acTL" | b"fcTL" | b"fdAT" => return DENIED,
+                    b"IDAT" => data = true,
+                    b"IEND" => { if size != 0 { return DENIED; } end = true; }
+                    _ => {}
+                }
+                at += size + 12;
+                if end { break; }
+            }
+            if !data || !end || at != len { return DENIED; }
             // Cumulative: releasing handles doesn't reset this frame's budget.
-            if unsafe { IMAGE_BYTES } + len > 4 * 1024 * 1024 { return DENIED; }
+            let pixels = width as u64 * height as u64;
+            if unsafe { IMAGE_BYTES } + len > 4 * 1024 * 1024 ||
+                unsafe { IMAGE_PIXELS } + pixels > 8_388_608 { return DENIED; }
             let image = allocate(11, u32::MAX);
             if image == DENIED { return DENIED; }
-            unsafe { IMAGE_BYTES += len; }
+            unsafe { IMAGE_BYTES += len; IMAGE_PIXELS += pixels; }
             let output = unsafe { &mut *core::ptr::addr_of_mut!(IMAGE) };
             let prefix = b"data:image/png;base64,";
             output[..prefix.len()].copy_from_slice(prefix);
@@ -221,6 +247,42 @@ pub extern "C" fn call(op: u32, id: u32, a: u32, b: u32, len: usize) -> u32 {
                 a == 0 || !exists(a) || unsafe { NODES[a as usize].kind != 11 }
                 { return DENIED; }
             send(7, id, a, "", "");
+            0
+        }
+        11 => {
+            // Box shadows: up to four (x, y, blur, spread, RGBA) records.
+            // Distances are signed thousandths of px or container-width units.
+            if len == 0 || len % 20 != 0 || len > 80 { return DENIED; }
+            let unit = match a { 1 => "px", 3 => "cqw", _ => return DENIED };
+            let mut value = Text::new();
+            for (i, record) in bytes.chunks_exact(20).enumerate() {
+                if i != 0 { let _ = value.write_str(", "); }
+                for field in 0..4 {
+                    let offset = field * 4;
+                    let n = i32::from_le_bytes(record[offset..offset+4].try_into().unwrap());
+                    if n.unsigned_abs() > 100_000 || field == 2 && n < 0 { return DENIED; }
+                    if write!(value, "{}{}.{:03}{} ", if n < 0 { "-" } else { "" },
+                        n.unsigned_abs()/1000, n.unsigned_abs()%1000, unit).is_err()
+                        { return DENIED; }
+                }
+                let rgba = u32::from_le_bytes(record[16..20].try_into().unwrap());
+                if write!(value, "#{:08x}", rgba).is_err() { return DENIED; }
+            }
+            send(2, id, 0, "box-shadow", value.str());
+            0
+        }
+        12 => {
+            // A semantic transition; there is no raw CSS or string escape hatch.
+            let Some(property) = PROPERTIES.get(a as usize) else { return DENIED; };
+            if len != 5 || b > 30_000 { return DENIED; }
+            let delay = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+            let Some(easing) = ["linear", "ease-in", "ease-out", "ease-in-out"]
+                .get(bytes[4] as usize) else { return DENIED; };
+            if delay > 30_000 { return DENIED; }
+            let mut value = Text::new();
+            if write!(value, "{} {}ms {} {}ms", property, b, easing, delay).is_err()
+                { return DENIED; }
+            send(2, id, 0, "transition", value.str());
             0
         }
         _ => DENIED,

@@ -33,6 +33,9 @@ await compile("sandbox", [await file("sandbox.rs")]);
 await compile("mahjong", [await file("mahjong.rs"), await file("guest-api.rs"), {
   path: "tiles.png", encoding: "base64", content: base64(await Deno.readFile(
     new URL("../../../examples/mahjong/tiles/ExampleRegular.png", root))),
+}, {
+  path: "bonus.png", encoding: "base64",
+  content: base64(await Deno.readFile(new URL("bonus.png", root))),
 }]);
 await Deno.writeTextFile(new URL("frame.html", output), `<!doctype html>
 <html>
