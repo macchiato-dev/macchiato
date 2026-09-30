@@ -129,3 +129,33 @@ the sandbox knows nothing about Mahjong or tile shapes.
 - Exercise invalid references and commands, network/navigation attempts,
   directory traversal, compiler file disclosure, and failure recovery.
 - Use browser screenshots and interactions, not compilation alone, as evidence.
+
+### Verified locally (2026-09-30)
+
+- The served frame has one inline script matching `frame.js`: 40 lines, maximum
+  76 characters. Browser instrumentation observed exactly two instantiations
+  in that frame, with only `browser.emit` and `sandbox.call` as their imports.
+- Playwright clicked through all 72 matching pairs in the saved project,
+  observed the delayed win transition, and reset to 144 tiles. There were no
+  output-frame network requests or page errors. All 144 images decoded.
+- Blocked tiles, mismatched deselection, hint, undo, singular move/undo labels,
+  settings, and outside-click dismissal were exercised. Screenshots checked
+  the project split, settings menu, 700-pixel project view, and a 360-pixel
+  output with optional controls enabled; there was no horizontal overflow.
+- Editing invalid Rust through CodeMirror returned 422 without replacing the
+  running frame. Correcting it returned 200 and replaced that frame. A public
+  visitor continued using the published artifact while a newer draft existed.
+  Test-only draft edits were removed afterward.
+- Direct sandbox probes rejected unsupported tags, properties, attributes,
+  units, stale references, wrong resource types, malformed PNGs, and animated
+  PNGs. Replacing parent text retired child references and preserved literal
+  markup as text, not HTML.
+- API probes rejected host-home/system-file reads, parent-directory reads,
+  traversal filenames, and file/directory collisions. A subsequent valid
+  module returned 42. No temporary compilation directories remained.
+- Existing content-store, SQL-policy, and application-machine checks passed:
+  `node --test packages/app/test/resources-content.test.js
+  packages/website/test/content-sql-policy.test.js
+  packages/website/test/resources-application-machine.test.js` (10 checks).
+
+These are prototype acceptance checks, not a completed security audit.
