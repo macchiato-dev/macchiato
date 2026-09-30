@@ -150,11 +150,7 @@ pub extern "C" fn dispatch(token: u32, args: u32) -> u32 {
 #[panic_handler]
 fn panic(_: &core::panic::PanicInfo) -> ! { core::arch::wasm32::unreachable() }
 
-#[no_mangle]
-pub extern "C" fn inbox() -> *mut u8 { core::ptr::addr_of_mut!(INBOX).cast() }
-
-#[no_mangle]
-pub extern "C" fn capacity() -> usize { CAPACITY }
+fn inbox() -> *mut u8 { core::ptr::addr_of_mut!(INBOX).cast() }
 
 // Zero is the already granted body. No document/window/head references exist.
 fn exists(id: u32) -> bool {
@@ -252,13 +248,11 @@ fn remove(id: u32) {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn event(id: u32) -> u32 {
+fn event(id: u32) -> u32 {
     if id == 0 || !exists(id) { 0 } else { unsafe { NODES[id as usize].click } }
 }
 
-#[no_mangle]
-pub extern "C" fn call(op: u32, id: u32, a: u32, b: u32, len: usize) -> u32 {
+fn call(op: u32, id: u32, a: u32, b: u32, len: usize) -> u32 {
     if !exists(id) || len > CAPACITY { return DENIED; }
     if id != 0 && unsafe { NODES[id as usize].kind == 11 } && op != 7 { return DENIED; }
     // Guest calls are synchronous; these DOM writes don't invoke guest code.

@@ -101,6 +101,11 @@ The privileged bridge uses a separate ABI: `string(pointer, length)`,
 returned reference is consumed by the bridge, as is the arguments reference.
 Host references cannot be guessed through the guest API: that API never
 interprets an argument as a host reference.
+The host's callable exports are only `start` and `dispatch`; its inbox and
+policy functions are internal. Browser exceptions abort the current call;
+temporary Rust handles are not unwound across a JavaScript exception, so a
+failed frame should be discarded rather than reused. Normal returns release
+them, including nested guest-to-host calls.
 
 | Operation | Meaning |
 | --- | --- |
@@ -161,6 +166,17 @@ the sandbox knows nothing about Mahjong or tile shapes.
 
 ### Verified locally (2026-09-30)
 
+- The revised bridge is 39 lines, maximum 77 characters. Browser tracing
+  observed bootstrap instantiation followed by child construction called from
+  Rust through `bridge.new`. The child imports only `sandbox.call`; trying
+  to import `bridge.call` fails at instantiation. The host is 13,457 bytes.
+- With the revised bridge, all 144 tile images decoded; browser clicks played
+  30 matching pairs, checked mismatched deselection, undo and reset, with no
+  page errors. Screenshots checked the project split and narrow layout.
+- After ten New Games and timer callbacks, the bridge stayed at 361 allocated
+  slots, 27 free (334 live). Boundary probes checked forbidden tags/properties,
+  attributes, stale references, invalid image resources, transfer limits,
+  signed CSS values and repeated subtree removal through the real guest ABI.
 - The initial bridge's browser checks observed two instances importing
   `browser.emit` and `sandbox.call`. That DOM-specific bridge has since been
   replaced by the generic bridge above; those imports are historical only.
