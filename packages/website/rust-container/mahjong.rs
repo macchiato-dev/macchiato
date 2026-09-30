@@ -4,18 +4,6 @@
 #[path = "guest-api.rs"] mod dom;
 use core::fmt::{self, Write};
 
-const SOLUTION: [(usize, usize); 72] = [
-    (131,57),(126,92),(135,11),(58,99),(143,74),(12,44),(117,10),
-    (139,91),(86,141),(134,67),(110,125),(111,56),(0,59),(93,105),
-    (85,124),(9,127),(84,140),(122,109),(138,1),(30,2),(29,116),
-    (106,73),(3,137),(98,31),(83,20),(115,123),(97,118),(90,132),
-    (89,96),(19,136),(104,121),(18,120),(68,130),(114,129),(8,94),
-    (72,112),(17,71),(103,45),(46,82),(88,113),(32,119),(128,81),
-    (102,4),(47,7),(100,6),(28,55),(80,60),(27,5),(48,95),(61,101),
-    (26,54),(69,79),(21,43),(107,87),(49,22),(62,16),(15,33),
-    (78,13),(142,14),(63,133),(53,70),(108,25),(50,34),(64,77),
-    (24,51),(65,35),(36,76),(66,52),(23,75),(42,37),(38,41),(39,40),
-];
 #[derive(Clone, Copy)]
 struct Tile { x: i16, y: i16, z: i16, kind: u8, removed: bool, node: u32, image: u32 }
 const TILE: Tile = Tile { x: 0, y: 0, z: 0, kind: 0, removed: false, node: 0, image: 0 };
@@ -117,16 +105,20 @@ impl Game {
         self.tiles[143].x = 13; self.tiles[143].y = 7; self.tiles[143].z = 4;
     }
     fn reset(&mut self) {
-        let mut pairs = [0u8; 72];
-        for (i, value) in pairs.iter_mut().enumerate() { *value = (i / 2) as u8; }
         // 34 regular types × 4 tiles, four flowers and four seasons = 144.
-        pairs[68..].copy_from_slice(&[34, 35, 36, 37]);
-        for i in (1..72).rev() { let j = self.random() as usize % (i + 1); pairs.swap(i,j); }
-        for (pair, kind) in SOLUTION.iter().zip(pairs) {
-            for (side, index) in [pair.0, pair.1].iter().enumerate() {
-                self.tiles[*index].kind = if kind < 34 { kind } else { 34 + (kind - 34) * 2 + side as u8 };
-                self.tiles[*index].removed = false;
-            }
+        let mut deck = [0u8; 144];
+        for (i, kind) in deck.iter_mut().enumerate() {
+            *kind = if i < 136 { (i / 4) as u8 } else { (i - 102) as u8 };
+        }
+        // Shuffle individual tiles, not predetermined pairs. No stored answer
+        // constrains the deal, and a random deal is not guaranteed solvable.
+        for i in (1..deck.len()).rev() {
+            let j = self.random() as usize % (i + 1);
+            deck.swap(i, j);
+        }
+        for (tile, kind) in self.tiles.iter_mut().zip(deck) {
+            tile.kind = kind;
+            tile.removed = false;
         }
         self.selected = None; self.second = None; self.pending = 0;
         self.count = 0; self.moves = 0; self.undos = 0; self.seconds = 0;

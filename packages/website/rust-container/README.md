@@ -104,9 +104,13 @@ these bounds do not provide execution preemption or a CPU budget.
 ## Mahjong and artwork
 
 `mahjong.rs` ports the existing example's half-tile turtle coordinates, free
-tile rules, shuffled solvable deal, selection, matching, undo, optional hints,
+tile rules, selection, matching, undo, optional hints,
 names, elapsed time, and move counts. A deck has 136 regular tiles and eight
 distinct bonus tiles; flowers match flowers and seasons match seasons.
+New Game shuffles all 144 individual tiles. There is no stored solution or
+fixed pairing of board positions, and random deals need not be solvable. This
+corrects the fixed removal sequence used by the earlier JavaScript example
+and the initial Rust port.
 Selections darken, matching tiles fade, and the win message fades in without
 reporting "no moves". Settings dismiss on selection or an outside click.
 
@@ -135,9 +139,16 @@ the sandbox knows nothing about Mahjong or tile shapes.
 - The served frame has one inline script matching `frame.js`: 40 lines, maximum
   76 characters. Browser instrumentation observed exactly two instantiations
   in that frame, with only `browser.emit` and `sandbox.call` as their imports.
-- Playwright clicked through all 72 matching pairs in the saved project,
+- Before the random-deal correction, Playwright clicked through all 72
+  matching pairs in the saved project,
   observed the delayed win transition, and reset to 144 tiles. There were no
   output-frame network requests or page errors. All 144 images decoded.
+  That fixed-sequence run is historical evidence, not a test of random deals.
+- After replacing that sequence with a full-deck shuffle, 20 New Games had
+  20 distinct arrangements with four copies of every regular type, four
+  flowers, and four seasons. Browser-driven legal play removed 53 pairs from
+  one random deal before it ran out of moves; undo restored the last pair and
+  New Game restored 144 tiles. No page errors occurred.
 - Blocked tiles, mismatched deselection, hint, undo, singular move/undo labels,
   settings, and outside-click dismissal were exercised. Screenshots checked
   the project split, settings menu, 700-pixel project view, and a 360-pixel
