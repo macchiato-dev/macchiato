@@ -1,17 +1,29 @@
 # Rust project container
 
 An unreleased resources-edge prototype, separate from the proposed `dev/app`
-design. It runs an iframe with 40 lines of JavaScript, each shorter than 80
+design. It runs an iframe with at most 40 lines of JavaScript, each shorter than 80
 characters, and two dependency-free `no_std`, `wasm32-unknown-unknown` modules:
 
 - A trusted sandbox validates DOM operations and tracks reference lifetimes.
 - An untrusted application owns Mahjong's state and calls only the sandbox.
 
-The JavaScript bridge does not hide application or policy code in generated
-strings, other scripts, or Rust constants. `frame.js` only instantiates the
-modules, copies bytes between their separate memories, forwards events, and
-performs the trusted sandbox's DOM operations. The sandbox owns the reference
-identities and permissions; JavaScript holds the corresponding browser objects.
+`frame.js` starts only the trusted Rust host. Its predefined primitives create
+strings, numbers and byte views, get/set properties, call functions, construct
+objects, and create callbacks into Rust. There is no `eval`, function-source
+compilation, DOM dispatcher, or guest-specific code in this bridge.
+
+The host receives a reference to the global object. It uses these primitives
+to construct the second WebAssembly instance, build its import object, copy
+its memory, and install its event handlers and clock. All DOM permissions and
+operations live in `sandbox.rs`; the parent integration only supplies the
+trusted host bytes and the application bytes as its input.
+
+Host-side references are separate from the guest's numeric capabilities.
+JavaScript holds arbitrary objects in an array with a free-slot stack. Rust
+releases temporary references on scope exit and retains only owned state.
+Dropping a callback's table entry does not remove the callback from its DOM
+listener or timer; those objects hold normal JavaScript references to it.
+The application receives only `sandbox.call`, never the privileged bridge.
 
 The sandbox is not replaceable by project files. A fresh output frame gets
 fresh instances and reference tables. The Rust source and two PNG sheets are
@@ -73,9 +85,22 @@ will need an explicitly configured isolated build service.
 The application exports its memory, `start(seed)`, and `event(token, time)`.
 Token zero is a clock tick with monotonic milliseconds; other tokens are
 application-chosen click callbacks. Only the application imports
-`sandbox.call(op, reference, a, b, pointer, length)`. The bridge copies that
-byte range into the trusted sandbox's bounded inbox before calling it.
+`sandbox.call(op, reference, a, b, pointer, length)`. The Rust host requests a
+bounds-checked view of the child's memory and copies that byte range into its
+bounded inbox before interpreting the operation. Guest calls from a Wasm
+start section, before the child's memory is available, are denied.
 An invalid operation returns `u32::MAX`.
+
+The privileged bridge uses a separate ABI: `string(pointer, length)`,
+`bytes(pointer, length)`, `number(value)`, `value(reference)`,
+`get(object, key)`, `set(object, key, value)`,
+`call(function, this, argument_refs_pointer, count)`,
+`new(constructor, argument_refs_pointer, count)`, `callback(token)`, and
+`release(reference)`. Reference 0 is undefined and 1 is the borrowed global.
+`callback` calls the host's `dispatch(token, arguments_reference)`; its
+returned reference is consumed by the bridge, as is the arguments reference.
+Host references cannot be guessed through the guest API: that API never
+interprets an argument as a host reference.
 
 | Operation | Meaning |
 | --- | --- |
@@ -136,9 +161,9 @@ the sandbox knows nothing about Mahjong or tile shapes.
 
 ### Verified locally (2026-09-30)
 
-- The served frame has one inline script matching `frame.js`: 40 lines, maximum
-  76 characters. Browser instrumentation observed exactly two instantiations
-  in that frame, with only `browser.emit` and `sandbox.call` as their imports.
+- The initial bridge's browser checks observed two instances importing
+  `browser.emit` and `sandbox.call`. That DOM-specific bridge has since been
+  replaced by the generic bridge above; those imports are historical only.
 - Before the random-deal correction, Playwright clicked through all 72
   matching pairs in the saved project,
   observed the delayed win transition, and reset to 144 tiles. There were no

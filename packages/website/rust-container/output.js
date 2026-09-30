@@ -1,4 +1,4 @@
-// Parent-side integration only: the 40-line frame owns both running VMs.
+// Start the trusted Rust host; it creates and owns the application VM.
 // Never accept sandbox bytes or bridge source from the editable project.
 const base = "/-/resources-site/";
 function encode(bytes) {
@@ -47,8 +47,8 @@ export class RustFrameOutput {
     try {
       const response = await fetch(`${base}rust-project-sandbox.wasm`);
       if (!response.ok) throw new Error("Rust sandbox is unavailable");
-      const sandbox = await response.arrayBuffer();
-      const guest = Uint8Array.from(atob(project.runtime.wasm), c => c.charCodeAt(0)).buffer;
+      const host = await response.arrayBuffer();
+      const input = Uint8Array.from(atob(project.runtime.wasm), c => c.charCodeAt(0)).buffer;
       if (this.pending !== entry || this.destroyed) throw new Error("Output was replaced");
       await new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error("Rust output timed out")), 15_000);
@@ -61,7 +61,7 @@ export class RustFrameOutput {
           } else if (data.ready) finish();
         };
         frame.onload = () => frame.contentWindow.postMessage(
-          { sandbox, guest }, "*", [channel.port2]);
+          { host, input }, "*", [channel.port2]);
         frame.onerror = () => finish(new Error("Rust frame failed to load"));
         frame.src = `${base}rust-project-frame.html`;
         this.mount.append(frame);

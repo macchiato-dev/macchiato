@@ -1,6 +1,6 @@
 #![no_std]
-// The only module permitted to import browser operations. Guest pointers are
-// never dereferenced here: the JS bridge copies into this fixed inbox first.
+// Trusted host: owns browser references, policy, and the child VM's imports.
+// The bridge supplies general JS primitives, never permissions for the guest.
 use core::fmt::{self, Write};
 
 const CAPACITY: usize = 512 * 1024;
@@ -19,10 +19,132 @@ static mut FREE_COUNT: usize = 0;
 static mut IMAGE_BYTES: usize = 0;
 static mut IMAGE_PIXELS: u64 = 0;
 
-#[link(wasm_import_module = "browser")]
+#[link(wasm_import_module = "bridge")]
 extern "C" {
-    fn emit(op: u32, id: u32, arg: u32, p: *const u8, n: usize,
-            q: *const u8, m: usize);
+    fn string(p: *const u8, n: usize) -> u32;
+    fn number(n: f64) -> u32;
+    fn value(id: u32) -> f64;
+    fn bytes(p: *mut u8, n: usize) -> u32;
+    fn get(id: u32, key: u32) -> u32;
+    fn set(id: u32, key: u32, value: u32);
+    #[link_name = "call"] fn invoke(id: u32, this: u32, p: *const u32, n: usize) -> u32;
+    #[link_name = "new"] fn construct(id: u32, p: *const u32, n: usize) -> u32;
+    fn callback(token: u32) -> u32;
+    fn release(id: u32);
+}
+
+// These handles belong to the host, not to the guest's capability table.
+// Temporaries release their slots on return; retained handles have an owner
+// in the fixed tables below. Zero means undefined, one is the borrowed global.
+struct Ref(u32);
+impl Ref {
+    fn retain(self) -> u32 { let id = self.0; core::mem::forget(self); id }
+}
+impl Drop for Ref { fn drop(&mut self) { unsafe { release(self.0); } } }
+fn js_string(s: &str) -> Ref { Ref(unsafe { string(s.as_ptr(), s.len()) }) }
+fn js_number(n: f64) -> Ref { Ref(unsafe { number(n) }) }
+fn property(id: u32, name: &str) -> Ref {
+    let key = js_string(name);
+    Ref(unsafe { get(id, key.0) })
+}
+fn assign(id: u32, name: &str, value: u32) {
+    let key = js_string(name);
+    unsafe { set(id, key.0, value); }
+}
+fn apply(function: u32, this: u32, args: &[u32]) -> Ref {
+    Ref(unsafe { invoke(function, this, args.as_ptr(), args.len()) })
+}
+fn method(this: u32, name: &str, args: &[u32]) -> Ref {
+    let function = property(this, name);
+    apply(function.0, this, args)
+}
+fn new(constructor: u32, args: &[u32]) -> Ref {
+    Ref(unsafe { construct(constructor, args.as_ptr(), args.len()) })
+}
+
+static mut OBJECTS: [u32; REFERENCES] = [0; REFERENCES];
+static mut DOCUMENT: u32 = 0;
+static mut CREATE_ELEMENT: u32 = 0;
+static mut UINT8_ARRAY: u32 = 0;
+static mut GUEST: u32 = 0;
+static mut GUEST_MEMORY: u32 = 0;
+static mut GUEST_EVENT: u32 = 0;
+static mut CLOCK: u32 = 0;
+static mut NOW: u32 = 0;
+const GUEST_CALL: u32 = REFERENCES as u32;
+const TICK: u32 = GUEST_CALL + 1;
+
+#[no_mangle]
+pub extern "C" fn start(input: u32) {
+    unsafe {
+        DOCUMENT = property(1, "document").retain();
+        CREATE_ELEMENT = property(DOCUMENT, "createElement").retain();
+        OBJECTS[0] = property(DOCUMENT, "body").retain();
+        UINT8_ARRAY = property(1, "Uint8Array").retain();
+        CLOCK = property(1, "performance").retain();
+        NOW = property(CLOCK, "now").retain();
+    }
+    // Assemble the child's imports here. It gets exactly one restricted
+    // callback, not the bridge, global object, or any host reference handles.
+    let object = property(1, "Object");
+    let imports = new(object.0, &[]);
+    let sandbox = new(object.0, &[]);
+    let handler = Ref(unsafe { callback(GUEST_CALL) });
+    assign(sandbox.0, "call", handler.0);
+    assign(imports.0, "sandbox", sandbox.0);
+    let wasm = property(1, "WebAssembly");
+    let module_type = property(wasm.0, "Module");
+    let module = new(module_type.0, &[input]);
+    let instance_type = property(wasm.0, "Instance");
+    let instance = new(instance_type.0, &[module.0, imports.0]);
+    unsafe {
+        GUEST = property(instance.0, "exports").retain();
+        GUEST_MEMORY = property(GUEST, "memory").retain();
+        GUEST_EVENT = property(GUEST, "event").retain();
+    }
+    let uint32 = property(1, "Uint32Array");
+    let one = js_number(1.0);
+    let random = new(uint32.0, &[one.0]);
+    let crypto = property(1, "crypto");
+    method(crypto.0, "getRandomValues", &[random.0]);
+    let seed = property(random.0, "0");
+    method(unsafe { GUEST }, "start", &[seed.0]);
+    let tick = Ref(unsafe { callback(TICK) });
+    let interval = js_number(50.0);
+    method(1, "setInterval", &[tick.0, interval.0]);
+}
+
+#[no_mangle]
+pub extern "C" fn dispatch(token: u32, args: u32) -> u32 {
+    if token == GUEST_CALL {
+        // A Wasm start section cannot use our API before its memory exists.
+        if unsafe { GUEST } == 0 { return js_number(DENIED as f64).retain(); }
+        let mut fields = [0u32; 6];
+        for (i, field) in fields.iter_mut().enumerate() {
+            let index = js_number(i as f64);
+            let item = Ref(unsafe { get(args, index.0) });
+            // i32 imports arrive signed. Preserve bits of negative CSS values.
+            *field = unsafe { value(item.0) } as i32 as u32;
+        }
+        let [op, id, a, b, pointer, length] = fields;
+        if length as usize > CAPACITY { return js_number(DENIED as f64).retain(); }
+        let target = Ref(unsafe { bytes(inbox(), length as usize) });
+        let buffer = property(unsafe { GUEST_MEMORY }, "buffer");
+        let offset = js_number(pointer as f64);
+        let size = js_number(length as f64);
+        // Construction checks the child's memory bounds. Its pointer never
+        // becomes a pointer in our memory, and buffer is read afresh on growth.
+        let source = new(unsafe { UINT8_ARRAY }, &[buffer.0, offset.0, size.0]);
+        method(target.0, "set", &[source.0]);
+        return js_number(call(op, id, a, b, length as usize) as f64).retain();
+    }
+    let click = if token == TICK { 0 } else { event(token) };
+    if token == TICK || click != 0 {
+        let click = js_number(click as f64);
+        let now = apply(unsafe { NOW }, unsafe { CLOCK }, &[]);
+        apply(unsafe { GUEST_EVENT }, unsafe { GUEST }, &[click.0, now.0]);
+    }
+    0
 }
 
 #[panic_handler]
@@ -50,7 +172,34 @@ fn allocate(kind: u8, parent: u32) -> u32 {
 }
 
 fn send(op: u32, id: u32, arg: u32, name: &str, value: &str) {
-    unsafe { emit(op, id, arg, name.as_ptr(), name.len(), value.as_ptr(), value.len()); }
+    let object = unsafe { OBJECTS[id as usize] };
+    match op {
+        0 => {
+            let tag = js_string(name);
+            let handler = Ref(unsafe { callback(id) });
+            let element = apply(unsafe { CREATE_ELEMENT }, unsafe { DOCUMENT }, &[tag.0]);
+            assign(element.0, "onclick", handler.0);
+            method(unsafe { OBJECTS[arg as usize] }, "append", &[element.0]);
+            unsafe { OBJECTS[id as usize] = element.retain(); }
+        }
+        1 => { let text = js_string(name); assign(object, "textContent", text.0); }
+        2 | 3 => {
+            let name = js_string(name);
+            let value = js_string(value);
+            if op == 2 {
+                let style = property(object, "style");
+                method(style.0, "setProperty", &[name.0, value.0]);
+            } else { method(object, "setAttribute", &[name.0, value.0]); }
+        }
+        4 => { let hidden = js_number(arg as f64); assign(object, "hidden", hidden.0); }
+        5 | 8 => {
+            if op == 5 { assign(object, "onclick", 0); method(object, "remove", &[]); }
+            unsafe { release(object); OBJECTS[id as usize] = 0; }
+        }
+        6 => { unsafe { OBJECTS[id as usize] = js_string(name).retain(); } }
+        7 => { assign(object, "src", unsafe { OBJECTS[arg as usize] }); }
+        _ => unreachable!(),
+    }
 }
 
 struct Text { bytes: [u8; 256], len: usize }
@@ -112,7 +261,7 @@ pub extern "C" fn event(id: u32) -> u32 {
 pub extern "C" fn call(op: u32, id: u32, a: u32, b: u32, len: usize) -> u32 {
     if !exists(id) || len > CAPACITY { return DENIED; }
     if id != 0 && unsafe { NODES[id as usize].kind == 11 } && op != 7 { return DENIED; }
-    // The bridge invokes us synchronously and doesn't re-enter on emit().
+    // Guest calls are synchronous; these DOM writes don't invoke guest code.
     let bytes = unsafe { core::slice::from_raw_parts(inbox(), len) };
     match op {
         0 => {

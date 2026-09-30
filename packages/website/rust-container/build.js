@@ -68,10 +68,10 @@ await Deno.writeTextFile(new URL("index.html", output), `<!doctype html>
       if (data.error) { const pre = document.createElement("pre");
         pre.textContent = data.error; document.body.prepend(pre); }
     };
-    const [sandbox, guest] = await Promise.all(["sandbox", "mahjong"].map(
+    const [host, input] = await Promise.all(["sandbox", "mahjong"].map(
       name => fetch("./" + name + ".wasm").then(r => r.arrayBuffer())));
     frame.onload = () => frame.contentWindow.postMessage(
-      {sandbox, guest}, "*", [channel.port2]);
+      {host, input}, "*", [channel.port2]);
     frame.src = "./frame.html";
   </script>
 </body>
