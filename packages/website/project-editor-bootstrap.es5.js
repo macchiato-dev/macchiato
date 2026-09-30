@@ -158,6 +158,7 @@
         var mounted = outputId ? new Promise(function (resolve) { resolve(outputId); }) :
           requestStage("output.mount", {
             rootKey: "1", scripts: [], violations: [], tags: [],
+            runtime: compiled.runtime,
             iframe: !(config.output && config.output.iframe === false),
             files: project.files,
             allowedFetchOrigins: project.config.containerOptions &&
@@ -175,6 +176,7 @@
             document: compiled.document,
             stylesheets: compiled.stylesheets,
             scripts: compiled.scripts,
+            runtime: compiled.runtime,
             files: project.files,
             allowedFetchOrigins: project.config.containerOptions &&
               project.config.containerOptions.allowedFetchOrigins || [],

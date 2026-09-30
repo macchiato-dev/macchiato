@@ -143,6 +143,7 @@ export function publicResponseHeaders(key, upstreamHeaders = new Headers()) {
   headers.set("cross-origin-resource-policy", key.startsWith("-/blog-examples/") ? "cross-origin" : "same-origin");
   if (key.startsWith("-/blog-examples/")) headers.set("access-control-allow-origin", "*");
   const embeddedRunner = key === "-/resources-site/project-output-frame.html" ||
+    key === "-/resources-site/rust-project-frame.html" ||
     key === "-/resources-site/project-editor-frame.html";
   headers.set("content-security-policy", key.startsWith("-/blog-examples/")
     ? "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src data:; font-src data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"

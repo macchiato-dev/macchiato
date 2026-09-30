@@ -1,5 +1,6 @@
 {
   "tasks": {
-    "serve": "deno run --allow-read --allow-write --allow-env=RESOURCES_RUST_WORK --allow-net=127.0.0.1:8791 --allow-run=rustc,prlimit compiler.js"
+    "serve": "deno run --allow-read --allow-write --allow-env=RESOURCES_RUST_WORK --allow-net=127.0.0.1:8791 --allow-run=rustc,prlimit compiler.js",
+    "build": "deno run --allow-read --allow-write=dist --allow-net=127.0.0.1:8791 build.js"
   }
 }

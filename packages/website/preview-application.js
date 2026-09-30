@@ -6,6 +6,7 @@ import { createResourcesEdgeHandler, renderResourcesDocument } from "./edge/app.
 import { ResourcesApplicationMachine } from "./resources-application-machine.js";
 import { createResourcesServerMachine } from "./resources-server-machine.js";
 import { ServerMachineController } from "../server-use/src/machine-controller.js";
+import { compileRustProject } from "./rust-container/compile-proxy.js";
 
 const serverModule = new WebAssembly.Module(readFileSync(
   new URL("./generated/microquickjs-server.wasm", import.meta.url)));
@@ -107,6 +108,9 @@ export function createResourcesPreviewApplication({ config, environment, db, fet
   return async (request) => {
     try {
       await ready();
+      if (new URL(request.url).pathname === "/api/rust/compile") {
+        return compileRustProject(request, authConfig);
+      }
       if (machine) return machine.handle(request, {
         documentHandler: () => handler(request),
       });

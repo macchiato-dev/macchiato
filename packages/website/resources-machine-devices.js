@@ -5,6 +5,7 @@ import { ProjectOutputStorage } from "./project-output-storage.js";
 import { boundedStorageReply, storageResponse } from "./storage-service.js";
 import { DRAFT_KEY, PENDING_KEY_PREFIX, PROJECT_RESOURCE_PREFIX as projectResourcePrefix } from "./project-session.js";
 import { ProjectEditorSurface } from "./project-editor-surface.js";
+import { compileRust, RustFrameOutput } from "./rust-container/output.js";
 
 const encoder = new TextEncoder();
 const allowedMethods = new Set(["GET", "POST", "DELETE"]);
@@ -283,6 +284,9 @@ export class ResourcesArchiveDevice {
 export class ResourcesBuildDevice {
   constructor(projectResources) { this.projectResources = projectResources; }
   async compile(payload) {
+    if (payload.config?.runtime === "rust") {
+      return compileRust(this.projectResources.hydrateFiles(payload.files), payload.config);
+    }
     const machine = await createProjectBuildMachine();
     // Compilation reads source files, while image/binary resource contents are
     // resolved later by the output device. Keeping those bytes out of this
@@ -527,6 +531,7 @@ export class ResourcesEditorDevice {
         rootKey: "1", iframe: project.config?.output?.iframe !== false,
         tree: compiled.tree, document: compiled.document,
         stylesheets: compiled.stylesheets, scripts: compiled.scripts,
+        runtime: compiled.runtime,
         files: project.files, allowedFetchOrigins: options.allowedFetchOrigins || [],
         allowedLinkPatterns: options.allowedLinkPatterns || [],
         environment: project.config?.environment || {},
@@ -698,6 +703,7 @@ export class ResourcesOutputDevice {
     if (!mount) throw new Error("Project output mount is unavailable");
     if (payload.tree !== undefined) this.validateTree(payload.tree);
     const project = {
+      runtime: payload.runtime,
       tree: payload.tree, document: payload.document,
       stylesheets: Array.isArray(payload.stylesheets) ? payload.stylesheets : [],
       scripts: Array.isArray(payload.scripts) ? payload.scripts : [],
@@ -710,7 +716,15 @@ export class ResourcesOutputDevice {
     const storageScope = mount.closest("[data-project-id]")?.dataset.projectId ||
       this.document.location.pathname;
     let output;
-    if (payload.iframe !== false) {
+    if (project.runtime?.kind === "rust") {
+      output = new RustFrameOutput(mount, error => this.deliver({
+        type: "output-error", id, message: error.message,
+      }));
+      this.pending.add(output);
+      try { await output.load(project); }
+      catch (error) { output.destroy(); throw error; }
+      finally { this.pending.delete(output); }
+    } else if (payload.iframe !== false) {
       output = new ProjectFrameOutput(mount, (frame, project, signal) =>
         this.connectFrame(frame, project, id, signal), storageScope);
       this.pending.add(output);
@@ -808,6 +822,7 @@ export class ResourcesOutputDevice {
     const project = payload.project || {};
     this.validateTree(project.tree);
     await output.load({
+      runtime: project.runtime,
       tree: project.tree,
       document: project.document,
       stylesheets: Array.isArray(project.stylesheets) ? project.stylesheets : [],

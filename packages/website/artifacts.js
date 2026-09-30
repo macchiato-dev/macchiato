@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { editorLanguages } from "../project-editor/src/languages.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -82,6 +82,13 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   const outputFrame = readFileSync(join(directory, "project-output-frame.html"), "utf8")
     .replace("/* PROJECT_OUTPUT_FRAME_CONTROLLER */", () => outputFrameController);
   files.set("/-/resources-site/project-output-frame.html", bytes(outputFrame));
+  const rustOutput = join(directory, "rust-container", "dist");
+  for (const [source, name] of [["frame.html", "rust-project-frame.html"],
+    ["sandbox.wasm", "rust-project-sandbox.wasm"]]) {
+    if (existsSync(join(rustOutput, source))) {
+      files.set(`/-/resources-site/${name}`, bytes(readFileSync(join(rustOutput, source))));
+    }
+  }
   files.set("/-/resources-site/project-editor-frame.html",
     bytes(readFileSync(join(directory, "project-editor-frame.html"), "utf8")
       .replace("/* PROJECT_EDITOR_FRAME_CONTROLLER */", () =>
