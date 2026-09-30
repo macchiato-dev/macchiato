@@ -743,7 +743,7 @@
 
   // packages/hub/src/content.js
   var CONTENT_SCHEMA = Object.freeze([
-    // Derived output has one replaceable slot, not a second version history.
+    // One working build and one published build, not a second version history.
     `CREATE TABLE IF NOT EXISTS resource_project_build_output (
     project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
     source_json TEXT NOT NULL,
@@ -817,6 +817,12 @@
     snapshot_json TEXT NOT NULL,
     published_at INTEGER NOT NULL
   ) STRICT`,
+    `CREATE TABLE IF NOT EXISTS resource_project_published_output (
+    project_id TEXT PRIMARY KEY REFERENCES resource_projects(id) ON DELETE CASCADE,
+    source_json TEXT NOT NULL,
+    output_json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  ) STRICT`,
     `CREATE TRIGGER IF NOT EXISTS resource_organizations_owner_limit
     BEFORE INSERT ON resource_organizations
     WHEN (SELECT COUNT(*) FROM resource_organizations WHERE owner_user_id = NEW.owner_user_id) >= 5
@@ -837,11 +843,26 @@
     FROM resource_project_publications p JOIN resource_project_state s ON s.project_id = p.project_id`
   ]);
   var CONTENT_QUERIES = Object.freeze({
-    buildOutput: `SELECT b.output_json FROM resource_project_build_output b
-    JOIN resource_projects p ON p.id = b.project_id
+    buildOutput: `SELECT CASE WHEN p.owner_user_id = requested.viewer
+      THEN b.output_json ELSE COALESCE(
+        CASE WHEN b.source_json = pub.snapshot_json THEN b.output_json END,
+        published.output_json) END AS output_json
+    FROM resource_projects p
+    JOIN (SELECT ? AS id, ? AS viewer) requested ON requested.id = p.id
     JOIN resource_project_publications pub ON pub.project_id = p.id
-    WHERE p.id = ? AND (p.owner_user_id = ? OR
-      (p.visibility = 'public' AND b.source_json = pub.snapshot_json))`,
+    LEFT JOIN resource_project_build_output b ON b.project_id = p.id
+    LEFT JOIN resource_project_published_output published ON published.project_id = p.id
+      AND published.source_json = pub.snapshot_json
+    WHERE p.owner_user_id = requested.viewer OR p.visibility = 'public'`,
+    retainPublishedBuild: `INSERT INTO resource_project_published_output
+      (project_id, source_json, output_json, updated_at)
+    SELECT b.project_id, b.source_json, b.output_json, b.updated_at
+    FROM resource_project_build_output b
+    JOIN resource_project_publications pub ON pub.project_id = b.project_id
+    JOIN resource_projects p ON p.id = b.project_id
+    WHERE p.id = ? AND p.owner_user_id = ? AND b.source_json = pub.snapshot_json
+    ON CONFLICT(project_id) DO UPDATE SET source_json = excluded.source_json,
+      output_json = excluded.output_json, updated_at = excluded.updated_at`,
     saveBuildOutput: `INSERT INTO resource_project_build_output
       (project_id, source_json, output_json, updated_at)
     SELECT p.id, s.snapshot_json, ?, ? FROM resource_projects p
@@ -866,12 +887,14 @@
     publicWorkspace: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
                      p.name, p.description, p.visibility, p.template, p.created_at,
                      pub.snapshot_json, s.last_version_sequence, s.updated_at,
-                     b.output_json AS saved_output_json
+                     COALESCE(b.output_json, published.output_json) AS saved_output_json
               FROM resource_projects p
               JOIN resource_project_state s ON s.project_id = p.id
               JOIN resource_project_publications pub ON pub.project_id = p.id
               LEFT JOIN resource_project_build_output b ON b.project_id = p.id
                 AND b.source_json = pub.snapshot_json
+              LEFT JOIN resource_project_published_output published ON published.project_id = p.id
+                AND published.source_json = pub.snapshot_json
               WHERE p.namespace_slug = ? COLLATE NOCASE AND p.slug = ? COLLATE NOCASE
                 AND p.visibility = 'public'`,
     publicProjects: `SELECT p.id, p.owner_user_id, p.namespace_kind, p.namespace_slug, p.slug,
@@ -1185,11 +1208,15 @@
         if (new TextEncoder().encode(outputJson).byteLength + new TextEncoder().encode(sourceJson).byteLength > 70 * 1024 * 1024) {
           throw new ContentValidationError("snapshot", "Build output is too large");
         }
-        const result = await client.execute({
+        const retain = {
+          sql: CONTENT_QUERIES.retainPublishedBuild,
+          args: [String(projectId), String(userId)]
+        };
+        const result = await client.batch([retain, {
           sql: CONTENT_QUERIES.saveBuildOutput,
           args: [outputJson, now(), String(projectId), String(userId), storedSource]
-        });
-        return { saved: Number(result.rowsAffected) > 0 };
+        }, retain]);
+        return { saved: Number(result[1].rowsAffected) > 0 };
       },
       async listPublicProjects({ limit = 24, namespaces } = {}) {
         await initialize2();
@@ -1593,6 +1620,9 @@
         }, {
           sql: sequence === null ? CONTENT_QUERIES.labelVersion : CONTENT_QUERIES.labelSelectedVersion,
           args: [versionTitle, timestamp, String(projectId), String(userId), ...sequence === null ? [] : [Number(sequence)]]
+        }, {
+          sql: CONTENT_QUERIES.retainPublishedBuild,
+          args: [String(projectId), String(userId)]
         }]);
         return Number(result[queries.length].rowsAffected) > 0;
       },
