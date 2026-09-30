@@ -1,0 +1,5 @@
+{
+  "name": "@resources/rust-project-container",
+  "private": true,
+  "type": "module"
+}
