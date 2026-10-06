@@ -515,7 +515,7 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
   }
 
   const response = await page.goto(`http://resources-edge.localhost:${port}/`, { waitUntil: "networkidle" });
-  await assert.doesNotReject(page.getByRole("heading", { name: /Infrastructure you own/ }).waitFor());
+  await assert.doesNotReject(page.getByRole("heading", { name: /Web projects, under your control/ }).waitFor());
   await assert.doesNotReject(page.getByLabel("Notifications").waitFor());
   await assert.doesNotReject(page.getByLabel("Create").waitFor());
   assert.equal(await page.locator(".ub-btn").count(), 0);
@@ -540,7 +540,7 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
   await checkBrowserScripts();
   assert.equal(await page.locator("script[type='application/json']").count(), 1);
   assert.equal(await page.locator("html").getAttribute("lang"), "en");
-  assert.deepEqual(edgeTheme, ["#30d5c8", "#2f5bff"]);
+  assert.deepEqual(edgeTheme, ["#fafaf8", "#fafaf8"]);
   assert.equal(await page.locator("html").getAttribute("data-theme-choice"), "system");
   await assert.doesNotReject(page.getByLabel("Account menu").waitFor());
   const accountTrigger = page.getByLabel("Account menu");
@@ -566,7 +566,7 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
       const style = getComputedStyle(node);
       return { width: rect.width, height: rect.height, radius: style.borderRadius, border: style.borderColor, background: style.backgroundColor };
     });
-    assert.deepEqual([hover.width, hover.height, hover.radius], [37, 37, "10px"]);
+    assert.deepEqual([hover.width, hover.height, hover.radius], [32, 32, "4px"]);
     assert.notEqual(hover.border, "rgba(0, 0, 0, 0)");
     assert.notEqual(hover.background, "rgba(0, 0, 0, 0)");
   }
@@ -586,7 +586,7 @@ test("Resources.co edge preview limits browser code to its host-owned machine co
   await page.getByRole("dialog", { name: "Search or jump to…" }).waitFor({ state: "hidden" });
   await page.getByLabel("Account menu").click();
   await page.getByLabel("Language").selectOption("es");
-  await assert.doesNotReject(page.getByRole("heading", { name: "Infraestructura tuya, compuesta por partes." }).waitFor());
+  await assert.doesNotReject(page.getByRole("heading", { name: "Proyectos web, bajo tu control." }).waitFor());
   assert.equal(await page.locator("html").getAttribute("lang"), "es");
   await page.getByRole("link", { name: "Acerca de" }).click();
   await assert.doesNotReject(page.getByRole("heading", { name: "Acerca de Resources.co" }).waitFor());
