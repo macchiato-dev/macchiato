@@ -100,7 +100,7 @@ test("appearance is correct before the frontend loads, including document naviga
           await page.waitForFunction(() => window.paints.length === 6);
           const paints = await page.evaluate(() => window.paints);
           const background = workspace
-            ? (expected === "light" ? "#e7ecff" : "#1a1aa2")
+            ? (expected === "light" ? "#f4f3f1" : "#1e1d1b")
             : (expected === "light" ? "#ffffff" : "#030302");
           assert.ok(paints.every((paint) => paint.theme === expected
             && paint.background === background), JSON.stringify(paints));
@@ -147,7 +147,7 @@ test("appearance is correct before the frontend loads, including document naviga
             }),
           };
         });
-        assert.equal(workspace.toolbar, expected === "light" ? "rgb(219, 228, 255)" : "rgb(23, 34, 110)");
+        assert.equal(workspace.toolbar, expected === "light" ? "rgb(244, 243, 241)" : "rgb(36, 35, 33)");
         assert.equal(workspace.details, workspace.toolbar);
         assert.equal(workspace.overflow, false);
         assert.equal(workspace.splitVisible, !mobile);

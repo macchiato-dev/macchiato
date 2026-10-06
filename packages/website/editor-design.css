@@ -1,0 +1,177 @@
+/* The workspace uses the site's neutral language at editing density. Keep
+   pane geometry and application-owned output untouched. These root tokens also
+   style popovers mounted outside the layout and apply before the guest starts. */
+html:has(.focused-view) {
+  --bg: #1e1d1b;
+  --bg-color: #1e1d1b;
+  --card: #242321;
+  --card-border: #413f3d;
+  --text: #f4f3f1;
+  --muted: #b5b2ad;
+  --accent: #f4f3f1;
+  --hover: #34322f;
+  --pop-bg: #242321;
+  --active-bg: #e7e6e3;
+  --active-fg: #161513;
+  --track: #1e1d1b;
+  --track-border: #514e49;
+  --ghost: #a6a4a0;
+  --thumb: #e7e6e3;
+  --thumb-ic: #161513;
+  --shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
+}
+html[data-theme="light"]:has(.focused-view) {
+  --bg: #f4f3f1;
+  --bg-color: #f4f3f1;
+  --card: #fafaf8;
+  --card-border: #d4d2cf;
+  --text: #282624;
+  --muted: #5d5a57;
+  --accent: #282624;
+  --hover: #e7e6e3;
+  --pop-bg: #ffffff;
+  --active-bg: #282624;
+  --active-fg: #fafaf8;
+  --track: #fafaf8;
+  --track-border: #c2bfba;
+  --ghost: #7c7a76;
+  --thumb: #413f3d;
+  --thumb-ic: #ffffff;
+  --shadow: 0 8px 24px rgba(40, 38, 36, 0.12);
+}
+body:has(.focused-view) {
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+}
+.layout.focused-view {
+  --project-toolbar-bg: #242321;
+  --project-edge-dark: #151412;
+  --project-edge-light: #413f3d;
+  --project-toolbar-fg: #c5c2bc;
+  --project-toolbar-strong: #fafaf8;
+  --project-toolbar-control: #242321;
+  --project-toolbar-accent: #413f3d;
+  --project-toolbar-hover: #34322f;
+  --project-toolbar-tab-hover: #34322f;
+  --project-toolbar-border: #413f3d;
+  --project-toolbar-selected-border: #7c7a76;
+}
+html[data-theme="light"] .layout.focused-view {
+  --project-toolbar-bg: #f4f3f1;
+  --project-edge-dark: #d4d2cf;
+  --project-edge-light: #ffffff;
+  --project-toolbar-fg: #5d5a57;
+  --project-toolbar-strong: #282624;
+  --project-toolbar-control: #f4f3f1;
+  --project-toolbar-accent: #ffffff;
+  --project-toolbar-hover: #e7e6e3;
+  --project-toolbar-tab-hover: #e7e6e3;
+  --project-toolbar-border: #d4d2cf;
+  --project-toolbar-selected-border: #a6a4a0;
+}
+.focused-view :is(.project-editor, .project-editor__workspace, .project-editor__preview, .project-editor__preview > [data-project-preview]) {
+  background: var(--project-toolbar-bg);
+}
+.focused-view .project-editor__open-tab { border-radius: 4px; }
+.focused-view .project-editor__open-tab > [role="tab"] {
+  font-size: 12px;
+  font-weight: 500;
+}
+.focused-view .project-editor__open-tab:has([aria-selected="true"]) {
+  border-color: var(--project-toolbar-selected-border);
+}
+.focused-view :is(.project-editor__file-option, .project-editor__version, .project-overflow__menu button, .save-split__menu button) {
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.focused-view :is(.project-editor__popover-head, .project-editor__open-files > p) {
+  font-size: 12px;
+  font-weight: 600;
+}
+.focused-view .project-editor__file-menu input {
+  border-radius: 4px;
+  background: var(--track);
+  font-size: 13px;
+}
+.focused-view .project-editor__file-menu input:focus { border-color: var(--muted); }
+.focused-view .project-editor__tab-scroll:disabled { color: var(--ghost); }
+.focused-view :is(.project-editor__history, .project-editor__file-menu, .project-overflow__menu, .save-split__menu) {
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+.focused-view .project-editor__latest {
+  border-color: var(--track-border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+.focused-view .project-editor__version-count { border-color: var(--track-border); }
+.focused-view .project-create__fields .create-form__field label,
+.focused-view .project-create__fields legend {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.focused-view .create-form :is(input, textarea, select) {
+  border-radius: 4px;
+  background: var(--track);
+}
+.focused-view .account-action { font-weight: 500; border-radius: 4px; }
+.focused-view .save-split__primary { border-radius: 4px 0 0 4px; }
+.focused-view .save-split__arrow {
+  border-radius: 0 4px 4px 0;
+  box-shadow: inset 1px 0 var(--ghost);
+}
+body:has(.focused-view) .instant-tooltip {
+  border-color: var(--track-border);
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--pop-bg);
+  box-shadow: var(--shadow);
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-weight: 400;
+}
+.focused-view .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after {
+  border-color: var(--muted);
+}
+.focused-view .project-editor__status {
+  border-color: var(--track-border);
+  border-radius: 4px;
+  color: var(--text);
+  background: var(--pop-bg);
+  font-size: 12px;
+}
+.focused-view .project-editor__status[data-state="warning"], .focused-view .draft-flash {
+  border-color: #947034;
+  color: #f4d59c;
+  background: #382e1f;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.focused-view .project-editor__status[data-state="error"], .focused-view .destructive-confirm {
+  border-color: #a55350;
+  color: #ffc4bf;
+  background: #3b2423;
+  border-radius: 4px;
+  font-size: 12px;
+}
+html[data-theme="light"] .focused-view .project-editor__status[data-state="warning"],
+html[data-theme="light"] .focused-view .draft-flash {
+  border-color: #c7a76b;
+  color: #725014;
+  background: #fff4db;
+}
+html[data-theme="light"] .focused-view .project-editor__status[data-state="error"],
+html[data-theme="light"] .focused-view .destructive-confirm {
+  border-color: #c6817b;
+  color: #922f2b;
+  background: #fff0ee;
+}
+html[data-theme="light"] .focused-view :is(.destructive-link, .project-create__fields .project-overflow__menu button, .form-field-error) { color: #a13731; }
+.focused-view .project-editor__status-action { border-color: currentColor; }
+.focused-view .project-editor__file-option-close:hover { color: var(--text); }
+.focused-view :is(button, a, input, textarea, select):focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 2px;
+}

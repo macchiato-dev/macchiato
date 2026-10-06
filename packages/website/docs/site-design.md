@@ -24,14 +24,28 @@ The neutral colors are sRGB equivalents of the reference's OKLCH palette.
 Fonts are bundled into static artifacts, with their licenses in
 `assets/fonts/design/`.
 
-## Project workspace exception
+## Project workspace
 
-Do not apply this redesign to the project/editor page yet. Every new theme and
-component rule excludes `.focused-view` and `.embed-view`, including rules on
-`html` and `body`. The workspace keeps its blue themes, typography, split panes,
-toolbars, editor, and output. The selector follows the actual page layout, so
-it also works when the application navigates without reloading the document.
+`editor-design.css` adapts the same visual language at editing density rather
+than applying landing-page spacing. Instrument Sans, warm neutral surfaces,
+four-pixel controls, and six-pixel menus connect it to the rest of the site.
+The editor uses a softer charcoal in dark mode and warm off-white in light
+mode. Syntax colors and a restrained blue selection remain distinct from UI
+selection; active tabs and pane controls have both a surface and border change.
+
+Keep the existing 54px app bar, 48px project toolbar, 30px icon controls, tab
+overflow behavior, two-pixel dividers and larger splitter hit targets. Do not
+add padding around CodeMirror: its own content padding is sufficient. The
+editor theme variables in `seed.js` also reach its isolated frame, including
+Find/Replace, gutters, caret, and selection. Keep the code font's existing
+metrics rather than introducing a font-loading-dependent layout change.
+
+The workspace adapter follows `.focused-view` through client navigation and
+styles first paint before any guest starts. Output applications and embeds
+remain responsible for their own colors and typography. Never recolor a game
+or document simply to match the surrounding editor.
 
 Check both themes, signed-in and signed-out home, article pages, account menus,
-forms, and small screens when changing the design. Compare project-page styles
-before and after; a general-site change must not alter the workspace.
+forms, and small screens when changing the design. In the workspace, check
+typing, selection, undo/redo, search, tabs, pane sizing, menus, and expanded
+output. Theme changes must reach the live editor without resetting its state.
