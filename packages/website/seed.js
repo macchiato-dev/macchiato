@@ -216,14 +216,15 @@ function sectionsFor(i18n) {
     title: t("home.title"),
     blocks: [
       {
+        type: "home-hero",
         eyebrow: t("home.eyebrow"),
         h1: t("home.heading"),
         paras: [
           t("home.p1"),
           t("home.p2"),
         ],
-        items: [[t("try.button"), t("try.buttonDescription"), "/try"]],
       },
+      { type: "home-features" },
       { h2: t("home.featured"), paras: ["__RESOURCES_PUBLIC_PROJECTS__"] },
     ],
   },
@@ -411,6 +412,8 @@ function creditsRoute(i18n) {
           item("Lucide", spanish ? "Iconos de interfaz, incluido el icono History." : "Interface icons, including the History icon.", "https://lucide.dev/"),
           item("QuickJS", spanish ? "Motor de JavaScript usado en entornos aislados." : "JavaScript engine used by sandboxed environments.", "https://bellard.org/quickjs/"),
           item("CodeMirror", spanish ? "Editor de código extensible usado por Code Editor Use." : "Extensible code editor used by Code Editor Use.", "https://codemirror.net/"),
+          item("Instrument Sans", spanish ? "Tipografía de interfaz de Rodrigo Fuenzalida, bajo la licencia SIL Open Font License." : "Interface typeface by Rodrigo Fuenzalida, under the SIL Open Font License.", "https://github.com/Instrument/instrument-sans"),
+          item("JetBrains Mono", spanish ? "Tipografía monoespaciada para código e identificadores, bajo la licencia SIL Open Font License." : "Monospaced typeface for code and identifiers, under the SIL Open Font License.", "https://www.jetbrains.com/lp/mono/"),
         ],
       },
       {
@@ -1374,6 +1377,8 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
     display: flex;
   }
 }
+
+${readFileSync(join(__dirname, "design-system.css"), "utf8")}
 `;
 }
 
@@ -1506,21 +1511,19 @@ function brandHeaderHtml(path) {
     });
     return `<header class="box project-identity" data-screen-label="brand"><nav class="project-identity__path" id="brand-path" aria-label="Project path"><a class="project-identity__home" href="/" aria-label="Resources.co home">${homeIcon()}</a><span class="project-identity__sep">/</span>${parts.join("")}</nav></header>`;
   }
-  const segments = brandSegmentsForPath(path);
-  if (segments.length === 0) {
-    return `<header class="box brand" data-screen-label="brand"><nav class="brand__path" id="brand-path" aria-label="Resource path"><a class="brand__home" href="/">Resources<span class="dot">.co</span></a></nav></header>`;
-  }
-  const parts = segments.map((segment, index) => {
-    const sep = index === 0 ? "" : `<span class="brand__sep">/</span>`;
-    if (segment.href) {
-      return `${sep}<a class="brand__seg" href="${segment.href}">${escapeHtml(segment.label)}</a>`;
-    }
-    return `${sep}<span class="brand__seg brand__seg--current">${escapeHtml(segment.label)}</span>`;
-  });
-  return `<header class="box brand" data-screen-label="brand"><nav class="brand__path brand__path--solo" id="brand-path" aria-label="Resource path">${parts.join("")}</nav></header>`;
+  // The regular site has a stable wordmark. Route breadcrumbs remain above
+  // the content; project workspaces keep their existing compact path header.
+  return `<header class="box brand" data-screen-label="brand"><nav class="brand__path" id="brand-path" aria-label="Resources.co"><a class="brand__home" href="/"><span class="brand__mark" aria-hidden="true">{}</span><span>Resources.co</span></a></nav></header>`;
 }
 
 function blockHtml(block, options = {}) {
+  const t = options.i18n?.text;
+  if (block.type === "home-hero") {
+    return `<section class="box block content-block home-hero"><div class="block__eyebrow">${escapeHtml(block.eyebrow)}</div><h1>${escapeHtml(block.h1)}</h1><p>${escapeHtml(block.paras[0])}</p><div class="home-actions"><a class="account-action" href="/try">${escapeHtml(t("home.try"))}<span aria-hidden="true"> →</span></a><a class="account-action account-action--secondary" href="/browse">${escapeHtml(t("home.browse"))}</a></div><p class="home-note">${escapeHtml(block.paras[1])}</p></section>`;
+  }
+  if (block.type === "home-features") {
+    return `<section class="home-features">${["edit", "versions", "sandbox"].map(key => `<div class="home-feature"><h2>${escapeHtml(t(`home.${key}.heading`))}</h2><p>${escapeHtml(t(`home.${key}.description`))}</p></div>`).join("")}</section>`;
+  }
   if (block.type === "auth") return renderResourcesAuthBlock(block.mode, { ...options, messages: authMessages(options.i18n) });
   if (block.type === "project-summary") return projectSummaryHtml(block);
   if (block.type === "package-details") return packageDetailsHtml(block);
@@ -1657,6 +1660,7 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
   const route = routeForPath(path, i18n);
   const documentRuntime = runtime === "document";
   const authRoute = path === "/login" || path === "/signup";
+  const readingRoute = path === "/blog" || path.startsWith("/blog/") || ["/about", "/terms", "/privacy", "/credits", "/help"].includes(path);
   const menu = resourcesMenu({
     home: i18n.text("nav.home"),
     browse: i18n.text("nav.browse"),
@@ -1666,7 +1670,7 @@ function pageHtml(path, { runtime = "browser-use", i18n, blogExamplesOrigin = ""
   });
   const view = viewForPath(path);
   const homeSocial = path === "/" ? `<aside class="box home-social" data-screen-label="home-social"><h2>${escapeHtml(i18n.text("social.heading"))}</h2><p>${escapeHtml(i18n.text("social.intro"))}</p><div class="home-social__links"><a href="https://x.com/ResourcesCo" target="_blank" rel="noopener">${escapeHtml(i18n.text("social.x"))}</a><a href="https://www.linkedin.com/company/resources-co/" target="_blank" rel="noopener">${escapeHtml(i18n.text("social.linkedin"))}</a></div></aside>` : "";
-  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${path === "/" ? " home-view" : ""}${authRoute ? " auth-layout" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${view === "focused" ? " focused-view" : ""}" data-view="${view}">
+  return `<main class="layout${documentRuntime ? " document-runtime" : ""}${path === "/" ? " home-view" : ""}${authRoute ? " auth-layout" : ""}${readingRoute ? " reading-view" : ""}${path === "/projects/new" ? " project-create-layout" : ""}${view === "focused" ? " focused-view" : ""}" data-view="${view}">
     ${brandHeaderHtml(path)}
     ${documentRuntime ? renderResourcesEdgeStatus({ cardless: view === "focused" }) : renderResourcesUserMenu({ cardless: view === "focused" })}
     ${documentRuntime ? "" : renderResourcesMobileMenu(route.navKey, menu)}

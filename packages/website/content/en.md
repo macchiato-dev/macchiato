@@ -32,10 +32,18 @@
 ## Home
 
 - **home.title**: Resources.co
-- **home.eyebrow**: Self-hosted building blocks
-- **home.heading**: Infrastructure you own, composed from parts.
-- **home.p1**: Resources.co is a startup building self-hostable primitives for the web: containers, components, and usage providers you run on your own stack, wired together however you like.
-- **home.p2**: Pick a section from the panel on the right to start, or browse the full catalogue.
+- **home.eyebrow**: A workspace for the open web
+- **home.heading**: Web projects, under your control.
+- **home.p1**: Start with an example. Make it your own. Resources.co brings code, a running view, and saved versions together in your browser.
+- **home.p2**: Try a project without an account. Sign in when you want to save it.
+- **home.try**: Start a project
+- **home.browse**: Explore projects
+- **home.edit.heading**: Make a change. See it run.
+- **home.edit.description**: Edit your files beside the running project. Start from a template or bring in a project archive.
+- **home.versions.heading**: Keep the versions that matter.
+- **home.versions.description**: Save a working version, explore another direction, and return to an earlier one. Your files travel together when you export.
+- **home.sandbox.heading**: Built around boundaries.
+- **home.sandbox.description**: Projects run in WebAssembly machines with controlled access to the page and network. The runtime is open source and still in development.
 - **home.featured**: Featured projects
 
 ## Browse

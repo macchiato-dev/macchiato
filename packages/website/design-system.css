@@ -1,0 +1,323 @@
+/* Adapted from the supplied Claude Design system. These rules deliberately
+   exclude the project workspace and embeds, including their root variables.
+   Existing guest-owned controls keep their behavior; no UI framework is added. */
+@font-face {
+  font-family: 'Instrument Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/-/fonts/resourcesco-design/instrument-sans-latin.woff2") format('woff2');
+}
+@font-face {
+  font-family: 'Instrument Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/-/fonts/resourcesco-design/instrument-sans-latin.woff2") format('woff2');
+}
+@font-face {
+  font-family: 'Instrument Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/-/fonts/resourcesco-design/instrument-sans-latin.woff2") format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/-/fonts/resourcesco-design/jetbrains-mono-latin.woff2") format('woff2');
+}
+
+/* The supplied OKLCH neutrals expressed as sRGB for the site's CSS schema. */
+html:not(:has(.focused-view, .embed-view)) {
+  --bg: #030302;
+  --bg-color: #030302;
+  --card: #0a0907;
+  --card-border: #282624;
+  --shadow: none;
+  --text: #fafaf8;
+  --muted: #a6a4a0;
+  --accent: #fafaf8;
+  --hover: #161513;
+  --pop-bg: #161513;
+  --active-bg: #fafaf8;
+  --active-fg: #0a0907;
+  --track: #161513;
+  --track-border: #413f3d;
+  --ghost: #7c7a76;
+  --thumb: #fafaf8;
+  --thumb-ic: #0a0907;
+  --radius: 6px;
+  --gap: 24px;
+}
+html[data-theme="light"]:not(:has(.focused-view, .embed-view)) {
+  --bg: #ffffff;
+  --bg-color: #ffffff;
+  --card: #fafaf8;
+  --card-border: #e7e6e3;
+  --text: #0a0907;
+  --muted: #5d5a57;
+  --accent: #0a0907;
+  --hover: #f4f3f1;
+  --pop-bg: #ffffff;
+  --active-bg: #0a0907;
+  --active-fg: #ffffff;
+  --track: #f4f3f1;
+  --track-border: #d4d2cf;
+  --ghost: #7c7a76;
+  --thumb: #0a0907;
+  --thumb-ic: #ffffff;
+}
+body:not(:has(.focused-view, .embed-view)) {
+  padding: 0;
+  font-family: 'Instrument Sans', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+body:not(:has(.focused-view, .embed-view)) .box {
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+body:not(:has(.focused-view, .embed-view)) .layout {
+  position: relative;
+  max-width: 1168px;
+  padding: 0 24px;
+  grid-template-columns: 180px minmax(0, 1fr) auto;
+  grid-template-rows: 64px 1fr auto auto;
+  grid-template-areas: "brand nav userbar" "main main main" "social social social" "footer footer footer";
+  gap: 0 16px;
+}
+body:not(:has(.focused-view, .embed-view)) .layout::before {
+  content: "";
+  position: absolute;
+  top: 63px;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: var(--card-border);
+  pointer-events: none;
+}
+body:not(:has(.focused-view, .embed-view)) :is(.brand, .userbar, .nav) {
+  align-self: center;
+  padding: 0;
+  min-height: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+body:not(:has(.focused-view, .embed-view)) .brand__home {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+body:not(:has(.focused-view, .embed-view)) .brand__home:hover { background: transparent; }
+body:not(:has(.focused-view, .embed-view)) .brand__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--active-fg);
+  background: var(--active-bg);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  letter-spacing: -0.08em;
+}
+body:not(:has(.focused-view, .embed-view)) .nav { display: flex; flex-direction: row; gap: 2px; }
+body:not(:has(.focused-view, .embed-view)) .nav a {
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+body:not(:has(.focused-view, .embed-view)) .nav a:is(:hover, [aria-current="page"]) {
+  color: var(--text);
+  background: var(--hover);
+}
+body:not(:has(.focused-view, .embed-view)) .main { padding: 48px 0 64px; min-width: 0; }
+body:not(:has(.focused-view, .embed-view)) .content-root { display: grid; gap: 32px; }
+body:not(:has(.focused-view, .embed-view)) .content-block {
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+body:not(:has(.focused-view, .embed-view)) .content-block + .content-block { padding-top: 28px; border-top: 1px solid var(--card-border); }
+body:not(:has(.focused-view, .embed-view)) :is(h1, h2, h3) { font-weight: 500; letter-spacing: -0.02em; }
+body:not(:has(.focused-view, .embed-view)) h1 { margin: 0 0 16px; font-size: clamp(30px, 4vw, 40px); line-height: 1.15; }
+body:not(:has(.focused-view, .embed-view)) h2 { margin: 0 0 16px; font-size: 24px; line-height: 1.25; }
+body:not(:has(.focused-view, .embed-view)) h3 { font-size: 17px; line-height: 1.4; }
+body:not(:has(.focused-view, .embed-view)) .content-block p {
+  max-width: 68ch;
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+body:not(:has(.focused-view, .embed-view)) .block__eyebrow {
+  margin-bottom: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+body:not(:has(.focused-view, .embed-view)) .crumb { margin-bottom: 28px; font-size: 13px; }
+body:not(:has(.focused-view, .embed-view)) .home-hero { padding: 40px 0 48px; text-align: center; }
+body:not(:has(.focused-view, .embed-view)) .home-hero h1 { max-width: 850px; margin: 0 auto 24px; font-size: clamp(40px, 5vw, 68px); line-height: 1.06; letter-spacing: -0.03em; text-wrap: balance; }
+body:not(:has(.focused-view, .embed-view)) .home-hero p { max-width: 650px; margin: 0 auto 16px; font-size: 18px; line-height: 1.65; text-wrap: balance; }
+body:not(:has(.focused-view, .embed-view)) .home-hero .home-note { margin-top: 16px; font-size: 13px; }
+body:not(:has(.focused-view, .embed-view)) .home-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 28px; }
+body:not(:has(.focused-view, .embed-view)) .home-features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 0 0 24px; }
+body:not(:has(.focused-view, .embed-view)) .home-feature { padding: 24px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--card); }
+body:not(:has(.focused-view, .embed-view)) .home-feature h2 { font-size: 18px; margin-bottom: 8px; }
+body:not(:has(.focused-view, .embed-view)) .home-feature p { font-size: 14px; line-height: 1.65; margin: 0; }
+
+/* Existing actions, menus and fields use the same compact control language. */
+body:not(:has(.focused-view, .embed-view)) :is(button, input, select, textarea) { font-family: 'Instrument Sans', system-ui, sans-serif; }
+body:not(:has(.focused-view, .embed-view)) :is(.account-action, .auth-provider, .ub-btn) {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid var(--active-bg);
+  border-radius: 4px;
+  box-shadow: none;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  text-decoration: none;
+  transition: background .14s ease, border-color .14s ease;
+}
+body:not(:has(.focused-view, .embed-view)) .account-action { color: var(--active-fg); background: var(--active-bg); }
+body:not(:has(.focused-view, .embed-view)) :is(.account-action--secondary, .auth-provider, .ub-btn) { color: var(--text); background: var(--bg-color); border-color: var(--card-border); }
+body:not(:has(.focused-view, .embed-view)) :is(.account-action--secondary, .auth-provider, .ub-btn):hover { background: var(--hover); border-color: var(--track-border); }
+body:not(:has(.focused-view, .embed-view)) .account-action:not(.account-action--secondary):hover { opacity: 0.85; }
+body:not(:has(.focused-view, .embed-view)) :is(.ub-icon, .command-trigger, .ub-acct) { border-radius: 4px; height: 32px; }
+body:not(:has(.focused-view, .embed-view)) .ub-icon { width: 32px; }
+body:not(:has(.focused-view, .embed-view)) .ub-acct { border-radius: 999px; }
+body:not(:has(.focused-view, .embed-view)) .ub-avatar { width: 26px; height: 26px; color: var(--text); background: var(--track); border-color: var(--card-border); font-weight: 500; }
+body:not(:has(.focused-view, .embed-view)) .command-trigger { width: 168px; min-height: 32px; padding: 5px 8px; font-size: 12px; background: var(--card); border-color: var(--card-border); }
+body:not(:has(.focused-view, .embed-view)) :is(.popover, .command-palette__dialog) { border: 1px solid var(--card-border); border-radius: 6px; background: var(--pop-bg); box-shadow: 0 8px 24px rgba(0,0,0,0.16); backdrop-filter: none; -webkit-backdrop-filter: none; }
+body:not(:has(.focused-view, .embed-view)) .popover .item { padding: 8px 10px; border-radius: 4px; font-size: 14px; }
+body:not(:has(.focused-view, .embed-view)) .menu__head { font-size: 12px; font-weight: 500; color: var(--muted); }
+body:not(:has(.focused-view, .embed-view)) .seg { border-radius: 4px; padding: 3px; background: var(--track); }
+body:not(:has(.focused-view, .embed-view)) .seg__btn { border-radius: 3px; font-size: 13px; }
+body:not(:has(.focused-view, .embed-view)) .seg__btn[aria-pressed="true"] { color: var(--active-fg); background: var(--active-bg); }
+body:not(:has(.focused-view, .embed-view)) .language-switcher select { padding: 6px 30px 6px 10px; background: var(--card); border-color: var(--card-border); border-radius: 4px; }
+body:not(:has(.focused-view, .embed-view)) :is(a, button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+body:not(:has(.focused-view, .embed-view)) :is(code, pre, kbd, .account-card__namespace, .account-card__meta, .blog-example-slug) { font-family: 'JetBrains Mono', monospace; font-weight: 400; }
+body:not(:has(.focused-view, .embed-view)) .items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+body:not(:has(.focused-view, .embed-view)) .items a { padding: 20px; border: 1px solid var(--card-border); border-radius: 6px; background: var(--card); }
+body:not(:has(.focused-view, .embed-view)) .items a:hover { background: var(--hover); border-color: var(--track-border); }
+body:not(:has(.focused-view, .embed-view)) .it-name { font-size: 16px; font-weight: 500; }
+body:not(:has(.focused-view, .embed-view)) .it-desc { font-size: 14px; line-height: 1.6; }
+body:not(:has(.focused-view, .embed-view)) .tags span { padding: 3px 8px; border-radius: 4px; border-color: var(--card-border); background: var(--card); color: var(--muted); font-size: 12px; }
+body:not(:has(.focused-view, .embed-view)) .account-grid { gap: 16px; }
+body:not(:has(.focused-view, .embed-view)) .account-card { min-height: 160px; padding: 20px; gap: 8px; border-radius: 6px; background: var(--bg-color); border: 1px solid var(--card-border); transition: background .14s ease, border-color .14s ease; }
+body:not(:has(.focused-view, .embed-view)) .account-card:hover { background: var(--card); border-color: var(--track-border); transform: none; }
+body:not(:has(.focused-view, .embed-view)) .account-card h3 { font-size: 17px; font-weight: 500; }
+body:not(:has(.focused-view, .embed-view)) .account-card__namespace { font-size: 12px; color: var(--muted); }
+body:not(:has(.focused-view, .embed-view)) .account-card p { font-size: 14px; line-height: 1.6; }
+body:not(:has(.focused-view, .embed-view)) .account-card__meta { margin-top: auto; font-size: 12px; }
+body:not(:has(.focused-view, .embed-view)) .account-dashboard { gap: 32px; }
+body:not(:has(.focused-view, .embed-view)) .account-dashboard__header { padding-bottom: 24px; border-bottom: 1px solid var(--card-border); gap: 24px; }
+body:not(:has(.focused-view, .embed-view)) .account-dashboard__header h1 { font-size: 30px; margin-bottom: 8px; }
+body:not(:has(.focused-view, .embed-view)) .account-dashboard__intro { font-size: 15px; }
+body:not(:has(.focused-view, .embed-view)) .account-section { gap: 16px; }
+body:not(:has(.focused-view, .embed-view)) .account-section__header h2 { font-size: 18px; margin: 0; }
+body:not(:has(.focused-view, .embed-view)) .account-empty { padding: 32px; border-radius: 6px; background: var(--card); }
+body:not(:has(.focused-view, .embed-view)) .create-form { max-width: 640px; gap: 24px; }
+body:not(:has(.focused-view, .embed-view)) .create-form__field { gap: 8px; }
+body:not(:has(.focused-view, .embed-view)) .create-form__field label { font-size: 14px; font-weight: 500; }
+body:not(:has(.focused-view, .embed-view)) .create-form :is(input, select, textarea) { padding: 9px 12px; color: var(--text); background: var(--bg-color); border: 1px solid var(--track-border); border-radius: 4px; font-size: 15px; }
+body:not(:has(.focused-view, .embed-view)) .form-help { font-size: 13px; line-height: 1.5; }
+body:not(:has(.focused-view, .embed-view)) .organization-member { padding: 16px; background: var(--card); border-radius: 6px; }
+body:not(:has(.focused-view, .embed-view)) .auth-card { width: 100%; max-width: 400px; margin: 24px auto 64px; padding: 32px; border: 1px solid var(--card-border); border-radius: 8px; background: var(--bg-color); }
+body:not(:has(.focused-view, .embed-view)) .auth-card h1 { font-size: 28px; }
+body:not(:has(.focused-view, .embed-view)) .auth-card p { font-size: 14px; }
+body:not(:has(.focused-view, .embed-view)) .auth-provider { min-height: 40px; }
+body:not(:has(.focused-view, .embed-view)) .auth-legal { font-size: 12px; }
+body:not(:has(.focused-view, .embed-view)) .home-social { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; padding: 24px 0; border: none; border-top: 1px solid var(--card-border); border-radius: 0; background: transparent; }
+body:not(:has(.focused-view, .embed-view)) .home-social h2 { font-size: 14px; margin: 0; }
+body:not(:has(.focused-view, .embed-view)) .home-social p { margin: 0; font-size: 13px; }
+body:not(:has(.focused-view, .embed-view)) .home-social__links { margin-left: auto; gap: 16px; }
+body:not(:has(.focused-view, .embed-view)) .footer { width: 100%; padding: 24px 0; border: none; border-top: 1px solid var(--card-border); border-radius: 0; background: transparent; font-size: 12px; }
+body:not(:has(.focused-view, .embed-view)) .footer .copy { gap: 20px; }
+body:not(:has(.focused-view, .embed-view)) .footer .copy a { color: var(--muted); text-decoration: none; }
+body:not(:has(.focused-view, .embed-view)) .footer .copy a:hover { color: var(--text); text-decoration: underline; }
+
+/* Reading pages are a continuous column, not a succession of floating cards. */
+body:not(:has(.focused-view, .embed-view)) .layout.reading-view .main { max-width: 800px; width: 100%; margin: 0 auto; }
+body:not(:has(.focused-view, .embed-view)) .reading-view .content-block p { max-width: 100%; }
+body:not(:has(.focused-view, .embed-view)) .reading-view .items { grid-template-columns: minmax(0, 1fr); }
+body:not(:has(.focused-view, .embed-view)) .blog-figure img { border-radius: 6px; }
+body:not(:has(.focused-view, .embed-view)) .blog-example-panel { color: var(--muted); background: var(--card); border-color: var(--card-border); }
+body:not(:has(.focused-view, .embed-view)) .blog-example-panel a { color: var(--text); }
+body:not(:has(.focused-view, .embed-view)) .blog-example-slug { color: var(--muted); font-size: 12px; }
+body:not(:has(.focused-view, .embed-view)) .blog-example-block:not(.blog-example-block--fullscreen) .blog-example-fullscreen { color: var(--text); }
+body:not(:has(.focused-view, .embed-view)) .blog-example-block--fullscreen .blog-example-panel { background: transparent; }
+html[data-theme="light"] body:not(:has(.focused-view, .embed-view)) :is(.form-error, .form-field-error) { color: #9b2924; background: #fff3f2; border-color: #ecc1bd; }
+
+/* Account pages adopt the export's application layout; marketing stays wide. */
+body:not(:has(.focused-view, .embed-view)) .layout:has(.account-dashboard) {
+  grid-template-columns: 200px minmax(0, 1fr) auto;
+  grid-template-areas: "brand userbar userbar" "nav main main" "social main main" "footer footer footer";
+  grid-template-rows: 64px auto 1fr auto;
+  gap: 0 32px;
+}
+body:not(:has(.focused-view, .embed-view)) .layout:has(.account-dashboard) .nav { flex-direction: column; align-self: start; padding: 40px 0 24px; gap: 4px; }
+body:not(:has(.focused-view, .embed-view)) .layout:has(.account-dashboard) .home-social { display: block; margin-right: 8px; }
+body:not(:has(.focused-view, .embed-view)) .layout:has(.account-dashboard) .home-social p { margin: 8px 0 16px; }
+
+@media (max-width: 1000px) {
+  body:not(:has(.focused-view, .embed-view)) .layout { grid-template-columns: 180px minmax(0, 1fr); grid-template-rows: 56px auto 1fr auto auto; grid-template-areas: "brand userbar" "nav nav" "main main" "social social" "footer footer"; }
+  body:not(:has(.focused-view, .embed-view)) .layout::before { top: 55px; }
+  body:not(:has(.focused-view, .embed-view)) .nav { padding: 12px 0; border-bottom: 1px solid var(--card-border); }
+  body:not(:has(.focused-view, .embed-view)) .account-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body:not(:has(.focused-view, .embed-view)) .layout:has(.account-dashboard) { grid-template-columns: 160px minmax(0, 1fr) auto; gap: 0 24px; }
+}
+@media (max-width: 760px) {
+  body:not(:has(.focused-view, .embed-view)) .layout,
+  body:not(:has(.focused-view, .embed-view)) .layout:has(.account-dashboard) {
+    padding: 0 20px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 56px auto 1fr auto auto;
+    grid-template-areas: "brand userbar" "nav nav" "main main" "social social" "footer footer";
+    gap: 0 12px;
+  }
+  body:not(:has(.focused-view, .embed-view)) .layout::before { top: 55px; left: 20px; right: 20px; }
+  body:not(:has(.focused-view, .embed-view)) .brand__home { font-size: 15px; gap: 6px; }
+  body:not(:has(.focused-view, .embed-view)) .brand__mark { width: 22px; height: 22px; }
+  body:not(:has(.focused-view, .embed-view)) .userbar { gap: 2px; }
+  body:not(:has(.focused-view, .embed-view)) .command-trigger { width: 32px; min-width: 32px; padding: 7px; }
+  body:not(:has(.focused-view, .embed-view)) .command-trigger :is(span, kbd) { display: none; }
+  body:not(:has(.focused-view, .embed-view)) .nav,
+  body:not(:has(.focused-view, .embed-view)) .layout:has(.account-dashboard) .nav { flex-direction: row; gap: 0; padding: 12px 0; overflow-x: auto; }
+  body:not(:has(.focused-view, .embed-view)) .nav a { padding: 7px 10px; font-size: 13px; }
+  body:not(:has(.focused-view, .embed-view)) .main { padding: 32px 0 40px; }
+  body:not(:has(.focused-view, .embed-view)) .home-hero { padding: 20px 0 24px; }
+  body:not(:has(.focused-view, .embed-view)) .home-hero h1 { font-size: 42px; }
+  body:not(:has(.focused-view, .embed-view)) .home-hero p { font-size: 16px; }
+  body:not(:has(.focused-view, .embed-view)) :is(.home-features, .items) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  body:not(:has(.focused-view, .embed-view)) .home-feature { padding: 20px; }
+  body:not(:has(.focused-view, .embed-view)) .account-dashboard__header { flex-wrap: wrap; gap: 16px; }
+  body:not(:has(.focused-view, .embed-view)) .auth-card { margin: 0 auto 24px; padding: 24px; }
+  body:not(:has(.focused-view, .embed-view)) .home-social__links { margin-left: 0; }
+  body:not(:has(.focused-view, .embed-view)) .footer .copy { gap: 12px 16px; }
+  body:not(:has(.focused-view, .embed-view)) .edge-user-menu__panel { max-width: calc(100vw - 40px); }
+}
+@media (max-width: 480px) {
+  body:not(:has(.focused-view, .embed-view)) .account-grid { grid-template-columns: minmax(0, 1fr); }
+  body:not(:has(.focused-view, .embed-view)) .account-card { min-height: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body:not(:has(.focused-view, .embed-view)) :is(.account-card, .account-action, .auth-provider, .ub-btn) { transition: background 0s, border-color 0s; }
+}

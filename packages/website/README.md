@@ -970,6 +970,13 @@ See [`edge/README.md`](edge/README.md) for the threat model and remaining work.
 
 ## Credits
 
+The regular site's [design system](docs/site-design.md) adapts the supplied
+Claude Design export while retaining the existing application behavior.
+[Instrument Sans](https://github.com/Instrument/instrument-sans) and
+[JetBrains Mono](https://www.jetbrains.com/lp/mono/) are embedded locally under
+the SIL Open Font License; notices accompany the files in `assets/fonts/design`.
+The project workspace keeps its existing theme and fonts for now.
+
 HTML character references are decoded in the compiler guest by
 [entities](https://github.com/fb55/entities), with separate text and attribute
 rules. Its decoder is bundled into the compiler, not downloaded by the browser

@@ -45,6 +45,10 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
     `/-/fonts/resourcesco-space-grotesk/${name}`,
     `data:font/woff2;base64,${Buffer.from(readFileSync(join(fontDirectory, name))).toString("base64")}`,
   ]));
+  for (const name of ["instrument-sans-latin.woff2", "jetbrains-mono-latin.woff2"]) {
+    embeddedFonts.set(`/-/fonts/resourcesco-design/${name}`,
+      `data:font/woff2;base64,${Buffer.from(readFileSync(join(directory, "assets", "fonts", "design", name))).toString("base64")}`);
+  }
   const routesByLocale = Object.fromEntries(RESOURCE_LOCALES.map((locale) => [
     locale,
     buildResourcesSiteRoutesForRuntime({ runtime: "edge", theme, locale, blogExamplesOrigin }),

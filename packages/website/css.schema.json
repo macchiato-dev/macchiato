@@ -128,13 +128,13 @@
       ]
     },
     "fontFaceSrc": {
-      "pattern": "^url\\(\"/-/fonts/resourcesco-space-grotesk/space-grotesk-(?:latin|latin-ext|vietnamese)\\.woff2\"\\) format\\('woff2'\\)$"
+      "pattern": "^url\\(\"/-/fonts/(?:resourcesco-space-grotesk/space-grotesk-(?:latin|latin-ext|vietnamese)|resourcesco-design/(?:instrument-sans-latin|jetbrains-mono-latin))\\.woff2\"\\) format\\('woff2'\\)$"
     },
     "unicodeRange": {
       "pattern": "^U\\+[0-9A-F?]{2,6}(?:-[0-9A-F]{2,6})?(?:,\\s*U\\+[0-9A-F?]{2,6}(?:-[0-9A-F]{2,6})?)*$"
     },
     "filter": {
-      "pattern": "^(?:blur\\(\\d+(?:\\.\\d+)?px\\)|saturate\\(\\d+%\\))(?:\\s+(?:blur\\(\\d+(?:\\.\\d+)?px\\)|saturate\\(\\d+%\\)))*$"
+      "pattern": "^(?:none|(?:blur\\(\\d+(?:\\.\\d+)?px\\)|saturate\\(\\d+%\\))(?:\\s+(?:blur\\(\\d+(?:\\.\\d+)?px\\)|saturate\\(\\d+%\\)))*)$"
     },
     "aspectRatio": {
       "pattern": "^\\d+(?:\\.\\d+)?\\s*/\\s*\\d+(?:\\.\\d+)?$"
@@ -402,6 +402,9 @@
         "border-top": {
           "$ref": "border"
         },
+        "border-bottom": {
+          "$ref": "border"
+        },
         "border-color": {
           "$ref": "color"
         },
@@ -624,9 +627,10 @@
           ]
         },
         "outline": {
-          "enum": [
-            "none"
-          ]
+          "$ref": "border"
+        },
+        "outline-offset": {
+          "$ref": "length"
         },
         "resize": {
           "enum": [
@@ -693,6 +697,12 @@
         "margin-top": {
           "$ref": "spacing"
         },
+        "margin-left": {
+          "$ref": "spacing"
+        },
+        "margin-right": {
+          "$ref": "spacing"
+        },
         "max-height": {
           "$ref": "length"
         },
@@ -708,6 +718,9 @@
             "hidden"
           ]
         },
+        "overflow-x": {
+          "enum": ["auto", "hidden"]
+        },
         "object-fit": {
           "enum": [
             "contain"
@@ -717,6 +730,9 @@
           "$ref": "spacing"
         },
         "padding-bottom": {
+          "$ref": "spacing"
+        },
+        "padding-top": {
           "$ref": "spacing"
         },
         "position": {
@@ -802,13 +818,13 @@
   ],
   "imports": false,
   "urls": {
-    "src": "^/-/fonts/resourcesco-space-grotesk/space-grotesk-(latin|latin-ext|vietnamese)\\.woff2$"
+    "src": "^/-/fonts/(?:resourcesco-space-grotesk/space-grotesk-(latin|latin-ext|vietnamese)|resourcesco-design/(?:instrument-sans-latin|jetbrains-mono-latin))\\.woff2$"
   },
   "selectors": {
     "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}]+$"
   },
   "limits": {
-    "maxStylesheetLength": 96000,
+    "maxStylesheetLength": 128000,
     "maxPropertyLength": 64,
     "maxValueLength": 900,
     "maxUrlLength": 100,

@@ -68,6 +68,7 @@
         {
           "oneOf": [
             "$content-block",
+            "$home-features",
             "$project-summary-block",
             "$package-details-block"
           ]
@@ -78,6 +79,11 @@
       "element": "section.box.block.content-block",
       "attrs": ["class"],
       "children": ["div", "figure", "h1", "h2", "p", "ul"]
+    },
+    "home-features": {
+      "element": "section.home-features",
+      "attrs": ["class"],
+      "children": ["div"]
     },
     "project-summary-block": {
       "element": "section.box.block.project-summary",
@@ -214,7 +220,7 @@
       "children": ["a", "span"]
     },
     "p": {
-      "attrs": [],
+      "attrs": ["class"],
       "children": ["#text", "a", "em"]
     },
     "em": {
@@ -258,7 +264,7 @@
       "children": ["option"]
     },
     "span": {
-      "attrs": ["class"],
+      "attrs": ["class", "aria-hidden"],
       "children": ["#text", "svg"]
     },
     "ul": {

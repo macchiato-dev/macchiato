@@ -32,10 +32,18 @@
 ## Inicio
 
 - **home.title**: Resources.co
-- **home.eyebrow**: Componentes para alojar por tu cuenta
-- **home.heading**: Infraestructura tuya, compuesta por partes.
-- **home.p1**: Resources.co crea piezas autoalojables para la web: contenedores, componentes y proveedores de uso que ejecutas en tu propia infraestructura y conectas como prefieras.
-- **home.p2**: Elige una sección del panel de la derecha para comenzar o explora el catálogo completo.
+- **home.eyebrow**: Un espacio para la web abierta
+- **home.heading**: Proyectos web, bajo tu control.
+- **home.p1**: Empieza con un ejemplo. Hazlo tuyo. Resources.co reúne el código, el proyecto en ejecución y sus versiones guardadas en tu navegador.
+- **home.p2**: Prueba un proyecto sin cuenta. Inicia sesión cuando quieras guardarlo.
+- **home.try**: Crear un proyecto
+- **home.browse**: Explorar proyectos
+- **home.edit.heading**: Cambia el código. Ve el resultado.
+- **home.edit.description**: Edita tus archivos junto al proyecto en ejecución. Empieza con una plantilla o importa un archivo de proyecto.
+- **home.versions.heading**: Guarda las versiones importantes.
+- **home.versions.description**: Guarda una versión que funcione, explora otra dirección y vuelve a una anterior. Tus archivos se exportan juntos.
+- **home.sandbox.heading**: Diseñado con límites.
+- **home.sandbox.description**: Los proyectos se ejecutan en máquinas WebAssembly con acceso controlado a la página y a la red. El entorno es de código abierto y sigue en desarrollo.
 - **home.featured**: Proyectos destacados
 
 ## Explorar
