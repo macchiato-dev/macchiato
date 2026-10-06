@@ -1,7 +1,10 @@
 /* The workspace uses the site's neutral language at editing density. Keep
    pane geometry and application-owned output untouched. These root tokens also
-   style popovers mounted outside the layout and apply before the guest starts. */
-html:has(.focused-view) {
+   style popovers mounted outside the layout and apply before the guest starts.
+   The head marker covers streaming first paint before the layout exists; once
+   it does, the layout alone determines the palette, including SPA navigation. */
+html:has(.focused-view),
+html:has(meta[name="resources-workspace"]):not(:has(.layout)) {
   --bg: #1e1d1b;
   --bg-color: #1e1d1b;
   --card: #242321;
@@ -20,7 +23,8 @@ html:has(.focused-view) {
   --thumb-ic: #161513;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
 }
-html[data-theme="light"]:has(.focused-view) {
+html[data-theme="light"]:has(.focused-view),
+html[data-theme="light"]:has(meta[name="resources-workspace"]):not(:has(.layout)) {
   --bg: #f4f3f1;
   --bg-color: #f4f3f1;
   --card: #fafaf8;
@@ -95,6 +99,18 @@ html[data-theme="light"] .layout.focused-view {
 }
 .focused-view .project-editor__file-menu input:focus { border-color: var(--muted); }
 .focused-view .project-editor__tab-scroll:disabled { color: var(--ghost); }
+.focused-view .project-editor__large-source {
+  color: var(--resources-editor-fg);
+  background: var(--resources-editor-bg);
+}
+.focused-view .project-editor__splitter {
+  background: var(--project-edge-dark);
+  box-shadow: inset 1px 0 var(--project-edge-light);
+}
+.focused-view .project-editor__workspace::after {
+  background: var(--project-edge-dark);
+  box-shadow: inset 0 -1px var(--project-edge-light);
+}
 .focused-view :is(.project-editor__history, .project-editor__file-menu, .project-overflow__menu, .save-split__menu) {
   border-radius: 6px;
   box-shadow: var(--shadow);
@@ -118,6 +134,7 @@ html[data-theme="light"] .layout.focused-view {
   background: var(--track);
 }
 .focused-view .account-action { font-weight: 500; border-radius: 4px; }
+.focused-view .account-action:disabled { opacity: 0.45; cursor: default; }
 .focused-view .save-split__primary { border-radius: 4px 0 0 4px; }
 .focused-view .save-split__arrow {
   border-radius: 0 4px 4px 0;

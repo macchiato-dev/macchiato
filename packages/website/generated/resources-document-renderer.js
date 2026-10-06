@@ -22,10 +22,10 @@ var projectCloseIcon = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"curren
 var projectHistoryIcon = "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 1 0 3-6.7L3 8\"></path><path d=\"M3 3v5h5\"></path><path d=\"M12 7v5l4 2\"></path></svg>";
 function focusedProjectDocument(html, namespace, slug) {
   var header = "<header class=\"box focused-header\" data-screen-label=\"brand\"><nav class=\"crumb\" id=\"brand-path\" aria-label=\"Breadcrumb\"><a class=\"home-ic\" href=\"/\" aria-label=\"Home\">".concat(focusedHomeIcon, "</a><span class=\"sep\">/</span><a href=\"/").concat(encodeURIComponent(namespace), "\">").concat(escapeHtml(namespace), "</a><span class=\"sep\">/</span><span class=\"here\">").concat(escapeHtml(slug), "</span></nav></header>");
-  return html.replace(/<main class="layout([^"]*)" data-view="standard">/, "<main class=\"layout$1 focused-view\" data-view=\"focused\">").replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
+  return html.replace("<head>", '<head><meta name="resources-workspace" content="true">').replace(/<main class="layout([^"]*)" data-view="standard">/, "<main class=\"layout$1 focused-view\" data-view=\"focused\">").replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
 }
 function embeddedProjectDocument(html) {
-  return html.replace(/<main class="layout([^"]*)" data-view="standard">/, "<main class=\"layout$1 embed-view\" data-view=\"embed\">").replace(/<main class="layout([^"]*) focused-view" data-view="focused">/, "<main class=\"layout$1 embed-view\" data-view=\"embed\">");
+  return html.replace('<meta name="resources-workspace" content="true">', "").replace(/<main class="layout([^"]*)" data-view="standard">/, "<main class=\"layout$1 embed-view\" data-view=\"embed\">").replace(/<main class="layout([^"]*) focused-view" data-view="focused">/, "<main class=\"layout$1 embed-view\" data-view=\"embed\">");
 }
 function namespaceDocument(html, namespace) {
   var crumb = "<nav class=\"box crumb\" id=\"crumb\" aria-label=\"Breadcrumb\"><a class=\"home-ic\" aria-label=\"Home\" href=\"/\">".concat(focusedHomeIcon, "</a><span class=\"sep\">/</span><span class=\"here\">").concat(escapeHtml(namespace.namespace), "</span></nav>");

@@ -47,12 +47,14 @@ const projectHistoryIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="current
 function focusedProjectDocument(html, namespace, slug) {
   const header = `<header class="box focused-header" data-screen-label="brand"><nav class="crumb" id="brand-path" aria-label="Breadcrumb"><a class="home-ic" href="/" aria-label="Home">${focusedHomeIcon}</a><span class="sep">/</span><a href="/${encodeURIComponent(namespace)}">${escapeHtml(namespace)}</a><span class="sep">/</span><span class="here">${escapeHtml(slug)}</span></nav></header>`;
   return html
+    .replace("<head>", '<head><meta name="resources-workspace" content="true">')
     .replace(/<main class="layout([^"]*)" data-view="standard">/, `<main class="layout$1 focused-view" data-view="focused">`)
     .replace(/<header class="box (?:brand|project-identity|focused-header)"[\s\S]*?<\/header>/, header);
 }
 
 function embeddedProjectDocument(html) {
   return html
+    .replace('<meta name="resources-workspace" content="true">', "")
     .replace(/<main class="layout([^"]*)" data-view="standard">/, `<main class="layout$1 embed-view" data-view="embed">`)
     .replace(/<main class="layout([^"]*) focused-view" data-view="focused">/, `<main class="layout$1 embed-view" data-view="embed">`);
 }

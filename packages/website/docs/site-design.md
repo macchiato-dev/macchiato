@@ -45,6 +45,10 @@ styles first paint before any guest starts. Output applications and embeds
 remain responsible for their own colors and typography. Never recolor a game
 or document simply to match the surrounding editor.
 
+A `resources-workspace` head marker supplies the initial palette before the
+streamed layout has arrived. It stops influencing the theme once a layout
+exists, so it cannot leak workspace colors into later client-side navigation.
+
 Check both themes, signed-in and signed-out home, article pages, account menus,
 forms, and small screens when changing the design. In the workspace, check
 typing, selection, undo/redo, search, tabs, pane sizing, menus, and expanded

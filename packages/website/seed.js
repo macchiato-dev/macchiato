@@ -1101,7 +1101,7 @@ html[data-theme="light"] .project-editor__asset-view { --resources-editor-bg: #f
 .project-editor__preview > [data-project-preview][data-preview-runtime="presentation-use"] { box-sizing: border-box; width: 100%; height: 100%; padding: 0; overflow: hidden; }
 .project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] { box-sizing: border-box; display: grid; width: 100%; height: 100%; place-items: center; }
 .project-editor__preview > [data-project-preview][data-preview-runtime="isolated-presentation"] .project-editor__presentation-frame { aspect-ratio: 16 / 10; height: auto; max-height: 100%; }
-html:not([data-theme="light"]) .project-editor__mount .cm-editor { background: #1d2020; }
+html:not([data-theme="light"]) .project-editor__mount .cm-editor { background: var(--resources-editor-bg); }
 .project-editor__mount .cm-scroller { overflow: auto; }
 .project-editor__mount .cm-panels-bottom { max-width: 100%; }
 /* Keep CodeMirror's standard wrapping Find/Replace layout. These controls sit
@@ -2170,7 +2170,7 @@ export function buildResourcesSiteRoutesForRuntime({ runtime = "local", theme = 
       lang: i18n.locale,
       html,
       css: stylesheet,
-      head: headHtml({ runtime: profile.name }),
+      head: (viewForPath(path) === "focused" ? '<meta name="resources-workspace" content="true">\n' : "") + headHtml({ runtime: profile.name }),
       nav,
       transition: { mode: profile.navigation, routePath: path },
     };

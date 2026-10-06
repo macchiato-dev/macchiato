@@ -72,6 +72,10 @@ test("editor surface keeps commands, input, themes and languages in its document
         return route.fulfill({ contentType: "font/woff2", body: await readFile(join(root,
           "examples/resources-website/assets/fonts/space-grotesk-latin.woff2")) });
       }
+      if (url.pathname === "/-/fonts/resourcesco-design/instrument-sans-latin.woff2") {
+        return route.fulfill({ contentType: "font/woff2", body: await readFile(join(website,
+          "assets/fonts/design/instrument-sans-latin.woff2")) });
+      }
       if (url.pathname.endsWith("/machine.js")) return route.fulfill({ body: machine, contentType: "text/javascript" });
       if (url.pathname.endsWith("project-editor-frame.html")) return route.fulfill({ body: shell, contentType: "text/html" });
       if (url.pathname.endsWith("project-editor-quickjs-runtime.wasm")) return route.fulfill({ body: wasm, contentType: "application/wasm" });
@@ -127,7 +131,7 @@ test("editor surface keeps commands, input, themes and languages in its document
   await frame.locator('.cm-search input[name="search"]').fill("return");
   await page.keyboard.press("Enter");
   assert.equal(await frame.locator('.cm-search input[name="search"]').evaluate(node =>
-    getComputedStyle(node).backgroundColor), "rgb(217, 225, 227)");
+    getComputedStyle(node).backgroundColor), "rgb(250, 250, 248)");
   await page.screenshot({ path: join(work, "editor-surface-search.png") });
   await page.keyboard.press("Escape");
   for (const theme of ["dark", "light", "dark", "light"]) {
@@ -136,7 +140,7 @@ test("editor surface keeps commands, input, themes and languages in its document
       surface.call("SetTheme", { theme });
     }, theme);
     assert.equal(await content.evaluate(node => getComputedStyle(node.closest(".cm-editor")).backgroundColor),
-      theme === "dark" ? "rgb(29, 32, 32)" : "rgb(217, 225, 227)");
+      theme === "dark" ? "rgb(30, 29, 27)" : "rgb(250, 250, 248)");
     assert.equal(await page.evaluate(() => surface.call("Inspect").document), edited);
   }
   await page.evaluate(() => surface.call("SetContent", {

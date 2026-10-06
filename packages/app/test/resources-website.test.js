@@ -1260,7 +1260,7 @@ test("saved project output keeps its backing while the editor is still loading",
     await page.addInitScript(({ choice, expected }) => {
       if (window !== window.top) return;
       localStorage.setItem("macchiato-theme", choice);
-      const palette = expected === "light" ? "rgb(219, 228, 255)" : "rgb(23, 34, 110)";
+      const palette = expected === "light" ? "rgb(244, 243, 241)" : "rgb(36, 35, 33)";
       window.paintAudit = { frames: 0, violations: [], frontend: false, editor: false, output: false };
       function sample() {
         const audit = window.paintAudit;
@@ -1391,9 +1391,9 @@ test("Resources project CodeMirror follows repeated explicit and system theme ch
     })),
   });
   // Match the shared --resources-editor-* palette, not CodeMirror One Dark's
-  // default gutter. Resources intentionally uses a slightly darker gutter.
-  const dark = { choice: "dark", theme: "dark", editor: "rgb(29, 32, 32)", gutter: "rgb(25, 28, 28)" };
-  const light = { choice: "light", theme: "light", editor: "rgb(217, 225, 227)", gutter: "rgb(203, 214, 217)" };
+  // default gutter. Resources uses a continuous neutral editing surface.
+  const dark = { choice: "dark", theme: "dark", editor: "rgb(30, 29, 27)", gutter: "rgb(30, 29, 27)" };
+  const light = { choice: "light", theme: "light", editor: "rgb(250, 250, 248)", gutter: "rgb(250, 250, 248)" };
 
   for (const expected of [light, dark, light, dark]) {
     await choose(expected.choice);
@@ -1660,7 +1660,7 @@ test("Resources editor remains usable when browser storage access is denied", { 
     if (!await button.isVisible()) await page.getByLabel("Account menu", { exact: true }).click();
     await button.click();
     assert.equal(await page.locator("html").getAttribute("data-theme"), choice);
-    const expected = choice === "dark" ? "rgb(29, 32, 32)" : "rgb(217, 225, 227)";
+    const expected = choice === "dark" ? "rgb(30, 29, 27)" : "rgb(250, 250, 248)";
     await (await codeDocument(page)).waitForFunction(expected => getComputedStyle(document.querySelector(".cm-editor")).backgroundColor === expected, expected);
   }
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "domcontentloaded" });
@@ -2670,7 +2670,7 @@ test("large project files remain readable without exceeding the editor service b
     assert.equal(bounds.overflow, "auto");
     assert.equal(bounds.fontFamily, "monospace");
     assert.equal(bounds.scrollable, true);
-    assert.equal(bounds.background, colorScheme === "light" ? "rgb(217, 225, 227)" : "rgb(29, 32, 32)");
+    assert.equal(bounds.background, colorScheme === "light" ? "rgb(250, 250, 248)" : "rgb(30, 29, 27)");
     assert.equal(await panel.locator("img").count(), 0, "source markup is text, never active DOM");
     await page.screenshot({ path: resolve(repoRoot, `../macchiato-work/large-source-${colorScheme}-${width}.png`) });
   }
