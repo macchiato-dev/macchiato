@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import {
   getAppConfigRow,
   listAppConfigRows,
@@ -98,6 +98,20 @@ function validateConfig(config) {
       if (!Number.isInteger(declaration.maxBytes) || declaration.maxBytes < 1 || declaration.maxBytes > 16_777_216) {
         throw new Error(`Invalid writable directory byte limit: ${path}`);
       }
+    }
+  }
+  if (config.access.uploadDirectories !== undefined) {
+    if (config.handler !== "directory") throw new Error("Upload grants require a directory app.");
+    assertObject(config.access.uploadDirectories, "access.uploadDirectories");
+    for (const [name, grant] of Object.entries(config.access.uploadDirectories)) {
+      if (!/^[a-z][a-z0-9-]*$/.test(name)) throw new Error("Invalid upload grant name.");
+      assertObject(grant, `access.uploadDirectories.${name}`);
+      if (typeof grant.path !== "string" || !isAbsolute(grant.path)) {
+        throw new Error("Upload grants require an absolute directory path.");
+      }
+      if (!Number.isSafeInteger(grant.maxFileBytes) || grant.maxFileBytes < 1 ||
+          !Number.isSafeInteger(grant.maxBytes) || grant.maxBytes < grant.maxFileBytes ||
+          grant.maxBytes > 1024 * 1024 * 1024) throw new Error("Invalid upload byte limits.");
     }
   }
 }

@@ -81,6 +81,31 @@ apps.packages = {
   dependencies: [],
 };
 
+apps["design-inbox"] = {
+  declaration: {
+    name: "Resources Design Inbox",
+    subdomain: "design-inbox",
+    kind: "private design file intake",
+    description: "Upload Claude Design exports for the resources-edge redesign.",
+    handler: "directory",
+    permissions: {},
+    access: {
+      uploadDirectories: {
+        design: {
+          path: resolve(repoRoot, "../macchiato-work/design-inbox"),
+          maxFileBytes: 250 * 1024 * 1024,
+          maxBytes: 1024 * 1024 * 1024,
+        },
+      },
+    },
+    options: { developmentAuth: true },
+  },
+  setup(db, { subdomain }) {
+    addDirectorySite(db, subdomain, join(repoRoot, "dev/design-inbox"));
+  },
+  dependencies: [],
+};
+
 apps["resources-design"] = {
   declaration: {
     name: "Resources.co Design",

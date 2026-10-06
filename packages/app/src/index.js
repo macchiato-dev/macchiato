@@ -21,6 +21,7 @@ import { declarativeApps, getDeclarativeApp } from "./declarative-apps.js";
 import { initializeAppsIfEmpty, installAppPlugins } from "./app-plugins.js";
 import { fileAppHandler } from "./file-app.js";
 import { directoryWritableFileResponse } from "./directory-file-access.js";
+import { directoryUploadResponse } from "./directory-uploads.js";
 import { nodeResponseHeaders } from "./node-response.js";
 import { createDevelopmentAuth } from "./development-auth.js";
 import { proxyAppHandler } from "./proxy-app.js";
@@ -498,6 +499,8 @@ async function route(request) {
 
   const row = app.handlerName === "directory" ? store.getDirectorySite.get(subdomain) : null;
   if (row) {
+    const uploadResponse = await directoryUploadResponse(request, app, row.directory);
+    if (uploadResponse) return uploadResponse;
     const writableResponse = await directoryWritableFileResponse(request, app, row.directory);
     if (writableResponse) return writableResponse;
     return serveFile(request, row.directory, url.pathname);

@@ -109,6 +109,38 @@ successful exchange, allowing authentication to recover after browser or
 cookie loss. Resetting a key invalidates existing links and cookies for only
 that subdomain.
 
+## Directory upload grants
+
+A `directory` app can declare `access.uploadDirectories`, independently of
+proxy apps. `options.developmentAuth: true` protects its static files and these
+routes through the same gateway authentication used for other app types.
+For example:
+
+```json
+{
+  "handler": "directory",
+  "options": { "developmentAuth": true },
+  "access": {
+    "uploadDirectories": {
+      "design": {
+        "path": "/root/macchiato-work/design-inbox",
+        "maxFileBytes": 262144000,
+        "maxBytes": 1073741824
+      }
+    }
+  }
+}
+```
+
+`GET /-/uploads/design` lists filenames, sizes and upload times.
+`POST /-/uploads/design?name=<encoded-filename>` streams the raw file body.
+Writes require a matching Origin and are create-only, with UUID prefixes to
+avoid overwrites. The gateway enforces per-file and total byte limits while
+streaming, removes partial uploads, and serializes quota accounting. The
+directory must be outside the app's served tree; there is no route to serve
+uploaded content. Undeclared grants get no upload handler. This is an operator
+grant to a trusted local directory, not access to arbitrary request paths.
+
 ## Proxy apps
 
 A `proxy` declaration maps an app subdomain to one HTTP or HTTPS origin. The

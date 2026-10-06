@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Resources · Design inbox</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Resources / Design inbox</p>
+    <h1>Bring your Claude Design files.</h1>
+    <p class="intro">Drop your export here for the resources-edge redesign.</p>
+    <button id="drop" type="button">
+      <span class="symbol" aria-hidden="true">↑</span>
+      <strong>Drop files here</strong>
+      <span>or click to choose files</span>
+    </button>
+    <input id="picker" type="file" multiple hidden>
+    <p class="hint">A ZIP keeps the full export together. Screenshots, source files,
+      fonts, and other assets also work. Up to 250 MiB per file.</p>
+    <p id="status" role="status" aria-live="polite">Ready for your files.</p>
+    <section aria-labelledby="received">
+      <h2 id="received">Received files</h2>
+      <ul id="files"></ul>
+      <p id="empty">Nothing uploaded yet.</p>
+    </section>
+    <footer>Originals stay on this development machine, outside the Git repo.
+      Uploading does not execute files or change the site.</footer>
+  </main>
+  <script type="module" src="./client.js"></script>
+</body>
+</html>
