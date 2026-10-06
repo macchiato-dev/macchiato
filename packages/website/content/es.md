@@ -67,11 +67,11 @@
 - **about.title**: Acerca de - Resources.co
 - **about.crumb**: Acerca de
 - **about.heading**: Acerca de Resources.co
-- **about.p1**: Resources.co hace que el autoalojamiento sea componible. Creamos las piezas —contenedores, componentes y proveedores de uso— para que los equipos ejecuten infraestructura moderna a su manera.
-- **about.p2**: La apuesta es sencilla: ser dueño de tu infraestructura no debería significar reconstruirla desde cero.
+- **about.p1**: Resources.co es un lugar para crear, ejecutar y compartir proyectos web. Mantén el código junto a su resultado, guarda versiones útiles y llévate los archivos contigo.
+- **about.p2**: Estamos construyendo una plataforma web que puedas entender y alojar tú mismo. Las piezas pequeñas y abiertas permiten examinar ese trabajo, en lugar de ocultarlo detrás de un servicio.
 - **about.fit**: Cómo encaja todo
-- **about.fitP1**: Cada pieza está diseñada para alojarse por cuenta propia y combinarse con las demás. El catálogo se genera desde los metadatos de los paquetes, no desde una lista mantenida a mano.
-- **about.fitP2**: Los nombres de paquetes se convierten en rutas públicas; por ejemplo, @macchiato-dev/dom-use aparece como macchiato/dom-use.
+- **about.fitP1**: Las máquinas WebAssembly ejecutan código con límites explícitos de acceso. El editor, el resultado del proyecto y la aplicación pueden evolucionar de forma independiente. Este trabajo sigue en desarrollo; no es una versión de seguridad terminada.
+- **about.fitP2**: Descubre proyectos en Explorar o consulta el catálogo de paquetes en Proyectos. El blog recoge las decisiones de diseño y los experimentos del camino.
 - **social.heading**: Sigue a Resources.co
 - **social.intro**: Novedades del producto y nuevos lanzamientos.
 - **social.x**: X

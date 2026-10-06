@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { putSiteRoute, readRepoProjectMetadata } from "@macchiato-dev/site";
 import { DomUse } from "@macchiato-dev/dom-use";
 import { StyleUse } from "@macchiato-dev/style-use";
+import { putFontAsset } from "@macchiato-dev/font-use";
 import { createSafeTriangle, pointInSafeTriangle, userMenuUseClientPath } from "@macchiato-dev/user-menu-use";
 import { resourcesRuntimeProfile } from "./runtime.js";
 import { resourcesThemeCss } from "./theme.js";
@@ -348,7 +349,7 @@ function sectionsFor(i18n) {
     blocks: [{ h1: t("docs.domUseHeading"), paras: [t("docs.domUseP1"), t("docs.domUseP2")] }],
   },
   "/dashboard": {
-    navKey: "",
+    navKey: "home",
     title: t("dashboard.title"),
     crumb: [{ icon: true, href: "/" }, { label: t("dashboard.heading") }],
     blocks: [{ paras: ["__RESOURCES_ACCOUNT_CONTENT__"] }],
@@ -1479,11 +1480,6 @@ function projectSegmentsForPath(path) {
   });
 }
 
-function brandSegmentsForPath(path) {
-  if (ORGS[path]) return [{ label: path.slice(1), href: "" }];
-  return [];
-}
-
 function viewForPath(path) {
   return path === "/projects/new" || path === "/try" || (/^\/[^/]+\/[^/]+$/.test(path) && path !== "/organizations/new" && !path.startsWith("/blog/") && !path.startsWith("/docs/"))
     ? "focused"
@@ -2128,6 +2124,14 @@ const pointInSafeTriangle = ${pointInSafeTriangle.toString()};
 }
 
 export function seedResourcesSite(db, { subdomain = SUBDOMAIN } = {}) {
+  // The SQLite development profile serves the fonts the edge build embeds.
+  for (const [assetPath, sourceUrl] of [
+    ["instrument-sans-latin.woff2", "https://github.com/Instrument/instrument-sans"],
+    ["jetbrains-mono-latin.woff2", "https://github.com/JetBrains/JetBrainsMono"],
+  ]) putFontAsset(db, {
+    name: "resourcesco-design", assetPath, sourceUrl, provider: "self",
+    content: readFileSync(join(__dirname, "assets", "fonts", "design", assetPath)),
+  });
   for (const route of buildResourcesSiteRoutesForRuntime({ runtime: "browser-use", subdomain, locale: DEFAULT_RESOURCE_LOCALE })) putSiteRoute(db, route);
 }
 

@@ -234,9 +234,8 @@ function dashboardHtml(content, messages) {
   return `<div class="account-dashboard">
     <div class="account-dashboard__header"><div><h1>${message(messages, "dashboard.heading", "Your projects")}</h1><p class="account-dashboard__intro">${message(messages, "dashboard.intro", "Projects and organizations owned by your account.")}</p></div>
       <a class="account-action" href="/projects/new">${message(messages, "account.newProject", "New Project")}</a></div>
-    <div class="create-actions"><a class="account-action account-action--secondary" href="/organizations/new">${message(messages, "account.newOrganization", "New organization")}</a></div>
     <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.projects", "Projects")}</h2></div>${projects}<div class="create-actions"><a class="account-action account-action--secondary" href="/projects">${message(messages, "dashboard.viewAllProjects", "View all projects")}</a></div></section>
-    <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.organizations", "Organizations")}</h2></div>${organizations}</section>
+    <section class="account-section"><div class="account-section__header"><h2>${message(messages, "dashboard.organizations", "Organizations")}</h2><a class="account-action account-action--secondary" href="/organizations/new">${message(messages, "account.newOrganization", "New organization")}</a></div>${organizations}</section>
   </div>`;
 }
 

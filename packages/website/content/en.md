@@ -67,11 +67,11 @@
 - **about.title**: About - Resources.co
 - **about.crumb**: About
 - **about.heading**: About Resources.co
-- **about.p1**: Resources.co is a startup making self-hosting composable. We build the primitives: containers, components, and usage providers, so teams can run modern infrastructure on their own terms.
-- **about.p2**: The bet is simple: owning your stack should not mean rebuilding it from scratch.
+- **about.p1**: Resources.co is a place to build, run, and share web projects. Keep the code beside its running view, save useful versions, and take the files with you.
+- **about.p2**: We are building toward a web stack you can understand and host yourself. Small, open-source pieces make that work inspectable, instead of hiding it behind a service.
 - **about.fit**: How it fits together
-- **about.fitP1**: Every building block is designed to be self-hosted and to compose with the others. The project catalogue is generated from package metadata rather than a hand-maintained list.
-- **about.fitP2**: Package names become public project paths, so @macchiato-dev/dom-use appears as macchiato/dom-use.
+- **about.fitP1**: WebAssembly machines run guest code with explicit boundaries around what it can access. The editor, project output, and surrounding application can evolve independently. This work is still in development, not a finished security release.
+- **about.fitP2**: Explore people's projects in Browse, or look through the package catalogue in Projects. The blog follows the design decisions and experiments along the way.
 - **social.heading**: Follow Resources.co
 - **social.intro**: Product updates and new releases.
 - **social.x**: X

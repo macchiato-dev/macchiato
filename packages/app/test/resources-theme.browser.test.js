@@ -96,11 +96,14 @@ test("appearance is correct before the frontend loads, including document naviga
         const page = await context.newPage();
         const errors = [];
         page.on("pageerror", (error) => errors.push(error.message));
-        async function checkPaint() {
+        async function checkPaint(workspace = false) {
           await page.waitForFunction(() => window.paints.length === 6);
           const paints = await page.evaluate(() => window.paints);
+          const background = workspace
+            ? (expected === "light" ? "#e7ecff" : "#1a1aa2")
+            : (expected === "light" ? "#ffffff" : "#030302");
           assert.ok(paints.every((paint) => paint.theme === expected
-            && paint.background === (expected === "light" ? "#e7ecff" : "#1a1aa2")), JSON.stringify(paints));
+            && paint.background === background), JSON.stringify(paints));
           assert.ok(paints.every(paint => paint.content.every(block =>
             block.opacity === '1' && block.transform === 'none')),
             'server-rendered content must be fully readable at first paint: ' + JSON.stringify(paints));
@@ -122,7 +125,7 @@ test("appearance is correct before the frontend loads, including document naviga
         assert.equal(await page.locator('a[href="/theme-test/theme-fixture"]').count(), 1,
           "the signed-in home renders the fixture project, not the public shell");
         await page.goto("http://theme.test/projects/new");
-        await checkPaint();
+        await checkPaint(true);
         // The server-rendered workspace must already be correctly colored
         // while all guest downloads are still absent. Each spinner belongs
         // to its own pane, rather than obscuring the divider between them.

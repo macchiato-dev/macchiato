@@ -71,7 +71,10 @@ test("exports resources site as static files", async (t) => {
   assert.match(home, /<title>Resources\.co<\/title>/);
   assert.match(home, /<html lang="en">/);
   assert.match(spanishHome, /<html lang="es">/);
-  assert.match(spanishHome, /Infraestructura tuya, compuesta por partes\./);
+  assert.match(spanishHome, /Proyectos web, bajo tu control\./);
+  assert.match(home, /Web projects, under your control\./);
+  assert.match(home, /font-family: 'Instrument Sans'/);
+  assert.doesNotMatch(home, /url\("\/-\/fonts\/resourcesco-design\//);
   assert.match(spanishProject, /Servidor HTTP multiplataforma y registro declarativo/);
   assert.match(spanishProject, /Se publica como @macchiato-dev\/app/);
   assert.doesNotMatch(spanishHome, /<footer[\s\S]*class="language-switcher"/);
