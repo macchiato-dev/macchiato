@@ -7,7 +7,7 @@ fork of the application.
 | Profile | Runtime | Validation and navigation |
 | --- | --- | --- |
 | Local Macchiato | Node + SQLite | Rich browser transitions sanitized by `dom-use`; optional browser QuickJS for the userbar state machine |
-| Bunny edge | Bunny V8 isolate + Storage | Strict build-time validation; one host-owned machine controller with a MicroQuickJS frontend guest; full-document navigation |
+| Bunny edge | Bunny V8 isolate + Storage | Strict build-time validation; one host-owned machine controller with a QuickJS frontend guest; full-document navigation |
 
 The generic `@macchiato-dev/theme-use` module owns safe CSS-token definition,
 merging, and rendering. [`theme.js`](theme.js) is the Resources.co-specific
@@ -65,18 +65,21 @@ mounts CodeMirror in its own iframe and machine. The trusted controller can
 select the direct surface with
 `startResourcesMachineController({ editorFrame: false })`. CodeMirror state,
 extensions, and commands
-run in a dedicated MicroQuickJS WebAssembly runtime with declared heap and stack
+run in a dedicated QuickJS WebAssembly runtime with declared heap and stack
 limits. The host owns only the constrained DOM renderer and filtered input
 bridge, and disposes their listeners, handles, context, and runtime on page
 teardown. The fixed frame shell constructs its bridge in the frame's realm;
 project source remains text edited by the guest, never browser-executed code.
 History and project details stay in the project UI machine, which owns the
 editor and output through controller services. Build the controller and guest artifacts with
-`node packages/website/build-project-editor.js`. The editor artifact currently
-retains the filename `project-editor-quickjs-runtime.wasm`, despite using
-MicroQuickJS. Language bytecode downloads and executes on guest request; the
-initial artifact includes only its small shared atom catalog. See the
-project-editor package's language-loading design.
+`node packages/website/build-project-editor.js`. The runtime is
+`project-editor-quickjs-runtime.wasm`; CodeMirror, project controls, and language
+grammars are separate bytecode downloads, compiled from modern JavaScript
+without Babel lowering. The project controls never load CodeMirror into their
+own context. Language bytecode downloads and executes on guest request.
+Programs use the same QuickJS version as the runtime. Their repeated function
+source strings are omitted from bytecode, but stack locations are retained and
+readable generated JavaScript remains available in the build directory.
 
 The project program is not executed in the editor runtime. Each executable
 output gets a disposable QuickJS context with its own DOM handle

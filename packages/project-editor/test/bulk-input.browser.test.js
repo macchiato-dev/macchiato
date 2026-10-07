@@ -18,7 +18,7 @@ test("bulk input preserves native behavior across the MicroQuickJS boundary", {
   await mkdir(work, { recursive: true });
   const directory = await mkdtemp(join(work, "bulk-input-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const generated = join(root, "packages/website/generated");
+  const generated = join(root, "packages/project-editor/generated");
   // Compare a previous DOM environment without changing the editor, language,
   // document, or input sequence. Production artifacts always use the default.
   const environment = process.env.MACCHIATO_TEST_ENVIRONMENT_FILE || join(generated, "project-editor-runtime.bin");

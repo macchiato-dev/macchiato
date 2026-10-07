@@ -12,7 +12,7 @@ test("native input-pending detection survives the guest boundary", { timeout: 90
   await mkdir(work, { recursive: true });
   const directory = await mkdtemp(resolve(work, "input-pending-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const generated = resolve(root, "packages/website/generated");
+  const generated = resolve(root, "packages/project-editor/generated");
   const suite = resolve(root, "dev/wasm-web-runtimes/examples/microquickjs-suite");
   const fixture = new URL("fixtures/input-pending.js", import.meta.url);
   const source = await readFile(fixture, "utf8");
@@ -23,7 +23,7 @@ test("native input-pending detection survives the guest boundary", { timeout: 90
     `runtime.bin=${resolve(generated, "project-editor-runtime.bin")}`,
     `application.bin=${resolve(directory, "application.bin")}`]);
   const micro = await readFile(resolve(directory, "guest.wasm"));
-  const quick = await readFile(resolve(generated, "project-quickjs-runtime.wasm"));
+  const quick = await readFile(resolve(root, "packages/website/generated/project-quickjs-runtime.wasm"));
   const code = (await build({ stdin: { contents: `
     export { default as Machine } from './dev/wasm-web-machine/src/wasm-web-machine.ts';
     export { QuickJSRuntime } from './dev/wasm-web-runtimes/quickjs/context-runtime.js';

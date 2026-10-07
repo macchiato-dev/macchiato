@@ -41,6 +41,20 @@ QuickJS's native string conversion reduced warm calls to 0.48–0.52 seconds
 does not grant another host capability. Large strings, embedded NUL, Unicode,
 and lone-surrogate replacement are covered by the server-runtime test.
 
+The frontend and project controls now use QuickJS. The editor runtime contains
+the DOM environment, not CodeMirror. Its controller downloads separate trusted
+QuickJS bytecode for the editor core (727 KB), surface integration (1.3 KB),
+and workspace controls (116 KB); the workspace context never loads the core.
+Grammars load only when selected. No application program executes in the
+browser realm. The shipped-artifact test recompiles each program, and the
+browser surface test covers editing, undo/redo, search, theme changes, and
+language changes.
+
+The old MicroQuickJS comparison tests now build their own ignored fixtures in
+`packages/project-editor/generated/`. They no longer consume the website's
+runtime or programs. Their DOM-realm and language-loading checks remain useful
+for that engine, but are not the production site acceptance test.
+
 These are exploratory observations, not completion evidence or Bunny latency
 claims. Final checks need repeated loads, interactive play, editor input and
 undo, theme changes, and the new REST client, with screenshots and errors

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 
-const bootstrap = await readFile(new URL("../project-editor-bootstrap.es5.js", import.meta.url), "utf8");
+const bootstrap = await readFile(new URL("../project-editor-bootstrap.js", import.meta.url), "utf8");
 
 for (const path of ["config", "data.json"]) test(`project owner validates ${path} at the appropriate boundary`, async () => {
   const attributes = new Map(), timers = new Map(), requests = [];
@@ -19,10 +19,12 @@ for (const path of ["config", "data.json"]) test(`project owner validates ${path
   };
   const context = {
     document: { querySelector: () => root, createElement: () => ({}) },
-    load() {},
+    __resourcesStartProjectUi() {},
     __codeEditorCreateLanguageLoader: () => () => {},
     __codeEditorConfigureLimits() {},
-    __wwcServiceCall: () => JSON.stringify({ snapshot, outputId: "existing", deferOutput: true }),
+    __wwcServiceCall: name => JSON.stringify(name === "editor.workspace.initial"
+      ? { snapshot, outputId: "existing", deferOutput: true, editorSurface: true }
+      : { value: null }),
     __wwcPostMessage: text => requests.push(JSON.parse(text)),
     __wwcReportError: message => { throw new Error(message); },
     setTimeout: (callback, delay) => { const id = ++nextTimer; timers.set(id, { callback, delay }); return id; },

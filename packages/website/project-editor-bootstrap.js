@@ -1,20 +1,8 @@
 (function () {
   "use strict";
 
-  // MicroQuickJS's named-call packet dispatches a function but does not send
-  // its return value. Keep the application reply protocol in this bootstrap,
-  // rather than teaching the interpreter about project-editor commands.
-  globalThis.__resourcesEditorCall = function (json) {
-    var request = JSON.parse(json);
-    var value = globalThis[request.name](JSON.stringify(request.value));
-    globalThis.__wwcPostMessage("__wwcResponse:" + (value == null ? "null" : value));
-  };
-
   var root = document.querySelector("[data-project-editor]");
-  if (!root) {
-    if (document.getElementById("editor")) load("surface.bin");
-    return;
-  }
+  if (!root) throw new Error("Project workspace is missing");
   var mount = root.querySelector("[data-project-editor-mount]");
   var snapshotField = root.querySelector("[data-project-snapshot]");
   if (!mount || !snapshotField) throw new Error("Project editor surface is incomplete");
@@ -40,14 +28,7 @@
       return "null";
     };
   } else {
-    var editor = document.createElement("div");
-    editor.id = "editor";
-    mount.replaceChildren(editor);
-    globalThis.__CODE_EDITOR_DEFER_START__ = true;
-    load("editor.bin");
-    globalThis.__codeEditorLoadLanguage = globalThis.__codeEditorCreateLanguageLoader(function (name) {
-      return request("bytecode.load", { name: name }).then(function () { load(name); });
-    });
+    throw new Error("Project workspace requires its own editor surface");
   }
   var initialSnapshot = initialWorkspace.snapshot;
   globalThis.__resourcesProjectWorkspace = function () {
@@ -61,7 +42,7 @@
     if (projectUiLoaded) return;
     projectUiLoaded = true;
     if (activeSnapshot) snapshotField.value = JSON.stringify(activeSnapshot);
-    load("project.bin");
+    globalThis.__resourcesStartProjectUi();
   }
 
   var requests = {};

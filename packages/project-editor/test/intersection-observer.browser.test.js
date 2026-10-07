@@ -38,7 +38,7 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
     await mkdir(work, { recursive: true });
     const directory = await mkdtemp(resolve(work, "intersection-observer-"));
     t.after(() => rm(directory, { recursive: true, force: true }));
-    const generated = resolve(root, "packages/website/generated");
+    const generated = resolve(root, "packages/project-editor/generated");
     const fixture = new URL("fixtures/intersection-observer.js", import.meta.url);
     const source = await readFile(fixture, "utf8");
     let wasm;
@@ -52,7 +52,7 @@ for (const engine of ["native", "microquickjs", "quickjs"]) {
         `runtime.bin=${resolve(generated, "project-editor-runtime.bin")}`, `application.bin=${application}`]);
       wasm = await readFile(resolve(directory, "guest.wasm"));
     } else if (engine === "quickjs") {
-      wasm = await readFile(resolve(generated, "project-quickjs-runtime.wasm"));
+      wasm = await readFile(resolve(root, "packages/website/generated/project-quickjs-runtime.wasm"));
     }
     const code = (await build({ stdin: { contents: `
       export { default as Machine } from './dev/wasm-web-machine/src/wasm-web-machine.ts';

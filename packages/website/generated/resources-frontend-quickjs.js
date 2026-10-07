@@ -1,41 +1,4 @@
 (async function resourcesFrontend() {
-// packages/website/resources-storage-client.js
-function storageRequest(operation, kind, key, value) {
-  const text = JSON.stringify({ operation, kind, key: String(key), value });
-  if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
-  const result = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
-  if (result.error) {
-    const ErrorType = result.error.name === "RangeError" ? RangeError : result.error.name === "TypeError" ? TypeError : Error;
-    const error = new ErrorType(result.error.message);
-    error.name = result.error.name;
-    throw error;
-  }
-  return result.value;
-}
-for (const [kind, area] of [["local", localStorage], ["session", sessionStorage]]) {
-  area.getItem = (key) => storageRequest("get", kind, key);
-  area.setItem = (key, value) => {
-    storageRequest("set", kind, key, String(value));
-  };
-  area.removeItem = (key) => {
-    storageRequest("delete", kind, key);
-  };
-}
-
-// packages/website/resources-frontend-platform.js
-globalThis.__resourcesDatasetGet = function(element, name) {
-  var value = element.getAttribute(name);
-  return value === null ? void 0 : value;
-};
-globalThis.__resourcesDatasetSet = function(element, name, value) {
-  element.setAttribute(name, String(value));
-  return value;
-};
-globalThis.__resourcesDatasetDelete = function(element, name) {
-  element.removeAttribute(name);
-  return true;
-};
-
 // packages/command-palette-use/src/client.js
 var isMac = /Mac|iPhone|iPad|iPod/.test(navigator.platform || navigator.userAgent);
 var shortcut = isMac ? "\u2318 K" : "Ctrl K";
@@ -164,6 +127,29 @@ document.addEventListener("change", (event) => {
   const select = event.target.closest?.("select[data-language-select]");
   if (select?.form) select.form.requestSubmit();
 });
+
+// packages/website/resources-storage-client.js
+function storageRequest(operation, kind, key, value) {
+  const text = JSON.stringify({ operation, kind, key: String(key), value });
+  if (text.length > 2 * 1024 * 1024) throw new RangeError("Storage request exceeds its text limit");
+  const result = JSON.parse(globalThis.__wwcServiceCall("storage.request", text));
+  if (result.error) {
+    const ErrorType = result.error.name === "RangeError" ? RangeError : result.error.name === "TypeError" ? TypeError : Error;
+    const error = new ErrorType(result.error.message);
+    error.name = result.error.name;
+    throw error;
+  }
+  return result.value;
+}
+for (const [kind, area] of [["local", localStorage], ["session", sessionStorage]]) {
+  area.getItem = (key) => storageRequest("get", kind, key);
+  area.setItem = (key, value) => {
+    storageRequest("set", kind, key, String(value));
+  };
+  area.removeItem = (key) => {
+    storageRequest("delete", kind, key);
+  };
+}
 
 // packages/website/project-frontend-services.js
 var pending = /* @__PURE__ */ new Map();

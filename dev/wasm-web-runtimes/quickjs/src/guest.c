@@ -486,6 +486,20 @@ static void receive_host_message(GuestSession *session, uint32_t minimum_length)
         flush_guest_operations(session);
         return;
     }
+    // Trusted application programs may be loaded after the runtime starts.
+    // Compile them with this exact QuickJS version; bytecode is not a format
+    // for accepting untrusted serialized input. Execution stays in this VM.
+    // Four-byte messages belong to callback dispatch, not program loading.
+    if (actual_length > 4 && host_message[0] == 3) {
+        result = JS_ReadObject(context, host_message + 1, actual_length - 1,
+                               JS_READ_OBJ_BYTECODE);
+        if (!JS_IsException(result)) result = JS_EvalFunction(context, result);
+        if (JS_IsException(result)) report(session, result);
+        JS_FreeValue(context, result);
+        drain_jobs(session);
+        flush_guest_operations(session);
+        return;
+    }
     if (actual_length > 1 && host_message[0] == 2
 #ifdef WWC_CANONICAL_HOST
         && actual_length != 4

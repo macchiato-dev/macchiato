@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import test from "node:test";
@@ -18,22 +17,8 @@ test("editor surface keeps commands, input, themes and languages in its document
   const directory = await mkdtemp(join(work, "editor-surface-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const website = join(root, "packages/website");
-  const runtime = join(root, "dev/wasm-web-runtimes/examples/microquickjs-suite");
-  const mqjs = join(runtime, "microquickjs-guest-runtime/microquickjs/mqjs");
-  for (const [name, source] of [["application", "project-editor-bootstrap"], ["surface", "project-editor-surface"]]) {
-    execFileSync(mqjs, ["-m32", "-o", join(directory, name + ".bin"), join(website, source + ".es5.js")]);
-  }
-  // Reuse the shipped interpreter/core, replacing only this experiment's two
-  // bootstraps. No Cargo build or mutable target/ artifact enters the test.
-  execFileSync(process.execPath, [join(runtime, "scripts/stamp-wasm.js"),
-    join(website, "generated/project-editor-quickjs-runtime.wasm"), join(directory, "editor.wasm"),
-    `runtime.bin=${join(website, "generated/project-editor-runtime.bin")}`,
-    `editor.bin=${join(website, "generated/project-editor-core.bin")}`,
-    `project.bin=${join(website, "generated/project-editor-services.bin")}`,
-    `language-atoms.bin=${join(website, "generated/project-editor-language-atoms.bin")}`,
-    `application.bin=${join(directory, "application.bin")}`, `surface.bin=${join(directory, "surface.bin")}`]);
-  const wasm = await readFile(process.env.MACCHIATO_TEST_BUILT_RUNTIME === "1"
-    ? join(website, "generated/project-editor-quickjs-runtime.wasm") : join(directory, "editor.wasm"));
+  // Exercise exactly the shipped runtime and separately loaded programs.
+  const wasm = await readFile(join(website, "generated/project-editor-quickjs-runtime.wasm"));
   const controller = (await build({ entryPoints: [join(website, "project-editor-surface.js")],
     bundle: true, write: false, format: "esm", platform: "browser" })).outputFiles[0].text;
   const devices = (await build({ entryPoints: [join(website, "resources-machine-devices.js")],
@@ -81,6 +66,9 @@ test("editor surface keeps commands, input, themes and languages in its document
       if (url.pathname.endsWith("project-editor-quickjs-runtime.wasm")) return route.fulfill({ body: wasm, contentType: "application/wasm" });
       if (/\/project-editor-language-[a-z]+\.bin$/.test(url.pathname)) {
         languageRequests.push(url.pathname);
+        return route.fulfill({ body: await readFile(join(website, "generated", url.pathname.split("/").at(-1))) });
+      }
+      if (/\/project-editor-(?:core|surface|workspace)\.bin$/.test(url.pathname)) {
         return route.fulfill({ body: await readFile(join(website, "generated", url.pathname.split("/").at(-1))) });
       }
       if (url.pathname === "/") return route.fulfill({ contentType: "text/html", body: `<!doctype html>

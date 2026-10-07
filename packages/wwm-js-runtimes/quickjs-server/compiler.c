@@ -1,6 +1,7 @@
 #include "quickjs.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
   FILE *input, *output;
@@ -11,7 +12,7 @@ int main(int argc, char **argv) {
   JSRuntime *runtime;
   JSContext *context;
   JSValue program;
-  if (argc != 3) return 2;
+  if (argc != 3 && !(argc == 4 && !strcmp(argv[3], "--strip-source"))) return 2;
   input = fopen(argv[1], "rb");
   if (!input || fseek(input, 0, SEEK_END) || (source_size = ftell(input)) < 0 ||
       fseek(input, 0, SEEK_SET)) return 3;
@@ -23,8 +24,11 @@ int main(int argc, char **argv) {
   runtime = JS_NewRuntime();
   context = runtime ? JS_NewContext(runtime) : NULL;
   if (!context) return 5;
+  // Keep line/stack information, but optionally omit repeated function source
+  // strings in shipped UI programs. The readable .js artifact remains beside it.
+  if (argc == 4) JS_SetStripInfo(runtime, JS_STRIP_SOURCE);
   program = JS_Eval(context, source, (size_t)source_size,
-    "server-application.js", JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
+    argv[1], JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY);
   free(source);
   if (JS_IsException(program)) return 6;
   bytecode = JS_WriteObject(context, &bytecode_size, program,

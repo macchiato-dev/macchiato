@@ -15,7 +15,7 @@ for (const engine of ["microquickjs", "quickjs"]) {
     await mkdir(working, { recursive: true });
     const directory = await mkdtemp(resolve(working, "resize-observer-"));
     t.after(() => rm(directory, { recursive: true, force: true }));
-    const generated = resolve(root, "packages/website/generated");
+    const generated = resolve(root, "packages/project-editor/generated");
     const fixture = new URL("fixtures/resize-observer.js", import.meta.url);
     const source = await readFile(fixture, "utf8");
     let wasm;
@@ -28,7 +28,7 @@ for (const engine of ["microquickjs", "quickjs"]) {
         resolve(generated, "project-editor-quickjs-runtime.wasm"), resolve(directory, "guest.wasm"),
         `runtime.bin=${resolve(generated, "project-editor-runtime.bin")}`, `application.bin=${application}`]);
       wasm = await readFile(resolve(directory, "guest.wasm"));
-    } else wasm = await readFile(resolve(generated, "project-quickjs-runtime.wasm"));
+    } else wasm = await readFile(resolve(root, "packages/website/generated/project-quickjs-runtime.wasm"));
     const code = (await build({ stdin: { contents: `
       export { default as Machine } from './dev/wasm-web-machine/src/wasm-web-machine.ts';
       export { QuickJSRuntime } from './dev/wasm-web-runtimes/quickjs/context-runtime.js';

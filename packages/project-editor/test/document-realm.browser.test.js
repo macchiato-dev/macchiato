@@ -16,14 +16,14 @@ test("DOM services belong to the granted document, not the controller realm", as
   const application = resolve(directory, "application.bin"), output = resolve(directory, "realm.wasm");
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", application,
     new URL("fixtures/document-realm.js", import.meta.url).pathname]);
-  let environment = resolve(root, "packages/website/generated/project-editor-runtime.bin");
+  let environment = resolve(root, "packages/project-editor/generated/project-editor-runtime.bin");
   if (process.env.MACCHIATO_TEST_RUNTIME_FILE) {
     environment = resolve(directory, "runtime.bin");
     execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", environment,
       resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
   }
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    process.env.MACCHIATO_TEST_RUNTIME_FILE || resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"), output,
+    process.env.MACCHIATO_TEST_RUNTIME_FILE || resolve(root, "packages/project-editor/generated/project-editor-quickjs-runtime.wasm"), output,
     `runtime.bin=${environment}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);

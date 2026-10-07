@@ -52,7 +52,7 @@ for (const [fixture, expected] of [
   execFileSync(resolve(runtime, "microquickjs/mqjs"), ["-m32", "-o", environment,
     resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    process.env.MACCHIATO_TEST_RUNTIME_FILE || resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"),
+    process.env.MACCHIATO_TEST_RUNTIME_FILE || resolve(root, "packages/project-editor/generated/project-editor-quickjs-runtime.wasm"),
     output, `runtime.bin=${environment}`,
     `application.bin=${application}`, ...extraFiles]);
   const wasm = await readFile(output);

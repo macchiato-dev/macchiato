@@ -1,58 +1,63 @@
-(function (require) {
-  var r = require("@lezer/lr"),
-    e = require("@lezer/highlight"),
-    a = (0, e.styleTags)({
-      String: e.tags.string,
-      Number: e.tags.number,
-      "True False": e.tags.bool,
-      PropertyName: e.tags.propertyName,
-      Null: e.tags.null,
-      ", :": e.tags.separator,
-      "[ ]": e.tags.squareBracket,
-      "{ }": e.tags.brace
-    }),
-    t = r.LRParser.deserialize({
-      version: 14,
-      states: "$bOVQPOOOOQO'#Cb'#CbOnQPO'#CeOvQPO'#ClOOQO'#Cr'#CrQOQPOOOOQO'#Cg'#CgO}QPO'#CfO!SQPO'#CtOOQO,59P,59PO![QPO,59PO!aQPO'#CuOOQO,59W,59WO!iQPO,59WOVQPO,59QOqQPO'#CmO!nQPO,59`OOQO1G.k1G.kOVQPO'#CnO!vQPO,59aOOQO1G.r1G.rOOQO1G.l1G.lOOQO,59X,59XOOQO-E6k-E6kOOQO,59Y,59YOOQO-E6l-E6l",
-      stateData: "#O~OeOS~OQSORSOSSOTSOWQO_ROgPO~OVXOgUO~O^[O~PVO[^O~O]_OVhX~OVaO~O]bO^iX~O^dO~O]_OVha~O]bO^ia~O",
-      goto: "!kjPPPPPPkPPkqwPPPPk{!RPPP!XP!e!hXSOR^bQWQRf_TVQ_Q`WRg`QcZRicQTOQZRQe^RhbRYQR]R",
-      nodeNames: "\u26A0 JsonText True False Null Number String } { Object Property PropertyName : , ] [ Array",
-      maxTerm: 25,
-      nodeProps: [["isolate", -2, 6, 11, ""], ["openedBy", 7, "{", 14, "["], ["closedBy", 8, "}", 15, "]"]],
-      propSources: [a],
-      skippedNodes: [0],
-      repeatNodeCount: 2,
-      tokenData: "(|~RaXY!WYZ!W]^!Wpq!Wrs!]|}$u}!O$z!Q!R%T!R![&c![!]&t!}#O&y#P#Q'O#Y#Z'T#b#c'r#h#i(Z#o#p(r#q#r(w~!]Oe~~!`Wpq!]qr!]rs!xs#O!]#O#P!}#P;'S!];'S;=`$o<%lO!]~!}Og~~#QXrs!]!P!Q!]#O#P!]#U#V!]#Y#Z!]#b#c!]#f#g!]#h#i!]#i#j#m~#pR!Q![#y!c!i#y#T#Z#y~#|R!Q![$V!c!i$V#T#Z$V~$YR!Q![$c!c!i$c#T#Z$c~$fR!Q![!]!c!i!]#T#Z!]~$rP;=`<%l!]~$zO]~~$}Q!Q!R%T!R![&c~%YRT~!O!P%c!g!h%w#X#Y%w~%fP!Q![%i~%nRT~!Q![%i!g!h%w#X#Y%w~%zR{|&T}!O&T!Q![&Z~&WP!Q![&Z~&`PT~!Q![&Z~&hST~!O!P%c!Q![&c!g!h%w#X#Y%w~&yO[~~'OO_~~'TO^~~'WP#T#U'Z~'^P#`#a'a~'dP#g#h'g~'jP#X#Y'm~'rOR~~'uP#i#j'x~'{P#`#a(O~(RP#`#a(U~(ZOS~~(^P#f#g(a~(dP#i#j(g~(jP#X#Y(m~(rOQ~~(wOW~~(|OV~",
-      tokenizers: [0],
-      topRules: {
-        JsonText: [0, 1]
-      },
-      tokenPrec: 0
-    });
-  var O = require("@codemirror/language");
-  var n = O.LRLanguage.define({
-    name: "json",
-    parser: t.configure({
-      props: [O.indentNodeProp.add({
-        Object: (0, O.continuedIndent)({
-          except: /^\s*\}/
-        }),
-        Array: (0, O.continuedIndent)({
-          except: /^\s*\]/
-        })
-      }), O.foldNodeProp.add({
-        "Object Array": O.foldInside
-      })]
-    }),
-    languageData: {
-      closeBrackets: {
-        brackets: ["[", "{", '"']
-      },
-      indentOnInput: /^\s*[\}\]]$/
-    }
-  });
-  function o() {
-    return new O.LanguageSupport(n);
+(function(require) {
+
+// node_modules/@lezer/json/dist/index.js
+var import_lr = require("@lezer/lr");
+var import_highlight = require("@lezer/highlight");
+var jsonHighlighting = (0, import_highlight.styleTags)({
+  String: import_highlight.tags.string,
+  Number: import_highlight.tags.number,
+  "True False": import_highlight.tags.bool,
+  PropertyName: import_highlight.tags.propertyName,
+  Null: import_highlight.tags.null,
+  ", :": import_highlight.tags.separator,
+  "[ ]": import_highlight.tags.squareBracket,
+  "{ }": import_highlight.tags.brace
+});
+var parser = import_lr.LRParser.deserialize({
+  version: 14,
+  states: "$bOVQPOOOOQO'#Cb'#CbOnQPO'#CeOvQPO'#ClOOQO'#Cr'#CrQOQPOOOOQO'#Cg'#CgO}QPO'#CfO!SQPO'#CtOOQO,59P,59PO![QPO,59PO!aQPO'#CuOOQO,59W,59WO!iQPO,59WOVQPO,59QOqQPO'#CmO!nQPO,59`OOQO1G.k1G.kOVQPO'#CnO!vQPO,59aOOQO1G.r1G.rOOQO1G.l1G.lOOQO,59X,59XOOQO-E6k-E6kOOQO,59Y,59YOOQO-E6l-E6l",
+  stateData: "#O~OeOS~OQSORSOSSOTSOWQO_ROgPO~OVXOgUO~O^[O~PVO[^O~O]_OVhX~OVaO~O]bO^iX~O^dO~O]_OVha~O]bO^ia~O",
+  goto: "!kjPPPPPPkPPkqwPPPPk{!RPPP!XP!e!hXSOR^bQWQRf_TVQ_Q`WRg`QcZRicQTOQZRQe^RhbRYQR]R",
+  nodeNames: "\u26A0 JsonText True False Null Number String } { Object Property PropertyName : , ] [ Array",
+  maxTerm: 25,
+  nodeProps: [
+    ["isolate", -2, 6, 11, ""],
+    ["openedBy", 7, "{", 14, "["],
+    ["closedBy", 8, "}", 15, "]"]
+  ],
+  propSources: [jsonHighlighting],
+  skippedNodes: [0],
+  repeatNodeCount: 2,
+  tokenData: "(|~RaXY!WYZ!W]^!Wpq!Wrs!]|}$u}!O$z!Q!R%T!R![&c![!]&t!}#O&y#P#Q'O#Y#Z'T#b#c'r#h#i(Z#o#p(r#q#r(w~!]Oe~~!`Wpq!]qr!]rs!xs#O!]#O#P!}#P;'S!];'S;=`$o<%lO!]~!}Og~~#QXrs!]!P!Q!]#O#P!]#U#V!]#Y#Z!]#b#c!]#f#g!]#h#i!]#i#j#m~#pR!Q![#y!c!i#y#T#Z#y~#|R!Q![$V!c!i$V#T#Z$V~$YR!Q![$c!c!i$c#T#Z$c~$fR!Q![!]!c!i!]#T#Z!]~$rP;=`<%l!]~$zO]~~$}Q!Q!R%T!R![&c~%YRT~!O!P%c!g!h%w#X#Y%w~%fP!Q![%i~%nRT~!Q![%i!g!h%w#X#Y%w~%zR{|&T}!O&T!Q![&Z~&WP!Q![&Z~&`PT~!Q![&Z~&hST~!O!P%c!Q![&c!g!h%w#X#Y%w~&yO[~~'OO_~~'TO^~~'WP#T#U'Z~'^P#`#a'a~'dP#g#h'g~'jP#X#Y'm~'rOR~~'uP#i#j'x~'{P#`#a(O~(RP#`#a(U~(ZOS~~(^P#f#g(a~(dP#i#j(g~(jP#X#Y(m~(rOQ~~(wOW~~(|OV~",
+  tokenizers: [0],
+  topRules: { "JsonText": [0, 1] },
+  tokenPrec: 0
+});
+
+// node_modules/@codemirror/lang-json/dist/index.js
+var import_language = require("@codemirror/language");
+var jsonLanguage = /* @__PURE__ */ import_language.LRLanguage.define({
+  name: "json",
+  parser: /* @__PURE__ */ parser.configure({
+    props: [
+      /* @__PURE__ */ import_language.indentNodeProp.add({
+        Object: /* @__PURE__ */ (0, import_language.continuedIndent)({ except: /^\s*\}/ }),
+        Array: /* @__PURE__ */ (0, import_language.continuedIndent)({ except: /^\s*\]/ })
+      }),
+      /* @__PURE__ */ import_language.foldNodeProp.add({
+        "Object Array": import_language.foldInside
+      })
+    ]
+  }),
+  languageData: {
+    closeBrackets: { brackets: ["[", "{", '"'] },
+    indentOnInput: /^\s*[\}\]]$/
   }
-  globalThis.__codeEditorRegisterLanguage("json", o);
+});
+function json() {
+  return new import_language.LanguageSupport(jsonLanguage);
+}
+
+// json-language.js
+globalThis.__codeEditorRegisterLanguage("json", json);
 })(globalThis.__codeMirrorRequire);

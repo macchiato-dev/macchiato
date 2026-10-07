@@ -20,7 +20,7 @@ test('container styles cannot select siblings of the granted root', async t => {
   execFileSync(resolve(examples, 'microquickjs-suite/microquickjs-guest-runtime/microquickjs/mqjs'),
     ['-m32', '-o', environment, resolve(examples, 'codemirror/generated/microquickjs-runtime.js')]);
   execFileSync(process.execPath, [resolve(examples, 'microquickjs-suite/scripts/stamp-wasm.js'),
-    resolve(root, 'packages/website/generated/project-editor-quickjs-runtime.wasm'), output,
+    resolve(root, 'packages/project-editor/generated/project-editor-quickjs-runtime.wasm'), output,
     `runtime.bin=${environment}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);

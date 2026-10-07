@@ -17,8 +17,8 @@ test('range access checks the subtree between its endpoints', async t => {
   execFileSync(resolve(examples, 'microquickjs-suite/microquickjs-guest-runtime/microquickjs/mqjs'),
     ['-m32', '-o', application, new URL('fixtures/range-scope.js', import.meta.url).pathname]);
   execFileSync(process.execPath, [resolve(examples, 'microquickjs-suite/scripts/stamp-wasm.js'),
-    resolve(root, 'packages/website/generated/project-editor-quickjs-runtime.wasm'), output,
-    `runtime.bin=${resolve(root, 'packages/website/generated/project-editor-runtime.bin')}`,
+    resolve(root, 'packages/project-editor/generated/project-editor-quickjs-runtime.wasm'), output,
+    `runtime.bin=${resolve(root, 'packages/project-editor/generated/project-editor-runtime.bin')}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);
   const host = await build({ entryPoints: [resolve(root, 'dev/wasm-web-machine/src/wasm-web-machine.ts')],

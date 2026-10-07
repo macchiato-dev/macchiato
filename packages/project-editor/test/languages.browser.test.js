@@ -14,7 +14,7 @@ for (const downloaded of [false, true]) test(`the MicroQuickJS editor loads ${do
   t.after(() => rm(directory, { recursive: true, force: true }));
   const examples = resolve(root, "dev/wasm-web-runtimes/examples");
   const runtime = resolve(examples, "microquickjs-suite/microquickjs-guest-runtime");
-  const generated = resolve(root, "packages/website/generated");
+  const generated = resolve(root, "packages/project-editor/generated");
   const application = resolve(directory, "application.bin");
   const applicationSource = resolve(directory, "application.js");
   const fixture = await readFile(new URL("fixtures/language-editor.js", import.meta.url), "utf8");

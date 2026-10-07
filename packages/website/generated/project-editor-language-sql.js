@@ -1,598 +1,724 @@
-function _defineProperties(e, r) { for (var t = 0; t < r.length; t++) { var o = r[t]; o.enumerable = o.enumerable || !1, o.configurable = !0, "value" in o && (o.writable = !0), Object.defineProperty(e, _toPropertyKey(o.key), o); } }
-function _createClass(e, r, t) { return r && _defineProperties(e.prototype, r), t && _defineProperties(e, t), Object.defineProperty(e, "prototype", { writable: !1 }), e; }
-function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
-function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-function _extends() { return _extends = Object.assign ? Object.assign.bind() : function (n) { for (var e = 1; e < arguments.length; e++) { var t = arguments[e]; for (var r in t) ({}).hasOwnProperty.call(t, r) && (n[r] = t[r]); } return n; }, _extends.apply(null, arguments); }
-function _createForOfIteratorHelperLoose(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (t) return (t = t.call(r)).next.bind(t); if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var o = 0; return function () { return o >= r.length ? { done: !0 } : { done: !1, value: r[o++] }; }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
-(function (require) {
-  var d = require("@codemirror/language"),
-    i = require("@lezer/highlight"),
-    S = require("@lezer/lr"),
-    q = require("@codemirror/autocomplete"),
-    se = 36,
-    D = 1,
-    oe = 2,
-    v = 3,
-    P = 4,
-    le = 5,
-    ce = 6,
-    de = 7,
-    me = 8,
-    ue = 9,
-    pe = 10,
-    fe = 11,
-    _e = 12,
-    ge = 13,
-    he = 14,
-    ye = 15,
-    be = 16,
-    ve = 17,
-    Z = 18,
-    ke = 19,
-    K = 20,
-    F = 21,
-    N = 22,
-    xe = 23,
-    Oe = 24;
-  function z(t) {
-    return t >= 65 && t <= 90 || t >= 97 && t <= 122 || t >= 48 && t <= 57;
+(function(require) {
+
+// node_modules/@codemirror/lang-sql/dist/index.js
+var import_language = require("@codemirror/language");
+var import_highlight = require("@lezer/highlight");
+var import_lr = require("@lezer/lr");
+var import_autocomplete = require("@codemirror/autocomplete");
+var whitespace = 36;
+var LineComment = 1;
+var BlockComment = 2;
+var String$1 = 3;
+var Number = 4;
+var Bool = 5;
+var Null = 6;
+var ParenL = 7;
+var ParenR = 8;
+var BraceL = 9;
+var BraceR = 10;
+var BracketL = 11;
+var BracketR = 12;
+var Semi = 13;
+var Dot = 14;
+var Operator = 15;
+var Punctuation = 16;
+var SpecialVar = 17;
+var Identifier = 18;
+var QuotedIdentifier = 19;
+var Keyword = 20;
+var Type = 21;
+var Bits = 22;
+var Bytes = 23;
+var Builtin = 24;
+function isAlpha(ch) {
+  return ch >= 65 && ch <= 90 || ch >= 97 && ch <= 122 || ch >= 48 && ch <= 57;
+}
+function isHexDigit(ch) {
+  return ch >= 48 && ch <= 57 || ch >= 97 && ch <= 102 || ch >= 65 && ch <= 70;
+}
+function readLiteral(input, endQuote, backslashEscapes) {
+  for (let escaped = false; ; ) {
+    if (input.next < 0)
+      return;
+    if (input.next == endQuote && !escaped) {
+      input.advance();
+      return;
+    }
+    escaped = backslashEscapes && !escaped && input.next == 92;
+    input.advance();
   }
-  function we(t) {
-    return t >= 48 && t <= 57 || t >= 97 && t <= 102 || t >= 65 && t <= 70;
-  }
-  function h(t, e, a) {
-    for (var r = !1;;) {
-      if (t.next < 0) return;
-      if (t.next == e && !r) {
-        t.advance();
+}
+function readDoubleDollarLiteral(input, tag) {
+  scan: for (; ; ) {
+    if (input.next < 0)
+      return;
+    if (input.next == 36) {
+      input.advance();
+      for (let i = 0; i < tag.length; i++) {
+        if (input.next != tag.charCodeAt(i))
+          continue scan;
+        input.advance();
+      }
+      if (input.next == 36) {
+        input.advance();
         return;
       }
-      r = a && !r && t.next == 92, t.advance();
+    } else {
+      input.advance();
     }
   }
-  function Qe(t, e) {
-    e: for (;;) {
-      if (t.next < 0) return;
-      if (t.next == 36) {
-        t.advance();
-        for (var a = 0; a < e.length; a++) {
-          if (t.next != e.charCodeAt(a)) continue e;
-          t.advance();
-        }
-        if (t.next == 36) {
-          t.advance();
-          return;
-        }
-      } else t.advance();
+}
+function readPLSQLQuotedLiteral(input, openDelim) {
+  let matchingDelim = "[{<(".indexOf(String.fromCharCode(openDelim));
+  let closeDelim = matchingDelim < 0 ? openDelim : "]}>)".charCodeAt(matchingDelim);
+  for (; ; ) {
+    if (input.next < 0)
+      return;
+    if (input.next == closeDelim && input.peek(1) == 39) {
+      input.advance(2);
+      return;
     }
+    input.advance();
   }
-  function Ce(t, e) {
-    var a = "[{<(".indexOf(String.fromCharCode(e)),
-      r = a < 0 ? e : "]}>)".charCodeAt(a);
-    for (;;) {
-      if (t.next < 0) return;
-      if (t.next == r && t.peek(1) == 39) {
-        t.advance(2);
-        return;
+}
+function readWord(input, result) {
+  for (; ; ) {
+    if (input.next != 95 && !isAlpha(input.next))
+      break;
+    if (result != null)
+      result += String.fromCharCode(input.next);
+    input.advance();
+  }
+  return result;
+}
+function readWordOrQuoted(input) {
+  if (input.next == 39 || input.next == 34 || input.next == 96) {
+    let quote = input.next;
+    input.advance();
+    readLiteral(input, quote, false);
+  } else {
+    readWord(input);
+  }
+}
+function readBits(input, endQuote) {
+  while (input.next == 48 || input.next == 49)
+    input.advance();
+  if (endQuote && input.next == endQuote)
+    input.advance();
+}
+function readNumber(input, sawDot) {
+  for (; ; ) {
+    if (input.next == 46) {
+      if (sawDot)
+        break;
+      sawDot = true;
+    } else if (input.next < 48 || input.next > 57) {
+      break;
+    }
+    input.advance();
+  }
+  if (input.next == 69 || input.next == 101) {
+    input.advance();
+    if (input.next == 43 || input.next == 45)
+      input.advance();
+    while (input.next >= 48 && input.next <= 57)
+      input.advance();
+  }
+}
+function eol(input) {
+  while (!(input.next < 0 || input.next == 10))
+    input.advance();
+}
+function inString(ch, str) {
+  for (let i = 0; i < str.length; i++)
+    if (str.charCodeAt(i) == ch)
+      return true;
+  return false;
+}
+var Space = " 	\r\n";
+function keywords(keywords2, types, builtin) {
+  let result = /* @__PURE__ */ Object.create(null);
+  result["true"] = result["false"] = Bool;
+  result["null"] = result["unknown"] = Null;
+  for (let kw of keywords2.split(" "))
+    if (kw)
+      result[kw] = Keyword;
+  for (let tp of types.split(" "))
+    if (tp)
+      result[tp] = Type;
+  for (let kw of (builtin || "").split(" "))
+    if (kw)
+      result[kw] = Builtin;
+  return result;
+}
+var SQLTypes = "array binary bit boolean char character clob date decimal double float int integer interval large national nchar nclob numeric object precision real smallint time timestamp varchar varying ";
+var SQLKeywords = "absolute action add after all allocate alter and any are as asc assertion at authorization before begin between both breadth by call cascade cascaded case cast catalog check close collate collation column commit condition connect connection constraint constraints constructor continue corresponding count create cross cube current current_date current_default_transform_group current_transform_group_for_type current_path current_role current_time current_timestamp current_user cursor cycle data day deallocate declare default deferrable deferred delete depth deref desc describe descriptor deterministic diagnostics disconnect distinct do domain drop dynamic each else elseif end end-exec equals escape except exception exec execute exists exit external fetch first for foreign found from free full function general get global go goto grant group grouping handle having hold hour identity if immediate in indicator initially inner inout input insert intersect into is isolation join key language last lateral leading leave left level like limit local localtime localtimestamp locator loop map match method minute modifies module month names natural nesting new next no none not of old on only open option or order ordinality out outer output overlaps pad parameter partial path prepare preserve primary prior privileges procedure public read reads recursive redo ref references referencing relative release repeat resignal restrict result return returns revoke right role rollback rollup routine row rows savepoint schema scroll search second section select session session_user set sets signal similar size some space specific specifictype sql sqlexception sqlstate sqlwarning start state static system_user table temporary then timezone_hour timezone_minute to trailing transaction translation treat trigger under undo union unique unnest until update usage user using value values view when whenever where while with without work write year zone ";
+var defaults = {
+  backslashEscapes: false,
+  hashComments: false,
+  spaceAfterDashes: false,
+  slashComments: false,
+  doubleQuotedStrings: false,
+  doubleDollarQuotedStrings: false,
+  unquotedBitLiterals: false,
+  treatBitsAsBytes: false,
+  charSetCasts: false,
+  plsqlQuotingMechanism: false,
+  operatorChars: "*+-%<>!=&|~^/",
+  specialVar: "?",
+  identifierQuotes: '"',
+  caseInsensitiveIdentifiers: false,
+  words: /* @__PURE__ */ keywords(SQLKeywords, SQLTypes)
+};
+function dialect(spec, kws, types, builtin) {
+  let dialect2 = {};
+  for (let prop in defaults)
+    dialect2[prop] = (spec.hasOwnProperty(prop) ? spec : defaults)[prop];
+  if (kws)
+    dialect2.words = keywords(kws, types || "", builtin);
+  return dialect2;
+}
+function tokensFor(d) {
+  return new import_lr.ExternalTokenizer((input) => {
+    var _a;
+    let { next } = input;
+    input.advance();
+    if (inString(next, Space)) {
+      while (inString(input.next, Space))
+        input.advance();
+      input.acceptToken(whitespace);
+    } else if (next == 36 && d.doubleDollarQuotedStrings) {
+      let tag = readWord(input, "");
+      if (input.next == 36) {
+        input.advance();
+        readDoubleDollarLiteral(input, tag);
+        input.acceptToken(String$1);
       }
-      t.advance();
-    }
-  }
-  function j(t, e) {
-    for (; !(t.next != 95 && !z(t.next));) e != null && (e += String.fromCharCode(t.next)), t.advance();
-    return e;
-  }
-  function Se(t) {
-    if (t.next == 39 || t.next == 34 || t.next == 96) {
-      var e = t.next;
-      t.advance(), h(t, e, !1);
-    } else j(t);
-  }
-  function V(t, e) {
-    for (; t.next == 48 || t.next == 49;) t.advance();
-    e && t.next == e && t.advance();
-  }
-  function $(t, e) {
-    for (;;) {
-      if (t.next == 46) {
-        if (e) break;
-        e = !0;
-      } else if (t.next < 48 || t.next > 57) break;
-      t.advance();
-    }
-    if (t.next == 69 || t.next == 101) for (t.advance(), (t.next == 43 || t.next == 45) && t.advance(); t.next >= 48 && t.next <= 57;) t.advance();
-  }
-  function A(t) {
-    for (; !(t.next < 0 || t.next == 10);) t.advance();
-  }
-  function g(t, e) {
-    for (var a = 0; a < e.length; a++) if (e.charCodeAt(a) == t) return !0;
-    return !1;
-  }
-  var T = " \t\r\n";
-  function G(t, e, a) {
-    var r = Object.create(null);
-    r.true = r.false = le, r.null = r.unknown = ce;
-    for (var _iterator = _createForOfIteratorHelperLoose(t.split(" ")), _step; !(_step = _iterator()).done;) {
-      var n = _step.value;
-      n && (r[n] = K);
-    }
-    for (var _iterator2 = _createForOfIteratorHelperLoose(e.split(" ")), _step2; !(_step2 = _iterator2()).done;) {
-      var _n = _step2.value;
-      _n && (r[_n] = F);
-    }
-    for (var _iterator3 = _createForOfIteratorHelperLoose((a || "").split(" ")), _step3; !(_step3 = _iterator3()).done;) {
-      var _n2 = _step3.value;
-      _n2 && (r[_n2] = Oe);
-    }
-    return r;
-  }
-  var y = "array binary bit boolean char character clob date decimal double float int integer interval large national nchar nclob numeric object precision real smallint time timestamp varchar varying ",
-    b = "absolute action add after all allocate alter and any are as asc assertion at authorization before begin between both breadth by call cascade cascaded case cast catalog check close collate collation column commit condition connect connection constraint constraints constructor continue corresponding count create cross cube current current_date current_default_transform_group current_transform_group_for_type current_path current_role current_time current_timestamp current_user cursor cycle data day deallocate declare default deferrable deferred delete depth deref desc describe descriptor deterministic diagnostics disconnect distinct do domain drop dynamic each else elseif end end-exec equals escape except exception exec execute exists exit external fetch first for foreign found from free full function general get global go goto grant group grouping handle having hold hour identity if immediate in indicator initially inner inout input insert intersect into is isolation join key language last lateral leading leave left level like limit local localtime localtimestamp locator loop map match method minute modifies module month names natural nesting new next no none not of old on only open option or order ordinality out outer output overlaps pad parameter partial path prepare preserve primary prior privileges procedure public read reads recursive redo ref references referencing relative release repeat resignal restrict result return returns revoke right role rollback rollup routine row rows savepoint schema scroll search second section select session session_user set sets signal similar size some space specific specifictype sql sqlexception sqlstate sqlwarning start state static system_user table temporary then timezone_hour timezone_minute to trailing transaction translation treat trigger under undo union unique unnest until update usage user using value values view when whenever where while with without work write year zone ",
-    U = {
-      backslashEscapes: !1,
-      hashComments: !1,
-      spaceAfterDashes: !1,
-      slashComments: !1,
-      doubleQuotedStrings: !1,
-      doubleDollarQuotedStrings: !1,
-      unquotedBitLiterals: !1,
-      treatBitsAsBytes: !1,
-      charSetCasts: !1,
-      plsqlQuotingMechanism: !1,
-      operatorChars: "*+-%<>!=&|~^/",
-      specialVar: "?",
-      identifierQuotes: '"',
-      caseInsensitiveIdentifiers: !1,
-      words: G(b, y)
-    };
-  function qe(t, e, a, r) {
-    var n = {};
-    for (var s in U) n[s] = (t.hasOwnProperty(s) ? t : U)[s];
-    return e && (n.words = G(e, a || "", r)), n;
-  }
-  function Y(t) {
-    return new S.ExternalTokenizer(function (e) {
-      var a;
-      var r = e.next;
-      if (e.advance(), g(r, T)) {
-        for (; g(e.next, T);) e.advance();
-        e.acceptToken(se);
-      } else if (r == 36 && t.doubleDollarQuotedStrings) {
-        var n = j(e, "");
-        e.next == 36 && (e.advance(), Qe(e, n), e.acceptToken(v));
-      } else if (r == 39 || r == 34 && t.doubleQuotedStrings) h(e, r, t.backslashEscapes), e.acceptToken(v);else if (r == 35 && t.hashComments || r == 47 && e.next == 47 && t.slashComments) A(e), e.acceptToken(D);else if (r == 45 && e.next == 45 && (!t.spaceAfterDashes || e.peek(1) == 32)) A(e), e.acceptToken(D);else if (r == 47 && e.next == 42) {
-        e.advance();
-        for (var _n3 = 1;;) {
-          var s = e.next;
-          if (e.next < 0) break;
-          if (e.advance(), s == 42 && e.next == 47) {
-            if (_n3--, e.advance(), !_n3) break;
-          } else s == 47 && e.next == 42 && (_n3++, e.advance());
+    } else if (next == 39 || next == 34 && d.doubleQuotedStrings) {
+      readLiteral(input, next, d.backslashEscapes);
+      input.acceptToken(String$1);
+    } else if (next == 35 && d.hashComments || next == 47 && input.next == 47 && d.slashComments) {
+      eol(input);
+      input.acceptToken(LineComment);
+    } else if (next == 45 && input.next == 45 && (!d.spaceAfterDashes || input.peek(1) == 32)) {
+      eol(input);
+      input.acceptToken(LineComment);
+    } else if (next == 47 && input.next == 42) {
+      input.advance();
+      for (let depth = 1; ; ) {
+        let cur = input.next;
+        if (input.next < 0)
+          break;
+        input.advance();
+        if (cur == 42 && input.next == 47) {
+          depth--;
+          input.advance();
+          if (!depth)
+            break;
+        } else if (cur == 47 && input.next == 42) {
+          depth++;
+          input.advance();
         }
-        e.acceptToken(oe);
-      } else if ((r == 101 || r == 69) && e.next == 39) e.advance(), h(e, 39, !0), e.acceptToken(v);else if ((r == 110 || r == 78) && e.next == 39 && t.charSetCasts) e.advance(), h(e, 39, t.backslashEscapes), e.acceptToken(v);else if (r == 95 && t.charSetCasts) for (var _n4 = 0;; _n4++) {
-        if (e.next == 39 && _n4 > 1) {
-          e.advance(), h(e, 39, t.backslashEscapes), e.acceptToken(v);
+      }
+      input.acceptToken(BlockComment);
+    } else if ((next == 101 || next == 69) && input.next == 39) {
+      input.advance();
+      readLiteral(input, 39, true);
+      input.acceptToken(String$1);
+    } else if ((next == 110 || next == 78) && input.next == 39 && d.charSetCasts) {
+      input.advance();
+      readLiteral(input, 39, d.backslashEscapes);
+      input.acceptToken(String$1);
+    } else if (next == 95 && d.charSetCasts) {
+      for (let i = 0; ; i++) {
+        if (input.next == 39 && i > 1) {
+          input.advance();
+          readLiteral(input, 39, d.backslashEscapes);
+          input.acceptToken(String$1);
           break;
         }
-        if (!z(e.next)) break;
-        e.advance();
-      } else if (t.plsqlQuotingMechanism && (r == 113 || r == 81) && e.next == 39 && e.peek(1) > 0 && !g(e.peek(1), T)) {
-        var _n5 = e.peek(1);
-        e.advance(2), Ce(e, _n5), e.acceptToken(v);
-      } else if (g(r, t.identifierQuotes)) {
-        var _n6 = r == 91 ? 93 : r;
-        h(e, _n6, !1), e.acceptToken(ke);
-      } else if (r == 40) e.acceptToken(de);else if (r == 41) e.acceptToken(me);else if (r == 123) e.acceptToken(ue);else if (r == 125) e.acceptToken(pe);else if (r == 91) e.acceptToken(fe);else if (r == 93) e.acceptToken(_e);else if (r == 59) e.acceptToken(ge);else if (t.unquotedBitLiterals && r == 48 && e.next == 98) e.advance(), V(e), e.acceptToken(N);else if ((r == 98 || r == 66) && (e.next == 39 || e.next == 34)) {
-        var _n7 = e.next;
-        e.advance(), t.treatBitsAsBytes ? (h(e, _n7, t.backslashEscapes), e.acceptToken(xe)) : (V(e, _n7), e.acceptToken(N));
-      } else if (r == 48 && (e.next == 120 || e.next == 88) || (r == 120 || r == 88) && e.next == 39) {
-        var _n8 = e.next == 39;
-        for (e.advance(); we(e.next);) e.advance();
-        _n8 && e.next == 39 && e.advance(), e.acceptToken(P);
-      } else if (r == 46 && e.next >= 48 && e.next <= 57) $(e, !0), e.acceptToken(P);else if (r == 46) e.acceptToken(he);else if (r >= 48 && r <= 57) $(e, !1), e.acceptToken(P);else if (g(r, t.operatorChars)) {
-        for (; g(e.next, t.operatorChars);) e.advance();
-        e.acceptToken(ye);
-      } else if (g(r, t.specialVar)) e.next == r && e.advance(), Se(e), e.acceptToken(ve);else if (r == 58 || r == 44) e.acceptToken(be);else if (z(r)) {
-        var _n9 = j(e, String.fromCharCode(r));
-        e.acceptToken(e.next == 46 || e.peek(-_n9.length - 1) == 46 ? Z : (a = t.words[_n9.toLowerCase()]) !== null && a !== void 0 ? a : Z);
+        if (!isAlpha(input.next))
+          break;
+        input.advance();
       }
-    });
-  }
-  var H = Y(U),
-    Pe = S.LRParser.deserialize({
-      version: 14,
-      states: "%vQ]QQOOO#wQRO'#DSO$OQQO'#CwO%eQQO'#CxO%lQQO'#CyO%sQQO'#CzOOQQ'#DS'#DSOOQQ'#C}'#C}O'UQRO'#C{OOQQ'#Cv'#CvOOQQ'#C|'#C|Q]QQOOQOQQOOO'`QQO'#DOO(xQRO,59cO)PQQO,59cO)UQQO'#DSOOQQ,59d,59dO)cQQO,59dOOQQ,59e,59eO)jQQO,59eOOQQ,59f,59fO)qQQO,59fOOQQ-E6{-E6{OOQQ,59b,59bOOQQ-E6z-E6zOOQQ,59j,59jOOQQ-E6|-E6|O+VQRO1G.}O+^QQO,59cOOQQ1G/O1G/OOOQQ1G/P1G/POOQQ1G/Q1G/QP+kQQO'#C}O+rQQO1G.}O)PQQO,59cO,PQQO'#Cw",
-      stateData: ",[~OtOSPOSQOS~ORUOSUOTUOUUOVROXSOZTO]XO^QO_UO`UOaPObPOcPOdUOeUOfUOgUOhUO~O^]ORvXSvXTvXUvXVvXXvXZvX]vX_vX`vXavXbvXcvXdvXevXfvXgvXhvX~OsvX~P!jOa_Ob_Oc_O~ORUOSUOTUOUUOVROXSOZTO^tO_UO`UOa`Ob`Oc`OdUOeUOfUOgUOhUO~OWaO~P$ZOYcO~P$ZO[eO~P$ZORUOSUOTUOUUOVROXSOZTO^QO_UO`UOaPObPOcPOdUOeUOfUOgUOhUO~O]hOsoX~P%zOajObjOcjO~O^]ORkaSkaTkaUkaVkaXkaZka]ka_ka`kaakabkackadkaekafkagkahka~Oska~P'kO^]O~OWvXYvX[vX~P!jOWnO~P$ZOYoO~P$ZO[pO~P$ZO^]ORkiSkiTkiUkiVkiXkiZki]ki_ki`kiakibkickidkiekifkigkihki~Oski~P)xOWkaYka[ka~P'kO]hO~P$ZOWkiYki[ki~P)xOasObsOcsO~O",
-      goto: "#hwPPPPPPPPPPPPPPPPPPPPPPPPPPx||||!Y!^!d!xPPP#[TYOZeUORSTWZbdfqT[OZQZORiZSWOZQbRQdSQfTZgWbdfqQ^PWk^lmrQl_Qm`RrseVORSTWZbdfq",
-      nodeNames: "\u26A0 LineComment BlockComment String Number Bool Null ( ) { } [ ] ; . Operator Punctuation SpecialVar Identifier QuotedIdentifier Keyword Type Bits Bytes Builtin Script Statement CompositeIdentifier Parens Braces Brackets Statement",
-      maxTerm: 38,
-      nodeProps: [["isolate", -4, 1, 2, 3, 19, ""]],
-      skippedNodes: [0, 1, 2],
-      repeatNodeCount: 3,
-      tokenData: "RORO",
-      tokenizers: [0, H],
-      topRules: {
-        Script: [0, 25]
-      },
-      tokenPrec: 0
-    });
-  function B(t) {
-    var e = t.cursor().moveTo(t.from, -1);
-    for (; /Comment/.test(e.name);) e.moveTo(e.from, -1);
-    return e.node;
-  }
-  function O(t, e) {
-    var a = t.sliceString(e.from, e.to),
-      r = /^([`'"\[])(.*)([`'"\]])$/.exec(a);
-    return r ? r[2] : a;
-  }
-  function C(t) {
-    return t && (t.name == "Identifier" || t.name == "QuotedIdentifier");
-  }
-  function Te(t, e) {
-    if (e.name == "CompositeIdentifier") {
-      var a = [];
-      for (var r = e.firstChild; r; r = r.nextSibling) C(r) && a.push(O(t, r));
-      return a;
+    } else if (d.plsqlQuotingMechanism && (next == 113 || next == 81) && input.next == 39 && input.peek(1) > 0 && !inString(input.peek(1), Space)) {
+      let openDelim = input.peek(1);
+      input.advance(2);
+      readPLSQLQuotedLiteral(input, openDelim);
+      input.acceptToken(String$1);
+    } else if (inString(next, d.identifierQuotes)) {
+      const endQuote = next == 91 ? 93 : next;
+      readLiteral(input, endQuote, false);
+      input.acceptToken(QuotedIdentifier);
+    } else if (next == 40) {
+      input.acceptToken(ParenL);
+    } else if (next == 41) {
+      input.acceptToken(ParenR);
+    } else if (next == 123) {
+      input.acceptToken(BraceL);
+    } else if (next == 125) {
+      input.acceptToken(BraceR);
+    } else if (next == 91) {
+      input.acceptToken(BracketL);
+    } else if (next == 93) {
+      input.acceptToken(BracketR);
+    } else if (next == 59) {
+      input.acceptToken(Semi);
+    } else if (d.unquotedBitLiterals && next == 48 && input.next == 98) {
+      input.advance();
+      readBits(input);
+      input.acceptToken(Bits);
+    } else if ((next == 98 || next == 66) && (input.next == 39 || input.next == 34)) {
+      const quoteStyle = input.next;
+      input.advance();
+      if (d.treatBitsAsBytes) {
+        readLiteral(input, quoteStyle, d.backslashEscapes);
+        input.acceptToken(Bytes);
+      } else {
+        readBits(input, quoteStyle);
+        input.acceptToken(Bits);
+      }
+    } else if (next == 48 && (input.next == 120 || input.next == 88) || (next == 120 || next == 88) && input.next == 39) {
+      let quoted = input.next == 39;
+      input.advance();
+      while (isHexDigit(input.next))
+        input.advance();
+      if (quoted && input.next == 39)
+        input.advance();
+      input.acceptToken(Number);
+    } else if (next == 46 && input.next >= 48 && input.next <= 57) {
+      readNumber(input, true);
+      input.acceptToken(Number);
+    } else if (next == 46) {
+      input.acceptToken(Dot);
+    } else if (next >= 48 && next <= 57) {
+      readNumber(input, false);
+      input.acceptToken(Number);
+    } else if (inString(next, d.operatorChars)) {
+      while (inString(input.next, d.operatorChars))
+        input.advance();
+      input.acceptToken(Operator);
+    } else if (inString(next, d.specialVar)) {
+      if (input.next == next)
+        input.advance();
+      readWordOrQuoted(input);
+      input.acceptToken(SpecialVar);
+    } else if (next == 58 || next == 44) {
+      input.acceptToken(Punctuation);
+    } else if (isAlpha(next)) {
+      let word = readWord(input, String.fromCharCode(next));
+      input.acceptToken(input.next == 46 || input.peek(-word.length - 1) == 46 ? Identifier : (_a = d.words[word.toLowerCase()]) !== null && _a !== void 0 ? _a : Identifier);
     }
-    return [O(t, e)];
+  });
+}
+var tokens = /* @__PURE__ */ tokensFor(defaults);
+var parser$1 = /* @__PURE__ */ import_lr.LRParser.deserialize({
+  version: 14,
+  states: "%vQ]QQOOO#wQRO'#DSO$OQQO'#CwO%eQQO'#CxO%lQQO'#CyO%sQQO'#CzOOQQ'#DS'#DSOOQQ'#C}'#C}O'UQRO'#C{OOQQ'#Cv'#CvOOQQ'#C|'#C|Q]QQOOQOQQOOO'`QQO'#DOO(xQRO,59cO)PQQO,59cO)UQQO'#DSOOQQ,59d,59dO)cQQO,59dOOQQ,59e,59eO)jQQO,59eOOQQ,59f,59fO)qQQO,59fOOQQ-E6{-E6{OOQQ,59b,59bOOQQ-E6z-E6zOOQQ,59j,59jOOQQ-E6|-E6|O+VQRO1G.}O+^QQO,59cOOQQ1G/O1G/OOOQQ1G/P1G/POOQQ1G/Q1G/QP+kQQO'#C}O+rQQO1G.}O)PQQO,59cO,PQQO'#Cw",
+  stateData: ",[~OtOSPOSQOS~ORUOSUOTUOUUOVROXSOZTO]XO^QO_UO`UOaPObPOcPOdUOeUOfUOgUOhUO~O^]ORvXSvXTvXUvXVvXXvXZvX]vX_vX`vXavXbvXcvXdvXevXfvXgvXhvX~OsvX~P!jOa_Ob_Oc_O~ORUOSUOTUOUUOVROXSOZTO^tO_UO`UOa`Ob`Oc`OdUOeUOfUOgUOhUO~OWaO~P$ZOYcO~P$ZO[eO~P$ZORUOSUOTUOUUOVROXSOZTO^QO_UO`UOaPObPOcPOdUOeUOfUOgUOhUO~O]hOsoX~P%zOajObjOcjO~O^]ORkaSkaTkaUkaVkaXkaZka]ka_ka`kaakabkackadkaekafkagkahka~Oska~P'kO^]O~OWvXYvX[vX~P!jOWnO~P$ZOYoO~P$ZO[pO~P$ZO^]ORkiSkiTkiUkiVkiXkiZki]ki_ki`kiakibkickidkiekifkigkihki~Oski~P)xOWkaYka[ka~P'kO]hO~P$ZOWkiYki[ki~P)xOasObsOcsO~O",
+  goto: "#hwPPPPPPPPPPPPPPPPPPPPPPPPPPx||||!Y!^!d!xPPP#[TYOZeUORSTWZbdfqT[OZQZORiZSWOZQbRQdSQfTZgWbdfqQ^PWk^lmrQl_Qm`RrseVORSTWZbdfq",
+  nodeNames: "\u26A0 LineComment BlockComment String Number Bool Null ( ) { } [ ] ; . Operator Punctuation SpecialVar Identifier QuotedIdentifier Keyword Type Bits Bytes Builtin Script Statement CompositeIdentifier Parens Braces Brackets Statement",
+  maxTerm: 38,
+  nodeProps: [
+    ["isolate", -4, 1, 2, 3, 19, ""]
+  ],
+  skippedNodes: [0, 1, 2],
+  repeatNodeCount: 3,
+  tokenData: "RORO",
+  tokenizers: [0, tokens],
+  topRules: { "Script": [0, 25] },
+  tokenPrec: 0
+});
+function tokenBefore(tree) {
+  let cursor = tree.cursor().moveTo(tree.from, -1);
+  while (/Comment/.test(cursor.name))
+    cursor.moveTo(cursor.from, -1);
+  return cursor.node;
+}
+function idName(doc, node) {
+  let text = doc.sliceString(node.from, node.to);
+  let quoted = /^([`'"\[])(.*)([`'"\]])$/.exec(text);
+  return quoted ? quoted[2] : text;
+}
+function plainID(node) {
+  return node && (node.name == "Identifier" || node.name == "QuotedIdentifier");
+}
+function pathFor(doc, id) {
+  if (id.name == "CompositeIdentifier") {
+    let path = [];
+    for (let ch = id.firstChild; ch; ch = ch.nextSibling)
+      if (plainID(ch))
+        path.push(idName(doc, ch));
+    return path;
   }
-  function E(t, e) {
-    for (var a = [];;) {
-      if (!e || e.name != ".") return a;
-      var r = B(e);
-      if (!C(r)) return a;
-      a.unshift(O(t, r)), e = B(r);
-    }
+  return [idName(doc, id)];
+}
+function parentsFor(doc, node) {
+  for (let path = []; ; ) {
+    if (!node || node.name != ".")
+      return path;
+    let name = tokenBefore(node);
+    if (!plainID(name))
+      return path;
+    path.unshift(idName(doc, name));
+    node = tokenBefore(name);
   }
-  function ze(t, e) {
-    var a = (0, d.syntaxTree)(t).resolveInner(e, -1),
-      r = Ue(t.doc, a);
-    return a.name == "Identifier" || a.name == "QuotedIdentifier" || a.name == "Keyword" ? {
-      from: a.from,
-      quoted: a.name == "QuotedIdentifier" ? t.doc.sliceString(a.from, a.from + 1) : null,
-      parents: E(t.doc, B(a)),
-      aliases: r
-    } : a.name == "." ? {
-      from: e,
-      quoted: null,
-      parents: E(t.doc, a),
-      aliases: r
-    } : {
-      from: e,
-      quoted: null,
-      parents: [],
-      empty: !0,
-      aliases: r
-    };
-  }
-  var je = new Set("where group having order union intersect except all distinct limit offset fetch for".split(" "));
-  function Ue(t, e) {
-    var a;
-    for (var n = e; !a; n = n.parent) {
-      if (!n) return null;
-      n.name == "Statement" && (a = n);
-    }
-    var r = null;
-    for (var _n0 = a.firstChild, s = !1, c = null; _n0; _n0 = _n0.nextSibling) {
-      var l = _n0.name == "Keyword" ? t.sliceString(_n0.from, _n0.to).toLowerCase() : null,
-        o = null;
-      if (!s) s = l == "from";else if (l == "as" && c && C(_n0.nextSibling)) o = O(t, _n0.nextSibling);else {
-        if (l && je.has(l)) break;
-        c && C(_n0) && (o = O(t, _n0));
-      }
-      o && (r || (r = Object.create(null)), r[o] = Te(t, c)), c = /Identifier$/.test(_n0.name) ? _n0 : null;
-    }
-    return r;
-  }
-  function Be(t, e, a) {
-    return a.map(function (r) {
-      return _extends({}, r, {
-        label: r.label[0] == t ? r.label : t + r.label + e,
-        apply: void 0
-      });
-    });
-  }
-  var Le = /^\w*$/,
-    Xe = /^[`'"\[]?\w*[`'"\]]?$/;
-  function W(t) {
-    return t.self && typeof t.self.label == "string";
-  }
-  var L = function () {
-    function t(e, a) {
-      this.idQuote = e, this.idCaseInsensitive = a, this.list = [], this.children = void 0;
-    }
-    var _proto = t.prototype;
-    _proto.child = function child(e) {
-      var a = this.children || (this.children = Object.create(null)),
-        r = a[e];
-      return r || (e && !this.list.some(function (n) {
-        return n.label == e;
-      }) && this.list.push(M(e, "type", this.idQuote, this.idCaseInsensitive)), a[e] = new t(this.idQuote, this.idCaseInsensitive));
-    };
-    _proto.maybeChild = function maybeChild(e) {
-      return this.children ? this.children[e] : null;
-    };
-    _proto.addCompletion = function addCompletion(e) {
-      var a = this.list.findIndex(function (r) {
-        return r.label == e.label;
-      });
-      a > -1 ? this.list[a] = e : this.list.push(e);
-    };
-    _proto.addCompletions = function addCompletions(e) {
-      for (var _iterator4 = _createForOfIteratorHelperLoose(e), _step4; !(_step4 = _iterator4()).done;) {
-        var a = _step4.value;
-        this.addCompletion(typeof a == "string" ? M(a, "property", this.idQuote, this.idCaseInsensitive) : a);
-      }
-    };
-    _proto.addNamespace = function addNamespace(e) {
-      Array.isArray(e) ? this.addCompletions(e) : W(e) ? this.addNamespace(e.children) : this.addNamespaceObject(e);
-    };
-    _proto.addNamespaceObject = function addNamespaceObject(e) {
-      for (var _i = 0, _Object$keys = Object.keys(e); _i < _Object$keys.length; _i++) {
-        var a = _Object$keys[_i];
-        var r = e[a],
-          n = null,
-          s = a.replace(new RegExp("\\\\?\\.", "g"), function (l) {
-            return l == "." ? "\0" : l;
-          }).split("\0"),
-          c = this;
-        W(r) && (n = r.self, r = r.children);
-        for (var l = 0; l < s.length; l++) n && l == s.length - 1 && c.addCompletion(n), c = c.child(s[l].replace(new RegExp("\\\\\\.", "g"), "."));
-        c.addNamespace(r);
-      }
-    };
-    return t;
-  }();
-  function M(t, e, a, r) {
-    return new RegExp("^[a-z_][a-z_\\d]*$", r ? "i" : "").test(t) ? {
-      label: t,
-      type: e
-    } : {
-      label: t,
-      type: e,
-      apply: a + t + J(a)
-    };
-  }
-  function J(t) {
-    return t === "[" ? "]" : t;
-  }
-  function Ie(t, e, a, r, n, s) {
-    var c;
-    var l = ((c = s == null ? void 0 : s.spec.identifierQuotes) === null || c === void 0 ? void 0 : c[0]) || '"',
-      o = new L(l, !!(s != null && s.spec.caseInsensitiveIdentifiers)),
-      p = n ? o.child(n) : null;
-    return o.addNamespace(t), e && (p || o).addCompletions(e), a && o.addCompletions(a), p && o.addCompletions(p.list), r && o.addCompletions((p || o).child(r).list), function (f) {
-      var _ze = ze(f.state, f.pos),
-        k = _ze.parents,
-        I = _ze.from,
-        R = _ze.quoted,
-        ne = _ze.empty,
-        w = _ze.aliases;
-      if (ne && !f.explicit) return null;
-      w && k.length == 1 && (k = w[k[0]] || k);
-      var m = o;
-      for (var _iterator5 = _createForOfIteratorHelperLoose(k), _step5; !(_step5 = _iterator5()).done;) {
-        var _2 = _step5.value;
-        for (; !m.children || !m.children[_2];) if (m == o && p) m = p;else if (m == p && r) m = m.child(r);else return null;
-        var _x = m.maybeChild(_2);
-        if (!_x) return null;
-        m = _x;
-      }
-      var Q = m.list;
-      if (m == o && w && (Q = Q.concat(Object.keys(w).map(function (_) {
-        return {
-          label: _,
-          type: "constant"
-        };
-      }))), R) {
-        var _ = R[0],
-          x = J(_),
-          ie = f.state.sliceDoc(f.pos, f.pos + 1) == x;
-        return {
-          from: I,
-          to: ie ? f.pos + 1 : void 0,
-          options: Be(_, x, Q),
-          validFor: Xe
-        };
-      } else return {
-        from: I,
-        options: Q,
-        validFor: Le
-      };
-    };
-  }
-  function Re(t) {
-    return t == F ? "type" : t == K ? "keyword" : "variable";
-  }
-  function De(t, e, a) {
-    var r = Object.keys(t).map(function (n) {
-      return a(e ? n.toUpperCase() : n, Re(t[n]));
-    });
-    return (0, q.ifNotIn)(["QuotedIdentifier", "String", "LineComment", "BlockComment", "."], (0, q.completeFromList)(r));
-  }
-  var Ze = Pe.configure({
-      props: [d.indentNodeProp.add({
-        Statement: (0, d.continuedIndent)()
-      }), d.foldNodeProp.add({
-        Statement: function Statement(t, e) {
-          return {
-            from: Math.min(t.from + 100, e.doc.lineAt(t.from).to),
-            to: t.to
-          };
-        },
-        BlockComment: function BlockComment(t) {
-          return {
-            from: t.from + 2,
-            to: t.to - 2
-          };
-        }
-      }), (0, i.styleTags)({
-        Keyword: i.tags.keyword,
-        Type: i.tags.typeName,
-        Builtin: i.tags.standard(i.tags.name),
-        Bits: i.tags.number,
-        Bytes: i.tags.string,
-        Bool: i.tags.bool,
-        Null: i.tags.null,
-        Number: i.tags.number,
-        String: i.tags.string,
-        Identifier: i.tags.name,
-        QuotedIdentifier: i.tags.special(i.tags.string),
-        SpecialVar: i.tags.special(i.tags.name),
-        LineComment: i.tags.lineComment,
-        BlockComment: i.tags.blockComment,
-        Operator: i.tags.operator,
-        "Semi Punctuation": i.tags.punctuation,
-        "( )": i.tags.paren,
-        "{ }": i.tags.brace,
-        "[ ]": i.tags.squareBracket
-      })]
-    }),
-    u = function () {
-      function t(e, a, r) {
-        this.dialect = e, this.language = a, this.spec = r;
-      }
-      var _proto2 = t.prototype;
-      _proto2.configureLanguage = function configureLanguage(e, a) {
-        return new t(this.dialect, this.language.configure(e, a), this.spec);
-      };
-      t.define = function define(e) {
-        var a = qe(e, e.keywords, e.types, e.builtin),
-          r = d.LRLanguage.define({
-            name: "sql",
-            parser: Ze.configure({
-              tokenizers: [{
-                from: H,
-                to: Y(a)
-              }]
-            }),
-            languageData: {
-              commentTokens: {
-                line: "--",
-                block: {
-                  open: "/*",
-                  close: "*/"
-                }
-              },
-              closeBrackets: {
-                brackets: ["(", "[", "{", "'", '"', "`"]
-              }
-            }
-          });
-        return new t(a, r, e);
-      };
-      return _createClass(t, [{
-        key: "extension",
-        get: function get() {
-          return this.language.extension;
-        }
-      }]);
-    }();
-  function Ne(t, e) {
+}
+function sourceContext(state, startPos) {
+  let pos = (0, import_language.syntaxTree)(state).resolveInner(startPos, -1);
+  let aliases = getAliases(state.doc, pos);
+  if (pos.name == "Identifier" || pos.name == "QuotedIdentifier" || pos.name == "Keyword") {
     return {
-      label: t,
-      type: e,
-      boost: -1
+      from: pos.from,
+      quoted: pos.name == "QuotedIdentifier" ? state.doc.sliceString(pos.from, pos.from + 1) : null,
+      parents: parentsFor(state.doc, tokenBefore(pos)),
+      aliases
     };
   }
-  function Ve(t, e, a) {
-    if (e === void 0) {
-      e = !1;
-    }
-    return De(t.dialect.words, e, a || Ne);
+  if (pos.name == ".") {
+    return { from: startPos, quoted: null, parents: parentsFor(state.doc, pos), aliases };
+  } else {
+    return { from: startPos, quoted: null, parents: [], empty: true, aliases };
   }
-  function $e(t) {
-    return t.schema ? Ie(t.schema, t.tables, t.schemas, t.defaultTable, t.defaultSchema, t.dialect || X) : function () {
+}
+var EndFrom = /* @__PURE__ */ new Set(/* @__PURE__ */ "where group having order union intersect except all distinct limit offset fetch for".split(" "));
+function getAliases(doc, at) {
+  let statement;
+  for (let parent = at; !statement; parent = parent.parent) {
+    if (!parent)
       return null;
-    };
+    if (parent.name == "Statement")
+      statement = parent;
   }
-  function Ae(t) {
-    return t.schema ? (t.dialect || X).language.data.of({
-      autocomplete: $e(t)
-    }) : [];
-  }
-  function ee(t) {
-    if (t === void 0) {
-      t = {};
+  let aliases = null;
+  for (let scan = statement.firstChild, sawFrom = false, prevID = null; scan; scan = scan.nextSibling) {
+    let kw = scan.name == "Keyword" ? doc.sliceString(scan.from, scan.to).toLowerCase() : null;
+    let alias = null;
+    if (!sawFrom) {
+      sawFrom = kw == "from";
+    } else if (kw == "as" && prevID && plainID(scan.nextSibling)) {
+      alias = idName(doc, scan.nextSibling);
+    } else if (kw && EndFrom.has(kw)) {
+      break;
+    } else if (prevID && plainID(scan)) {
+      alias = idName(doc, scan);
     }
-    var e = t.dialect || X;
-    return new d.LanguageSupport(e.language, [Ae(t), e.language.data.of({
-      autocomplete: Ve(e, t.upperCaseKeywords, t.keywordCompletion)
-    })]);
+    if (alias) {
+      if (!aliases)
+        aliases = /* @__PURE__ */ Object.create(null);
+      aliases[alias] = pathFor(doc, prevID);
+    }
+    prevID = /Identifier$/.test(scan.name) ? scan : null;
   }
-  var X = u.define({}),
-    We = u.define({
-      charSetCasts: !0,
-      doubleDollarQuotedStrings: !0,
-      operatorChars: "+-*/<>=~!@#%^&|`?",
-      specialVar: "",
-      keywords: b + "abort abs absent access according ada admin aggregate alias also always analyse analyze array_agg array_max_cardinality asensitive assert assignment asymmetric atomic attach attribute attributes avg backward base64 begin_frame begin_partition bernoulli bit_length blocked bom cache called cardinality catalog_name ceil ceiling chain char_length character_length character_set_catalog character_set_name character_set_schema characteristics characters checkpoint class class_origin cluster coalesce cobol collation_catalog collation_name collation_schema collect column_name columns command_function command_function_code comment comments committed concurrently condition_number configuration conflict connection_name constant constraint_catalog constraint_name constraint_schema contains content control conversion convert copy corr cost covar_pop covar_samp csv cume_dist current_catalog current_row current_schema cursor_name database datalink datatype datetime_interval_code datetime_interval_precision db debug defaults defined definer degree delimiter delimiters dense_rank depends derived detach detail dictionary disable discard dispatch dlnewcopy dlpreviouscopy dlurlcomplete dlurlcompleteonly dlurlcompletewrite dlurlpath dlurlpathonly dlurlpathwrite dlurlscheme dlurlserver dlvalue document dump dynamic_function dynamic_function_code element elsif empty enable encoding encrypted end_frame end_partition endexec enforced enum errcode error event every exclude excluding exclusive exp explain expression extension extract family file filter final first_value flag floor following force foreach fortran forward frame_row freeze fs functions fusion generated granted greatest groups handler header hex hierarchy hint id ignore ilike immediately immutable implementation implicit import include including increment indent index indexes info inherit inherits inline insensitive instance instantiable instead integrity intersection invoker isnull key_member key_type label lag last_value lead leakproof least length library like_regex link listen ln load location lock locked log logged lower mapping matched materialized max max_cardinality maxvalue member merge message message_length message_octet_length message_text min minvalue mod mode more move multiset mumps name namespace nfc nfd nfkc nfkd nil normalize normalized nothing notice notify notnull nowait nth_value ntile nullable nullif nulls number occurrences_regex octet_length octets off offset oids operator options ordering others over overlay overriding owned owner parallel parameter_mode parameter_name parameter_ordinal_position parameter_specific_catalog parameter_specific_name parameter_specific_schema parser partition pascal passing passthrough password percent percent_rank percentile_cont percentile_disc perform period permission pg_context pg_datatype_name pg_exception_context pg_exception_detail pg_exception_hint placing plans pli policy portion position position_regex power precedes preceding prepared print_strict_params procedural procedures program publication query quote raise range rank reassign recheck recovery refresh regr_avgx regr_avgy regr_count regr_intercept regr_r2 regr_slope regr_sxx regr_sxy regr_syy reindex rename repeatable replace replica requiring reset respect restart restore result_oid returned_cardinality returned_length returned_octet_length returned_sqlstate returning reverse routine_catalog routine_name routine_schema routines row_count row_number rowtype rule scale schema_name schemas scope scope_catalog scope_name scope_schema security selective self sensitive sequence sequences serializable server server_name setof share show simple skip slice snapshot source specific_name sqlcode sqlerror sqrt stable stacked standalone statement statistics stddev_pop stddev_samp stdin stdout storage strict strip structure style subclass_origin submultiset subscription substring substring_regex succeeds sum symmetric sysid system system_time table_name tables tablesample tablespace temp template ties token top_level_count transaction_active transactions_committed transactions_rolled_back transform transforms translate translate_regex trigger_catalog trigger_name trigger_schema trim trim_array truncate trusted type types uescape unbounded uncommitted unencrypted unlink unlisten unlogged unnamed untyped upper uri use_column use_variable user_defined_type_catalog user_defined_type_code user_defined_type_name user_defined_type_schema vacuum valid validate validator value_of var_pop var_samp varbinary variable_conflict variadic verbose version versioning views volatile warning whitespace width_bucket window within wrapper xmlagg xmlattributes xmlbinary xmlcast xmlcomment xmlconcat xmldeclaration xmldocument xmlelement xmlexists xmlforest xmliterate xmlnamespaces xmlparse xmlpi xmlquery xmlroot xmlschema xmlserialize xmltable xmltext xmlvalidate yes",
-      types: y + "bigint int8 bigserial serial8 varbit bool box bytea cidr circle precision float8 inet int4 json jsonb line lseg macaddr macaddr8 money numeric pg_lsn point polygon float4 int2 smallserial serial2 serial serial4 text timetz timestamptz tsquery tsvector txid_snapshot uuid xml"
+  return aliases;
+}
+function maybeQuoteCompletions(openingQuote, closingQuote, completions) {
+  return completions.map((c) => ({ ...c, label: c.label[0] == openingQuote ? c.label : openingQuote + c.label + closingQuote, apply: void 0 }));
+}
+var Span = /^\w*$/;
+var QuotedSpan = /^[`'"\[]?\w*[`'"\]]?$/;
+function isSelfTag(namespace) {
+  return namespace.self && typeof namespace.self.label == "string";
+}
+var CompletionLevel = class _CompletionLevel {
+  constructor(idQuote, idCaseInsensitive) {
+    this.idQuote = idQuote;
+    this.idCaseInsensitive = idCaseInsensitive;
+    this.list = [];
+    this.children = void 0;
+  }
+  child(name) {
+    let children = this.children || (this.children = /* @__PURE__ */ Object.create(null));
+    let found = children[name];
+    if (found)
+      return found;
+    if (name && !this.list.some((c) => c.label == name))
+      this.list.push(nameCompletion(name, "type", this.idQuote, this.idCaseInsensitive));
+    return children[name] = new _CompletionLevel(this.idQuote, this.idCaseInsensitive);
+  }
+  maybeChild(name) {
+    return this.children ? this.children[name] : null;
+  }
+  addCompletion(option) {
+    let found = this.list.findIndex((o) => o.label == option.label);
+    if (found > -1)
+      this.list[found] = option;
+    else
+      this.list.push(option);
+  }
+  addCompletions(completions) {
+    for (let option of completions)
+      this.addCompletion(typeof option == "string" ? nameCompletion(option, "property", this.idQuote, this.idCaseInsensitive) : option);
+  }
+  addNamespace(namespace) {
+    if (Array.isArray(namespace)) {
+      this.addCompletions(namespace);
+    } else if (isSelfTag(namespace)) {
+      this.addNamespace(namespace.children);
+    } else {
+      this.addNamespaceObject(namespace);
+    }
+  }
+  addNamespaceObject(namespace) {
+    for (let name of Object.keys(namespace)) {
+      let children = namespace[name], self = null;
+      let parts = name.replace(/\\?\./g, (p) => p == "." ? "\0" : p).split("\0");
+      let scope = this;
+      if (isSelfTag(children)) {
+        self = children.self;
+        children = children.children;
+      }
+      for (let i = 0; i < parts.length; i++) {
+        if (self && i == parts.length - 1)
+          scope.addCompletion(self);
+        scope = scope.child(parts[i].replace(/\\\./g, "."));
+      }
+      scope.addNamespace(children);
+    }
+  }
+};
+function nameCompletion(label, type, idQuote, idCaseInsensitive) {
+  if (new RegExp("^[a-z_][a-z_\\d]*$", idCaseInsensitive ? "i" : "").test(label))
+    return { label, type };
+  return { label, type, apply: idQuote + label + getClosingQuote(idQuote) };
+}
+function getClosingQuote(openingQuote) {
+  return openingQuote === "[" ? "]" : openingQuote;
+}
+function completeFromSchema(schema, tables, schemas, defaultTableName, defaultSchemaName, dialect2) {
+  var _a;
+  let idQuote = ((_a = dialect2 === null || dialect2 === void 0 ? void 0 : dialect2.spec.identifierQuotes) === null || _a === void 0 ? void 0 : _a[0]) || '"';
+  let top = new CompletionLevel(idQuote, !!(dialect2 === null || dialect2 === void 0 ? void 0 : dialect2.spec.caseInsensitiveIdentifiers));
+  let defaultSchema = defaultSchemaName ? top.child(defaultSchemaName) : null;
+  top.addNamespace(schema);
+  if (tables)
+    (defaultSchema || top).addCompletions(tables);
+  if (schemas)
+    top.addCompletions(schemas);
+  if (defaultSchema)
+    top.addCompletions(defaultSchema.list);
+  if (defaultTableName)
+    top.addCompletions((defaultSchema || top).child(defaultTableName).list);
+  return (context) => {
+    let { parents, from, quoted, empty, aliases } = sourceContext(context.state, context.pos);
+    if (empty && !context.explicit)
+      return null;
+    if (aliases && parents.length == 1)
+      parents = aliases[parents[0]] || parents;
+    let level = top;
+    for (let name of parents) {
+      while (!level.children || !level.children[name]) {
+        if (level == top && defaultSchema)
+          level = defaultSchema;
+        else if (level == defaultSchema && defaultTableName)
+          level = level.child(defaultTableName);
+        else
+          return null;
+      }
+      let next = level.maybeChild(name);
+      if (!next)
+        return null;
+      level = next;
+    }
+    let options = level.list;
+    if (level == top && aliases)
+      options = options.concat(Object.keys(aliases).map((name) => ({ label: name, type: "constant" })));
+    if (quoted) {
+      let openingQuote = quoted[0];
+      let closingQuote = getClosingQuote(openingQuote);
+      let quoteAfter = context.state.sliceDoc(context.pos, context.pos + 1) == closingQuote;
+      return {
+        from,
+        to: quoteAfter ? context.pos + 1 : void 0,
+        options: maybeQuoteCompletions(openingQuote, closingQuote, options),
+        validFor: QuotedSpan
+      };
+    } else {
+      return {
+        from,
+        options,
+        validFor: Span
+      };
+    }
+  };
+}
+function completionType(tokenType) {
+  return tokenType == Type ? "type" : tokenType == Keyword ? "keyword" : "variable";
+}
+function completeKeywords(keywords2, upperCase, build) {
+  let completions = Object.keys(keywords2).map((keyword) => build(upperCase ? keyword.toUpperCase() : keyword, completionType(keywords2[keyword])));
+  return (0, import_autocomplete.ifNotIn)(["QuotedIdentifier", "String", "LineComment", "BlockComment", "."], (0, import_autocomplete.completeFromList)(completions));
+}
+var parser = /* @__PURE__ */ parser$1.configure({
+  props: [
+    /* @__PURE__ */ import_language.indentNodeProp.add({
+      Statement: /* @__PURE__ */ (0, import_language.continuedIndent)()
     }),
-    te = "accessible algorithm analyze asensitive authors auto_increment autocommit avg avg_row_length binlog btree cache catalog_name chain change changed checkpoint checksum class_origin client_statistics coalesce code collations columns comment committed completion concurrent consistent contains contributors convert database databases day_hour day_microsecond day_minute day_second delay_key_write delayed delimiter des_key_file dev_pop dev_samp deviance directory disable discard distinctrow div dual dumpfile enable enclosed ends engine engines enum errors escaped even event events every explain extended fast field fields flush force found_rows fulltext grants handler hash high_priority hosts hour_microsecond hour_minute hour_second ignore ignore_server_ids import index index_statistics infile innodb insensitive insert_method install invoker iterate keys kill linear lines list load lock logs low_priority master master_heartbeat_period master_ssl_verify_server_cert masters max max_rows maxvalue message_text middleint migrate min min_rows minute_microsecond minute_second mod mode modify mutex mysql_errno no_write_to_binlog offline offset one online optimize optionally outfile pack_keys parser partition partitions password phase plugin plugins prev processlist profile profiles purge query quick range read_write rebuild recover regexp relaylog remove rename reorganize repair repeatable replace require resume rlike row_format rtree schedule schema_name schemas second_microsecond security sensitive separator serializable server share show slave slow snapshot soname spatial sql_big_result sql_buffer_result sql_cache sql_calc_found_rows sql_no_cache sql_small_result ssl starting starts std stddev stddev_pop stddev_samp storage straight_join subclass_origin sum suspend table_name table_statistics tables tablespace terminated triggers truncate uncommitted uninstall unlock upgrade use use_frm user_resources user_statistics utc_date utc_time utc_timestamp variables views warnings xa xor year_month zerofill",
-    re = y + "bool blob long longblob longtext medium mediumblob mediumint mediumtext tinyblob tinyint tinytext text bigint int1 int2 int3 int4 int8 float4 float8 varbinary varcharacter precision datetime unsigned signed",
-    ae = "charset clear edit ego help nopager notee nowarning pager print prompt quit rehash source status system tee",
-    Me = u.define({
-      operatorChars: "*+-%<>!=&|^",
-      charSetCasts: !0,
-      doubleQuotedStrings: !0,
-      unquotedBitLiterals: !0,
-      hashComments: !0,
-      spaceAfterDashes: !0,
-      specialVar: "@?",
-      identifierQuotes: "`",
-      keywords: b + "group_concat " + te,
-      types: re,
-      builtin: ae
+    /* @__PURE__ */ import_language.foldNodeProp.add({
+      Statement(tree, state) {
+        return { from: Math.min(tree.from + 100, state.doc.lineAt(tree.from).to), to: tree.to };
+      },
+      BlockComment(tree) {
+        return { from: tree.from + 2, to: tree.to - 2 };
+      }
     }),
-    Ke = u.define({
-      operatorChars: "*+-%<>!=&|^",
-      charSetCasts: !0,
-      doubleQuotedStrings: !0,
-      unquotedBitLiterals: !0,
-      hashComments: !0,
-      spaceAfterDashes: !0,
-      specialVar: "@?",
-      identifierQuotes: "`",
-      keywords: b + "always generated groupby_concat hard persistent shutdown soft virtual " + te,
-      types: re,
-      builtin: ae
-    }),
-    Ee = "approx_count_distinct approx_percentile_cont approx_percentile_disc avg checksum_agg count count_big grouping grouping_id max min product stdev stdevp sum var varp ai_generate_embeddings ai_generate_chunks cume_dist first_value lag last_value lead percentile_cont percentile_disc percent_rank left_shift right_shift bit_count get_bit set_bit collationproperty tertiary_weights @@datefirst @@dbts @@langid @@language @@lock_timeout @@max_connections @@max_precision @@nestlevel @@options @@remserver @@servername @@servicename @@spid @@textsize @@version cast convert parse try_cast try_convert try_parse asymkey_id asymkeyproperty certproperty cert_id crypt_gen_random decryptbyasymkey decryptbycert decryptbykey decryptbykeyautoasymkey decryptbykeyautocert decryptbypassphrase encryptbyasymkey encryptbycert encryptbykey encryptbypassphrase hashbytes is_objectsigned key_guid key_id key_name signbyasymkey signbycert symkeyproperty verifysignedbycert verifysignedbyasymkey @@cursor_rows @@fetch_status cursor_status datalength ident_current ident_incr ident_seed identity sql_variant_property @@datefirst current_timestamp current_timezone current_timezone_id date_bucket dateadd datediff datediff_big datefromparts datename datepart datetime2fromparts datetimefromparts datetimeoffsetfromparts datetrunc day eomonth getdate getutcdate isdate month smalldatetimefromparts switchoffset sysdatetime sysdatetimeoffset sysutcdatetime timefromparts todatetimeoffset year edit_distance edit_distance_similarity jaro_winkler_distance jaro_winkler_similarity edge_id_from_parts graph_id_from_edge_id graph_id_from_node_id node_id_from_parts object_id_from_edge_id object_id_from_node_id json isjson json_array json_contains json_modify json_object json_path_exists json_query json_value regexp_like regexp_replace regexp_substr regexp_instr regexp_count regexp_matches regexp_split_to_table abs acos asin atan atn2 ceiling cos cot degrees exp floor log log10 pi power radians rand round sign sin sqrt square tan choose greatest iif least @@procid app_name applock_mode applock_test assemblyproperty col_length col_name columnproperty databasepropertyex db_id db_name file_id file_idex file_name filegroup_id filegroup_name filegroupproperty fileproperty filepropertyex fulltextcatalogproperty fulltextserviceproperty index_col indexkey_property indexproperty next value for object_definition object_id object_name object_schema_name objectproperty objectpropertyex original_db_name parsename schema_id schema_name scope_identity serverproperty stats_date type_id type_name typeproperty dense_rank ntile rank row_number publishingservername certenclosed certprivatekey current_user database_principal_id has_dbaccess has_perms_by_name is_member is_rolemember is_srvrolemember loginproperty original_login permissions pwdencrypt pwdcompare session_user sessionproperty suser_id suser_name suser_sid suser_sname system_user user user_id user_name ascii char charindex concat concat_ws difference format left len lower ltrim nchar patindex quotename replace replicate reverse right rtrim soundex space str string_agg string_escape stuff substring translate trim unicode upper $partition @@error @@identity @@pack_received @@rowcount @@trancount binary_checksum checksum compress connectionproperty context_info current_request_id current_transaction_id decompress error_line error_message error_number error_procedure error_severity error_state formatmessage get_filestream_transaction_context getansinull host_id host_name isnull isnumeric min_active_rowversion newid newsequentialid rowcount_big session_context xact_state @@connections @@cpu_busy @@idle @@io_busy @@pack_sent @@packet_errors @@timeticks @@total_errors @@total_read @@total_write textptr textvalid columns_updated eventdata trigger_nestlevel vector_distance vectorproperty vector_search generate_series opendatasource openjson openquery openrowset openxml predict string_split coalesce nullif apply catch filter force include keep keepfixed modify optimize parameterization parameters partition recompile sequence set",
-    Fe = u.define({
-      keywords: b + "add external procedure all fetch public alter file raiserror and fillfactor read any for readtext as foreign reconfigure asc freetext references authorization freetexttable replication backup from restore begin full restrict between function return break goto revert browse grant revoke bulk group right by having rollback cascade holdlock rowcount case identity rowguidcol check identity_insert rule checkpoint identitycol save close if schema clustered in securityaudit coalesce index select collate inner semantickeyphrasetable column insert semanticsimilaritydetailstable commit intersect semanticsimilaritytable compute into session_user constraint is set contains join setuser containstable key shutdown continue kill some convert left statistics create like system_user cross lineno table current load tablesample current_date merge textsize current_time national then current_timestamp nocheck to current_user nonclustered top cursor not tran database null transaction dbcc nullif trigger deallocate of truncate declare off try_convert default offsets tsequal delete on union deny open unique desc opendatasource unpivot disk openquery update distinct openrowset updatetext distributed openxml use double option user drop or values dump order varying else outer view end over waitfor errlvl percent when escape pivot where except plan while exec precision with execute primary within group exists print writetext exit proc noexpand index forceseek forcescan holdlock nolock nowait paglock readcommitted readcommittedlock readpast readuncommitted repeatableread rowlock serializable snapshot spatial_window_max_cells tablock tablockx updlock xlock keepidentity keepdefaults ignore_constraints ignore_triggers",
-      types: y + "smalldatetime datetimeoffset datetime2 datetime bigint smallint smallmoney tinyint money real text nvarchar ntext varbinary image hierarchyid uniqueidentifier sql_variant xml",
-      builtin: Ee,
-      operatorChars: "*+-%<>!=^&|/",
-      specialVar: "@",
-      identifierQuotes: '"['
-    }),
-    Ge = u.define({
-      keywords: b + "abort analyze attach autoincrement conflict database detach exclusive fail glob ignore index indexed instead isnull notnull offset plan pragma query raise regexp reindex rename replace temp vacuum virtual",
-      types: y + "bool blob long longblob longtext medium mediumblob mediumint mediumtext tinyblob tinyint tinytext text bigint int2 int8 unsigned signed real",
-      builtin: "auth backup bail changes clone databases dbinfo dump echo eqp explain fullschema headers help import imposter indexes iotrace lint load log mode nullvalue once print prompt quit restore save scanstats separator shell show stats system tables testcase timeout timer trace vfsinfo vfslist vfsname width",
-      operatorChars: "*+-%<>!=&|/~",
-      identifierQuotes: '`"',
-      specialVar: "@:?$"
-    }),
-    Ye = u.define({
-      keywords: "add all allow alter and any apply as asc authorize batch begin by clustering columnfamily compact consistency count create custom delete desc distinct drop each_quorum exists filtering from grant if in index insert into key keyspace keyspaces level limit local_one local_quorum modify nan norecursive nosuperuser not of on one order password permission permissions primary quorum rename revoke schema select set storage superuser table three to token truncate ttl two type unlogged update use user users using values where with writetime infinity NaN",
-      types: y + "ascii bigint blob counter frozen inet list map static text timeuuid tuple uuid varint",
-      slashComments: !0
-    }),
-    He = u.define({
-      keywords: b + "abort accept access add all alter and any arraylen as asc assert assign at attributes audit authorization avg base_table begin between binary_integer body by case cast char_base check close cluster clusters colauth column comment commit compress connected constant constraint crash create current currval cursor data_base database dba deallocate debugoff debugon declare default definition delay delete desc digits dispose distinct do drop else elseif elsif enable end entry exception exception_init exchange exclusive exists external fast fetch file for force form from function generic goto grant group having identified if immediate in increment index indexes indicator initial initrans insert interface intersect into is key level library like limited local lock log logging loop master maxextents maxtrans member minextents minus mislabel mode modify multiset new next no noaudit nocompress nologging noparallel not nowait number_base of off offline on online only option or order out package parallel partition pctfree pctincrease pctused pls_integer positive positiven pragma primary prior private privileges procedure public raise range raw rebuild record ref references refresh rename replace resource restrict return returning returns reverse revoke rollback row rowid rowlabel rownum rows run savepoint schema segment select separate set share snapshot some space split sql start statement storage subtype successful synonym tabauth table tables tablespace task terminate then to trigger truncate type union unique unlimited unrecoverable unusable update use using validate value values variable view views when whenever where while with work",
-      builtin: "appinfo arraysize autocommit autoprint autorecovery autotrace blockterminator break btitle cmdsep colsep compatibility compute concat copycommit copytypecheck define echo editfile embedded feedback flagger flush heading headsep instance linesize lno loboffset logsource longchunksize markup native newpage numformat numwidth pagesize pause pno recsep recsepchar repfooter repheader serveroutput shiftinout show showmode spool sqlblanklines sqlcase sqlcode sqlcontinue sqlnumber sqlpluscompatibility sqlprefix sqlprompt sqlterminator suffix tab term termout timing trimout trimspool ttitle underline verify version wrap",
-      types: y + "ascii bfile bfilename bigserial bit blob dec long number nvarchar nvarchar2 serial smallint string text uid varchar2 xml",
-      operatorChars: "*/+-%<>!=~",
-      doubleQuotedStrings: !0,
-      charSetCasts: !0,
-      plsqlQuotingMechanism: !0
+    /* @__PURE__ */ (0, import_highlight.styleTags)({
+      Keyword: import_highlight.tags.keyword,
+      Type: import_highlight.tags.typeName,
+      Builtin: /* @__PURE__ */ import_highlight.tags.standard(import_highlight.tags.name),
+      Bits: import_highlight.tags.number,
+      Bytes: import_highlight.tags.string,
+      Bool: import_highlight.tags.bool,
+      Null: import_highlight.tags.null,
+      Number: import_highlight.tags.number,
+      String: import_highlight.tags.string,
+      Identifier: import_highlight.tags.name,
+      QuotedIdentifier: /* @__PURE__ */ import_highlight.tags.special(import_highlight.tags.string),
+      SpecialVar: /* @__PURE__ */ import_highlight.tags.special(import_highlight.tags.name),
+      LineComment: import_highlight.tags.lineComment,
+      BlockComment: import_highlight.tags.blockComment,
+      Operator: import_highlight.tags.operator,
+      "Semi Punctuation": import_highlight.tags.punctuation,
+      "( )": import_highlight.tags.paren,
+      "{ }": import_highlight.tags.brace,
+      "[ ]": import_highlight.tags.squareBracket
+    })
+  ]
+});
+var SQLDialect = class _SQLDialect {
+  constructor(dialect2, language, spec) {
+    this.dialect = dialect2;
+    this.language = language;
+    this.spec = spec;
+  }
+  /**
+  Returns the language for this dialect as an extension.
+  */
+  get extension() {
+    return this.language.extension;
+  }
+  /**
+  Reconfigure the parser used by this dialect. Returns a new
+  dialect object.
+  */
+  configureLanguage(options, name) {
+    return new _SQLDialect(this.dialect, this.language.configure(options, name), this.spec);
+  }
+  /**
+  Define a new dialect.
+  */
+  static define(spec) {
+    let d = dialect(spec, spec.keywords, spec.types, spec.builtin);
+    let language = import_language.LRLanguage.define({
+      name: "sql",
+      parser: parser.configure({
+        tokenizers: [{ from: tokens, to: tokensFor(d) }]
+      }),
+      languageData: {
+        commentTokens: { line: "--", block: { open: "/*", close: "*/" } },
+        closeBrackets: { brackets: ["(", "[", "{", "'", '"', "`"] }
+      }
     });
-  globalThis.__codeEditorRegisterLanguage("sql", ee);
+    return new _SQLDialect(d, language, spec);
+  }
+};
+function defaultKeyword(label, type) {
+  return { label, type, boost: -1 };
+}
+function keywordCompletionSource(dialect2, upperCase = false, build) {
+  return completeKeywords(dialect2.dialect.words, upperCase, build || defaultKeyword);
+}
+function schemaCompletionSource(config) {
+  return config.schema ? completeFromSchema(config.schema, config.tables, config.schemas, config.defaultTable, config.defaultSchema, config.dialect || StandardSQL) : () => null;
+}
+function schemaCompletion(config) {
+  return config.schema ? (config.dialect || StandardSQL).language.data.of({
+    autocomplete: schemaCompletionSource(config)
+  }) : [];
+}
+function sql(config = {}) {
+  let lang = config.dialect || StandardSQL;
+  return new import_language.LanguageSupport(lang.language, [
+    schemaCompletion(config),
+    lang.language.data.of({
+      autocomplete: keywordCompletionSource(lang, config.upperCaseKeywords, config.keywordCompletion)
+    })
+  ]);
+}
+var StandardSQL = /* @__PURE__ */ SQLDialect.define({});
+var PostgreSQL = /* @__PURE__ */ SQLDialect.define({
+  charSetCasts: true,
+  doubleDollarQuotedStrings: true,
+  operatorChars: "+-*/<>=~!@#%^&|`?",
+  specialVar: "",
+  keywords: SQLKeywords + "abort abs absent access according ada admin aggregate alias also always analyse analyze array_agg array_max_cardinality asensitive assert assignment asymmetric atomic attach attribute attributes avg backward base64 begin_frame begin_partition bernoulli bit_length blocked bom cache called cardinality catalog_name ceil ceiling chain char_length character_length character_set_catalog character_set_name character_set_schema characteristics characters checkpoint class class_origin cluster coalesce cobol collation_catalog collation_name collation_schema collect column_name columns command_function command_function_code comment comments committed concurrently condition_number configuration conflict connection_name constant constraint_catalog constraint_name constraint_schema contains content control conversion convert copy corr cost covar_pop covar_samp csv cume_dist current_catalog current_row current_schema cursor_name database datalink datatype datetime_interval_code datetime_interval_precision db debug defaults defined definer degree delimiter delimiters dense_rank depends derived detach detail dictionary disable discard dispatch dlnewcopy dlpreviouscopy dlurlcomplete dlurlcompleteonly dlurlcompletewrite dlurlpath dlurlpathonly dlurlpathwrite dlurlscheme dlurlserver dlvalue document dump dynamic_function dynamic_function_code element elsif empty enable encoding encrypted end_frame end_partition endexec enforced enum errcode error event every exclude excluding exclusive exp explain expression extension extract family file filter final first_value flag floor following force foreach fortran forward frame_row freeze fs functions fusion generated granted greatest groups handler header hex hierarchy hint id ignore ilike immediately immutable implementation implicit import include including increment indent index indexes info inherit inherits inline insensitive instance instantiable instead integrity intersection invoker isnull key_member key_type label lag last_value lead leakproof least length library like_regex link listen ln load location lock locked log logged lower mapping matched materialized max max_cardinality maxvalue member merge message message_length message_octet_length message_text min minvalue mod mode more move multiset mumps name namespace nfc nfd nfkc nfkd nil normalize normalized nothing notice notify notnull nowait nth_value ntile nullable nullif nulls number occurrences_regex octet_length octets off offset oids operator options ordering others over overlay overriding owned owner parallel parameter_mode parameter_name parameter_ordinal_position parameter_specific_catalog parameter_specific_name parameter_specific_schema parser partition pascal passing passthrough password percent percent_rank percentile_cont percentile_disc perform period permission pg_context pg_datatype_name pg_exception_context pg_exception_detail pg_exception_hint placing plans pli policy portion position position_regex power precedes preceding prepared print_strict_params procedural procedures program publication query quote raise range rank reassign recheck recovery refresh regr_avgx regr_avgy regr_count regr_intercept regr_r2 regr_slope regr_sxx regr_sxy regr_syy reindex rename repeatable replace replica requiring reset respect restart restore result_oid returned_cardinality returned_length returned_octet_length returned_sqlstate returning reverse routine_catalog routine_name routine_schema routines row_count row_number rowtype rule scale schema_name schemas scope scope_catalog scope_name scope_schema security selective self sensitive sequence sequences serializable server server_name setof share show simple skip slice snapshot source specific_name sqlcode sqlerror sqrt stable stacked standalone statement statistics stddev_pop stddev_samp stdin stdout storage strict strip structure style subclass_origin submultiset subscription substring substring_regex succeeds sum symmetric sysid system system_time table_name tables tablesample tablespace temp template ties token top_level_count transaction_active transactions_committed transactions_rolled_back transform transforms translate translate_regex trigger_catalog trigger_name trigger_schema trim trim_array truncate trusted type types uescape unbounded uncommitted unencrypted unlink unlisten unlogged unnamed untyped upper uri use_column use_variable user_defined_type_catalog user_defined_type_code user_defined_type_name user_defined_type_schema vacuum valid validate validator value_of var_pop var_samp varbinary variable_conflict variadic verbose version versioning views volatile warning whitespace width_bucket window within wrapper xmlagg xmlattributes xmlbinary xmlcast xmlcomment xmlconcat xmldeclaration xmldocument xmlelement xmlexists xmlforest xmliterate xmlnamespaces xmlparse xmlpi xmlquery xmlroot xmlschema xmlserialize xmltable xmltext xmlvalidate yes",
+  types: SQLTypes + "bigint int8 bigserial serial8 varbit bool box bytea cidr circle precision float8 inet int4 json jsonb line lseg macaddr macaddr8 money numeric pg_lsn point polygon float4 int2 smallserial serial2 serial serial4 text timetz timestamptz tsquery tsvector txid_snapshot uuid xml"
+});
+var MySQLKeywords = "accessible algorithm analyze asensitive authors auto_increment autocommit avg avg_row_length binlog btree cache catalog_name chain change changed checkpoint checksum class_origin client_statistics coalesce code collations columns comment committed completion concurrent consistent contains contributors convert database databases day_hour day_microsecond day_minute day_second delay_key_write delayed delimiter des_key_file dev_pop dev_samp deviance directory disable discard distinctrow div dual dumpfile enable enclosed ends engine engines enum errors escaped even event events every explain extended fast field fields flush force found_rows fulltext grants handler hash high_priority hosts hour_microsecond hour_minute hour_second ignore ignore_server_ids import index index_statistics infile innodb insensitive insert_method install invoker iterate keys kill linear lines list load lock logs low_priority master master_heartbeat_period master_ssl_verify_server_cert masters max max_rows maxvalue message_text middleint migrate min min_rows minute_microsecond minute_second mod mode modify mutex mysql_errno no_write_to_binlog offline offset one online optimize optionally outfile pack_keys parser partition partitions password phase plugin plugins prev processlist profile profiles purge query quick range read_write rebuild recover regexp relaylog remove rename reorganize repair repeatable replace require resume rlike row_format rtree schedule schema_name schemas second_microsecond security sensitive separator serializable server share show slave slow snapshot soname spatial sql_big_result sql_buffer_result sql_cache sql_calc_found_rows sql_no_cache sql_small_result ssl starting starts std stddev stddev_pop stddev_samp storage straight_join subclass_origin sum suspend table_name table_statistics tables tablespace terminated triggers truncate uncommitted uninstall unlock upgrade use use_frm user_resources user_statistics utc_date utc_time utc_timestamp variables views warnings xa xor year_month zerofill";
+var MySQLTypes = SQLTypes + "bool blob long longblob longtext medium mediumblob mediumint mediumtext tinyblob tinyint tinytext text bigint int1 int2 int3 int4 int8 float4 float8 varbinary varcharacter precision datetime unsigned signed";
+var MySQLBuiltin = "charset clear edit ego help nopager notee nowarning pager print prompt quit rehash source status system tee";
+var MySQL = /* @__PURE__ */ SQLDialect.define({
+  operatorChars: "*+-%<>!=&|^",
+  charSetCasts: true,
+  doubleQuotedStrings: true,
+  unquotedBitLiterals: true,
+  hashComments: true,
+  spaceAfterDashes: true,
+  specialVar: "@?",
+  identifierQuotes: "`",
+  keywords: SQLKeywords + "group_concat " + MySQLKeywords,
+  types: MySQLTypes,
+  builtin: MySQLBuiltin
+});
+var MariaSQL = /* @__PURE__ */ SQLDialect.define({
+  operatorChars: "*+-%<>!=&|^",
+  charSetCasts: true,
+  doubleQuotedStrings: true,
+  unquotedBitLiterals: true,
+  hashComments: true,
+  spaceAfterDashes: true,
+  specialVar: "@?",
+  identifierQuotes: "`",
+  keywords: SQLKeywords + "always generated groupby_concat hard persistent shutdown soft virtual " + MySQLKeywords,
+  types: MySQLTypes,
+  builtin: MySQLBuiltin
+});
+var MSSQLBuiltin = (
+  // Aggregate https://msdn.microsoft.com/en-us/library/ms173454.aspx
+  "approx_count_distinct approx_percentile_cont approx_percentile_disc avg checksum_agg count count_big grouping grouping_id max min product stdev stdevp sum var varp ai_generate_embeddings ai_generate_chunks cume_dist first_value lag last_value lead percentile_cont percentile_disc percent_rank left_shift right_shift bit_count get_bit set_bit collationproperty tertiary_weights @@datefirst @@dbts @@langid @@language @@lock_timeout @@max_connections @@max_precision @@nestlevel @@options @@remserver @@servername @@servicename @@spid @@textsize @@version cast convert parse try_cast try_convert try_parse asymkey_id asymkeyproperty certproperty cert_id crypt_gen_random decryptbyasymkey decryptbycert decryptbykey decryptbykeyautoasymkey decryptbykeyautocert decryptbypassphrase encryptbyasymkey encryptbycert encryptbykey encryptbypassphrase hashbytes is_objectsigned key_guid key_id key_name signbyasymkey signbycert symkeyproperty verifysignedbycert verifysignedbyasymkey @@cursor_rows @@fetch_status cursor_status datalength ident_current ident_incr ident_seed identity sql_variant_property @@datefirst current_timestamp current_timezone current_timezone_id date_bucket dateadd datediff datediff_big datefromparts datename datepart datetime2fromparts datetimefromparts datetimeoffsetfromparts datetrunc day eomonth getdate getutcdate isdate month smalldatetimefromparts switchoffset sysdatetime sysdatetimeoffset sysutcdatetime timefromparts todatetimeoffset year edit_distance edit_distance_similarity jaro_winkler_distance jaro_winkler_similarity edge_id_from_parts graph_id_from_edge_id graph_id_from_node_id node_id_from_parts object_id_from_edge_id object_id_from_node_id json isjson json_array json_contains json_modify json_object json_path_exists json_query json_value regexp_like regexp_replace regexp_substr regexp_instr regexp_count regexp_matches regexp_split_to_table abs acos asin atan atn2 ceiling cos cot degrees exp floor log log10 pi power radians rand round sign sin sqrt square tan choose greatest iif least @@procid app_name applock_mode applock_test assemblyproperty col_length col_name columnproperty databasepropertyex db_id db_name file_id file_idex file_name filegroup_id filegroup_name filegroupproperty fileproperty filepropertyex fulltextcatalogproperty fulltextserviceproperty index_col indexkey_property indexproperty next value for object_definition object_id object_name object_schema_name objectproperty objectpropertyex original_db_name parsename schema_id schema_name scope_identity serverproperty stats_date type_id type_name typeproperty dense_rank ntile rank row_number publishingservername certenclosed certprivatekey current_user database_principal_id has_dbaccess has_perms_by_name is_member is_rolemember is_srvrolemember loginproperty original_login permissions pwdencrypt pwdcompare session_user sessionproperty suser_id suser_name suser_sid suser_sname system_user user user_id user_name ascii char charindex concat concat_ws difference format left len lower ltrim nchar patindex quotename replace replicate reverse right rtrim soundex space str string_agg string_escape stuff substring translate trim unicode upper $partition @@error @@identity @@pack_received @@rowcount @@trancount binary_checksum checksum compress connectionproperty context_info current_request_id current_transaction_id decompress error_line error_message error_number error_procedure error_severity error_state formatmessage get_filestream_transaction_context getansinull host_id host_name isnull isnumeric min_active_rowversion newid newsequentialid rowcount_big session_context xact_state @@connections @@cpu_busy @@idle @@io_busy @@pack_sent @@packet_errors @@timeticks @@total_errors @@total_read @@total_write textptr textvalid columns_updated eventdata trigger_nestlevel vector_distance vectorproperty vector_search generate_series opendatasource openjson openquery openrowset openxml predict string_split coalesce nullif apply catch filter force include keep keepfixed modify optimize parameterization parameters partition recompile sequence set"
+);
+var MSSQL = /* @__PURE__ */ SQLDialect.define({
+  keywords: SQLKeywords + // Reserved Keywords https://learn.microsoft.com/en-us/sql/t-sql/language-elements/reserved-keywords-transact-sql?view=sql-server-ver17
+  "add external procedure all fetch public alter file raiserror and fillfactor read any for readtext as foreign reconfigure asc freetext references authorization freetexttable replication backup from restore begin full restrict between function return break goto revert browse grant revoke bulk group right by having rollback cascade holdlock rowcount case identity rowguidcol check identity_insert rule checkpoint identitycol save close if schema clustered in securityaudit coalesce index select collate inner semantickeyphrasetable column insert semanticsimilaritydetailstable commit intersect semanticsimilaritytable compute into session_user constraint is set contains join setuser containstable key shutdown continue kill some convert left statistics create like system_user cross lineno table current load tablesample current_date merge textsize current_time national then current_timestamp nocheck to current_user nonclustered top cursor not tran database null transaction dbcc nullif trigger deallocate of truncate declare off try_convert default offsets tsequal delete on union deny open unique desc opendatasource unpivot disk openquery update distinct openrowset updatetext distributed openxml use double option user drop or values dump order varying else outer view end over waitfor errlvl percent when escape pivot where except plan while exec precision with execute primary within group exists print writetext exit proc noexpand index forceseek forcescan holdlock nolock nowait paglock readcommitted readcommittedlock readpast readuncommitted repeatableread rowlock serializable snapshot spatial_window_max_cells tablock tablockx updlock xlock keepidentity keepdefaults ignore_constraints ignore_triggers",
+  types: SQLTypes + "smalldatetime datetimeoffset datetime2 datetime bigint smallint smallmoney tinyint money real text nvarchar ntext varbinary image hierarchyid uniqueidentifier sql_variant xml",
+  builtin: MSSQLBuiltin,
+  operatorChars: "*+-%<>!=^&|/",
+  specialVar: "@",
+  identifierQuotes: '"['
+});
+var SQLite = /* @__PURE__ */ SQLDialect.define({
+  keywords: SQLKeywords + "abort analyze attach autoincrement conflict database detach exclusive fail glob ignore index indexed instead isnull notnull offset plan pragma query raise regexp reindex rename replace temp vacuum virtual",
+  types: SQLTypes + "bool blob long longblob longtext medium mediumblob mediumint mediumtext tinyblob tinyint tinytext text bigint int2 int8 unsigned signed real",
+  builtin: "auth backup bail changes clone databases dbinfo dump echo eqp explain fullschema headers help import imposter indexes iotrace lint load log mode nullvalue once print prompt quit restore save scanstats separator shell show stats system tables testcase timeout timer trace vfsinfo vfslist vfsname width",
+  operatorChars: "*+-%<>!=&|/~",
+  identifierQuotes: '`"',
+  specialVar: "@:?$"
+});
+var Cassandra = /* @__PURE__ */ SQLDialect.define({
+  keywords: "add all allow alter and any apply as asc authorize batch begin by clustering columnfamily compact consistency count create custom delete desc distinct drop each_quorum exists filtering from grant if in index insert into key keyspace keyspaces level limit local_one local_quorum modify nan norecursive nosuperuser not of on one order password permission permissions primary quorum rename revoke schema select set storage superuser table three to token truncate ttl two type unlogged update use user users using values where with writetime infinity NaN",
+  types: SQLTypes + "ascii bigint blob counter frozen inet list map static text timeuuid tuple uuid varint",
+  slashComments: true
+});
+var PLSQL = /* @__PURE__ */ SQLDialect.define({
+  keywords: SQLKeywords + "abort accept access add all alter and any arraylen as asc assert assign at attributes audit authorization avg base_table begin between binary_integer body by case cast char_base check close cluster clusters colauth column comment commit compress connected constant constraint crash create current currval cursor data_base database dba deallocate debugoff debugon declare default definition delay delete desc digits dispose distinct do drop else elseif elsif enable end entry exception exception_init exchange exclusive exists external fast fetch file for force form from function generic goto grant group having identified if immediate in increment index indexes indicator initial initrans insert interface intersect into is key level library like limited local lock log logging loop master maxextents maxtrans member minextents minus mislabel mode modify multiset new next no noaudit nocompress nologging noparallel not nowait number_base of off offline on online only option or order out package parallel partition pctfree pctincrease pctused pls_integer positive positiven pragma primary prior private privileges procedure public raise range raw rebuild record ref references refresh rename replace resource restrict return returning returns reverse revoke rollback row rowid rowlabel rownum rows run savepoint schema segment select separate set share snapshot some space split sql start statement storage subtype successful synonym tabauth table tables tablespace task terminate then to trigger truncate type union unique unlimited unrecoverable unusable update use using validate value values variable view views when whenever where while with work",
+  builtin: "appinfo arraysize autocommit autoprint autorecovery autotrace blockterminator break btitle cmdsep colsep compatibility compute concat copycommit copytypecheck define echo editfile embedded feedback flagger flush heading headsep instance linesize lno loboffset logsource longchunksize markup native newpage numformat numwidth pagesize pause pno recsep recsepchar repfooter repheader serveroutput shiftinout show showmode spool sqlblanklines sqlcase sqlcode sqlcontinue sqlnumber sqlpluscompatibility sqlprefix sqlprompt sqlterminator suffix tab term termout timing trimout trimspool ttitle underline verify version wrap",
+  types: SQLTypes + "ascii bfile bfilename bigserial bit blob dec long number nvarchar nvarchar2 serial smallint string text uid varchar2 xml",
+  operatorChars: "*/+-%<>!=~",
+  doubleQuotedStrings: true,
+  charSetCasts: true,
+  plsqlQuotingMechanism: true
+});
+
+// sql-language.js
+globalThis.__codeEditorRegisterLanguage("sql", sql);
 })(globalThis.__codeMirrorRequire);

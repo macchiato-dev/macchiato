@@ -319,6 +319,18 @@ package use one download, failed downloads can retry, and an editor disposed
 while downloading cannot receive the result. CodeMirror adds an arriving parser
 with a compartment reconfiguration, preserving text, selection, and undo.
 
+The Resources website now uses QuickJS, compiling modern JavaScript directly
+to separate bytecode programs. Its runtime, workspace controls, CodeMirror core,
+and language modules load independently. The controller executes trusted
+bytecode with tag 3; a successful return means the program has run. The guest
+does not need a second `load()` call. See `packages/website/README.md`.
+
+The MicroQuickJS-specific regression tests remain separate from that production
+build. After building the website, generate their compatibility fixtures with
+`deno run -A packages/project-editor/build-microquickjs-fixtures.js`. These
+ignored outputs live in this package's `generated/`, not in the website's
+deployment artifacts. They retain the following earlier protocol:
+
 MicroQuickJS normally registers ROM atoms before guest execution. The build
 therefore includes a small shared atom catalog, not all language programs, in
 the initial stamp. Late relocation must resolve every compiled atom to an

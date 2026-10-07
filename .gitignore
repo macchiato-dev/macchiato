@@ -17,6 +17,9 @@ packages/website/exported/
 /packages/website/frontend/controller.js
 /packages/website/frontend/machine.js
 /packages/website/generated/resources-policy.js
+/packages/website/generated/project-editor-compile
+/packages/website/generated/project-editor-empty.js
+/packages/project-editor/generated/
 *.egg-info/
 
 # Environment

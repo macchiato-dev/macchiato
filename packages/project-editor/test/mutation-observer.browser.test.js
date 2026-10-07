@@ -12,7 +12,7 @@ test("mutation observations preserve native registrations, queues, and options",
   await mkdir(work, { recursive: true });
   const directory = await mkdtemp(resolve(work, "mutation-observer-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const generated = resolve(root, "packages/website/generated");
+  const generated = resolve(root, "packages/project-editor/generated");
   const suite = resolve(root, "dev/wasm-web-runtimes/examples/microquickjs-suite");
   const fixture = new URL("fixtures/mutation-observer.js", import.meta.url);
   const source = await readFile(fixture, "utf8");
@@ -23,7 +23,7 @@ test("mutation observations preserve native registrations, queues, and options",
     `runtime.bin=${resolve(generated, "project-editor-runtime.bin")}`, `application.bin=${application}`]);
   const assets = {
     "/microquickjs.wasm": await readFile(resolve(directory, "microquickjs.wasm")),
-    "/quickjs.wasm": await readFile(resolve(generated, "project-quickjs-runtime.wasm")),
+    "/quickjs.wasm": await readFile(resolve(root, "packages/website/generated/project-quickjs-runtime.wasm")),
     "/module.js": (await build({ stdin: { contents: `
       export { default as Machine } from './dev/wasm-web-machine/src/wasm-web-machine.ts';
       export { QuickJSRuntime } from './dev/wasm-web-runtimes/quickjs/context-runtime.js';

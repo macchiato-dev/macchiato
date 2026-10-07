@@ -31,7 +31,8 @@ var encoder = new TextEncoder();
 var encoder2 = new TextEncoder();
 var decoder = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
-var editorBytecodeNames = new Set(editorLanguages.map((item) => `language-${item.package}.bin`));
+var editorLanguageNames = new Set(editorLanguages.map((item) => `language-${item.package}.bin`));
+var editorBytecodeNames = /* @__PURE__ */ new Set([...editorLanguageNames, "core.bin", "workspace.bin", "surface.bin"]);
 var editorBytecodes = /* @__PURE__ */ new Map();
 function editorBytecode(name) {
   if (!editorBytecodeNames.has(name)) throw new Error("Editor bytecode resource is not granted");
@@ -40,7 +41,7 @@ function editorBytecode(name) {
     fetch(`/-/resources-site/project-editor-${name}`, { credentials: "same-origin" }).then(async (response) => {
       if (!response.ok) throw new Error(`Editor bytecode response ${response.status}`);
       const bytes = new Uint8Array(await response.arrayBuffer());
-      if (bytes.length > 1e6) throw new Error("Editor bytecode exceeds its size limit");
+      if (bytes.length > 2e6) throw new Error("Editor bytecode exceeds its size limit");
       return bytes;
     }).catch((error) => {
       editorBytecodes.delete(name);
@@ -86,22 +87,19 @@ async function createProjectEditorMachine({
   module: suppliedModule
 }) {
   const module = suppliedModule || await loadProjectEditorModule();
-  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
   const machineId = `wasm-web-machine-${nextMachine++}`;
   let response, machineError, starting = true, machineStage = "startup";
-  let installedName, disposed = false;
+  let disposed = false;
   const installedPrograms = /* @__PURE__ */ new Map();
   function installBytecode({ name }) {
     if (!installedPrograms.has(name)) installedPrograms.set(name, editorBytecode(name).then((bytes) => {
       if (disposed) throw new Error("Editor was closed during bytecode loading");
-      const label = encoder2.encode(name + "\0");
-      const packet = new Uint8Array(1 + label.length + bytes.length);
+      const packet = new Uint8Array(1 + bytes.length);
       packet[0] = 3;
-      packet.set(label, 1);
-      packet.set(bytes, 1 + label.length);
-      installedName = void 0;
+      packet.set(bytes, 1);
+      machineError = void 0;
       machine.onmsg(packet);
-      if (installedName !== name) throw new Error("Editor bytecode installation did not acknowledge");
+      if (machineError) throw new Error(machineError);
       return null;
     }).catch((error) => {
       installedPrograms.delete(name);
@@ -112,13 +110,8 @@ async function createProjectEditorMachine({
   const machine = new WasmWebMachine(module, root, {
     allowNavigate,
     resolveImage,
-    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : void 0,
     services,
     onMessage(text) {
-      if (text.startsWith("__wwcBytecode:")) {
-        installedName = text.slice(14);
-        return;
-      }
       if (text.startsWith("__wwcError:")) {
         machineError = `${machineStage}: ${text.slice(11)}`;
         const error = new Error(machineError);
@@ -135,7 +128,11 @@ async function createProjectEditorMachine({
       if (message.type === "editor-bytecode-started" && root.dataset) root.dataset.editorBytecodeState = "started";
       if (message.type === "editor-application-ready" && root.dataset) root.dataset.editorApplicationState = "ready";
       if (message.protocol === "resources-editor-v1") {
-        Promise.resolve().then(() => message.name === "bytecode.load" ? installBytecode(message.payload || {}) : onRequest(message.name, message.payload || {})).then(
+        Promise.resolve().then(() => {
+          if (message.name !== "bytecode.load") return onRequest(message.name, message.payload || {});
+          if (!editorLanguageNames.has(message.payload?.name)) throw new Error("Editor language is not granted");
+          return installBytecode(message.payload);
+        }).then(
           (value) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", { id: message.id, value })),
           (error) => !disposed && machine.onmsg(callMessage("__resourcesEditorReceive", {
             id: message.id,
@@ -157,6 +154,12 @@ async function createProjectEditorMachine({
   try {
     await machine.onmsg(0);
     if (machineError) throw new Error(machineError);
+    if (root.querySelector("[data-project-editor]") || root.matches?.("[data-project-editor]")) {
+      await installBytecode({ name: "workspace.bin" });
+    } else {
+      await installBytecode({ name: "core.bin" });
+      await installBytecode({ name: "surface.bin" });
+    }
     starting = false;
     machineStage = "idle";
     if (limits !== false) call("__codeEditorConfigureLimits", limits || { maxLines: 5e3, maxCharacters: 1e6 });
@@ -170,7 +173,7 @@ async function createProjectEditorMachine({
     if (!/^__[A-Za-z0-9_]+$/.test(name)) throw new TypeError("Guest function name is invalid");
     response = machineError = void 0;
     machineStage = `call ${name}`;
-    machine.onmsg(callMessage("__resourcesEditorCall", { name, value: payload }));
+    machine.onmsg(callMessage(name, payload));
     if (machineError) throw new Error(machineError);
     if (response === void 0) throw new Error(`Guest function ${name} did not respond`);
     machineStage = "idle";

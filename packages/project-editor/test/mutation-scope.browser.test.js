@@ -18,8 +18,8 @@ test("document observers and delegated input respect the machine's granted roots
     new URL("fixtures/mutation-scope.js", import.meta.url).pathname]);
   const output = resolve(directory, "scope.wasm");
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"), output,
-    `runtime.bin=${resolve(root, "packages/website/generated/project-editor-runtime.bin")}`,
+    resolve(root, "packages/project-editor/generated/project-editor-quickjs-runtime.wasm"), output,
+    `runtime.bin=${resolve(root, "packages/project-editor/generated/project-editor-runtime.bin")}`,
     `application.bin=${application}`]);
   const wasm = await readFile(output);
   const machine = await readFile(resolve(root, "dev/wasm-web-machine/dist/module/machine.js"));

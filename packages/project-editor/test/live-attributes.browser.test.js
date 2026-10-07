@@ -20,7 +20,7 @@ test("attribute reads and classList see native changes before observer delivery"
     resolve(examples, "codemirror/generated/microquickjs-runtime.js")]);
   const output = resolve(directory, "probe.wasm");
   execFileSync(process.execPath, [resolve(examples, "microquickjs-suite/scripts/stamp-wasm.js"),
-    resolve(root, "packages/website/generated/project-editor-quickjs-runtime.wasm"), output,
+    resolve(root, "packages/project-editor/generated/project-editor-quickjs-runtime.wasm"), output,
     `runtime.bin=${environment}`, `application.bin=${application}`]);
   const wasm = await readFile(output), source = await readFile(fixture, "utf8");
   const quickjs = await readFile(resolve(root, "packages/website/generated/project-quickjs-runtime.wasm"));

@@ -13,7 +13,7 @@ test("MicroQuickJS's node identity cache does not retain unreachable removed wra
   await mkdir(work, { recursive: true });
   const directory = await mkdtemp(resolve(work, "node-cache-lifetime-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const generated = resolve(root, "packages/website/generated");
+  const generated = resolve(root, "packages/project-editor/generated");
   const suite = resolve(root, "dev/wasm-web-runtimes/examples/microquickjs-suite");
   const application = resolve(directory, "application.bin");
   execFileSync(resolve(suite, "microquickjs-guest-runtime/microquickjs/mqjs"),

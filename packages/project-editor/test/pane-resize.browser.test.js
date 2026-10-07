@@ -11,7 +11,7 @@ test("CodeMirror follows native pane resizing and visibility without input", { t
   await mkdir(work, { recursive: true });
   const directory = await mkdtemp(resolve(work, "pane-resize-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  const generated = resolve(root, "packages/website/generated");
+  const generated = resolve(root, "packages/project-editor/generated");
   const suite = resolve(root, "dev/wasm-web-runtimes/examples/microquickjs-suite");
   const fixture = await readFile(new URL("fixtures/pane-resize.js", import.meta.url), "utf8");
   const application = resolve(directory, "application.js"), bytecode = resolve(directory, "application.bin");

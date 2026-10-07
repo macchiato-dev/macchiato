@@ -1,15 +1,10 @@
 import { build } from "esbuild";
-import { transformAsync } from "@babel/core";
-import presetEnv from "@babel/preset-env";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import microQuickJSSyntax from "../../dev/wasm-web-runtimes/examples/codemirror/babel-microquickjs.js";
-import lowerDatasetAccess from "./babel-resources-dataset.js";
 import { editorLanguages } from "../project-editor/src/languages.js";
-import { atomCatalogSource } from "../../dev/wasm-web-runtimes/examples/microquickjs-suite/scripts/bytecode-atoms.js";
 import { optimizeMutationScans } from "../project-editor/codemirror-mutation-scan.js";
 import { retainFinishedParsing, shortenForegroundParsing, shortenIdleParserPause } from "../project-editor/codemirror-parse-budget.js";
 
@@ -38,15 +33,6 @@ await build({
   } }],
   outfile: join(outputDirectory, "project-editor-frame-controller.js"),
 });
-const lowerForMicroQuickJS = async (source, plugins = []) => (await transformAsync(source, {
-  comments: false,
-  compact: false,
-  // Strings, Sets, and Maps are iterable too; loose array spread changes data.
-  assumptions: { iterableIsArray: false },
-  plugins: [...plugins, microQuickJSSyntax],
-  presets: [[presetEnv, { bugfixes: true, loose: true, modules: false,
-    targets: { ie: "11" }, useBuiltIns: false }]],
-})).code;
 const frameworkRuntime = async (contents) => build({
   stdin: { contents, resolveDir: workspace, sourcefile: "framework-runtime.js" },
   bundle: true,
@@ -103,9 +89,9 @@ for (const [name, contents] of Object.entries(languageSources)) {
     stdin: { contents, resolveDir: workspace, sourcefile: `${name}-language.js` },
     bundle: true, format: "cjs", platform: "neutral", external: languageExternals,
     banner: { js: "(function(require) {" }, footer: { js: "})(globalThis.__codeMirrorRequire);" },
-    minify: true, write: false,
+    target: "es2022", write: false,
   }).then((result) => result.outputFiles[0].text);
-  languageChunks[name] = await lowerForMicroQuickJS(bundled);
+  languageChunks[name] = bundled;
 }
 languageChunks.typescript = languageChunks.javascript;
 await writeFile(join(outputDirectory, "project-editor-languages.js"),
@@ -169,53 +155,67 @@ await build({
   outfile: join(outputDirectory, "project-output-bootstrap.js"),
 });
 
-for (const name of ["project-builder", "project-framework-builder"]) {
+if (!process.argv.includes("--editor-only")) {
+  for (const name of ["project-builder", "project-framework-builder"]) {
+    execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
+      cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
+      env: {
+        ...process.env,
+        WWC_CANONICAL_HOST: "1",
+        WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "quickjs", "src", "message-guest.js"),
+        WWC_APPLICATION_SOURCE: join(outputDirectory, `${name}-guest.js`),
+      },
+      stdio: "inherit",
+    });
+    await copyFile(
+      join(workspace, "dev", "wasm-web-runtimes", "quickjs", "target", "wasm32-unknown-unknown", "release", "wasm_web_container_quickjs_runtime.wasm"),
+      join(outputDirectory, `${name}-quickjs-runtime.wasm`),
+    );
+  }
+
   execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
     cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
     env: {
       ...process.env,
       WWC_CANONICAL_HOST: "1",
-      WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "quickjs", "src", "message-guest.js"),
-      WWC_APPLICATION_SOURCE: join(outputDirectory, `${name}-guest.js`),
+      WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "examples", "codemirror", "generated", "canonical-dom.js"),
+      WWC_MULTICONTEXT: "1",
+      WWC_APPLICATION_SOURCE: join(outputDirectory, "project-output-bootstrap.js"),
     },
     stdio: "inherit",
   });
   await copyFile(
     join(workspace, "dev", "wasm-web-runtimes", "quickjs", "target", "wasm32-unknown-unknown", "release", "wasm_web_container_quickjs_runtime.wasm"),
-    join(outputDirectory, `${name}-quickjs-runtime.wasm`),
+    join(outputDirectory, "project-quickjs-runtime.wasm"),
   );
 }
+const quickjsRuntime = join(workspace, "dev", "wasm-web-runtimes", "quickjs");
+const emptySource = join(outputDirectory, "project-editor-empty.js");
+await writeFile(emptySource, "// Programs are loaded separately on demand.\n");
+execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
+  cwd: quickjsRuntime,
+  env: { ...process.env, WWC_CANONICAL_HOST: "1",
+    WWC_GUEST_ENVIRONMENT: join(workspace, "dev/wasm-web-runtimes/examples/codemirror/generated/canonical-dom.js"),
+    WWC_APPLICATION_SOURCE: emptySource },
+  stdio: "inherit",
+});
+await copyFile(join(quickjsRuntime, "target/wasm32-unknown-unknown/release/wasm_web_container_quickjs_runtime.wasm"),
+  join(outputDirectory, "project-editor-quickjs-runtime.wasm"));
 
-execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
-  cwd: join(workspace, "dev", "wasm-web-runtimes", "quickjs"),
-  env: {
-    ...process.env,
-    WWC_CANONICAL_HOST: "1",
-    WWC_GUEST_ENVIRONMENT: join(workspace, "dev", "wasm-web-runtimes", "examples", "codemirror", "generated", "canonical-dom.js"),
-    WWC_MULTICONTEXT: "1",
-    WWC_APPLICATION_SOURCE: join(outputDirectory, "project-output-bootstrap.js"),
-  },
-  stdio: "inherit",
-});
-await copyFile(
-  join(workspace, "dev", "wasm-web-runtimes", "quickjs", "target", "wasm32-unknown-unknown", "release", "wasm_web_container_quickjs_runtime.wasm"),
-  join(outputDirectory, "project-quickjs-runtime.wasm"),
-);
-const microExample = join(workspace, "dev", "wasm-web-runtimes", "examples", "codemirror");
-const microRuntime = join(workspace, "dev", "wasm-web-runtimes", "examples",
-  "microquickjs-suite", "microquickjs-guest-runtime");
-execFileSync(cargo, ["build", "--release", "--target", "wasm32-unknown-unknown"], {
-  cwd: microRuntime,
-  env: { ...process.env, WWC_REBUILD_EXAMPLES: "1" },
-  stdio: "inherit",
-});
-// The Cargo build supplies the interpreter, not this DOM runtime's bytecode.
-// Compile the environment just generated above; an old demo .bin may contain
-// different callback/timer semantics even when every JavaScript file is fresh.
-const runtimeBytecode = join(outputDirectory, "project-editor-runtime.bin");
-execFileSync(join(microRuntime, "microquickjs", "mqjs"),
-  ["-m32", "-o", runtimeBytecode, join(microExample, "generated", "microquickjs-runtime.js")],
-  { stdio: "inherit" });
+// A native build-time compiler and the Wasm runtime use the same engine.
+// Nothing below is evaluated in the browser's JavaScript realm.
+const compiler = join(outputDirectory, "project-editor-compile");
+const engine = join(quickjsRuntime, "quickjs");
+execFileSync(process.env.CC || "cc", ["-O0", '-DCONFIG_VERSION="2026-06-04"',
+  `-I${engine}`, join(workspace, "packages/wwm-js-runtimes/quickjs-server/compiler.c"),
+  ...["quickjs.c", "dtoa.c", "libregexp.c", "libunicode.c", "cutils.c"].map(file => join(engine, file)),
+  "-lm", "-o", compiler], { stdio: "inherit" });
+async function compileProgram(name, source) {
+  const file = join(outputDirectory, `project-editor-${name}.js`);
+  await writeFile(file, source);
+  execFileSync(compiler, [file, join(outputDirectory, `project-editor-${name}.bin`), "--strip-source"],
+    { stdio: "inherit" });
+}
 const editorCoreSource = await build({
   entryPoints: [join(workspace, "packages", "project-editor", "src", "guest.js")],
   plugins: [{
@@ -236,33 +236,17 @@ const editorCoreSource = await build({
   bundle: true,
   format: "iife",
   platform: "neutral",
+  target: "es2022",
   write: false,
 }).then((result) => result.outputFiles[0].text);
-const loweredEditor = await lowerForMicroQuickJS(editorCoreSource);
-const loweredEditorSource = join(outputDirectory, "project-editor-microquickjs.js");
-const editorBytecode = join(outputDirectory, "project-editor-core.bin");
-await writeFile(loweredEditorSource, loweredEditor);
-execFileSync(join(microRuntime, "microquickjs", "mqjs"),
-  ["-m32", "-o", editorBytecode, loweredEditorSource], { stdio: "inherit" });
-const languageBytecodes = [];
+await compileProgram("core", `globalThis.__CODE_EDITOR_DEFER_START__ = true;\n${editorCoreSource}`);
 for (const [name, source] of Object.entries(languageChunks)) {
   if (name === "typescript") continue;
-  const sourceFile = join(outputDirectory, `project-editor-language-${name}.js`);
-  const bytecodeFile = join(outputDirectory, `project-editor-language-${name}.bin`);
-  await writeFile(sourceFile, source);
-  execFileSync(join(microRuntime, "microquickjs", "mqjs"),
-    ["-m32", "-o", bytecodeFile, sourceFile], { stdio: "inherit" });
-  languageBytecodes.push([name, bytecodeFile]);
+  await compileProgram(`language-${name}`, source);
 }
-const atomSource = join(outputDirectory, "project-editor-language-atoms.js");
-const atomBytecode = join(outputDirectory, "project-editor-language-atoms.bin");
-await writeFile(atomSource, atomCatalogSource(await Promise.all(
-  languageBytecodes.map(([, file]) => readFile(file)))));
-execFileSync(join(microRuntime, "microquickjs", "mqjs"),
-  ["-m32", "-o", atomBytecode, atomSource], { stdio: "inherit" });
 const projectServicesSource = await build({
   entryPoints: [join(directory, "project-editor-ui.js")],
-  bundle: true, format: "iife", platform: "neutral",
+  bundle: true, format: "iife", platform: "neutral", target: "es2022",
   plugins: [{
     name: "project-editor-ui-imports",
     setup(build) {
@@ -275,27 +259,6 @@ const projectServicesSource = await build({
   }],
   write: false,
 }).then((result) => result.outputFiles[0].text);
-const loweredProjectServices = await lowerForMicroQuickJS(projectServicesSource,
-  [lowerDatasetAccess]);
-const projectServicesFile = join(outputDirectory, "project-editor-services-microquickjs.js");
-const projectServicesBytecode = join(outputDirectory, "project-editor-services.bin");
-await writeFile(projectServicesFile, loweredProjectServices);
-execFileSync(join(microRuntime, "microquickjs", "mqjs"),
-  ["-m32", "-o", projectServicesBytecode, projectServicesFile], { stdio: "inherit" });
-const controllerBytecode = join(outputDirectory, "project-editor-application.bin");
-execFileSync(join(microRuntime, "microquickjs", "mqjs"), ["-m32", "-o", controllerBytecode,
-  join(directory, "project-editor-bootstrap.es5.js")], { stdio: "inherit" });
-const surfaceBytecode = join(outputDirectory, "project-editor-surface.bin");
-execFileSync(join(microRuntime, "microquickjs", "mqjs"), ["-m32", "-o", surfaceBytecode,
-  join(directory, "project-editor-surface.es5.js")], { stdio: "inherit" });
-execFileSync(process.execPath, [
-  join(workspace, "dev", "wasm-web-runtimes", "examples", "microquickjs-suite", "scripts", "stamp-wasm.js"),
-  join(microRuntime, "target", "wasm32-unknown-unknown", "release", "wasm_web_container_example_runtime.wasm"),
-  join(outputDirectory, "project-editor-quickjs-runtime.wasm"),
-  `runtime.bin=${runtimeBytecode}`,
-  `application.bin=${controllerBytecode}`,
-  `surface.bin=${surfaceBytecode}`,
-  `editor.bin=${editorBytecode}`,
-  `project.bin=${projectServicesBytecode}`,
-  `language-atoms.bin=${atomBytecode}`,
-], { stdio: "inherit" });
+await compileProgram("workspace", `globalThis.__resourcesStartProjectUi = () => {\n${projectServicesSource}\n};\n` +
+  await readFile(join(directory, "project-editor-bootstrap.js"), "utf8"));
+await compileProgram("surface", await readFile(join(directory, "project-editor-surface-guest.js"), "utf8"));

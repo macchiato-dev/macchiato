@@ -17,7 +17,7 @@ test("native and MicroQuickJS editors preserve caret blink and text dragging", {
   const examples = join(root, "dev/wasm-web-runtimes/examples");
   const runtime = join(examples, "microquickjs-suite/microquickjs-guest-runtime");
   const compiler = join(runtime, "microquickjs/mqjs");
-  const generated = join(root, "packages/website/generated");
+  const generated = join(root, "packages/project-editor/generated");
   const setup = '__codeEditorSetContent(JSON.stringify({language:"text",content:' +
     JSON.stringify("A long line for repeated keyboard movement. ".repeat(4)) + '}));';
   const application = join(directory, "application.js");
