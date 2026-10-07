@@ -42,8 +42,8 @@ test("Mahjong keeps its improved game and artwork in portable project files", ()
   const application = readFileSync(new URL("application.js", example), "utf8");
   const source = `${model}\n${application}`;
   const css = readFileSync(new URL("style.css", example), "utf8");
-  assert.match(html, /src="\.\/game-model\.js"/);
-  assert.match(html, /src="\.\/application\.js"/);
+  assert.match(application, /from "\.\/game-model\.js"/);
+  assert.match(html, /type="module" src="\.\/application\.js"/);
   assert.match(html, /href="\.\/style\.css"/);
   assert.match(source, /document\.createElement\(["']img["']\)/);
   assert.match(source, /response\.resourceUrl\(\)/);
@@ -67,10 +67,11 @@ test("Mahjong keeps its improved game and artwork in portable project files", ()
   assert.match(source, /settingButton\("Show time \/ moves"/);
   assert.match(source, /settingButton\("Show hint button"/);
   assert.match(source, /winMessage\.textContent = "You Win!"/);
-  assert.match(source, /var rows\s*=\s*\[\[12,1\],[\s\S]*\[12,1\]\]/);
+  assert.match(source, /const rows\s*=\s*\[\[12,1\],[\s\S]*\[12,1\]\]/);
   assert.match(source, /layer\(1,\s*6,\s*6,\s*4,\s*1\)[\s\S]*layer\(3,\s*2,\s*2,\s*6,\s*3\)/);
   assert.match(source, /result\.push\(\{\s*x:\s*6\.5,\s*y:\s*3\.5,\s*z:\s*4\s*\}\)/);
-  assert.match(source, /shuffle\(types\)/);
-  assert.match(source, /var solution\s*=\s*\[\s*\[/);
+  assert.match(source, /shuffle\(types, random\)/);
+  assert.match(source, /export const removalOrder\s*=\s*\[\s*\[/);
+  assert.doesNotMatch(source, /\bvar\b|function\s*\(/);
   assert.doesNotMatch(source, /row\.shift\(\).*row\.pop\(/);
 });

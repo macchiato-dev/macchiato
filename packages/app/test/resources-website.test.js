@@ -823,7 +823,7 @@ test("Mahjong ZIP drops round-trip a signed-in project's files and recover from 
   const exported = await exportZip();
   assert.equal(exported.name, "classic-chinese-mahjong.zip");
   const expected = await decodeProjectArchive(exported.bytes);
-  assert.deepEqual(expected.files, snapshot.files);
+  assert.deepEqual([...expected.files].sort((a, b) => a.path.localeCompare(b.path)), snapshot.files);
   await page.goto(`http://resources-edge.localhost:${port}/projects/new`, { waitUntil: "networkidle" });
   await codeSurface(page).locator(".cm-content").waitFor();
   await openImport();

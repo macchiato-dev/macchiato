@@ -1,14 +1,14 @@
-var names = {
+const names = {
   E: "East wind", S: "South wind", W: "West wind", N: "North wind",
   R: "Red dragon", G: "Green dragon", H: "White dragon"
 };
-var regular = [];
-["m", "p", "s"].forEach(function (suit) {
-  for (var number = 1; number <= 9; number++) regular.push(suit + number);
-});
-regular = regular.concat(["E", "S", "W", "N", "R", "H", "G"]);
+const regular = ["m", "p", "s"].flatMap(suit =>
+  Array.from({ length: 9 }, (_, index) => `${suit}${index + 1}`));
+regular.push("E", "S", "W", "N", "R", "H", "G");
 
-var solution = [
+// Geometry only: each pair is free after the preceding pairs are removed.
+// New game shuffles tile identities onto these positions, not the layout.
+export const removalOrder = [
   [131,57],[126,92],[135,11],[58,99],[143,74],[12,44],[117,10],
   [139,91],[86,141],[134,67],[110,125],[111,56],[0,59],[93,105],
   [85,124],[9,127],[84,140],[122,109],[138,1],[30,2],[29,116],
@@ -21,17 +21,17 @@ var solution = [
   [24,51],[65,35],[36,76],[66,52],[23,75],[42,37],[38,41],[39,40]
 ];
 
-function positions() {
-  var result = [];
+export function positions() {
+  const result = [];
   function layer(z, width, height, x, y) {
-    for (var row = 0; row < height; row++) {
-      for (var column = 0; column < width; column++) {
-        result.push({ x: x + column, y: y + row, z: z });
+    for (let row = 0; row < height; row++) {
+      for (let column = 0; column < width; column++) {
+        result.push({ x: x + column, y: y + row, z });
       }
     }
   }
-  var rows = [[12,1],[8,3],[10,2],[14,0],[13,.5],[10,2],[8,3],[12,1]];
-  rows.forEach(function (row, y) { layer(0, row[0], 1, row[1], y); });
+  const rows = [[12,1],[8,3],[10,2],[14,0],[13,.5],[10,2],[8,3],[12,1]];
+  rows.forEach(([width, x], y) => layer(0, width, 1, x, y));
   layer(1, 6, 6, 4, 1);
   layer(2, 4, 4, 5, 2);
   layer(3, 2, 2, 6, 3);
@@ -39,31 +39,27 @@ function positions() {
   return result;
 }
 
-function shuffle(values) {
-  for (var index = values.length - 1; index > 0; index--) {
-    var other = Math.floor(Math.random() * (index + 1));
-    var value = values[index]; values[index] = values[other]; values[other] = value;
+function shuffle(values, random) {
+  for (let index = values.length - 1; index > 0; index--) {
+    const other = Math.floor(random() * (index + 1));
+    [values[index], values[other]] = [values[other], values[index]];
   }
   return values;
 }
 
-function assignTiles() {
-  var places = positions();
-  var types = [];
-  regular.forEach(function (type) { types.push(type, type); });
-  for (var bonus = 0; bonus < 8; bonus++) types.push("f" + bonus);
-  shuffle(types);
-  var assigned = new Array(places.length);
-  solution.forEach(function (pair) {
-    var type = types.pop();
-    var match = type[0] === "f" ? (+type.slice(1) < 4 ? "flowers" : "seasons") : type;
-    pair.forEach(function (index) {
-      assigned[index] = {
-        x: places[index].x, y: places[index].y, z: places[index].z,
-        type: type, match: match, removed: false
-      };
-    });
-  });
+export function assignTiles(random = Math.random) {
+  const places = positions();
+  const types = regular.flatMap(type => [type, type]);
+  for (let bonus = 0; bonus < 8; bonus++) types.push(`f${bonus}`);
+  shuffle(types, random);
+  const assigned = new Array(places.length);
+  for (const pair of removalOrder) {
+    const type = types.pop();
+    const match = type[0] === "f" ? (+type.slice(1) < 4 ? "flowers" : "seasons") : type;
+    for (const index of pair) {
+      assigned[index] = { ...places[index], type, match, removed: false };
+    }
+  }
   return assigned;
 }
 
@@ -71,11 +67,12 @@ function overlaps(first, second) {
   return Math.abs(first.x - second.x) < 1 && Math.abs(first.y - second.y) < 1;
 }
 
-function free(index) {
-  var tile = tiles[index], left = false, right = false;
+export function isFree(tiles, index) {
+  const tile = tiles[index];
+  let left = false, right = false;
   if (tile.removed) return false;
-  for (var other = 0; other < tiles.length; other++) {
-    var candidate = tiles[other];
+  for (let other = 0; other < tiles.length; other++) {
+    const candidate = tiles[other];
     if (candidate.removed || other === index) continue;
     if (candidate.z > tile.z && overlaps(tile, candidate)) return false;
     if (candidate.z === tile.z && Math.abs(candidate.y - tile.y) < .5) {
@@ -86,12 +83,12 @@ function free(index) {
   return !left || !right;
 }
 
-function tileName(type) {
+export function tileName(type) {
   if (type[0] === "f") return +type.slice(1) < 4 ? "Flower" : "Season";
-  return names[type] || type[1] + " " + ({ m: "characters", p: "dots", s: "bamboo" })[type[0]];
+  return names[type] || `${type[1]} ${{ m: "characters", p: "dots", s: "bamboo" }[type[0]]}`;
 }
 
-function spriteCell(type) {
+export function spriteCell(type) {
   if (type[0] === "m") return [+type[1] - 1, 0];
   if (type[0] === "p") return [+type[1] - 1, 1];
   if (type[0] === "s") return [+type[1] - 1, 2];
