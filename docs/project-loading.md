@@ -55,6 +55,24 @@ The old MicroQuickJS comparison tests now build their own ignored fixtures in
 runtime or programs. Their DOM-realm and language-loading checks remain useful
 for that engine, but are not the production site acceptance test.
 
+After the server conversion and frontend/editor migration, three fresh browser
+contexts with no concurrent builds measured 144 visible Mahjong tiles at
+1.63, 1.14, and 1.05 seconds, and editor readiness at 2.08, 1.58, and 1.49
+seconds. This meets the local timing target in these samples, not a staging
+latency guarantee. A run competing with C/Babel builds was substantially slower;
+do not mix build load into before/after application comparisons.
+
+A second three-load run measured 1.65, 1.37, and 1.27 seconds for the board.
+Playwright then clicked all 72 matching pairs in the actual signed-in output
+iframe, observed the win message and empty board, and started a new 144-tile
+game. No page errors were reported. Screenshots and raw timing logs are kept
+outside the repository in `/root/macchiato-work/design-refresh/`.
+
+Project-level checks also cover Markdown grammars, Find/Replace in both themes,
+and titled saves/history. The save/reload test caught a cached-output ordering
+bug: when a session draft exists, the editor must recover it before any saved
+output is mounted. The cache remains the initial path only without recovery.
+
 These are exploratory observations, not completion evidence or Bunny latency
 claims. Final checks need repeated loads, interactive play, editor input and
 undo, theme changes, and the new REST client, with screenshots and errors

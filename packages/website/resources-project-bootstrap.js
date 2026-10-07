@@ -33,7 +33,9 @@ if (document.querySelector("[data-project-editor]")) {
       JSON.stringify(savedConfig.environment || {}) === JSON.stringify(config.environment || {});
     if (workspace) delete workspace.savedOutput;
     await requestFrontendService("editor.mount", {
-      deferOutput: deferOutput && !useSaved, workspace, savedOutput: useSaved ? saved : null,
+      // A session draft may supersede even a valid cached build. Let the
+      // editor recover it before choosing the first output to display.
+      deferOutput, workspace, savedOutput: useSaved ? saved : null,
     });
   }
   openProject().catch((error) => {

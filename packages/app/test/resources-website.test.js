@@ -2300,6 +2300,10 @@ test("Resources project save controls publish titled latest versions", async (t)
   await page.getByLabel("Title", { exact: true }).fill("Save controls");
   await page.getByRole("button", { name: "Create project" }).click();
   await page.locator("[data-project-submit]").waitFor();
+  // The saved project's HTML arrives before its independently loaded editor
+  // controls. Exercise those controls only after that new workspace is ready.
+  await page.waitForFunction(() =>
+    document.querySelector("[data-project-editor]")?.dataset.editorMachineStage === "ready");
   assert.equal(await page.locator(".project-close").getAttribute("href"), "/", "an exhausted project close stack should return home");
   const projectToolbar = await page.locator(".project-editor__toolbar").boundingBox();
   for (const label of ["Notifications", "Create", "Account menu"]) {
