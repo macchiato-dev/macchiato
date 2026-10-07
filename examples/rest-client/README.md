@@ -30,7 +30,7 @@ backticks and embedded newlines survive a round trip. Bodies use fenced code
 blocks; fences grow when the body contains backticks. Request order and duplicate
 header/parameter names are retained. Internal IDs and response data are omitted.
 
-```markdown
+````markdown
 # REST Desk
 
 ## Project
@@ -50,9 +50,11 @@ header/parameter names are retained. Internal IDs and response data are omitted.
 - [ ] `"X-Debug"`: `"true"`
 
 #### Body
-```
+```text
 
-The body heading is followed by a `text` fenced code block, empty for this GET.
+```
+````
+
 `markdown.js` contains the small, strict reader/writer for this format.
 
 Import this directory as project files and choose `index.html` as the entry.

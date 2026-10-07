@@ -20,7 +20,8 @@ export function writeProjects(projects) {
         lines.push("");
       }
       const fence = "`".repeat(Math.max(2, ...[...request.body.matchAll(/`+/g)].map(match => match[0].length)) + 1);
-      lines.push("#### Body", `${fence}text`, request.body, fence, "");
+      const json = request.headers.some(item => item.enabled && item.name.toLowerCase() === "content-type" && /json/i.test(item.value));
+      lines.push("#### Body", `${fence}${json ? "json" : "text"}`, request.body, fence, "");
     }
   }
   return lines.join("\n");

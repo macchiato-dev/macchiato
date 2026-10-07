@@ -234,7 +234,14 @@ field("delete-request").addEventListener("click", () => {
 field("open-requests").addEventListener("click", () => collection(true));
 field("close-requests").addEventListener("click", () => collection(false, true));
 field("collection-backdrop").addEventListener("click", () => collection(false, true));
+let exchangeFocus;
+function closeExchange(restore = true) {
+  field("exchange").hidden = true;
+  if (restore) exchangeFocus?.focus();
+  exchangeFocus = null;
+}
 function exchange(mode) {
+  exchangeFocus = document.activeElement;
   field("exchange").hidden = false;
   field("exchange-title").textContent = mode === "import" ? "Import Markdown" : "Export Markdown";
   field("markdown").value = mode === "import" ? "" : writeProjects(mode === "all" ? projects : [project()]);
@@ -245,7 +252,7 @@ function exchange(mode) {
 field("export-collection").addEventListener("click", () => { save(); exchange("collection"); });
 field("export-projects").addEventListener("click", () => { save(); exchange("all"); });
 field("open-import").addEventListener("click", () => exchange("import"));
-field("close-exchange").addEventListener("click", () => { field("exchange").hidden = true; });
+field("close-exchange").addEventListener("click", () => closeExchange());
 field("select-markdown").addEventListener("click", () => { field("markdown").focus(); field("markdown").select(); });
 field("import-markdown").addEventListener("click", () => {
   try {
@@ -258,12 +265,12 @@ field("import-markdown").addEventListener("click", () => {
       value.selected = value.requests[0].id;
     }
     projects.push(...imported); selectedProject = imported[0].id;
-    render(); persist(); field("exchange").hidden = true; collection(false);
+    render(); persist(); closeExchange(false); collection(false); field("name").focus();
   } catch (error) { field("exchange-error").textContent = error.message; }
 });
 document.addEventListener("keydown", event => {
   if (!field("exchange").hidden) {
-    if (event.key === "Escape") { event.preventDefault(); field("exchange").hidden = true; }
+    if (event.key === "Escape") { event.preventDefault(); closeExchange(); }
     if (event.key === "Tab") {
       const items = [...field("exchange").querySelectorAll("button, textarea")].filter(item => !item.hidden);
       if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items[items.length - 1].focus(); }
