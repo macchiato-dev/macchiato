@@ -248,6 +248,7 @@ function exchange(mode) {
   field("import-markdown").hidden = mode !== "import";
   field("exchange-error").textContent = "";
   field("markdown").focus();
+  field("markdown").scrollTop = 0;
 }
 field("export-collection").addEventListener("click", () => { save(); exchange("collection"); });
 field("export-projects").addEventListener("click", () => { save(); exchange("all"); });
