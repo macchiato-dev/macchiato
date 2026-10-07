@@ -22,6 +22,8 @@ const sprite = {
   scale: .435
 };
 const bonusArt = [];
+const imageSources = new Map();
+const tileImages = new Map();
 let resourceUrls = Object.create(null);
 function resourceUrl(path) {
   const value = resourceUrls[path];
@@ -98,9 +100,7 @@ function boardUnit(pixels) {
   return pixels / boardGeometry.width * 100 + "cqw";
 }
 function paint(index, layout) {
-  const tile = tiles[index],
-    button = buttons[index],
-    image = button.image;
+  const tile = tiles[index], button = buttons[index];
   const bonus = tile.type[0] === "f";
   const state = `${tile.removed}/${selected === index}/${bonus}`;
   if (button.state !== state) {
@@ -112,10 +112,30 @@ function paint(index, layout) {
   // resending the large sprite URL through the bridge on every click.
   if (!layout) return;
   button.node.setAttribute("aria-label", tileName(tile.type));
-  button.node.style.left = boardUnit(boardGeometry.leftInset + tile.x * boardGeometry.columnStep + tile.z * boardGeometry.layerStepX);
-  button.node.style.top = boardUnit(boardGeometry.topInset + tile.y * boardGeometry.rowStep - tile.z * boardGeometry.layerStepY);
-  button.node.style.zIndex = String(10 + tile.z * 100 + Math.round(tile.y * 2));
-  image.src = bonus ? bonusArt[+tile.type.slice(1)] : sprite.source;
+  if (!button.positioned) {
+    button.node.style.left = boardUnit(boardGeometry.leftInset + tile.x * boardGeometry.columnStep + tile.z * boardGeometry.layerStepX);
+    button.node.style.top = boardUnit(boardGeometry.topInset + tile.y * boardGeometry.rowStep - tile.z * boardGeometry.layerStepY);
+    button.node.style.zIndex = String(10 + tile.z * 100 + Math.round(tile.y * 2));
+    button.positioned = true;
+  }
+  if (button.type !== tile.type) {
+    button.node.replaceChildren(tileImage(tile.type).cloneNode(false));
+    button.type = tile.type;
+  }
+}
+
+// Transfer each image source only once. Ordinary DOM cloning then shares the
+// browser's decoded artwork without copying its data URL across Wasm again.
+function tileImage(type) {
+  if (tileImages.has(type)) return tileImages.get(type);
+  const bonus = type[0] === "f";
+  const source = bonus ? bonusArt[+type.slice(1)] : sprite.source;
+  if (!imageSources.has(source)) {
+    const image = document.createElement("img");
+    image.src = source;
+    imageSources.set(source, image);
+  }
+  const image = imageSources.get(source).cloneNode(false);
   if (bonus) {
     image.style.inset = "0";
     image.style.left = "0";
@@ -124,7 +144,7 @@ function paint(index, layout) {
     image.style.height = "100%";
     image.style.objectFit = "contain";
   } else {
-    const cell = spriteCell(tile.type);
+    const cell = spriteCell(type);
     image.style.inset = "auto";
     image.style.objectFit = "fill";
     image.style.width = boardUnit(sprite.width * sprite.scale);
@@ -132,6 +152,8 @@ function paint(index, layout) {
     image.style.left = boardUnit(-(cell[0] * sprite.cellWidth + sprite.leftInset) * sprite.scale);
     image.style.top = boardUnit(-(cell[1] * sprite.cellHeight + sprite.topInset) * sprite.scale);
   }
+  tileImages.set(type, image);
+  return image;
 }
 function render(layout = false) {
   for (let index = 0; index < tiles.length; index++) paint(index, layout);
@@ -391,8 +413,7 @@ function start(resources) {
   board.setAttribute("role", "grid");
   board.setAttribute("aria-label", "Mahjong solitaire turtle layout");
   for (const [tileIndex] of positions().entries()) {
-    let button = document.createElement("button");
-    let image = document.createElement("img");
+    const button = document.createElement("button");
     button.setAttribute("type", "button");
     button.setAttribute("role", "gridcell");
     button.addEventListener("click", () => {
@@ -406,12 +427,8 @@ function start(resources) {
       showTileName(tileIndex);
     });
     button.addEventListener("blur", hideTileName);
-    button.append(image);
     board.append(button);
-    buttons.push({
-      node: button,
-      image: image
-    });
+    buttons.push({ node: button });
   }
   winMessage = document.createElement("div");
   winMessage.className = "win-message";

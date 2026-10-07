@@ -73,7 +73,35 @@ and titled saves/history. The save/reload test caught a cached-output ordering
 bug: when a session draft exists, the editor must recover it before any saved
 output is mounted. The cache remains the initial path only without recovery.
 
-These are exploratory observations, not completion evidence or Bunny latency
-claims. Final checks need repeated loads, interactive play, editor input and
-undo, theme changes, and the new REST client, with screenshots and errors
-recorded. Keep benchmark instrumentation outside the production controller.
+## Final example checks
+
+Mahjong now uses two ordinary ES modules. Its model accepts state explicitly,
+and its UI loads resources with `async`/`await`. Initial image templates cross
+the bridge once per source and are cloned with the normal DOM API; selecting
+a tile only changes affected states, not all 144 image URLs and positions.
+Existing gameplay and the user's other project files were preserved. The
+saved output was regenerated in the Wasm build guest for the new source.
+
+After that change, a three-context local run measured the visible board at
+2.67, 2.57, and 1.93 seconds, and editor readiness at 4.01, 3.42, and 2.99
+seconds. The first context also completed all 72 pairs, reached the win
+state, and started a fresh game. The immediately preceding run had two
+loads above three seconds; retain those logs rather than presenting the
+fastest sample as a universal guarantee. These final samples meet the local
+target; staging still needs its own latency measurements.
+
+`/benatkin/rest-client` is the new REST Desk project, with portable source in
+`examples/rest-client/`. Browser tests cover JSON POST, response headers,
+HTTP 422, displaying response HTML as text, blocked origins, recovery, and
+session draft restoration. A real HTTPS endpoint was also exercised with
+GET and POST. Request bodies and response streams have size limits; ambient
+credentials, referrers, redirects and ungranted origins remain blocked.
+The shared controller adapter is `packages/website/project-fetch.js`.
+
+The editor surface regression covers input, commands, themes, and languages.
+Mahjong ZIP import/export still renders the modern example. Screenshots were
+inspected for the board, REST Desk in light/dark modes, and the two separate
+loading indicators. The indicators are 38 by 3 pixel opacity pulses, not
+rotating circles; reduced-motion mode reports no animation. All timing and
+screenshot instrumentation stays outside the production controller, under
+`/root/macchiato-work/design-refresh/`.

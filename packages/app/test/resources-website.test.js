@@ -921,6 +921,10 @@ test("REST Desk sends explicit requests from QuickJS, shows errors, and recovers
   await output.locator("#send").click();
   await output.locator("#status").filter({ hasText: "200" }).waitFor();
   assert.equal(await output.locator("#error").isHidden(), true);
+  await output.locator("#url").fill("https://httpbingo.org/get?draft=retained");
+  await page.reload();
+  await output.locator("#send").waitFor();
+  assert.equal(await output.locator("#url").inputValue(), "https://httpbingo.org/get?draft=retained");
   assert.deepEqual(errors, []);
 });
 

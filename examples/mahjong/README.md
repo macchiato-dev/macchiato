@@ -11,8 +11,9 @@ shuffles identities onto that layout. `application.js` owns input, settings,
 and rendering. It loads local resources concurrently with `async`/`await`.
 
 Artwork and placement are set once per game. A selection/removal redraw only
-changes the affected button states, avoiding repeated image transfers across
-the Wasm bridge. The runtime's `response.resourceUrl()` returns a checked data
+changes the affected button states. Image templates use ordinary DOM cloning,
+so each source crosses the Wasm bridge once, not once per tile. The runtime's
+`response.resourceUrl()` returns a checked data
 URL for a project file; this is the one deliberate extension to browser fetch.
 
 The example preserves the existing gameplay and appearance. Model checks live
