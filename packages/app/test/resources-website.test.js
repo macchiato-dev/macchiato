@@ -864,6 +864,66 @@ test("Mahjong ZIP drops round-trip a signed-in project's files and recover from 
   assert.deepEqual(errors, []);
 });
 
+test("REST Desk sends explicit requests from QuickJS, shows errors, and recovers", { timeout: 90_000 }, async t => {
+  const port = await getPort(), dataDir = await tempDir();
+  const app = startApp(port, dataDir);
+  t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
+  await app.waitForReady;
+  const files = await Promise.all(["index.html", "style.css", "application.js"].map(async path =>
+    ({ path, content: await readFile(join(repoRoot, "examples/rest-client", path), "utf8") })));
+  const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
+  const client = createNodeSqliteClient(db);
+  const account = await createAccountStore(client).authenticateIdentity({ provider: "github",
+    providerUserId: "rest-player", login: "rest-player", name: "REST Player",
+    email: "rest-player@example.test", emailVerified: true });
+  await createContentStore(client).createProject(account.id, { userSlug: account.login,
+    name: "REST Desk", slug: "rest-client", snapshot: { files, config: { entry: "index.html", template: "html",
+      containerOptions: { allowedFetchOrigins: ["https://httpbingo.org"] } } } });
+  db.close();
+  const session = await seal({ v: 1, sub: account.id, login: account.login, name: account.name,
+    iat: Date.now(), exp: Date.now() + 300_000 }, "local-preview-session-signing-key");
+  const browser = await chromium.launch();
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  await page.context().addCookies([{ name: "resources_session", value: session,
+    domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
+  const requests = [], errors = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route("https://httpbingo.org/**", async route => {
+    const request = route.request();
+    if (request.method() !== "OPTIONS") requests.push({ method: request.method(), body: request.postData() });
+    await route.fulfill({ status: request.url().endsWith("/422") ? 422 : 200,
+      headers: { "content-type": "application/json", "access-control-allow-origin": "*",
+        "access-control-allow-methods": "*", "access-control-allow-headers": "*", "x-example": "test" },
+      body: JSON.stringify({ message: "<img src=https://not-granted.example/x>", body: request.postData() }) });
+  });
+  await page.goto(`http://resources-edge.localhost:${port}/rest-player/rest-client`);
+  const output = page.frameLocator(".project-editor__output-frame:not([inert])");
+  await output.locator("#send").waitFor();
+  await output.locator("#example").selectOption("post");
+  await output.locator("#send").click();
+  await output.locator("#status").filter({ hasText: "200" }).waitFor();
+  assert.equal(requests.at(-1).method, "POST");
+  assert.equal(JSON.parse(requests.at(-1).body).message, "Hello from QuickJS");
+  assert.match(await output.locator("#response").textContent(), /<img src=/);
+  assert.equal(await output.locator("#response img").count(), 0);
+  await output.locator("#response-headers").click();
+  assert.match(await output.locator("#response").textContent(), /content-type: application\/json/);
+  await output.locator("#example").selectOption("error");
+  await output.locator("#send").click();
+  await output.locator("#status").filter({ hasText: "422" }).waitFor();
+  const count = requests.length;
+  await output.locator("#url").fill("https://not-granted.example/private");
+  await output.locator("#send").click();
+  await output.locator("#error").filter({ hasText: "Fetch blocked" }).waitFor();
+  assert.equal(requests.length, count);
+  await output.locator("#example").selectOption("get");
+  await output.locator("#send").click();
+  await output.locator("#status").filter({ hasText: "200" }).waitFor();
+  assert.equal(await output.locator("#error").isHidden(), true);
+  assert.deepEqual(errors, []);
+});
+
 test("every Resources starting point exports and imports without losing files or configuration", async (t) => {
   const port = await getPort();
   const dataDir = await tempDir();

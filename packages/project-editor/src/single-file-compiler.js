@@ -9,11 +9,12 @@ const OMITTED = new Set(["meta", "title", "style", "script", "link"]);
 const ELEMENTS = new Set([
   "a", "article", "aside", "b", "br", "button", "canvas", "code", "dialog", "div", "em", "footer", "form",
   "h1", "h2", "h3", "h4", "header", "i", "img", "input", "label", "li", "main", "nav", "ol",
-  "option", "p", "section", "small", "span", "strong", "textarea", "ul",
+  "optgroup", "option", "p", "pre", "section", "select", "small", "span", "strong", "textarea", "ul",
 ]);
 const ATTRIBUTES = new Set([
   "aria-label", "aria-live", "class", "contenteditable", "dir", "hidden", "id", "lang", "maxlength", "placeholder",
-  "role", "tabindex", "title", "translate", "type", "value",
+  "role", "tabindex", "title", "translate", "type", "value", "autocomplete", "checked", "cols",
+  "disabled", "readonly", "rows", "selected", "spellcheck",
 ]);
 const SVG_ELEMENTS = new Map([
   "svg", "g", "defs", "circle", "ellipse", "line", "linearGradient", "path", "rect", "stop", "text", "title",

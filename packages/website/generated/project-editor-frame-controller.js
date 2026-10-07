@@ -27,9 +27,13 @@ var smallValueLimit = (replyLimit - JSON.stringify({ value: "", error: null }).l
 // packages/website/project-output-session.js
 var encoder = new TextEncoder();
 
-// packages/website/project-machines.js
+// packages/website/project-fetch.js
 var encoder2 = new TextEncoder();
 var decoder = new TextDecoder();
+
+// packages/website/project-machines.js
+var encoder3 = new TextEncoder();
+var decoder2 = new TextDecoder();
 var runtimeModules = /* @__PURE__ */ new Map();
 var editorLanguageNames = new Set(editorLanguages.map((item) => `language-${item.package}.bin`));
 var editorBytecodeNames = /* @__PURE__ */ new Set([...editorLanguageNames, "core.bin", "workspace.bin", "surface.bin"]);
@@ -62,7 +66,7 @@ async function moduleFor(url) {
   return runtimeModules.get(url);
 }
 function callMessage(name, payload) {
-  const fn = encoder2.encode(name), argument = encoder2.encode(JSON.stringify(payload)), message = new Uint8Array(2 + fn.length + argument.length);
+  const fn = encoder3.encode(name), argument = encoder3.encode(JSON.stringify(payload)), message = new Uint8Array(2 + fn.length + argument.length);
   message[0] = 2;
   message.set(fn, 1);
   message.set(argument, fn.length + 2);

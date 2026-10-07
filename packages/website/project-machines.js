@@ -39,46 +39,8 @@ function callMessage(name, payload) {
   const fn = encoder.encode(name), argument = encoder.encode(JSON.stringify(payload)), message = new Uint8Array(2 + fn.length + argument.length);
   message[0] = 2; message.set(fn, 1); message.set(argument, fn.length + 2); return message;
 }
-export function createConstrainedFetch(allowedOrigins = [], maxBytes = 1_048_576) {
-  const origins = new Set(allowedOrigins.map((value) => new URL(value).origin));
-  return async (value, { signal } = {}) => {
-    const url = new URL(value);
-    if (url.protocol !== "https:" || !origins.has(url.origin)) throw new Error(`Fetch blocked for ${url.origin}`);
-    const response = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", signal }), bytes = new Uint8Array(await response.arrayBuffer());
-    if (bytes.byteLength > maxBytes) throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
-    let binary = "";
-    for (let offset = 0; offset < bytes.length; offset += 0x8000)
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-    const mime = response.headers.get("content-type")?.split(";", 1)[0] || "application/octet-stream";
-    return { status: response.status, body: decoder.decode(bytes), resourceUrl: `data:${mime};base64,${btoa(binary)}` };
-  }; }
-export function createProjectFetch(files = [], allowedOrigins = [], maxBytes = 1_048_576) {
-  const projectFiles = new Map(files.map((file) => [file.path, file]));
-  const remoteFetch = createConstrainedFetch(allowedOrigins, maxBytes);
-  return async (value, options) => {
-    if (/^https:\/\//.test(value)) return remoteFetch(value, options);
-    if (typeof value !== "string" || value.includes("?") || value.includes("#"))
-      throw new Error("Project file fetch requires a relative file path");
-    const path = value.replace(/^\.\//, "");
-    if (!path || path.startsWith("/") || path.split("/").includes(".."))
-      throw new Error("Project file fetch path is invalid");
-    const file = projectFiles.get(path);
-    if (!file) throw new Error(`Project file not found: ${path}`);
-    const extension = path.split(".").at(-1).toLowerCase();
-    const mime = { css: "text/css", gif: "image/gif", html: "text/html", jpeg: "image/jpeg",
-      jpg: "image/jpeg", js: "text/javascript", json: "application/json", png: "image/png",
-      svg: "image/svg+xml", txt: "text/plain" }[extension] || "application/octet-stream";
-    const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
-    let bytes;
-    if (data) bytes = Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0));
-    else bytes = encoder.encode(file.content);
-    if (bytes.byteLength > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
-    let binary = "";
-    for (let offset = 0; offset < bytes.length; offset += 0x8000)
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-    return { status: 200, body: data ? "" : file.content, resourceUrl: `data:${mime};base64,${btoa(binary)}` };
-  };
-}
+import { createProjectFetch } from "./project-fetch.js";
+export { createConstrainedFetch, createProjectFetch } from "./project-fetch.js";
 export function createProjectImageResolver(files = []) {
   const images = new Map();
   for (const file of files) {

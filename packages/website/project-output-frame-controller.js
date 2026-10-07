@@ -2,9 +2,10 @@ import WasmWebMachine from "./machine.js";
 import { urlMatchesAllowedPatterns } from "../hub/src/url-pattern.js";
 import { ProjectOutputStorage } from "./project-output-storage.js";
 import { ProjectOutput } from "./project-output-session.js";
+import { createProjectFetch, resourceResult } from "./project-fetch.js";
 
 const protocol = "resources-project-output-machine-v1";
-const encoder = new TextEncoder(), decoder = new TextDecoder();
+const encoder = new TextEncoder();
 let output, storage, ownerPort;
 let destroyed = false;
 
@@ -15,44 +16,6 @@ function reportError(error) {
   ownerPort?.postMessage({ protocol, type: "error", error: error?.message || String(error) });
 }
 
-function projectFetch(files, allowedOrigins, maxBytes = 1_048_576) {
-  const projectFiles = new Map(files.map((file) => [file.path, file]));
-  const origins = new Set(allowedOrigins.map((value) => new URL(value).origin));
-  return async (value, { signal } = {}) => {
-    if (/^https:\/\//.test(value)) {
-      const url = new URL(value);
-      if (!origins.has(url.origin)) throw new Error(`Fetch blocked for ${url.origin}`);
-      const reply = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", signal });
-      const bytes = new Uint8Array(await reply.arrayBuffer());
-      if (bytes.byteLength > maxBytes) throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
-      return resourceResult(bytes, reply.headers.get("content-type")?.split(";", 1)[0]);
-    }
-    if (typeof value !== "string" || value.includes("?") || value.includes("#"))
-      throw new Error("Project file fetch requires a relative file path");
-    const path = value.replace(/^\.\//, "");
-    if (!path || path.startsWith("/") || path.split("/").includes(".."))
-      throw new Error("Project file fetch path is invalid");
-    const file = projectFiles.get(path);
-    if (!file) throw new Error(`Project file not found: ${path}`);
-    const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
-    const bytes = data ? Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0)) : encoder.encode(file.content);
-    if (bytes.byteLength > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
-    return resourceResult(bytes, data?.[1] || mimeFor(path), data ? "" : file.content);
-  };
-}
-
-function mimeFor(path) {
-  return { css: "text/css", gif: "image/gif", html: "text/html", jpeg: "image/jpeg", jpg: "image/jpeg",
-    js: "text/javascript", json: "application/json", png: "image/png", svg: "image/svg+xml",
-    txt: "text/plain" }[path.split(".").at(-1).toLowerCase()] || "application/octet-stream";
-}
-
-function resourceResult(bytes, mime = "application/octet-stream", body) {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 0x8000)
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
-  return { status: 200, body: body ?? decoder.decode(bytes), resourceUrl: `data:${mime};base64,${btoa(binary)}` };
-}
 
 function imageResolver(files) {
   const images = new Map();
@@ -75,7 +38,7 @@ async function start(payload, port) {
     environment: { ...payload.environment, ...project.environment },
     files: project.files || [],
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1_000 : 50,
-    fetchResource: projectFetch(project.files || [], project.allowedFetchOrigins || []),
+    fetchResource: createProjectFetch(project.files || [], project.allowedFetchOrigins || []),
     resolveImage: imageResolver(project.files || []),
     allowNavigate: url => urlMatchesAllowedPatterns(url, project.allowedLinkPatterns || []),
     services: {

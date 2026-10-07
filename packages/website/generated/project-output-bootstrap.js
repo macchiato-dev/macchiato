@@ -146,10 +146,11 @@
     setOutputDocument(project.document, true);
     return JSON.stringify({ mounted: result.mounted, hydrated: result.hydrated });
   };
-  globalThis.__wwcFetchMissing = (url) => new Promise((resolve, reject) => {
+  globalThis.__wwcFetchMissing = (url, options = {}) => new Promise((resolve, reject) => {
     const id = nextFetch++;
     pendingFetches.set(id, { resolve, reject });
-    globalThis.__wwcPostMessage(JSON.stringify({ type: "fetch", id, url }));
+    const init = { method: options.method, headers: options.headers, body: options.body };
+    globalThis.__wwcPostMessage(JSON.stringify({ type: "fetch", id, url, init }));
   });
   globalThis.__resourcesFetchResolve = (json) => {
     const result = JSON.parse(json);
@@ -160,7 +161,13 @@
     else pending.resolve({
       ok: result.status >= 200 && result.status < 300,
       status: result.status,
+      headers: {
+        get: (name) => (result.headers || []).find(([key]) => key.toLowerCase() === String(name).toLowerCase())?.[1] ?? null,
+        entries: () => (result.headers || [])[Symbol.iterator](),
+        [Symbol.iterator]: () => (result.headers || [])[Symbol.iterator]()
+      },
       text: () => Promise.resolve(result.body),
+      json: () => Promise.resolve().then(() => JSON.parse(result.body)),
       arrayBuffer: () => Promise.resolve(new TextEncoder().encode(result.body)),
       resourceUrl: () => result.resourceUrl
     });

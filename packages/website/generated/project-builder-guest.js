@@ -1658,9 +1658,12 @@
     "main",
     "nav",
     "ol",
+    "optgroup",
     "option",
     "p",
+    "pre",
     "section",
+    "select",
     "small",
     "span",
     "strong",
@@ -1683,7 +1686,15 @@
     "title",
     "translate",
     "type",
-    "value"
+    "value",
+    "autocomplete",
+    "checked",
+    "cols",
+    "disabled",
+    "readonly",
+    "rows",
+    "selected",
+    "spellcheck"
   ]);
   var SVG_ELEMENTS = new Map([
     "svg",

@@ -315,7 +315,10 @@ var OutputSession = class {
     let reply;
     try {
       if (!this.options.fetchResource) throw new Error("Project network access is disabled");
-      reply = { id: request.id, ...await this.options.fetchResource(request.url, { signal: this.abort.signal }) };
+      reply = { id: request.id, ...await this.options.fetchResource(
+        request.url,
+        { ...request.init, signal: this.abort.signal }
+      ) };
     } catch (error) {
       reply = { id: request.id, error: error.message || String(error) };
     }
@@ -520,10 +523,127 @@ var ProjectOutput = class {
   };
 };
 
-// packages/website/project-output-frame-controller.js
-var protocol = "resources-project-output-machine-v1";
+// packages/website/project-fetch.js
 var encoder3 = new TextEncoder();
 var decoder = new TextDecoder();
+var methods = /* @__PURE__ */ new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]);
+var forbiddenHeaders = /^(?:cookie2?|host|origin|referer|connection|content-length|transfer-encoding|upgrade|proxy-.*|sec-.*)$/i;
+function resourceResult(bytes, mime = "application/octet-stream", body) {
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 32768)
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
+  return {
+    status: 200,
+    headers: [["content-type", mime]],
+    body: body ?? decoder.decode(bytes),
+    resourceUrl: `data:${mime};base64,${btoa(binary)}`
+  };
+}
+function requestOptions(init, maxBytes) {
+  const method = String(init.method || "GET").toUpperCase();
+  if (!methods.has(method)) throw new Error("Fetch method is not allowed");
+  const headers = new Headers(init.headers || []);
+  let headerBytes = 0;
+  for (const [name, value] of headers) {
+    if (forbiddenHeaders.test(name)) throw new Error(`Fetch header is not allowed: ${name}`);
+    headerBytes += encoder3.encode(name + value).length;
+  }
+  if (headerBytes > 16384) throw new Error("Fetch headers exceed 16384 bytes");
+  const body = init.body == null ? void 0 : init.body;
+  if (body !== void 0 && typeof body !== "string") throw new Error("Fetch body must be text");
+  if (body !== void 0 && encoder3.encode(body).length > maxBytes) throw new Error("Fetch body is too large");
+  if (body !== void 0 && (method === "GET" || method === "HEAD")) throw new Error(`${method} cannot have a body`);
+  return {
+    method,
+    headers,
+    body,
+    signal: init.signal,
+    credentials: "omit",
+    referrerPolicy: "no-referrer",
+    redirect: "error"
+  };
+}
+async function readLimited(response, maxBytes) {
+  if (!response.body) return new Uint8Array();
+  const reader = response.body.getReader(), chunks = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.length;
+      if (length > maxBytes) {
+        await reader.cancel();
+        throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return bytes;
+}
+function createConstrainedFetch(allowedOrigins = [], maxBytes = 1048576) {
+  const origins = new Set(allowedOrigins.map((value) => {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password || url.pathname !== "/" || url.search || url.hash)
+      throw new Error("Fetch permissions must be HTTPS origins");
+    return url.origin;
+  }));
+  return async (value, init = {}) => {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password || !origins.has(url.origin))
+      throw new Error(`Fetch blocked for ${url.origin}`);
+    const response = await fetch(url, requestOptions(init, maxBytes));
+    const bytes = await readLimited(response, maxBytes);
+    return {
+      ...resourceResult(bytes, response.headers.get("content-type")?.split(";", 1)[0]),
+      status: response.status,
+      headers: [...response.headers]
+    };
+  };
+}
+function createProjectFetch(files = [], allowedOrigins = [], maxBytes = 1048576) {
+  const projectFiles = new Map(files.map((file) => [file.path, file]));
+  const remoteFetch = createConstrainedFetch(allowedOrigins, maxBytes);
+  return async (value, init = {}) => {
+    if (/^https:\/\//.test(value)) return remoteFetch(value, init);
+    if (typeof value !== "string" || value.includes("?") || value.includes("#"))
+      throw new Error("Project file fetch requires a relative file path");
+    if (init.method && init.method.toUpperCase() !== "GET") throw new Error("Project files are read-only");
+    const path = value.replace(/^\.\//, "");
+    if (!path || path.startsWith("/") || path.split("/").includes(".."))
+      throw new Error("Project file fetch path is invalid");
+    const file = projectFiles.get(path);
+    if (!file) throw new Error(`Project file not found: ${path}`);
+    const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
+    const bytes = data ? Uint8Array.from(atob(data[2]), (c) => c.charCodeAt(0)) : encoder3.encode(file.content);
+    if (bytes.length > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
+    const mime = {
+      css: "text/css",
+      gif: "image/gif",
+      html: "text/html",
+      jpeg: "image/jpeg",
+      jpg: "image/jpeg",
+      js: "text/javascript",
+      json: "application/json",
+      png: "image/png",
+      svg: "image/svg+xml",
+      txt: "text/plain"
+    }[path.split(".").at(-1).toLowerCase()] || "application/octet-stream";
+    return resourceResult(bytes, data?.[1] || mime, data ? "" : file.content);
+  };
+}
+
+// packages/website/project-output-frame-controller.js
+var protocol = "resources-project-output-machine-v1";
+var encoder4 = new TextEncoder();
 var output;
 var storage;
 var ownerPort;
@@ -532,57 +652,12 @@ addEventListener("focus", () => output?.focus());
 function reportError(error) {
   ownerPort?.postMessage({ protocol, type: "error", error: error?.message || String(error) });
 }
-function projectFetch(files, allowedOrigins, maxBytes = 1048576) {
-  const projectFiles = new Map(files.map((file) => [file.path, file]));
-  const origins = new Set(allowedOrigins.map((value) => new URL(value).origin));
-  return async (value, { signal } = {}) => {
-    if (/^https:\/\//.test(value)) {
-      const url = new URL(value);
-      if (!origins.has(url.origin)) throw new Error(`Fetch blocked for ${url.origin}`);
-      const reply = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", redirect: "error", signal });
-      const bytes2 = new Uint8Array(await reply.arrayBuffer());
-      if (bytes2.byteLength > maxBytes) throw new Error(`Fetch response exceeds ${maxBytes} bytes`);
-      return resourceResult(bytes2, reply.headers.get("content-type")?.split(";", 1)[0]);
-    }
-    if (typeof value !== "string" || value.includes("?") || value.includes("#"))
-      throw new Error("Project file fetch requires a relative file path");
-    const path = value.replace(/^\.\//, "");
-    if (!path || path.startsWith("/") || path.split("/").includes(".."))
-      throw new Error("Project file fetch path is invalid");
-    const file = projectFiles.get(path);
-    if (!file) throw new Error(`Project file not found: ${path}`);
-    const data = /^data:([^;,]+);base64,(.*)$/s.exec(file.content);
-    const bytes = data ? Uint8Array.from(atob(data[2]), (character) => character.charCodeAt(0)) : encoder3.encode(file.content);
-    if (bytes.byteLength > maxBytes) throw new Error(`Project file exceeds ${maxBytes} bytes: ${path}`);
-    return resourceResult(bytes, data?.[1] || mimeFor(path), data ? "" : file.content);
-  };
-}
-function mimeFor(path) {
-  return {
-    css: "text/css",
-    gif: "image/gif",
-    html: "text/html",
-    jpeg: "image/jpeg",
-    jpg: "image/jpeg",
-    js: "text/javascript",
-    json: "application/json",
-    png: "image/png",
-    svg: "image/svg+xml",
-    txt: "text/plain"
-  }[path.split(".").at(-1).toLowerCase()] || "application/octet-stream";
-}
-function resourceResult(bytes, mime = "application/octet-stream", body) {
-  let binary = "";
-  for (let offset = 0; offset < bytes.length; offset += 32768)
-    binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
-  return { status: 200, body: body ?? decoder.decode(bytes), resourceUrl: `data:${mime};base64,${btoa(binary)}` };
-}
 function imageResolver(files) {
   const images = /* @__PURE__ */ new Map();
   for (const file of files) {
     if (/^data:image\/(?:gif|jpeg|png|webp);base64,/i.test(file.content)) images.set(file.path, file.content);
     else if (file.path.toLowerCase().endsWith(".svg"))
-      images.set(file.path, resourceResult(encoder3.encode(file.content), "image/svg+xml").resourceUrl);
+      images.set(file.path, resourceResult(encoder4.encode(file.content), "image/svg+xml").resourceUrl);
   }
   return (value) => images.get(String(value).replace(/^\.\//, "")) || value;
 }
@@ -594,7 +669,7 @@ async function start(payload, port) {
     environment: { ...payload.environment, ...project.environment },
     files: project.files || [],
     frameInterval: () => document.activeElement?.closest(".cm-editor") ? 1e3 : 50,
-    fetchResource: projectFetch(project.files || [], project.allowedFetchOrigins || []),
+    fetchResource: createProjectFetch(project.files || [], project.allowedFetchOrigins || []),
     resolveImage: imageResolver(project.files || []),
     allowNavigate: (url) => urlMatchesAllowedPatterns(url, project.allowedLinkPatterns || []),
     services: {

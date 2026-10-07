@@ -604,11 +604,11 @@ function resolved(value) {
 /* Resources are already inside the Wasm artifact. This deliberately tiny
    fetch keeps the familiar response/text shape without promises or a host
    round trip, and cannot address anything outside the build-owned table. */
-function fetch(url) {
+function fetch(url, options) {
   var source = RUNTIME_RESOURCES.files[url] ||
     (url.slice(0, 2) === "./" ? RUNTIME_RESOURCES.files[url.slice(2)] : undefined);
   if (source === undefined && typeof globalThis.__wwcFetchMissing === "function") {
-    return globalThis.__wwcFetchMissing(String(url));
+    return globalThis.__wwcFetchMissing(String(url), options);
   }
   return resolved({
     ok: source !== undefined,

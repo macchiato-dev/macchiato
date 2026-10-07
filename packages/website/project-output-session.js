@@ -69,7 +69,8 @@ class OutputSession {
     let reply;
     try {
       if (!this.options.fetchResource) throw new Error("Project network access is disabled");
-      reply = { id: request.id, ...await this.options.fetchResource(request.url, { signal: this.abort.signal }) };
+      reply = { id: request.id, ...await this.options.fetchResource(request.url,
+        { ...request.init, signal: this.abort.signal }) };
     } catch (error) { reply = { id: request.id, error: error.message || String(error) }; }
     if (!this.disposed) this.machine.onmsg(message("__resourcesFetchResolve", reply));
   }

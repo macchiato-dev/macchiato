@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REST Desk</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <div><h1>REST Desk</h1><p>A small request workbench, running inside QuickJS.</p></div>
+      <label>Examples
+        <select id="example">
+          <option value="get">Inspect a GET request</option>
+          <option value="post">Send JSON</option>
+          <option value="error">Inspect a 422 response</option>
+        </select>
+      </label>
+    </header>
+    <form id="request">
+      <div class="request-line">
+        <label class="method">Method
+          <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option></select>
+        </label>
+        <label class="url">URL<input id="url" type="text" spellcheck="false" autocomplete="off"></label>
+        <button id="send" type="submit">Send request</button>
+      </div>
+      <div class="panels">
+        <section>
+          <h2>Request</h2>
+          <label>Headers <span>one name: value per line</span>
+            <textarea id="headers" rows="5" spellcheck="false"></textarea>
+          </label>
+          <label>Body<textarea id="body" rows="9" spellcheck="false"></textarea></label>
+        </section>
+        <section>
+          <div class="response-heading"><h2>Response</h2><span id="status" role="status">Ready</span></div>
+          <div class="response-tabs">
+            <button id="response-body" type="button" aria-pressed="true">Body</button>
+            <button id="response-headers" type="button" aria-pressed="false">Headers</button>
+            <label class="format"><input id="pretty" type="checkbox" checked> Format JSON</label>
+          </div>
+          <pre id="response" tabindex="0">Choose an example or edit the request, then send it.</pre>
+        </section>
+      </div>
+    </form>
+    <p class="policy">Only explicitly permitted HTTPS origins can be reached. Browser cookies and referrers are never sent; redirects are blocked. CORS still applies.</p>
+    <p id="error" role="alert" hidden></p>
+  </main>
+  <script type="module" src="./application.js"></script>
+</body>
+</html>
