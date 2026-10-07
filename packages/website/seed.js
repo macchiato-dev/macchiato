@@ -1139,7 +1139,7 @@ html[data-theme="light"] .project-editor__splitter { background: #c4ccce; box-sh
 .project-editor__pane-loading { display: none; }
 .project-editor[data-editor-machine-state="starting"] .project-editor__source > .project-editor__pane-loading,
 .project-editor[data-output-machine-state="starting"] .project-editor__preview > .project-editor__pane-loading { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 25; display: grid; place-items: center; background: var(--project-toolbar-bg); }
-.project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after { content: ""; width: 26px; height: 26px; border: 3px dashed #7d8fff; border-radius: 50%; animation: projectSpin .75s linear infinite; }
+.project-editor__pane-loading::after { content: ""; width: 38px; height: 3px; border-radius: 2px; background: var(--project-toolbar-fg); opacity: .2; animation: projectBreathe 1.2s ease-in-out infinite alternate; }
 .project-editor__status { min-height: 31px; margin: 4px; padding: 4px 8px; border: 1px solid #5269e8; border-radius: 999px; color: #cbd3ff; background: #1b2454; font-size: 11px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .project-editor__status[hidden] { display: none; }
 .project-editor__status[data-state="warning"] { border-color: #c99b37; color: #ffe2a3; background: #3c3018; }
@@ -1280,9 +1280,9 @@ html:has(.embed-view), body:has(.embed-view) { width: 100%; height: 100%; margin
 @keyframes skeletonPulse {
   50% { opacity: .38; }
 }
-@keyframes projectSpin { to { transform: rotate(360deg); } }
+@keyframes projectBreathe { to { opacity: .55; } }
 @media (prefers-reduced-motion: reduce) {
-  .project-editor[data-editor-machine-state="starting"] .project-editor__pane-loading::after { animation: projectSpin 1.8s linear infinite; }
+  .project-editor__pane-loading::after { animation: none; }
 }
 
 @media (max-width: 760px) {
