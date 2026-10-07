@@ -115,7 +115,7 @@ test("Resources framed editor integrates with the site and running output", { ti
     await content.waitFor({ timeout: 15000 });
     await output.getByRole("heading", { name: "Frame fixture" }).waitFor();
     await content.locator(".cm-line span[class]").first().waitFor();
-    for (const name of ["resources-frontend-microquickjs.wasm", "project-editor-quickjs-runtime.wasm",
+    for (const name of ["resources-frontend-quickjs.wasm", "project-editor-quickjs-runtime.wasm",
       "project-quickjs-runtime.wasm", "project-editor-language-html.bin"]) {
       assert.equal(assetResponses.get(`/-/resources-site/${name}`)?.["content-encoding"], "gzip", name);
     }

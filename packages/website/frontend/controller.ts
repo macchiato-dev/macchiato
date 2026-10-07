@@ -41,14 +41,13 @@ export async function startResourcesMachineController({ editorFrame = true } = {
   function pagehide(event) { if (!event.persisted) destroy(); }
   window.addEventListener("pagehide", pagehide);
   let module;
-  try { module = await loadModule("/-/resources-site/resources-frontend-microquickjs.wasm", startup.signal); }
+  try { module = await loadModule("/-/resources-site/resources-frontend-quickjs.wasm", startup.signal); }
   catch (error) {
     if (disposed) return;
     destroy();
     throw error;
   }
   if (disposed) return;
-  const sections = WebAssembly.Module.customSections(module, "wasm-web-machine");
 
   async function deliver(message) {
     if (disposed) return;
@@ -140,7 +139,6 @@ export async function startResourcesMachineController({ editorFrame = true } = {
 
   machine = new WasmWebMachine(module, document, {
     allowNavigate: "self",
-    stamp: sections.length === 1 ? new Uint8Array(sections[0]) : undefined,
     services: {
       call(name, payloadText) {
         const payload = payloadText ? JSON.parse(payloadText) : {};
@@ -153,7 +151,7 @@ export async function startResourcesMachineController({ editorFrame = true } = {
     onMessage: receive,
   });
   const machineId = `resources-frontend-${nextMachine++}`;
-  document.documentElement.dataset.resourcesFrontendMachine = "microquickjs";
+  document.documentElement.dataset.resourcesFrontendMachine = "quickjs";
   document.documentElement.dataset.resourcesFrontendMachineId = machineId;
   document.documentElement.dataset.resourcesFrontendMachineState = "starting";
   try { await machine.onmsg(0); }

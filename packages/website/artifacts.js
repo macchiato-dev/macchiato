@@ -74,14 +74,14 @@ export function createResourcesArtifactSet({ theme = {}, generatedAt = new Date(
   const projectBuilder = bytes(readFileSync(join(generatedDirectory, "project-builder-quickjs-runtime.wasm")));
   const frameworkBuilder = bytes(readFileSync(join(generatedDirectory, "project-framework-builder-quickjs-runtime.wasm")));
   const editorMachine = bytes(readFileSync(join(generatedDirectory, "project-editor-quickjs-runtime.wasm")));
-  const frontendMachine = bytes(readFileSync(join(generatedDirectory, "resources-frontend-microquickjs.wasm")));
+  const frontendMachine = bytes(readFileSync(join(generatedDirectory, "resources-frontend-quickjs.wasm")));
   const browserMachine = bytes(readFileSync(join(directory, "frontend", "machine.js")));
   files.set("/-/resources-site/machine.js", browserMachine);
   const machineController = bytes(readFileSync(join(directory, "frontend", "controller.js"), "utf8")
-    .replace("/-/resources-site/resources-frontend-microquickjs.wasm",
-      `/-/resources-site/resources-frontend-microquickjs.wasm?v=${version(frontendMachine)}`));
+    .replace("/-/resources-site/resources-frontend-quickjs.wasm",
+      `/-/resources-site/resources-frontend-quickjs.wasm?v=${version(frontendMachine)}`));
   files.set("/-/resources-site/controller.js", machineController);
-  files.set("/-/resources-site/resources-frontend-microquickjs.wasm", frontendMachine);
+  files.set("/-/resources-site/resources-frontend-quickjs.wasm", frontendMachine);
   const outputFrameController = readFileSync(join(generatedDirectory, "project-output-frame-controller.js"), "utf8");
   const outputFrame = readFileSync(join(directory, "project-output-frame.html"), "utf8")
     .replace("/* PROJECT_OUTPUT_FRAME_CONTROLLER */", () => outputFrameController);

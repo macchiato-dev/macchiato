@@ -1,5 +1,5 @@
-// This is the Resources browser application. Build tooling bundles and lowers
-// it to MicroQuickJS bytecode; the browser loads only the host controller.
+// This is the Resources browser application. Build tooling bundles its ES6+
+// source for QuickJS; the browser loads only the host controller.
 import "./resources-frontend-platform.js";
 import "../command-palette-use/src/client.js";
 import "../theme-use/src/client.js";

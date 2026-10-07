@@ -1293,7 +1293,7 @@ test("saved project output keeps its backing while the editor is still loading",
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
     let release = () => {}, delayed, releaseFrontend = () => {}, frontendDelayed;
-    await page.route("**/resources-frontend-microquickjs.wasm*", async route => {
+    await page.route("**/resources-frontend-quickjs.wasm*", async route => {
       await frontendDelayed;
       if (!page.isClosed()) await route.continue();
     });
@@ -1722,7 +1722,7 @@ test("organization naming adopts input typed before the outer guest is ready", {
     let release, requested;
     const gate = new Promise(resolve => { release = resolve; });
     const loading = new Promise(resolve => { requested = resolve; });
-    await page.route(url => url.pathname.endsWith("/resources-frontend-microquickjs.wasm"), async route => {
+    await page.route(url => url.pathname.endsWith("/resources-frontend-quickjs.wasm"), async route => {
       requested();
       await gate;
       await route.continue();
@@ -1890,7 +1890,7 @@ test("Resources.co edge account creates organizations and projects in a real bro
     editor: document.querySelector("[data-project-editor]").dataset.editorMachineId,
     editorReason: document.querySelector("[data-project-editor]").dataset.editorMachineReason,
   }));
-  assert.equal(initialMachines.frontendState, "microquickjs");
+  assert.equal(initialMachines.frontendState, "quickjs");
   assert.ok(initialMachines.frontend, "site frontend machine should publish its diagnostic identity");
   assert.notEqual(initialMachines.frontend, initialMachines.editor);
   await page.evaluate(() => { window.initialProjectFrame = document.querySelector("[data-project-output-mount] iframe:not([inert])"); });
