@@ -869,7 +869,7 @@ test("REST Desk sends explicit requests from QuickJS, shows errors, and recovers
   const app = startApp(port, dataDir);
   t.after(async () => { await stopChild(app.child); await rm(dataDir, { recursive: true, force: true }); });
   await app.waitForReady;
-  const files = await Promise.all(["index.html", "style.css", "application.js"].map(async path =>
+  const files = await Promise.all(["index.html", "style.css", "application.js", "markdown.js"].map(async path =>
     ({ path, content: await readFile(join(repoRoot, "examples/rest-client", path), "utf8") })));
   const db = new DatabaseSync(join(dataDir, "macchiato.sqlite3"));
   const client = createNodeSqliteClient(db);
@@ -888,19 +888,26 @@ test("REST Desk sends explicit requests from QuickJS, shows errors, and recovers
   await page.context().addCookies([{ name: "resources_session", value: session,
     domain: "resources-edge.localhost", path: "/", httpOnly: true, sameSite: "Lax" }]);
   const requests = [], errors = [];
+  let delayedResponse = Promise.resolve();
   page.on("pageerror", error => errors.push(error.message));
   await page.route("https://httpbingo.org/**", async route => {
     const request = route.request();
-    if (request.method() !== "OPTIONS") requests.push({ method: request.method(), body: request.postData() });
+    if (request.method() !== "OPTIONS") requests.push({ method: request.method(), body: request.postData(), url: request.url(), headers: request.headers() });
+    if (request.url().includes("slow=1")) await delayedResponse;
     await route.fulfill({ status: request.url().endsWith("/422") ? 422 : 200,
       headers: { "content-type": "application/json", "access-control-allow-origin": "*",
         "access-control-allow-methods": "*", "access-control-allow-headers": "*", "x-example": "test" },
-      body: JSON.stringify({ message: "<img src=https://not-granted.example/x>", body: request.postData() }) });
+      body: JSON.stringify({ message: "<img src=https://not-granted.example/x>", body: request.postData(), url: request.url() }) });
   });
   await page.goto(`http://resources-edge.localhost:${port}/rest-player/rest-client`);
   const output = page.frameLocator(".project-editor__output-frame:not([inert])");
   await output.locator("#send").waitFor();
-  await output.locator("#example").selectOption("post");
+  await page.getByRole("button", { name: "Output View", exact: true }).click();
+  async function choose(id) {
+    if (await output.locator("#open-requests").isVisible()) await output.locator("#open-requests").click();
+    await output.locator(`[data-request-id="${id}"]`).click();
+  }
+  await choose("post");
   await output.locator("#send").click();
   await output.locator("#status").filter({ hasText: "200" }).waitFor();
   assert.equal(requests.at(-1).method, "POST");
@@ -909,7 +916,7 @@ test("REST Desk sends explicit requests from QuickJS, shows errors, and recovers
   assert.equal(await output.locator("#response img").count(), 0);
   await output.locator("#response-headers").click();
   assert.match(await output.locator("#response").textContent(), /content-type: application\/json/);
-  await output.locator("#example").selectOption("error");
+  await choose("error");
   await output.locator("#send").click();
   await output.locator("#status").filter({ hasText: "422" }).waitFor();
   const count = requests.length;
@@ -917,14 +924,89 @@ test("REST Desk sends explicit requests from QuickJS, shows errors, and recovers
   await output.locator("#send").click();
   await output.locator("#error").filter({ hasText: "Fetch blocked" }).waitFor();
   assert.equal(requests.length, count);
-  await output.locator("#example").selectOption("get");
+  await choose("get");
+  await output.getByLabel("Parameter 1 value", { exact: true }).fill("a & b");
+  await output.locator("#add-header").click();
+  await output.getByLabel("Header 2 name", { exact: true }).fill("X-Demo");
+  await output.getByLabel("Header 2 value", { exact: true }).fill("collection");
   await output.locator("#send").click();
   await output.locator("#status").filter({ hasText: "200" }).waitFor();
   assert.equal(await output.locator("#error").isHidden(), true);
+  assert.equal(new URL(requests.at(-1).url).searchParams.get("hello"), "a & b");
+  assert.equal(requests.at(-1).headers["x-demo"], "collection");
+  let releaseResponse;
+  delayedResponse = new Promise(resolve => { releaseResponse = resolve; });
+  await output.locator("#url").fill("/get?slow=1");
+  const sending = page.waitForRequest(request => request.url().includes("slow=1"));
+  await output.locator("#send").click();
+  await sending;
+  await choose("post");
+  await output.locator("#response-body").click();
+  const previousResponse = await output.locator("#response").textContent();
+  const receiving = page.waitForResponse(reply => reply.url().includes("slow=1"));
+  releaseResponse();
+  await receiving;
+  assert.equal(await output.locator("#response").textContent(), previousResponse);
+  await choose("get");
+  await output.locator("#response").filter({ hasText: "slow=1" }).waitFor();
+  await output.locator("#url").fill("/get");
+  await output.getByLabel("Parameter 1 enabled", { exact: true }).uncheck();
+  await output.getByLabel("Header 2 enabled", { exact: true }).uncheck();
+  await output.locator("#send").click();
+  await output.locator("#send").filter({ hasText: "Send request" }).waitFor();
+  assert.equal(new URL(requests.at(-1).url).searchParams.has("hello"), false);
+  assert.equal(requests.at(-1).headers["x-demo"], undefined);
+  await output.locator("#duplicate-request").click();
+  await output.locator("#name").fill("Independent copy");
+  await output.getByLabel("Parameter 1 value", { exact: true }).fill("copy only");
+  await choose("get");
+  assert.equal(await output.getByLabel("Parameter 1 value", { exact: true }).inputValue(), "a & b");
+  if (await output.locator("#open-requests").isVisible()) await output.locator("#open-requests").click();
+  await output.locator("#new-project").click();
+  await output.locator("#project-name").fill("Second API");
+  await output.locator("#base-url").fill("https://httpbingo.org/anything");
+  await output.locator("#url").fill("/item");
+  assert.equal(await output.locator("#resolved-url").textContent(), "https://httpbingo.org/anything/item");
+  if (await output.locator("#open-requests").isVisible()) await output.locator("#open-requests").click();
+  await output.locator("#project").selectOption("item-1");
+  if (await output.locator("#close-requests").isVisible()) await output.locator("#close-requests").click();
+  assert.equal(await output.locator("#base-url").inputValue(), "https://httpbingo.org");
   await output.locator("#url").fill("https://httpbingo.org/get?draft=retained");
   await page.reload();
   await output.locator("#send").waitFor();
   assert.equal(await output.locator("#url").inputValue(), "https://httpbingo.org/get?draft=retained");
+  await page.getByRole("button", { name: "Output View", exact: true }).click();
+  if (await output.locator("#open-requests").isVisible()) await output.locator("#open-requests").click();
+  await output.locator("#export-projects").click();
+  const markdown = await output.locator("#markdown").inputValue();
+  assert.equal((markdown.match(/^## Project$/gm) || []).length, 2);
+  assert.match(markdown, /#### Headers/);
+  await output.locator("#close-exchange").click();
+  await output.locator("#open-import").click();
+  await output.locator("#markdown").fill("not a project");
+  await output.locator("#import-markdown").click();
+  assert.match(await output.locator("#exchange-error").textContent(), /Expected/);
+  assert.equal(await output.locator("#project option").count(), 2);
+  await output.locator("#markdown").fill(markdown);
+  await output.locator("#import-markdown").click();
+  assert.equal(await output.locator("#exchange").isHidden(), true);
+  assert.equal(await output.locator("#project option").count(), 4);
+  if (await output.locator("#open-requests").isVisible()) await output.locator("#open-requests").click();
+  await output.locator("#project").selectOption("item-1");
+  if (await output.locator("#close-requests").isVisible()) await output.locator("#close-requests").click();
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/design-refresh/rest-collection-desktop.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await output.locator("#open-requests").click();
+  await page.screenshot({ path: resolve(repoRoot, "../macchiato-work/design-refresh/rest-collection-mobile.png") });
+  await output.locator("[data-request-id=post]").click();
+  assert.equal(await output.locator("#collection").isHidden(), true);
+  assert.equal(await output.locator("#body").inputValue(), '{\n  "message": "Hello from QuickJS",\n  "count": 3\n}');
+  await output.locator("#open-requests").click();
+  await page.keyboard.press("Escape");
+  assert.equal(await output.locator("#collection").isHidden(), true);
+  await output.locator("#open-requests").click();
+  await output.locator("#collection-backdrop").click({ position: { x: 370, y: 200 } });
+  assert.equal(await output.locator("#collection").isHidden(), true);
   assert.deepEqual(errors, []);
 });
 

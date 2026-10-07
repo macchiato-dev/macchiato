@@ -1,9 +1,59 @@
 # REST Desk
 
-A small Insomnia-style REST workbench. The application is an ES module executed
-inside the project's QuickJS machine, with a request editor, response headers,
-JSON formatting, timing, HTTP error responses, and session-only draft recovery.
-It has no application dependencies.
+A small Insomnia-style REST workbench. Each project has a name, base URL and
+collection of named requests. A desktop sidebar becomes an overlay on narrow
+screens, including the project's split output pane. Create, duplicate, rename
+and delete requests; switch projects without losing their edits. Relative
+request paths use the selected project's base URL, while full URLs override it.
+
+Headers and query parameters have editable name/value rows, enable switches,
+and add/remove controls. The resolved URL shows encoded parameters before
+sending. Each request retains its own response, response tab and JSON-format
+setting while the app is open—even when switching during a pending request.
+Collections and the selected request persist in session storage; responses do
+not. There is no server-side collection storage or application dependency.
+
+The application is an ES module executed inside the project's QuickJS machine.
+Changing a base URL is not a network permission grant.
+
+## Markdown interchange
+
+The sidebar exports the current collection (one project) or all projects as
+ordinary Markdown. The import/export dialog exposes the text for copying to a
+file or pasting from one, without clipboard or filesystem permissions. Imports
+append projects; malformed input leaves the existing collection untouched.
+
+Projects and requests use headings. Metadata uses labeled list items. Headers
+and parameters use task lists: `[x]` means enabled, `[ ]` means disabled. String
+values are JSON string literals inside Markdown code spans, so empty values,
+backticks and embedded newlines survive a round trip. Bodies use fenced code
+blocks; fences grow when the body contains backticks. Request order and duplicate
+header/parameter names are retained. Internal IDs and response data are omitted.
+
+```markdown
+# REST Desk
+
+## Project
+- Name: `"Demo API"`
+- Base URL: `"https://httpbingo.org"`
+
+### Request
+- Name: `"Find items"`
+- Method: `"GET"`
+- URL: `"/get"`
+
+#### Parameters
+- [x] `"search"`: `"hello world"`
+
+#### Headers
+- [x] `"Accept"`: `"application/json"`
+- [ ] `"X-Debug"`: `"true"`
+
+#### Body
+```
+
+The body heading is followed by a `text` fenced code block, empty for this GET.
+`markdown.js` contains the small, strict reader/writer for this format.
 
 Import this directory as project files and choose `index.html` as the entry.
 The project configuration must explicitly grant its sample API origin:

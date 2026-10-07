@@ -7,46 +7,69 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main>
-    <header>
-      <div><h1>REST Desk</h1><p>A small request workbench, running inside QuickJS.</p></div>
-      <label>Examples
-        <select id="example">
-          <option value="get">Inspect a GET request</option>
-          <option value="post">Send JSON</option>
-          <option value="error">Inspect a 422 response</option>
-        </select>
-      </label>
-    </header>
-    <form id="request">
-      <div class="request-line">
-        <label class="method">Method
-          <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option></select>
-        </label>
-        <label class="url">URL<input id="url" type="text" spellcheck="false" autocomplete="off"></label>
-        <button id="send" type="submit">Send request</button>
+  <main id="desk">
+    <button id="collection-backdrop" type="button" aria-label="Close requests" tabindex="-1"></button>
+    <aside id="collection">
+      <div class="collection-heading"><h1>REST Desk</h1><button id="close-requests" type="button" aria-label="Close requests">×</button></div>
+      <label>Project</label>
+      <div class="project-picker"><select id="project" aria-label="Project"></select><button id="new-project" type="button" aria-label="New project">+</button></div>
+      <div class="collection-caption">REQUESTS <span>Session collection</span></div>
+      <nav id="request-list" aria-label="Requests"></nav>
+      <button id="new-request" type="button">+ New request</button>
+      <div class="transfer-actions">
+        <button id="export-collection" type="button">Export collection</button>
+        <button id="export-projects" type="button">Export all projects</button>
+        <button id="open-import" type="button">Import Markdown</button>
       </div>
-      <div class="panels">
-        <section>
-          <h2>Request</h2>
-          <label>Headers <span>one name: value per line</span>
-            <textarea id="headers" rows="5" spellcheck="false"></textarea>
-          </label>
-          <label>Body<textarea id="body" rows="9" spellcheck="false"></textarea></label>
-        </section>
-        <section>
-          <div class="response-heading"><h2>Response</h2><span id="status" role="status">Ready</span></div>
-          <div class="response-tabs">
-            <button id="response-body" type="button" aria-pressed="true">Body</button>
-            <button id="response-headers" type="button" aria-pressed="false">Headers</button>
-            <label class="format"><input id="pretty" type="checkbox" checked> Format JSON</label>
-          </div>
-          <pre id="response" tabindex="0">Choose an example or edit the request, then send it.</pre>
-        </section>
+    </aside>
+    <div class="workspace">
+      <button id="open-requests" type="button" aria-expanded="false"><span class="menu-mark" aria-hidden="true"></span> Projects &amp; requests</button>
+      <div class="project-settings">
+        <label>Project name<input id="project-name" type="text" maxlength="120"></label>
+        <label class="base-url">Base URL<input id="base-url" type="text" spellcheck="false" autocomplete="off"></label>
       </div>
-    </form>
-    <p class="policy">Only explicitly permitted HTTPS origins can be reached. Browser cookies and referrers are never sent; redirects are blocked. CORS still applies.</p>
-    <p id="error" role="alert" hidden></p>
+      <header>
+        <label class="request-name">Request name<input id="name" type="text" maxlength="120" autocomplete="off"></label>
+        <div class="request-actions"><button id="duplicate-request" type="button">Duplicate</button><button id="delete-request" type="button">Delete</button></div>
+      </header>
+      <form id="request">
+        <div class="request-line">
+          <label class="method">Method<select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option></select></label>
+          <label class="url">Path or full URL<input id="url" type="text" spellcheck="false" autocomplete="off"></label>
+          <button id="send" type="submit">Send request</button>
+        </div>
+        <p id="resolved-url"></p>
+        <div class="panels">
+          <section>
+            <div class="section-heading"><h2>Parameters</h2><button id="add-parameter" type="button">+ Add</button></div>
+            <div id="parameters" class="pairs"></div>
+            <div class="section-heading"><h2>Headers</h2><button id="add-header" type="button">+ Add</button></div>
+            <div id="headers" class="pairs"></div>
+            <label class="body-label">Body<textarea id="body" rows="9" spellcheck="false"></textarea></label>
+          </section>
+          <section>
+            <div class="response-heading"><h2>Response</h2><span id="status" role="status">Ready</span></div>
+            <div class="response-tabs">
+              <button id="response-body" type="button" aria-pressed="true">Body</button>
+              <button id="response-headers" type="button" aria-pressed="false">Headers</button>
+              <label class="format"><input id="pretty" type="checkbox" checked> Format JSON</label>
+            </div>
+            <pre id="response" tabindex="0">Send this request to see its response.</pre>
+          </section>
+        </div>
+      </form>
+      <p id="error" role="alert" hidden></p>
+      <p class="policy">Projects and request drafts stay in this browser session. Network access still requires an explicit origin grant; changing the base URL does not grant access. Cookies and referrers are not sent. Redirects are blocked; CORS applies.</p>
+    </div>
+    <div id="exchange" hidden role="dialog" aria-modal="true" aria-label="Markdown import and export">
+      <div class="exchange-card">
+        <div class="section-heading"><h2 id="exchange-title">Markdown</h2><button id="close-exchange" type="button" aria-label="Close Markdown">×</button></div>
+        <p>Copy this document to save it, or paste an exported document to import. Imports add projects without replacing existing ones.</p>
+        <textarea id="markdown" rows="18" spellcheck="false" aria-label="Markdown document"></textarea>
+        <p id="exchange-error" role="alert"></p>
+        <div class="exchange-actions"><button id="select-markdown" type="button">Select all</button><button id="import-markdown" type="button">Import projects</button></div>
+      </div>
+    </div>
   </main>
   <script type="module" src="./application.js"></script>
 </body>
