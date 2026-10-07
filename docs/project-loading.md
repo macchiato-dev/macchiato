@@ -33,6 +33,14 @@ Measure those boundaries before changing the transport. The stored last
 successful build already avoids compiling the project on the opening path;
 preserve that behavior and draft recovery.
 
+The next probe isolated workspace retrieval without changing the database.
+Repeated calls took 4.28–5.21 seconds, including 0.92–0.99 seconds in the
+policy/database round trips. Replacing interpreted per-byte UTF-8 loops with
+QuickJS's native string conversion reduced warm calls to 0.48–0.52 seconds
+(the first call took 1.80 seconds). This keeps the byte protocol unchanged and
+does not grant another host capability. Large strings, embedded NUL, Unicode,
+and lone-surrogate replacement are covered by the server-runtime test.
+
 These are exploratory observations, not completion evidence or Bunny latency
 claims. Final checks need repeated loads, interactive play, editor input and
 undo, theme changes, and the new REST client, with screenshots and errors

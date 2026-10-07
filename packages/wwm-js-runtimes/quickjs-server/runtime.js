@@ -3,6 +3,15 @@
   var pending = new Map();
   var nextCall = 1;
 
+  // Native conversion is also useful to guest applications enforcing byte
+  // limits. It grants no host access and keeps large resources byte-sized.
+  globalThis.TextEncoder = class TextEncoder {
+    encode(value = "") {
+      return new Uint8Array(__utf8Encode(String(value).toWellFormed()));
+    }
+  };
+  const encoder = new TextEncoder();
+
   // Byte storage must stay byte-sized even when a project contains megabytes
   // of text or images. A JS number array multiplies that memory cost.
   function Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }
@@ -25,10 +34,11 @@
     } while (value);
   };
   Writer.prototype.text = function (value) {
-    var text = unescape(encodeURIComponent(value));
-    this.uint(text.length);
-    this.reserve(text.length);
-    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
+    var bytes = encoder.encode(value);
+    this.uint(bytes.length);
+    this.reserve(bytes.length);
+    this.bytes.set(bytes, this.at);
+    this.at += bytes.length;
   };
   Writer.prototype.value = function (value, depth) {
     depth = depth || 0;
@@ -85,13 +95,11 @@
     return value;
   };
   Reader.prototype.text = function () {
-    var bytes = this.take(this.uint()), chunks = [];
-    // Bounded native calls avoid repeated concatenation of a growing string
-    // and do not put a whole project on the interpreter's argument stack.
-    for (var index = 0; index < bytes.length; index += 2048) {
-      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
-    }
-    return decodeURIComponent(escape(chunks.join("")));
+    var length = this.uint();
+    if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
+    var text = __utf8Decode(this.bytes.subarray(this.at, this.at + length));
+    this.at += length;
+    return text;
   };
   Reader.prototype.value = function (depth) {
     depth = depth || 0;

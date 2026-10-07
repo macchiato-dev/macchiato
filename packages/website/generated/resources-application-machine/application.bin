@@ -1,10 +1,10 @@
-’unescape$encodeURIComponent$decodeURIComponentescape__hostSendserverHandlecryptoTextEncoderURLhostCall*server-application.jspendingnextCallWriterReadersendreservebyteuinttexttake__serverReceive
+Œ__utf8Encode__utf8Decode__hostSendserverHandleTextEncodercryptoURL$decodeURIComponenthostCall*server-application.jspendingnextCallencoderWriterReadersendencodereservebyteuinttexttake__serverReceivetoWellFormed
 bytesatmaxsubarrayisSafeIntegerinvalid integer
-floorcharCodeAt
+floor
 depthitementries
 entry"value is too deep6only integers are supportedisArray"unsupported valuetruncated value
 scale&integer is too longtruncated bytes
-slicechunkspushfromCharCodetyperesultkeyhasOwnPropertycall<unsafe or duplicate object key&unknown value type writerdeviceoperationidreadercontinuation,invalid server message.unknown device response,invalid server request
+slicetyperesultkeypushhasOwnPropertycall<unsafe or duplicate object key&unknown value type writerdeviceoperationidreadercontinuation,invalid server message.unknown device response,invalid server request
 errorNAMESPACE_NAME0RESERVED_NAMESPACE_NAMESnamespaceNameACCOUNT_SCHEMAACCOUNT_QUERIES(AccountConflictError4AccountSignupDisabledError,AccountValidationErrornormalizeEmailfirstRowaccountFromRow$createAccountStorePATHMAX_FILESMAX_FILE_BYTES MAX_CONFIG_BYTES$MAX_SNAPSHOT_BYTESfileJsonBytesownjsonValuesamefileMap0normalizeProjectSnapshottextSpliceconfigDiff(diffProjectSnapshotsconfigParent"applyProjectPatch&projectPatchIsEmpty0planProjectVersionUpdate(emptyProjectSnapshot&ORGANIZATION_SCHEMA(ORGANIZATION_QUERIES.OrganizationAccessError,OrganizationInputErrorrole$invitationConflictnotification.createOrganizationStoreCONTENT_SCHEMACONTENT_QUERIESSLUGTEMPLATES(ContentConflictError,ContentValidationErrorworkspaceOutputslugisUniqueErrorlimitErrorprojectsnapshotJsonparsedSnapshotparsedPatch"validatedSnapshot destructivePatchorganization$createContentStore.MIGRATION_LEDGER_SCHEMAHUB_MIGRATIONS*createMigrationRunnerHOST_LABELwildcardSource0compileAllowedUrlPattern4validateAllowedUrlPatterns4validateProjectUrlPatternsaccountPaths,discoverableNamespacestryTemplatesrouteNameprojectRoutenamespaceRoute<createResourcesDocumentPlanner compatibleResultdatabaseoperationNowrandomIdsnextRandomIdaccountscontentorganizationsmigrationsinitializederrorValuestoreCallinitializeplanDocumentfreeze
 adminadministratorapiauthblogdocshelp
 loginlogoutprojectsrootsecuritysettingssignupsupportsystemwww†CREATE TABLE IF NOT EXISTS users (
@@ -329,7 +329,7 @@ blankhtmlsvgcanvas´CREATE TABLE IF NOT EXISTS resource_schema_migrations (
   version INTEGER PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   applied_at INTEGER NOT NULL
-) STRICTversion(accounts-and-contentstatementsTorganization-memberships-and-notifications,project-version-labelsfind@latest-successful-project-output//projects/projects/new$/organizations/new/profilebenatkinresourcesmacchiatoencodeexecute
+) STRICTversion(accounts-and-contentstatementsTorganization-memberships-and-notifications,project-version-labelsfind@latest-successful-project-output//projects/projects/new$/organizations/new/profilebenatkinresourcesmacchiatoexecute
 batchnowrandomId"snapshotValidator
 fieldminimumtrimtoLowerCase" must be between $ and 63 characterstestp must use lowercase letters, numbers, and single hyphens
 That  is reservedcodeprovidersemail_takenTAn account already uses this email addressusername_taken>That username is already in usevThis provider identity is already linked to another account@Sign up is not currently enabledsignup_disabled
@@ -338,11 +338,11 @@ labelisFinitefromEntriessort< must contain only JSON valuesleft
 rightstringifysnapshot
 filesfilepathsourceFilesseenconfigsnapshotBytes2Project snapshot exceeds  files*Project configurationNProject configuration must be an objectbyteLengthDProject configuration is too largereduce:Project snapshot is too largecontent2previouscachedincludes//6Invalid project file path: :Duplicate project file path: rProject file exceeds the 50 MB portable-artifact budget: localeComparebefore
 after
-startcommonbeforeEndafterEndminremoveinsertoperationsbeforeObjectafterObjectopabsentbeforeValueafterValuebeforeFilesafterFilessplicecurrentRConfiguration patch path does not exist: .parentsnapshotValue
+startcommonbeforeEndafterEndmincharCodeAtremoveinsertoperationsbeforeObjectafterObjectopabsentbeforeValueafterValuebeforeFilesafterFilessplicecurrentRConfiguration patch path does not exist: .parentsnapshotValue
 patch*Invalid project patch8Invalid project patch path: JProject patch expected missing file: >Project patch delete mismatch: >Project patch splice mismatch: HUnsupported project file operation: @Invalid configuration patch pathHInvalid configuration patch parent: JConfiguration patch delete mismatch: DConfiguration patch set mismatch: JUnsupported configuration operation: key2changeEmpty,pendingCheckpointEmptydestructivecheckpointDue&lastVersionSequencesequence.checkpointVersionReason"nextVersionReasonnextVersionBase checkpointTargetperiodicmanualrestoreRProject version planning input is invalidunchanged
 statecheckpoint$before_destructiveupdateXOrganization administration is not availablemember8Role must be member or adminjThis organization already has or is inviting an adminkindread_atreadinvitation_idinvitationIdorganization_idorganizationId"organization_slug organizationSlug"organization_name organizationName inviter_usernameinvitercreated_atcreatedAtlOrganization store requires a libSQL-compatible client,getManagedOrganizationinvite"listNotificationsslugValue
 slug2"organization nameorgdescriptionowner_user_idownerUserIdviewer_roleviewerRoleuser_idactorUserIdrequestedRoletargetNameexistinginvitationRolenotificationIdDNo existing user has that usernametThe organization owner is already part of the organization:That user is already a memberresults
-foundmemberUserIdA < with that name already exists_takenjsonworkspaceJsonencoder
+foundmemberUserIdA < with that name already exists_takenjsonworkspaceJson
 parse
  and  charactersxname must use lowercase letters, numbers, and single hyphens<resource_projects_global_limitproject_limitNThe site project limit has been reached:resource_projects_owner_limitNAn account can have at most 20 projectsDresource_organizations_owner_limit$organization_limitVAn account can have at most 5 organizationsnamespace_kindnamespaceKindnamespace_slugnamespacevisibilitytemplate>Stored project patch is invalidversionPlannersnapshotDifferbContent store requires a libSQL-compatible clientPContent store requires a version plannerPContent store requires a snapshot differVContent store requires a snapshot validatorgetProject&getProjectWorkspace2getPublicProjectWorkspace*getProjectBuildOutput,saveProjectBuildOutput$listPublicProjectsgetNamespace&listProjectVersions"getProjectVersionlistForUser$createOrganizationcreateProject&saveProjectSnapshot*restoreProjectVersionpublishProject0revertProjectToPublishedprojectSlugviewerUserIdsnapshot_json"saved_output_jsonsavedOutput.published_snapshot_json*hasUnpublishedChanges*last_version_sequenceversionCountupdated_atupdatedAtprojectIdoutput_jsonoutput
 ownedcompiledproject2sourceJsonstoredSourceoutputJsonretain.Build output is invalidformat6resources-project-output-v1scriptsstylesheets
@@ -357,18 +357,26 @@ slashhostnamehostnamePatternpathPatternexpressionpathname6URL pattern canno
 http:BExact URLs must use HTTP or HTTPSPRegular expressions need a closing slashindexOf/*LUse a hostname such as *.wikipedia.orgBA hostname path must start with /^$iurlsearchhashpatternspattern containerOptions&allowedLinkPatternscontainerRallowed link URL patterns must be strings
 match
 embedaccounts2XDocument planner requires application storesplanDocument2direct"directTryTemplatesession accountShellPath requestedProject$requestedNamespacedynamicProjectprojectOwner dynamicNamespaceaccountContentaccountcsrfActions<Document plan input is invalidrouteOnlynotFoundmethodGETHEAD/try
-/try/redirectsub/dashboardshellOnlypublicApi"staticShellExists/browse(managed-organizationdashboardproject-form"organization-formprofileproject:organization:/organizationsshellPathfocused
-text2character
-pointcodePointAtcolumnslastInsertRowidcolumn
+/try/redirectsub/dashboardshellOnlypublicApi"staticShellExists/browse(managed-organizationdashboardproject-form"organization-formprofileproject:organization:/organizationsshellPathfocusedcolumnslastInsertRowidcolumn
 queryaffected^Application operation lacks a random identifier
 shiftstoreNamestores
-store@Store operation is not availablerandomuuid:unknown application operationdocument-plan  ¨   	ª   ğ  Ú  Ğ  Â  æ  è  Ì  Ê  Ò  ê  ì  î  ª  ğ  Œ     Î  ò  Ş    Ü  ô  Ô  ö  æ  ø    ¾ ìÇ¾ìË(ú   º „  C   «ü @ş@€ @‚@„@ğ  Ú Ğ Â æ è Ì Ê Ò ê	 ì
- î ª ğ Œ   ¾ É¾Ê¾Á8 !  Ç´ÈÅ=?   ¾?  Å=?   ¾?  Å=?   ¾?  Å=?   ¾?  Å=?   ¾?D   Æ=?   ¾?  Æ=?   ¾?  Æ=?   ¾	?  Æ=?   ¾
-?  Æ=?   ¾?D   8 ¾?ü   8 ¾?  )úf 6& 
-     D     F ¥/function () {
+store@Store operation is not availablerandomuuid:unknown application operationdocument-plan  ¨   	ª   ğ  æ  Ò  Ú  Ğ  Â  Ì  Ê  è  ê  ª  ì  Œ     î  Î  ğ  Ş    Ü  Ô  ò  æ  ô  ö    ¾ ìÇ¾ìË(ø   Ê Æ C   éú @ü@î °ö ğş ğ€@‚@„@ğ  æ Ò Ú Ğ Â Ì Ê è ê	 ª
+ ì Œ   î ¾Á¾Á¾Á^ 8 !  Ç´È8 ^ ^ ½S÷    ¾ Q   ÊÍg ?÷   8 !  ÁÀ=?   ¾?  À=?   ¾?  À=?   ¾?  À=?   ¾?  À=?   ¾?D   À=?   ¾	?  À=?   ¾
+?  À=?   ¾?  À=?   ¾?  À=?   ¾?D   8 ¾?û   8 ¾?	  )øt O&  #
+! 
+     D     F ”0function () {
   "use strict";
   var pending = new Map();
   var nextCall = 1;
+
+  // Native conversion is also useful to guest applications enforcing byte
+  // limits. It grants no host access and keeps large resources byte-sized.
+  globalThis.TextEncoder = class TextEncoder {
+    encode(value = "") {
+      return new Uint8Array(__utf8Encode(String(value).toWellFormed()));
+    }
+  };
+  const encoder = new TextEncoder();
 
   // Byte storage must stay byte-sized even when a project contains megabytes
   // of text or images. A JS number array multiplies that memory cost.
@@ -392,10 +400,11 @@ store@Store operation is not availablerandomuuid:unknown application operation
     } while (value);
   };
   Writer.prototype.text = function (value) {
-    var text = unescape(encodeURIComponent(value));
-    this.uint(text.length);
-    this.reserve(text.length);
-    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
+    var bytes = encoder.encode(value);
+    this.uint(bytes.length);
+    this.reserve(bytes.length);
+    this.bytes.set(bytes, this.at);
+    this.at += bytes.length;
   };
   Writer.prototype.value = function (value, depth) {
     depth = depth || 0;
@@ -452,13 +461,11 @@ store@Store operation is not availablerandomuuid:unknown application operation
     return value;
   };
   Reader.prototype.text = function () {
-    var bytes = this.take(this.uint()), chunks = [];
-    // Bounded native calls avoid repeated concatenation of a growing string
-    // and do not put a whole project on the interpreter's argument stack.
-    for (var index = 0; index < bytes.length; index += 2048) {
-      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
-    }
-    return decodeURIComponent(escape(chunks.join("")));
+    var length = this.uint();
+    if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
+    var text = __utf8Decode(this.bytes.subarray(this.at, this.at + length));
+    this.at += length;
+    return text;
   };
   Reader.prototype.value = function (depth) {
     depth = depth || 0;
@@ -522,40 +529,40 @@ store@Store operation is not availablerandomuuid:unknown application operation
       function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }
     );
   };
-}C€      ğ  ÇÃ8  ¼ ! ?	  Ã³?
-  )ú("%*Efunction Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }C   _d  Ü     ğ  Ú ÈÏÄ=	  çÄ=
-  œ¢è)8  8 >  Ä=
-  Ï›Ä=	  çµ˜$ ! Ë>F   Ä=	  >  ³Ä=
-  $ $ ÄÃ?	  )ú8))@7 I1 %"'æfunction (length) {
+}@    %ˆ  ˆÿÿÿÿ  ğ  æ Ò ^  Ïğè¿×Ç8  8 8 Ïí>
+  $  í! (ø?5)cencode(value = "") {
+      return new Uint8Array(__utf8Encode(String(value).toWellFormed()));
+    }@       ö Ç+d  èÃ$  )øclass TextEncoder {
+    encode(value = "") {
+      return new Uint8Array(__utf8Encode(String(value).toWellFormed()));
+    }
+  }C€      ğ  ÇÃ8  ¼ ! ?  Ã³?  )ø("%*Efunction Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }C   _d  Ü     ğ  Ú ÈÏÄ=  çÄ=  œ¢è)8  8 >  Ä=  Ï›Ä=  çµ˜$ ! Ë>F   Ä=  >  ³Ä=  $ $ ÄÃ?  )ø8))@7 I1 %"'æfunction (length) {
     if (length <= this.bytes.length - this.at) return;
     var next = new Uint8Array(Math.max(this.at + length, this.bytes.length * 2));
     next.set(this.bytes.subarray(0, this.at));
     this.bytes = next;
-  }C    #ˆ    ÇÃ>  ´$ Ã=	  Ã>
-  ?
-  ÏF)ú+  %Nfunction (value) {
+  }C    #ˆ    ÇÃ>  ´$ Ã=  Ã>  ?  ÏF)ø+  %Nfunction (value) {
     this.reserve(1);
     this.bytes[this.at++] = value;
-  }C   Uˆ  ˆ     Ğ Â Ú È8  >  Ï$ ”éÏ³¡è8   ! 0Ï¼€ šÇ8 >  Ï¼€ ™$ ÓÄ>  ÃÏè¼€ ê³­$ ÏéÒ)ú2!*/%	C#/ÿfunction (value) {
+  }C   Uˆ  Š     Ğ Â Ú È8  >  Ï$ ”éÏ³¡è8   ! 0Ï¼€ šÇ8 >  Ï¼€ ™$ ÓÄ>  ÃÏè¼€ ê³­$ ÏéÒ)ø2!*/%	C#/ÿfunction (value) {
     if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("invalid integer");
     do {
       var byte = value % 128;
       value = Math.floor(value / 128);
       this.byte(byte | (value ? 128 : 0));
     } while (value);
-  }C   Oˆ  Œ   ¶    æ è É8  8 ÏííÇÅ>  Ãç$ Å>  Ãç$ ³ÈÄÃç¡è#Å=	  Å>
-  ?
-  Ã>  Ä$ F‘êÙ)ú>&%		
-0 %Uëfunction (value) {
-    var text = unescape(encodeURIComponent(value));
-    this.uint(text.length);
-    this.reserve(text.length);
-    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
-  }C   ·ˆ  ¢  ¤   ¦  ¨    Â Ğ ğ  Ì Ê ÊĞé³Ø» £è8    ! 0ÏñèÆ>  ³% Ï	©èÆ>  ´% Ï
-©èÆ>  µ% Ï•J   ©èE8 >  Ï$ ”è8    ! 0Æ>  Ï³¤è¶ê·$ Æ>  Ï³¤èÏêÏŠ´œ% Ï•L   ©èÆ>  ¸$ Æ>  Ï% Ï8 ¥èIÆ>  ¹$ Æ>  Ïç$ Æ>  Ïç$ Æ=	  >F   ÏÆ=
-  $ Æ>
-  Ïç›?
-  )8 >  Ï$ è2Æ>  º$ Æ>  Ïç$ Ï{êÇÆ>D   ÃĞ´›$ ~ èî‚)Ïèf8 >c   Ï$ 8 =?   ©èO8 >  Ï$ ÈÆ>  »$ Æ>  Äç$ Ä{êÉÆ>  Å³C$ Æ>D   Å´CĞ´›$ ~ èß‚)8    ! 0ú & /%* , !* 0 &/%C%Y/  
+  }C   Lˆ  –     ş Èd  >  Ï$ ÇÄ>  Ãç$ Ä>  Ãç$ Ä=  >F   ÃÄ=  $ Ä>  Ãç›?  )ø6#
+
+
+
+»function (value) {
+    var bytes = encoder.encode(value);
+    this.uint(bytes.length);
+    this.reserve(bytes.length);
+    this.bytes.set(bytes, this.at);
+    this.at += bytes.length;
+  }C   ·ˆ  ¤  ¦   ¨  ª    Â Ğ ğ  Ì Ê ÊĞé³Ø» £è8    ! 0ÏñèÆ>  ³% Ï	©èÆ>  ´% Ï
+©èÆ>  µ% Ï•J   ©èE8 >  Ï$ ”è8    ! 0Æ>  Ï³¤è¶ê·$ Æ>  Ï³¤èÏêÏŠ´œ% Ï•L   ©èÆ>  ¸$ Æ>  Ï% Ï8 ¥èIÆ>  ¹$ Æ>  Ïç$ Æ>  Ïç$ Æ=  >F   ÏÆ=  $ Æ>  Ïç›?  )8 >  Ï$ è2Æ>  º$ Æ>  Ïç$ Ï{êÇÆ>D   ÃĞ´›$ ~ èî‚)Ïèf8 >c   Ï$ 8 =?   ©èO8 >  Ï$ ÈÆ>  »$ Æ>  Äç$ Ä{êÉÆ>  Å³C$ Æ>D   Å´CĞ´›$ ~ èß‚)8    ! 0ø*& /%* , !* 0 &/%C%Y/  
  !U" 
 
 
@@ -602,15 +609,11 @@ store@Store operation is not availablerandomuuid:unknown application operation
       return;
     }
     throw new TypeError("unsupported value");
-  }C‚   ’    ÇÃÏ?	  Ã³?
-  )ú
-A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C     4  Â ÇÃ=
-  Ã=	  ç¤è8    ! 0Ã=	  Ã>
-  ?
-  C(úB @/%- %!function () {
+  }C‚   –    ÇÃÏ?  Ã³?  )ø
+K2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C     4  Â ÇÃ=  Ã=  ç¤è8    ! 0Ã=  Ã>  ?  C(øL @/%- %!function () {
     if (this.at >= this.bytes.length) throw new TypeError("truncated value");
     return this.bytes[this.at++];
-  }C     Dˆ   ´  ¶  ˆ    Â Á³Ç´È³ÉÅ»¡è)À>  $  ÊÃÆ»«Ä˜›ÇÆ¼€ «”èÃ(Ä¼€ ˜È‘êÓ8    ! 0ú6F
+  }C     Dˆ   ¶  ¶  Š    Â Á³Ç´È³ÉÅ»¡è)À>  $  ÊÃÆ»«Ä˜›ÇÆ¼€ «”èÃ(Ä¼€ ˜È‘êÓ8    ! 0ø6P
 
 
  
@@ -623,33 +626,20 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
       scale *= 128;
     }
     throw new TypeError("integer is too long");
-  }C   Md  ˆ     Â ÈÏÄ=	  çÄ=
-  œ£è8    ! 0Ä=	  >  Ä=
-  Ä=
-  Ï›$ ÇÄ>
-  Ï›?
-  Ã(ú0P#'R/%3  ##!Ófunction (length) {
+  }C   Md  ˆ     Â ÈÏÄ=  çÄ=  œ£è8    ! 0Ä=  >  Ä=  Ä=  Ï›$ ÇÄ>  Ï›?  Ã(ø0Z#'R/%3  ##!Ófunction (length) {
     if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
     var value = this.bytes.slice(this.at, this.at + length);
     this.at += length;
     return value;
-  }C   
-  f’   ¼  ¶    Ò ê	 ì
- ÊÆ>  Æ>  $  $ Ç&  È³ÉÅÃç¡è2Ä>  8  =   >^   Ã>  ÅÅ¼ ›$ $ $ ¼ ’êÊ8 8 Ä>_   ¿$ í# úBV 
-B7
-
-/ 
-)3F(Q& 
-?´function () {
-    var bytes = this.take(this.uint()), chunks = [];
-    // Bounded native calls avoid repeated concatenation of a growing string
-    // and do not put a whole project on the interpreter's argument stack.
-    for (var index = 0; index < bytes.length; index += 2048) {
-      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
-    }
-    return decodeURIComponent(escape(chunks.join("")));
-  }C   º¢  Â   d  Ä  ¶  Æ    Â Ê ÁÏé³×» £è8    ! 0À>  $  Ë³©è(Ã´©è	(Ãµ©è
-(Ã¶©èÀ>  %  Ã·©èÀ>  $  Š´œ(Ã¸©èÀ>  %  Ã¹©èÀ>  À>  $  % Ãº©è4&  ÉÀ>  $  È³ÊÆÄ¡èÅ>  À>D   Ï´›$ $ ‘êáÅ(Ã»©èiÉÀ>  $  È³ÊÆÄ¡èSÀ>  $  ÂH   ©é8 =?   =$  >%  ÅÀ$ è8  &  ! 0ÅÀÀ>D   Ï´›$ F‘êªÅ(8  '  Ã›! 0úÈ_& /%
+  }C     Zd       Â è ÉÅ>  $  ËÅ=  çÅ=  œ£è8    ! 08 Å=  >  Å=  Å=  Ã›$ íÈÅ>  Ã›?  Ä(ø8`	
+#'R/%="  #'!úfunction () {
+    var length = this.uint();
+    if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
+    var text = __utf8Decode(this.bytes.subarray(this.at, this.at + length));
+    this.at += length;
+    return text;
+  }C   º¤  ¾   d  À  ¶  Â    Â Ê ÁÏé³×» £è8    ! 0À>  $  Ë³©è(Ã´©è	(Ãµ©è
+(Ã¶©èÀ>  %  Ã·©èÀ>  $  Š´œ(Ã¸©èÀ>  %  Ã¹©èÀ>  À>  $  % Ãº©è4&  ÉÀ>  $  È³ÊÆÄ¡èÅ>"  À>D   Ï´›$ $ ‘êáÅ(Ã»©èiÉÀ>  $  È³ÊÆÄ¡èSÀ>  $  ÂH   ©é8 =?   =#  >$  ÅÀ$ è8  %  ! 0ÅÀÀ>D   Ï´›$ F‘êªÅ(8  &  Ã›! 0øÈg& /%
 
 
 
@@ -692,24 +682,24 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
       return result;
     }
     throw new TypeError("unknown value type " + type);
-  }C„  *ˆ  Ğ   €  î Û!  Ë>D   Ï$ 8 Ã=	  >  ³Ã=
-  $ í)ú}&- +‡function send(value) {
+  }C„  *ˆ  Î   €  ê	 Û!  Ë>D   Ï$ 8 Ã=  >  ³Ã=  $ í)ø…&- +‡function send(value) {
     var writer = new Writer();
     writer.value(value);
     __hostSend(writer.bytes.subarray(0, writer.at));
-  }C Ò@Ô@¸@Ö  @ü   „  ş  ª İáÇ8 ¾ ! (ú‚ #×function (device, operation, input) {
+  }C Ğ@Ò@¸@Ô  @ú   „  ü  ª
+ İáÇ8 ¾ ! (øŠ #×function (device, operation, input) {
     var id = nextCall++;
     return new Promise(function (resolve, reject) {
       pending.set(id, [resolve, reject]);
       send([2, id, device, operation, input]);
     });
-  }C    Š  Œ  ü  Ö   „ Ò  Ô ¸ Û>F   ÜÏĞ& $ İµÜŞ[ [ & í)ú„!
+  }C    Š  Œ  ú  Ô   „ Ğ  Ò ¸ Û>F   ÜÏĞ& $ İµÜŞ[ [ & í)øŒ!
 
  7{function (resolve, reject) {
       pending.set(id, [resolve, reject]);
       send([2, id, device, operation, input]);
-    }C 	Í’  Ø   l @Ú  „  Ò ‚  ğ  Ì Â ü   ğ ª İ8 Ï! ! Ë>D   $  ÈÃ=
-  Ã=	  çªé8 >  Ä$ ”è8 .  ! 0Ä³C¶©èB[ >E   Ä´C$ Í”è8 /  ! 0[ >	   Ä´C$ ÄµCèÅ³CêÅ´CÄ¶C# Ä³C³ªé7 •   ªè8 0  ! 08 >…   8 ÄµCí$ >„   ¾ ¾% ú…‰8
+    }C 	Í–  Ö   l @Ø  „  Ò ‚  ğ  Ì Â ú   ì ª
+ İ8 Ï! ! Ë>D   $  ÈÃ=  Ã=  çªé8 >  Ä$ ”è8 -  ! 0Ä³C¶©èB[ >E   Ä´C$ Í”è8 .  ! 0[ >	   Ä´C$ ÄµCèÅ³CêÅ´CÄ¶C# Ä³C³ªé7 •   ªè8 /  ! 08 >…   8 ÄµCí$ >„   ¾ ¾% ø…‘8
 !U/%	
 10/%%
 } 0?/%	
@@ -732,24 +722,25 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
       function (result) { send([1, message[1], result]); },
       function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }
     );
-  }C    Ä  „  l  Û´Ü´CÏ& í)ú™(
-!4function (result) { send([1, message[1], result]); }C    'â  „  l  Ò Û´Ü´C¼ô&  8 ÏèÏ=6   éÏí& & í)úš&%
-/5%A_function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }   ` WKö`ä  @æ@è	@ê@ì@î@ö ğğ@ö ğò
-@ö ğô
-@ö@ø@ú  ü@ş@€@‚@„@†@ˆ@Š@Œ@@@’@”@–9@˜@š2@œ;@ =@ !1@¢"@¤# @¦$!@ö ğ¨%@ö ğª'"@¬)#@®*$@°+  ²,*@´-+@¶.)@¸/8@º05@ö %ğ¼1'@ö &ğ¾3/@Œ5(@À6,@Â77@Ä86@Æ9-@È::@Ê;.@Ì<3@Î=0@Ğ><@Ò?4@Ô@  ÖA>@ØB?@ÚC  ÜD@@ŞEA@àFB@âGC@äH  æII@èJF@êKE@ìLD@îMG@ğNH@òO  ô  °öQJğôPK@öS  øTM@úUL@üV  şWN@€XO@‚YP@„ZT@†[S@ˆ\R@Š]U@Œ^Q@_V@Ò Î Ê ò Ş  Ğ Ì Ü Œ ô Ú Ô ª ö æ ê	 Â ğ  ø    ¾É¾Á¾Á¾Á¾	Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á ¾Á!¾Á(¾Á)¾Á*¾Á+¾#Á4¾$Á5¾%Á6¾&Á7¾'Á8¾(Á9¾)Á:¾*Á;¾+Á<¾,Á=¾-Á>¾.Á?¾/Á@¾3ÁC¾6ÁE¾7ÁF¾8ÁG¾9ÁH¾:ÁL¾;ÁM¾<ÁN¾=ÁO¾@ÁR¾CÁV¾GÁ\¾HÁ]¾IÁ^½ ½4Ç8 >ˆ  8 ‰  Š  ‹  Œ          ‘    ’  “  ”  •  –  —  ˜     ™  & ! $ È8 >ˆ  š  ›  œ      Ÿ  & $ Ê8 >ˆ     I¡  ¢  I£  ¤  I¥  ¦  I§  ¨  I©  ª  I«  ¬  I­  ®  I¯  °  I±  ²  I³  ´  Iµ  ¶  I·  $ Á8 ^ ½S7  Ág Á8 ^ ½S8  Ág Á8 ^
- ½S9  Á
+  }C    À  „  l  Û´Ü´CÏ& í)ø¡(
+!4function (result) { send([1, message[1], result]); }C    'à  „  l  Ò Û´Ü´C¼ô&  8 ÏèÏ=6   éÏí& & í)ø¢&%
+/5%A_function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }   ^ VIÃ^â  @ä@æ	@è@ê@ì@ö ğî@ö ğğ
+@ö ğò
+@ô@ö@ø  ú@ü@ş@€@‚@„@†@ˆ@Š@Œ@@@’@”9@–@˜2@š;@œ =@!1@ "@¢# @¤$!@ö ğ¦%@ö ğ¨'"@ª)#@¬*$@®+  °,*@²-+@´.)@¶/8@¸05@ö %ğº1'@ö &ğ¼3/@5(@¾6,@À77@Â86@Ä9-@Æ::@È;.@Ê<3@Ì=0@Î><@Ğ?4@Ò@  ÔA>@ÖB?@ØC  ÚD@@ÜEA@ŞFB@àGC@âH  äII@æJF@èKE@êLD@ìMG@îNH@ğO  òPJ@ôQ  öRL@øSK@úT  üUM@şVN@€WO@‚XS@„YR@†ZQ@ˆ[T@Š\P@Œ]U@Ò Î Ê ğ Ş  Ğ Ì Ü Œ î Ú Ô ª
+ ò æ ô Â ö    ¾É¾Á¾Á¾Á¾	Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á¾Á ¾Á!¾Á(¾Á)¾Á*¾Á+¾#Á4¾$Á5¾%Á6¾&Á7¾'Á8¾(Á9¾)Á:¾*Á;¾+Á<¾,Á=¾-Á>¾.Á?¾/Á@¾3ÁC¾6ÁE¾7ÁF¾8ÁG¾9ÁH¾:ÁL¾;ÁM¾<ÁN¾=ÁO¾>ÁP¾AÁT¾EÁZ¾FÁ[¾GÁ\½ ½4Ç8 >‡  8 ˆ  ‰  Š  ‹  Œ          €  ‘  ’  “  ”  •  –  —     ˜  & ! $ È8 >‡  ™  š  ›  œ      & $ Ê8 >‡  Ÿ  I   ¡  I¢  £  I¤  ¥  I¦  §  I¨  ©  Iª  «  I¬  ­  I®  ¯  I°  ±  I²  ³  I´  µ  I¶  $ Á8 ^ ½S6  Ág Á8 ^ ½S7  Ág Á8 ^
+ ½S8  Á
 g
  Á	½
-½4Á»@Á»F¼ ˜¼ ˜Á ú  Á»F¼ ˜¼ ˜Á8 !  Á8 >ˆ  ¸  ¹  º  »  ¼  ½  ¾  & $ Á"8 >ˆ  ¿  IÀ  Á  IÂ  Ã  IÄ  Å  IÆ  Ç  IÈ  É  IÊ  Ë  IÌ  Í  IÎ  Ï  IĞ  Ñ  IÒ  Ó  IÔ  Õ  IÖ  ×  IØ  Ù  IÚ  Û  IÜ  $ Á#8 ^% ½SS  Á%g% Á$8 ^' ½ST  Á'g' Á&8 >ˆ  İ  Ş  ß  à  á  â  ã  ä  å  æ  ç  è  é  ê  ë  ì  í  î  & $ Á,8 >ˆ  ï  Iğ  ñ  Iò  ó  Iô  õ  Iö  ÷  Iø  ù  Iú  û  Iü  ı  Iş  ÿ  I     I    I    I    I  	  I
-    I    I    I    I    I    I    I    I    I    I    I   !  I"  #  I$  %  I&  '  I(  )  I*  +  I,  -  I.  /  I0  $ Á-½½ 4Á.8 1  2  3  4  5  6  7  8  9  :  ;  <  & ! Á/8 ^1 ½!S]  Á1g1 Á08 ^3 ½"S^  Á3g3 Á2=  ÁA8 >ˆ  8 >ˆ  ´I>  ?  I:   8 >ˆ  &  ³ÆOÀ,O$ I@  $ 8 >ˆ  µI>  A  I:   À"I@  $ 8 >ˆ  ¶I>  B  I:   8 >ˆ  À,>C  ¾0$ À,>C  ¾1$ & $ I@  $ 8 >ˆ  ·I>  D  I:   8 >ˆ  À,>C  ¾2$ & $ I@  $ & $ ÁB½4½54ÁD8 E  F  G  H  I  & ! ÁIJ  K  L  & ÁJ8 1  3  4  5  6  7  8  9  2  &	 ! ÁK8 =ú   óé)8 ^P ^Q ½?Sú    ¾>QM   ÁQÂPgQ ?ú   8 >ˆ  ¾AQN  ¾BQO  $ ÁS³ÁT&  ÁUÀÀS¾DJP  IP  ÀVIQ  îÁWÀ@ÀS¾EJP  IP  ÀVIQ  ÀHIR  îÁXÀ+ÀS¾FJP  IP  ÀVIQ  îÁYÀCÀSíÁZÀOÀWI  ÀXI€  ÀYI  íÁ_8 ¾J?ø   )úŒŸ È(8 f / <À > ~  8*k ,k k ¼#
+½4Á»@Á»F¼ ˜¼ ˜Á ú  Á»F¼ ˜¼ ˜Á8 !  Á8 >‡  ·  ¸  ¹  º  »  ¼  ½  & $ Á"8 >‡  ¾  I¿  À  IÁ  Â  IÃ  Ä  IÅ  Æ  IÇ  È  IÉ  Ê  IË  Ì  IÍ  Î  IÏ  Ğ  IÑ  Ò  IÓ  Ô  IÕ  Ö  I×  Ø  IÙ  Ú  IÛ  $ Á#8 ^% ½SR  Á%g% Á$8 ^' ½SS  Á'g' Á&8 >‡  Ü  İ  Ş  ß  à  á  â  ã  ä  å  æ  ç  è  é  ê  ë  ì  í  & $ Á,8 >‡  î  Iï  ğ  Iñ  ò  Ió  ô  Iõ  ö  I÷  ø  Iù  ú  Iû  ü  Iı  ş  Iÿ     I    I    I    I    I	  
+  I    I    I    I    I    I    I    I    I    I    I     I!  "  I#  $  I%  &  I'  (  I)  *  I+  ,  I-  .  I/  $ Á-½½ 4Á.8 0  1  2  3  4  5  6  7  8  9  :  ;  & ! Á/8 ^1 ½!S\  Á1g1 Á08 ^3 ½"S]  Á3g3 Á2<  ÁA8 >‡  8 >‡  ´I=  >  I:   8 >‡  &  ³ÆOÀ,O$ I?  $ 8 >‡  µI=  @  I:   À"I?  $ 8 >‡  ¶I=  A  I:   8 >‡  À,>B  ¾0$ À,>B  ¾1$ & $ I?  $ 8 >‡  ·I=  C  I:   8 >‡  À,>B  ¾2$ & $ I?  $ & $ ÁB½4½54ÁD8 D  E  F  G  H  & ! ÁII  J  K  & ÁJ8 0  2  3  4  5  6  7  8  1  &	 ! ÁK8 >‡  ¾?QL  ¾@QM  $ ÁQ³ÁR&  ÁSÀÀQ¾BJN  IN  ÀTIO  îÁUÀ@ÀQ¾CJN  IN  ÀTIO  ÀHIP  îÁVÀ+ÀQ¾DJN  IN  ÀTIO  îÁWÀCÀQíÁXÀOÀUI~  ÀVI  ÀWI€  íÁ]8 ¾H?ö   )ø€§ È(8 f / <À > ~  8*k ,k k ¼#
 &&&"9 ”Ù H œ  Z&k k ò b  È Ğ  à6 C 16k $k Ø	 
 1p€/&/*‹p¬%p„—%
 %%
  €* p˜«%
-”*£ & ‚ z0¢1  4 1 Ğ? %Rp , 
+”*£ & ‚ z0¢1  4 1 æp , 
 &O+ *' &O)& ' 
 0O? >1 ,- Zz<? 
-!ÿí() => {
+!£å() => {
   // packages/hub/src/names.js
   var NAMESPACE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   var RESERVED_NAMESPACE_NAMES = Object.freeze(/* @__PURE__ */ new Set([
@@ -2641,37 +2632,6 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
   }
 
   // packages/website/resources-application-guest.js
-  if (typeof globalThis.TextEncoder !== "function") {
-    globalThis.TextEncoder = class TextEncoder {
-      encode(value) {
-        const text2 = String(value);
-        let length = 0;
-        for (const character of text2) {
-          const point = character.codePointAt(0);
-          length += point < 128 ? 1 : point < 2048 ? 2 : point < 65536 ? 3 : 4;
-        }
-        const bytes = new Uint8Array(length);
-        let at = 0;
-        for (const character of text2) {
-          let point = character.codePointAt(0);
-          if (point >= 55296 && point <= 57343) point = 65533;
-          if (point < 128) bytes[at++] = point;
-          else if (point < 2048) {
-            bytes[at++] = 192 | point >> 6;
-            bytes[at++] = 128 | point & 63;
-          } else {
-            if (point >= 65536) {
-              bytes[at++] = 240 | point >> 18;
-              bytes[at++] = 128 | point >> 12 & 63;
-            } else bytes[at++] = 224 | point >> 12;
-            bytes[at++] = 128 | point >> 6 & 63;
-            bytes[at++] = 128 | point & 63;
-          }
-        }
-        return bytes;
-      }
-    };
-  }
   function compatibleResult(result) {
     const [columns, values, rowsAffected] = result;
     return {
@@ -2799,7 +2759,7 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
     }
     return ["error", "unknown application operation"];
   };
-}4^[a-z0-9]+(?:-[a-z0-9]+)*$   ?      õÿÿÿ 	$ 0 9 a z ğÿÿÿ   - $ 0 9 a z ğÿÿÿãÿÿÿ A è  âˆ     ˆÿÿÿÿ  ¦	  ¨	  ¨	   ¦	  Ä °Ò  Î ä   æ  ^ ^ ^  ÏÇĞğé!o>S  ğè:   È>T  ğè·Éêêİ_ Ê_ Á^ 8  Ïé¿í>U  $  >V  $  Á_ çÆ¡é	_ ç»?£è8 ¿>`   ÀW  ÆX  $ ! 0İ>Y  _ $ ”è8 ¿>`   ÀZ  $ ! 0Ş>g   _ $ è8 [  >`   À\  $ ! 0_ (úQ· @" 
+}4^[a-z0-9]+(?:-[a-z0-9]+)*$   ?      õÿÿÿ 	$ 0 9 a z ğÿÿÿ   - $ 0 9 a z ğÿÿÿãÿÿÿ A æ  âˆ     ˆÿÿÿÿ  ¢	  ¤	  ¤	   ¢	  À °Ò  Î â   ä  ^ ^ ^  ÏÇĞğé!o>Q  ğè:   È>R  ğè·Éêêİ_ Ê_ Á^ 8  Ïé¿í>S  $  >T  $  Á_ çÆ¡é	_ ç»?£è8 ¿>`   ÀU  ÆV  $ ! 0İ>W  _ $ ”è8 ¿>`   ÀX  $ ! 0Ş>g   _ $ è8 Y  >`   ÀZ  $ ! 0_ (øQ¿ @" 
 O 4%2/9[ (44;0
 (H4Eñfunction namespaceName(value, { field = "name", minimum = 4 } = {}) {
     const result = String(value || "").trim().toLowerCase();
@@ -2807,7 +2767,7 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
     if (!NAMESPACE_NAME.test(result)) throw new Error(`${field} must use lowercase letters, numbers, and single hyphens`);
     if (RESERVED_NAMESPACE_NAMES.has(result)) throw new Error(`That ${field} is reserved`);
     return result;
-  }Ä   º	  ¼	  º	ÿÿÿÿ  ¼	  î  ì    ö Ê ÉÊ^ +^ ^  ÏÇĞğè&  ØÈÅ5ÆÏ_  ©è`  êÏa  ©èb  êc  ! b d  è_ $  _ 7  ?:   _ Ï?]  _ 8 >ˆ  &  ³ĞO$ ?^  c (ú#ü” 
+  }Ä   ¶	  ¸	  ¶	ÿÿÿÿ  ¸	  î  ì    ö Ê ÉÊ^ +^ ^  ÏÇĞğè&  ØÈÅ5ÆÏ]  ©è^  êÏ_  ©è`  êa  ! b d  è_ $  _ 6  ?:   _ Ï?[  _ 8 >‡  &  ³ĞO$ ?\  c (ø#„” 
 4† 
 M›q	5!"/	“class extends Error {
     constructor(code, providers = []) {
@@ -2816,22 +2776,22 @@ M›q	5!"/	“class extends Error {
       this.code = code;
       this.providers = Object.freeze([...providers]);
     }
-  }Æ     Fî  ì    ö ÇÈ^ +Ã5Äd  ! b d  è_ $  _ 8  ?:   _ e  ?]  c (ú„5*
+  }Æ     Fî  ì    ö ÇÈ^ +Ã5Äb  ! b d  è_ $  _ 7  ?:   _ c  ?[  c (øŒ5*
 q	5¹class extends Error {
     constructor() {
       super("Sign up is not currently enabled");
       this.name = "AccountSignupDisabledError";
       this.code = "signup_disabled";
     }
-  }Æ   >¦	  l  î  ì    ö
- ÇÈ^ +Ã5ÄĞ! b d  è_ $  _ 9  ?:   _ Ï?S  c (ú‹5q	5class extends Error {
+  }Æ   >¢	  l  î  ì    ö
+ ÇÈ^ +Ã5ÄĞ! b d  è_ $  _ 8  ?:   _ Ï?Q  c (ø“5q	5class extends Error {
     constructor(field, message) {
       super(message);
       this.name = "AccountValidationError";
       this.field = field;
     }
-  }C ô  rˆ  Ì	  °Î	 °Ò  Î ^ ^  8  Ïé¿í>U  $  Ç_  >h  i  $ È_ ´¡é_ _  ç´œ©é
-_  ç¼ş £è8 j  ! 0_  If  _  >V  $  Ik  (ú9‘!  
+  }C ò  rˆ  È	  °Ê	 °Ò  Î ^ ^  8  Ïé¿í>S  $  Ç_  >f  g  $ È_ ´¡é_ _  ç´œ©é
+_  ç¼ş £è8 h  ! 0_  Id  _  >T  $  Ii  (ø9™!  
 3
 4%
 !0
@@ -2844,18 +2804,18 @@ q	5¹class extends Error {
       throw new Error("A verified provider email address is required");
     }
     return { email, normalized: email.toLowerCase() };
-  }C ö    Ä  Ï®èê=l  ®èê³Cé(ú™p %Efunction firstRow(result) {
+  }C ô    À  Ï®èê=j  ®èê³Cé(ø¡p %Efunction firstRow(result) {
     return result?.rows?.[0] || null;
-  }C ø   ?Ú	  Ê Ò  Ïè;8  >ˆ  8 Ï=+  íI+  8 Ï=n  íI  8 Ï=o  íI:   $ (ú'œ!!! 5®function accountFromRow(row) {
+  }C ö   ?Ö	  Ê Ò  Ïè;8  >‡  8 Ï=*  íI*  8 Ï=l  íI  8 Ï=m  íI:   $ (ø'¤!!! 5®function accountFromRow(row) {
     return row && Object.freeze({
       id: String(row.id),
       login: String(row.username),
       name: String(row.display_name)
     });
-  }A ú‘à	@   à	ÿÿÿÿ   	  ¢	  â	  â	   ¢	@ 	@¼	ğä	 àæ	@Â
-@è	@ò ê  Ò  ì  ø  ö  è  ò	  î  Î ô  ğ  Ê Ş  ^ ^ ^ ^  ÏÇĞğéBo>P  ğè
-8 =P  È>Q  ğè	¾ JQ  É>q  ğèu  v  & Êêê¼_ Á_ Á_ Á¾Á	¾Á
-¾Á^ ^ Ï®èê=N  ”éÏ®èê=O  ”è8	 w  ! 08 À! Á_ =1   ”é&  ³_ O>x  ¾$ è8	 y  ! 0Á8 >ˆ  À	I†  ÀIt  ¾Q§  ¾Qz  % ú9£™ X	\R&/
+  }A ø‘Ü	@   Ü	ÿÿÿÿ  œ	  	  Ş	  Ş	   	@œ	@¸	ğà	 àâ	@À
+@ä	@ğ è  Ò  ê  ö  ô  æ  ğ	  ì  Î ò  î  Ê Ş  ^ ^ ^ ^  ÏÇĞğéBo>N  ğè
+8 =N  È>O  ğè	¾ JO  É>o  ğès  t  & Êêê¼_ Á_ Á_ Á¾Á	¾Á
+¾Á^ ^ Ï®èê=L  ”éÏ®èê=M  ”è8	 u  ! 08 À! Á_ =1   ”é&  ³_ O>v  ¾$ è8	 w  ! 0Á8 >‡  À	I…  ÀIr  ¾Q¦  ¾Qx  % ø9«™ X	\R&/
 #H%
 ;/
  0
@@ -2989,36 +2949,32 @@ q	5¹class extends Error {
         return Object.freeze({ id: userId, login: identity.login, name: identity.name });
       }
     });
-  }B        ò  8  >{  %  ú	¥() => crypto.randomUUID()B     ø	  ½ ½4>Y  Ï$ ”(ú	ª/N6(provider) => !/^[a-z][a-z0-9-]{0,63}$/.test(provider),^[a-z][a-z0-9-]{0,63}$Š  =      õÿÿÿ 	$ a z     ?   $ - - 0 9 a z  ?   çÿÿÿ C æ	    . ä	 à	  ê d  é$Ü>O  İ>}  ¾ $ $ >   ¾$ e  d  (ú®%"%%d% ›Şfunction initialize2() {
+  }B        ğ  8  >y  %  ø	­() => crypto.randomUUID()B     ô	  ½ ½4>W  Ï$ ”(ø	²/N6(provider) => !/^[a-z][a-z0-9-]{0,63}$/.test(provider),^[a-z][a-z0-9-]{0,63}$Š  =      õÿÿÿ 	$ a z     ?   $ - - 0 9 a z  ?   çÿÿÿ C â	    . à	 Ü	  è d  é$Ü>M  İ>{  ¾ $ $ >   ¾$ e  d  (ø¶%"%%d% ›Şfunction initialize2() {
       initialized2 ||= client.batch(ACCOUNT_SCHEMA.map((sql) => ({ sql, args: [] }))).catch((error) => {
         initialized2 = null;
         throw error;
       });
       return initialized2;
-    }B      ü	  ÏI~  &  I  (ú¯7(sql) => ({ sql, args: [] })B     â  ä	  e  Ï0ú
-¯\§!F(error) => {
+    }B      ø	  ÏI|  &  I}  (ø·7(sql) => ({ sql, args: [] })B     à  à	  e  Ï0ø
+·\§!F(error) => {
         initialized2 = null;
         throw error;
-      }b Â 6€
-  Ä  °Ò à	  ì ^  Ü>N  İ=¡  I~  Ï& I  $ ‰Ç_  =l  >}  ¾ $ /úµ.!'5 	4+ 
+      }b À 6ü	  À  °Ò Ü	  ê ^  Ü>L  İ=   I|  Ï& I}  $ ‰Ç_  =j  >{  ¾ $ /ø½.!'5 	4+ 
 %+èasync function providersForUser(userId) {
       const result = await client.execute({
         sql: ACCOUNT_QUERIES.providersForUser,
         args: [userId]
       });
       return result.rows.map((row) => String(row.provider));
-    }B     Ú	  Ò  8  Ï=|  # úº(row) => String(row.provider)b è	   .€
-  æ		  ø ö à	  ì Ò Ûì‰ÜİŞ>N  [ =£  I~  8 Ïí& I  $ ‰íí/ú#¼!G5 	H))Õasync function getAccount(userId) {
+    }B     Ö	  Ò  8  Ï=z  # øÂ(row) => String(row.provider)b ä	   .ü	  â		  ö ô Ü	  ê Ò Ûì‰ÜİŞ>L  [ =¢  I|  8 Ïí& I}  $ ‰íí/ø#Ä!G5 	H))Õasync function getAccount(userId) {
       await initialize2();
       return accountFromRow(firstRow(await client.execute({
         sql: ACCOUNT_QUERIES.accountById,
         args: [String(userId)]
       })));
-    }b  	 	¾€
-  ˆ  Ü	   â ƒ‚
- °„
- °†
- °â ƒæ		  è ò  	  à	  ì î Ò è	  ^ ^  Ûì‰Çk   ÜĞn  IS  î`  êÈk   İn  Ä=6   ! 00ŞìÉk·   ^ ^ [ >N  [ =¥  I~  _  & I  $ ‰Ê_ =l  ³Cè[ a  ! 0[ >O  [ =§  I~  _  _ 8 Ïí& I  [ =©  I~  _  _ 8 Ïí& I  & $ ‰Á_ ³C®èê=„  ”èn/êAÁk<   ½ ½4>Y  8 À®èê=6   éÀí$ è[ a  ! 0À00[ Ïí/ú‹Æ!7>E%F
+    }b  	 	¾ü	  ˆ  Ø	   à ƒş	 °€
+ °‚
+ °à ƒâ		  æ ğ œ	  Ü	  ê ì Ò ä	  ^ ^  Ûì‰Çk   ÜĞl  IQ  î`  êÈk   İl  Ä=6   ! 00ŞìÉk·   ^ ^ [ >L  [ =¤  I|  _  & I}  $ ‰Ê_ =j  ³Cè[ _  ! 0[ >M  [ =¦  I|  _  _ 8 Ïí& I}  [ =¨  I|  _  _ 8 Ïí& I}  & $ ‰Á_ ³C®èê=‚  ”èn/êAÁk<   ½ ½4>W  8 À®èê=6   éÀí$ è[ _  ! 0À00[ Ïí/ø‹Î!7>E%F
 #? 	@!+5 8+  
 /(; !)5695 	' W Y
 W%Z/(;s
@@ -3050,36 +3006,34 @@ W%Z/(;s
           throw error;
         }
         return getAccount(userId);
-      }"unique constraint–  C      õÿÿÿ U N I Q U E   C O N S T R A I N T  `  	  ÛŠ
-     Š
-ÿÿÿÿ  Œ
-  
-  
-   Œ
-  
- °Ì	 °Ö	 °‚
- °’
-	 °”
+      }"unique constraint–  C      õÿÿÿ U N I Q U E   C O N S T R A I N T  `  	  Û†
+     †
+ÿÿÿÿ  ˆ
+  Š
+  Š
+   ˆ
+  Œ
+ °È	 °Ò	 °ş	 °
+	 °
 
- °–
- °˜
- °€
- °€	 °æ		  ¼	 Î	 Ò ô
-  	  à	  ì ö î Â
-  ø ğ ¢	  Ê ^ ^ ^  ÏÇĞğéo>†  ğèÈ>‡  ğè
+ °’
+ °”
+ °ü	 °ş °â		  ¸	 Î	 Ò ò
+ œ	  Ü	  ê ô ì À
+  ö î 	  Ê ^ ^ ^  ÏÇĞğéo>„  ğèÈ>…  ğè
 Éêêá_ Ê_ Á^ ^ ^ ^ ^
- ^	 ^ ^ ^ ^ Ûì‰d >g   Ï=|  $ ”è8   ! 08 Ï=ˆ  íÁğéo>f  Á>k  Áê[ Ï=f  íêâÏ=  
-ªè8 j  ! 0[ ìÁ[ >N  [ =«  I~  Ï=|  _ & I  $ ‰Á	[ _	 íÁ
+ ^	 ^ ^ ^ ^ Ûì‰d >g   Ï=z  $ ”è8 ‹  ! 08 Ï=†  íÁğéo>d  Á>i  Áê[ Ï=d  íêâÏ=Œ  
+ªè8 h  ! 0[ ìÁ[ >L  [ =ª  I|  Ï=z  _ & I}  $ ‰Á	[ _	 íÁ
 _
  h¼   Àè08 _
- =+  í8 Àíªè[	   [
+ =*  í8 Àíªè[	   [
  _
- =+  í‰! 0[ >O  [ =­  I~  Ï=:   _ _
- =+  & I  [ =¯  I~  Ï=  _ Ï=|  _ & I  & $ ‰[ _
- PÏ=:   Io  _
- =n  In  í/À”èÆ”è	[ !  0[ >N  [ =±  I~  _ & I  $ ‰Á[ _ íÁÀ”è _ è[	 _  [
- _ =+  í‰! 0Àè5_ è08 _ =+  í8 Àíªè[	 _  [
- _ =+  í‰! 0Àè	8 Àíê[ ìÁ&  ÁÀ”è8_ >  [ =³  I~  _ Ï=:   Ï=  _ _ & I  $ _ ”è2_ >  [ =µ  I~  _ _ _ _ _ & I  $ _ >  [ =·  I~  Ï=|  _ _ Ï=  _ _ & I  $ [ >O  _ $ ‰8 >ˆ  _ I+  Ï=  I  Ï=:   I:   $ /ú‘ã W
+ =*  í‰! 0[ >M  [ =¬  I|  Ï=:   _ _
+ =*  & I}  [ =®  I|  Ï=  _ Ï=z  _ & I}  & $ ‰[ _
+ PÏ=:   Im  _
+ =l  Il  í/À”èÆ”è	[ !  0[ >L  [ =°  I|  _ & I}  $ ‰Á[ _ íÁÀ”è _ è[	 ]  [
+ _ =*  í‰! 0Àè5_ è08 _ =*  í8 Àíªè[	 ]  [
+ _ =*  í‰! 0Àè	8 Àíê[ ìÁ&  ÁÀ”è8_ >"  [ =²  I|  _ Ï=:   Ï=  _ _ & I}  $ _ ”è2_ >"  [ =´  I|  _ _ _ _ _ & I}  $ _ >"  [ =¶  I|  Ï=z  _ _ Ï=  _ _ & I}  $ [ >M  _ $ ‰8 >‡  _ I*  Ï=  I  Ï=:   I:   $ /ø‘ë W
  >/
 …O (/
 %	!75 + %+  !4G/Z" !Q;	"5 KW5 M +5  
@@ -3149,11 +3103,11 @@ _
         });
         await client.batch(statements);
         return Object.freeze({ id: userId, login: identity.login, name: identity.name });
-      }z^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$   ˆ      õÿÿÿ 	)   / )-      õÿÿÿ   	   / .    .    / )      õÿÿÿ\  ğ   $ - 9 A Z _ _ a z ~ ~  ï   ßÿÿÿ C ˆ   š  Æ  Ê 8  =?   =$  >%  ÏĞ% ú®g]function own(object, key) {
+      }z^(?!\/)(?!.*(?:^|\/)\.\.?\/?)(?!.*\\)[A-Za-z0-9._~/-]{1,240}$   ˆ      õÿÿÿ 	)   / )-      õÿÿÿ   	   / .    .    / )      õÿÿÿ\  ğ   $ - 9 A Z _ _ a z ~ ~  ï   ßÿÿÿ C †   š  Â  Ê 8  =?   =#  >$  ÏĞ% ø¶g]function own(object, key) {
     return Object.prototype.hasOwnProperty.call(object, key);
-  }C Š µˆ@ 
- @Š  Ğ Ì Ê Î ÏñéÏ•L   ©é
-Ï•K   ©èÏ(Ï•J   ©è8 >‘  Ï$ èÏ(8 >  Ï$ èÏ>}  ¾ % ÏèKÏ•M   ©èA8 >c   Ï$ 8 =?   ©è*8 >’  8 >0   Ï$ >“  $  >}  ¾$ % 8 ¿>`   Ğ”  $ ! 0úd±&9./,‡/  i
+  }C ˆ µˆ@œ
+ @ˆ  Ğ Ì Ê Î ÏñéÏ•L   ©é
+Ï•K   ©èÏ(Ï•J   ©è8 >  Ï$ èÏ(8 >  Ï$ èÏ>{  ¾ % ÏèKÏ•M   ©èA8 >c   Ï$ 8 =?   ©è*8 >  8 >0   Ï$ >‘  $  >{  ¾$ % 8 ¿>`   Ğ’  $ ! 0ød¹&9./,‡/  i
  
 %+ /  {
 %m4/ºfunction jsonValue(value, label) {
@@ -3164,25 +3118,25 @@ _
       return Object.fromEntries(Object.keys(value).sort().map((key) => [key, jsonValue(value[key], label)]));
     }
     throw new Error(`${label} must contain only JSON values`);
-  }B     ¤  Š   
- ÛÏÜ# ú´/ (item) => jsonValue(item, label)B     Æ  Š  ˆ   
- ÏÛÜÏCİî& (ú¶>
-,(key) => [key, jsonValue(value[key], label)]C Œ   ª
-  ¬
-  Ü 8  >—  Ï$ 8  >—  Ğ$ ©(úº#7[function same(left, right) {
+  }B     ¦  ˆ  œ
+ ÛÏÜ# ø¼/ (item) => jsonValue(item, label)B     Â  ˆ  ˆ  œ
+ ÏÛÜÏCİî& (ø¾>
+,(key) => [key, jsonValue(value[key], label)]C Š   ¦
+  ¨
+  Ü 8  >•  Ï$ 8  >•  Ğ$ ©(øÂ#7[function same(left, right) {
     return JSON.stringify(left) === JSON.stringify(right);
-  }C   °
-  Œ	 8  Ï=™  >}  ¾ $ ! (ú½%%mfunction fileMap(snapshot) {
+  }C Œ  ¬
+  Œ	 8  Ï=—  >{  ¾ $ ! (øÅ%%mfunction fileMap(snapshot) {
     return new Map(snapshot.files.map((file) => [file.path, file.content]));
-  }B      ´
-  Ï=›  Ï=€  & (ú¾&#(file) => [file.path, file.content]A  œˆ  ˆÿÿÿÿ  ¸
-  °º
- ğ²
- °¼
- °¾
- °Ò  ü  Î †  ô
- €  Ê Ü Ì ş   Š  ‚  Ú „  ^  Ïğè×Ç^ ^ ^ ^ ^ 8 >  Ï=™  $ è	Ï=™  ê&  È_ ç[	 £è8    >`   [	 ¡  $ ! 08
- !  É_ >}  ¾ $ >“  ¾$ Ê[ Ï=  ®è¢  îÁ_ ”é8 >  _ $ é_ •M   ªè8 £  ! 08 !  >M  8 >—  _ $ $ =¤  [ £è8 ¥  ! 08 !  >M  8 >—  &  I™  _ I  $ $ =¤  _ >¦  ¾³$ ›8 >  ³_ ç´œ$ ›Á_ [ £è8 §  ! 08 >ˆ  8 >ˆ  _ $ I™  8 >ˆ  _ $ I  % úÂÀŠ,
+  }B      °
+  Ï=™  Ï=  & (øÆ&#(file) => [file.path, file.content]A  œˆ  ˆÿÿÿÿ  ´
+  °¶
+ ğ®
+ °¸
+ °º
+ °Ò  ú  Î „  î
+ ş  Ê Ü Ì ü   ˆ  €  Ú ‚  ^  Ïğè×Ç^ ^ ^ ^ ^ 8 >  Ï=—  $ è	Ï=—  ê&  È_ ç[	 £è8   >`   [	 Ÿ  $ ! 08
+ !  É_ >{  ¾ $ >‘  ¾$ Ê[ Ï=œ  ®è   îÁ_ ”é8 >  _ $ é_ •M   ªè8 ¡  ! 08 !  >  8 >•  _ $ $ =¢  [ £è8 £  ! 08 !  >  8 >•  &  I—  _ Iœ  $ $ =¢  _ >¤  ¾³$ ›8 >  ³_ ç´œ$ ›Á_ [ £è8 ¥  ! 08 >‡  8 >‡  _ $ I—  8 >‡  _ $ Iœ  % øÂÈŠ,
 
  
 4G.HD991%  5%
@@ -3221,13 +3175,13 @@ R*
     const snapshotBytes = new TextEncoder().encode(JSON.stringify({ files: [], config })).byteLength + files.reduce((bytes, file) => bytes + fileJsonBytes.get(file).bytes, 0) + Math.max(0, files.length - 1);
     if (snapshotBytes > MAX_SNAPSHOT_BYTES) throw new Error("Project snapshot is too large");
     return Object.freeze({ files: Object.freeze(files), config: Object.freeze(config) });
-  }B  	 	 ¡´
-  ¶
-  °Ğ
- °Ò
- °Ô
- °Ö	 °Ò  ü Î º
- † ô € Ê Ü ^ ^ ^ ^ ^  8  Ï®èê=›  é¿íÇ8  Ï®èê=€  ®è¿íÈÜ>Y  _  $ ”é_  >«  ¬  $ è8 ­  >`   _  $ ! 0d >g   _  $ è8 ®  >`   _  $ ! 0ÏèÏ•M   ©è[ >E   Ï$ êÉ_ è_ =›  _  ©è_ =€  _ ©Ê_ ”è68 !  >M  _ $ =¤  [ £è8 ¯  >`   _  $ ! 0d >l   _  $ 8 >ˆ  _  I›  _ I€  $ Á[ >F   _ _ è_ ê9_  I›  _ I€  8 !  >M  8 >—  _ $ $ =¤  I	  $ _ (ú·Ä"N\	a	*4$HH =Q
+  }B  	 	 ¡°
+  ²
+  °Ì
+ °Î
+ °Ğ
+ °Ò	 °Ò  ú Î ¶
+ „ î ş Ê Ü ^ ^ ^ ^ ^  8  Ï®èê=™  é¿íÇ8  Ï®èê=  ®è¿íÈÜ>W  _  $ ”é_  >©  ª  $ è8 «  >`   _  $ ! 0d >g   _  $ è8 ¬  >`   _  $ ! 0ÏèÏ•M   ©è[ >E   Ï$ êÉ_ è_ =™  _  ©è_ =  _ ©Ê_ ”è68 !  >  _ $ =¢  [ £è8 ­  >`   _  $ ! 0d >l   _  $ 8 >‡  _  I™  _ I  $ Á[ >F   _ _ è_ ê9_  I™  _ I  8 !  >  8 >•  _ $ $ =¢  I  $ _ (ø·Ì"N\	a	*4$HH =Q
 $HL A
 /
  k %q 8H„ y
@@ -3250,19 +3204,19 @@ R*
         bytes: new TextEncoder().encode(JSON.stringify(normalized)).byteLength
       });
       return normalized;
-    }B      ª
-  ¬
-  Ï=›  >°  Ğ=›  % úÔ"
+    }B      ¦
+  ¨
+  Ï=™  >®  Ğ=™  % øÜ"
 
-4(left, right) => left.path.localeCompare(right.path)B     ’  ´
-  † ÏÛ>E   Ğ$ =	  ›(úØt"
-16(bytes, file) => bytes + fileJsonBytes.get(file).bytesC ’  Ñâ
-  ä
-  æ
-   è
- °ê
-  ì
-  Ú Ê ^ ^ ^ ^  ³Ç8  >·  ÏçĞç$ È_  _ ¡è&Ï>  _  $ Ğ>  _  $ ©è_  `  êÓÏçÉĞçÊ_ _  £è;_ _  £è2Ï>  _ ´œ$ Ğ>  _ ´œ$ ©è_ ` _ ` ê¾8 >ˆ  _  I³  Ï>  _  _ $ I¸  Ğ>  _  _ $ I¹  % ú„ÜD
+4(left, right) => left.path.localeCompare(right.path)B     –  °
+  „ ÏÛ>E   Ğ$ =  ›(øàt"
+16(bytes, file) => bytes + fileJsonBytes.get(file).bytesC   ÑŞ
+  à
+  â
+   ä
+ °æ
+  è
+  Ú Ê ^ ^ ^ ^  ³Ç8  >µ  ÏçĞç$ È_  _ ¡è&Ï>¶  _  $ Ğ>¶  _  $ ©è_  `  êÓÏçÉĞçÊ_ _  £è;_ _  £è2Ï>¶  _ ´œ$ Ğ>¶  _ ´œ$ ©è_ ` _ ` ê¾8 >‡  _  I±  Ï>  _  _ $ I·  Ğ>  _  _ $ I¸  % ø„äD
 
 
 )
@@ -3281,14 +3235,14 @@ R*
       afterEnd--;
     }
     return Object.freeze({ start, remove: before.slice(start, beforeEnd), insert: after.slice(start, afterEnd) });
-  }C ”  ­â
-  ä
-  ¶
+  }C ’  ­Ş
+  à
+  ²
+  ò
   ô
-  ö
-  °ø
- °` °Æ °Œ  Ì Ê  ˆ  ”  ^ ^ ^  ÛÏĞîè)ÏèÏ•M   ©è8 >  Ï$ ”ÇĞèĞ•M   ©è8 >  Ğ$ ”È_  ”é_ ”è>Ò>  8 >ˆ  F   I½  8 >ˆ  Ñ$ I›  ÏI±  ĞID   $ $ )&  ³8 &  ³8 >0   Ï$ O8 >0   Ğ$ O! O>“  $  É^ _ {ëÍ Ê[ Ğ_ î”èIÒ>  8 >ˆ  	   I½  8 >ˆ  &  ³ÑO_ N$ I›  Ï_ CI±  $ $ êx[ Ï_ î”èOÒ>  8 >ˆ  F   I½  8 >ˆ  &  ³ÑO_ N$ I›  
-I¾  Ğ_ CID   $ $ ê[ Ï_ CĞ_ C&  ³ÑO_ NÒ" ~ h2ÿÿÿ‚)úÆè0
+  °ö
+ °` °Â °Š  Ì Ê  †  ’  ^ ^ ^  ÛÏĞîè)ÏèÏ•M   ©è8 >  Ï$ ”ÇĞèĞ•M   ©è8 >  Ğ$ ”È_  ”é_ ”è>Ò>"  8 >‡  F   I¼  8 >‡  Ñ$ I™  ÏI¯  ĞID   $ $ )&  ³8 &  ³8 >0   Ï$ O8 >0   Ğ$ O! O>‘  $  É^ _ {ëÍ Ê[ Ğ_ î”èIÒ>"  8 >‡  	   I¼  8 >‡  &  ³ÑO_ N$ I™  Ï_ CI¯  $ $ êx[ Ï_ î”èOÒ>"  8 >‡  F   I¼  8 >‡  &  ³ÑO_ N$ I™  
+I½  Ğ_ CID   $ $ ê[ Ï_ CĞ_ C&  ³ÑO_ NÒ" ~ h2ÿÿÿ‚)øÆğ0
 ""9"
 o 9"
 k*"!'R6H. oF*Od
@@ -3306,13 +3260,14 @@ I¾  Ğ_ CID   $ $ ê[ Ï_ CĞ_ C&  ³ÑO_ NÒ" ~ h2ÿÿÿ‚)úÆè0
       else if (!own(before, key)) operations.push(Object.freeze({ op: "set", path: Object.freeze([...path, key]), absent: true, value: after[key] }));
       else configDiff(before[key], after[key], [...path, key], operations);
     }
-  }C –  Ø	ş
-  €  â
-  °ä
- °‚ °„ °²
- °¶
- °¼
- °     Ê ’  ”  ^ ^ ^ ^ ^ ^  ÛÏíÇÛĞíÈÜ_  íÉÜ_ íÊ&  Á^ &  ³8 &  ³_ >0   $  O_ >0   $  O! O>“  $  {ëÁ_ >g   _ $ ”èA_ >  8 >ˆ  	   I½  _ I›  _ >E   _ $ I±  $ $ ëÀ _ >g   _ $ ”è@_ >  8 >ˆ  l   I½  _ I›  _ >E   _ $ I€  $ $ êo_ >E   _ $ _ >E   _ $ ªèP_ >  8 >ˆ  Ã  I½  _ I›  [ _ >E   _ $ _ >E   _ $ îP$ $ ~ hìşÿÿ‚&  Á[ _  =  _ =  &  _ " 8 >ˆ  ´I>  8 >ˆ  _ $ I™  8 >ˆ  _ $ I  % úË÷]"2323	0>*
+  }C ”  Ø	ü
+  ş
+  Ş
+  °à
+ °€ °‚ °®
+ °²
+ °¸
+ °  Œ   Ê   ’  ^ ^ ^ ^ ^ ^  ÛÏíÇÛĞíÈÜ_  íÉÜ_ íÊ&  Á^ &  ³8 &  ³_ >0   $  O_ >0   $  O! O>‘  $  {ëÁ_ >g   _ $ ”èA_ >"  8 >‡  	   I¼  _ I™  _ >E   _ $ I¯  $ $ ëÀ _ >g   _ $ ”è@_ >"  8 >‡  l   I¼  _ I™  _ >E   _ $ I  $ $ êo_ >E   _ $ _ >E   _ $ ªèP_ >"  8 >‡  Â  I¼  _ I™  [ _ >E   _ $ _ >E   _ $ îP$ $ ~ hìşÿÿ‚&  Á[ _  =œ  _ =œ  &  _ " 8 >‡  ´I=  8 >‡  _ $ I—  8 >‡  _ $ Iœ  % øËÿ]"2323	0>*
 
 U`
 0·
@@ -3341,10 +3296,9 @@ I¾  Ğ_ CID   $ $ ê[ Ï_ CĞ_ C&  ³ÑO_ NÒ" ~ h2ÿÿÿ‚)úÆè0
     const config = [];
     configDiff(before.config, after.config, [], config);
     return Object.freeze({ version: 1, files: Object.freeze(files), config: Object.freeze(config) });
-  }C ˜
-  –¦  ¶
-  ˆ   Æ °Ì ˆ  Î ^  ÏÇ^ Ğ>  ³²$ {êbÈ_  ”é+_  •M   ªé8  >  _  $ éÜ_  _ î”è$8 Å  >`   Ğ>_   Æ  $ $ ! 0_  _ C`  ~ èœ‚_  IÇ  Ğ>
-  ²$ I#  (úD†  &)*$9 
+  }C –
+  –¤  ²
+  †   Â °Ì †  Î ^  ÏÇ^ Ğ>  ³²$ {êbÈ_  ”é+_  •M   ªé8  >  _  $ éÜ_  _ î”è$8 Ä  >`   Ğ>_   Å  $ $ ! 0_  _ C`  ~ èœ‚_  IÆ  Ğ>  ²$ I!  (øD  &)*$9 
 %4Hd4
  k¥;**Kòfunction configParent(root, path) {
     let current = root;
@@ -3353,16 +3307,16 @@ I¾  Ğ_ CID   $ $ ê[ Ï_ CĞ_ C&  ³ÑO_ NÒ" ~ h2ÿÿÿ‚)úÆè0
       current = current[key];
     }
     return { parent: current, key: path.at(-1) };
-  }C š
- ¡	  ’  °
-  °²
- °Ô °¶
- °Ğ
- °æ
- °¼
- °Ô ° °Æ	 °Ì Î     Ò  ü  Ğ Š  ˜  ˆ  Œ  ^ ^ ^  Ğ”é6Ğ=>  ´ªé*8  >  Ğ=™  $ ”é8  >  Ğ=  $ ”è8 Ê  ! 0İÏíÇŞ_  íÈ^ Ğ=™  {ëÉ^ 8 _ =›  é¿íÊ[ >Y  _ $ ”è8 Ë  >`   _ $ ! 0_ =½  l   ©èM_ >g   _ $ è8 Ì  >`   _ $ ! 0_ >F   _ 8 _ =€  ®è¿í$ ëf_ =½  	   ©èW_ >g   _ $ ”é_ >E   _ $ _ =±  ªè8 Í  >`   _ $ ! 0_ >	   _ $ ë _ =½  Ã  ©hÒ   ^ ^ _ >E   _ $ Á8 _ =³  íÁ_ •L   ªéB8 >  _ $ ”é/_ ³¡é&_ >  _ _ _ =¸  ç›$ _ =¸  ªè8 Î  >`   _ $ ! 0_ >F   _ _ >  ³_ $ _ =¹  ›_ >  _ _ =¸  ç›$ ›$ ê8 Ï  >`   _ =½  $ ! 0~ hşıÿÿ‚[ _  =  ¢  îÁ^ Ğ=  {ëäÁ^	 ^ 8  >  _ =›  $ ”é#_ =›  ç³©é_ =›  >x  ¾ $ è8 Ğ  ! 0ğéo>Ç  Á>#  Á	ê[ _ _ =›  îêİ_ ”é_ •M   ªé8  >  _ $ è+8 Ñ  >`   _ =›  >_   Æ  $ $ ! 0_ =½  	   ©è[[	 _ _	 î”é[
- _ _	 C_ =±  î”è+8 Ò  >`   _ =›  >_   Æ  $ $ ! 0_ _	 –ë± _ =½  F   ©hƒ   _ =¾  è[	 _ _	 îê$[	 _ _	 î”é[
- _ _	 C_ =±  î”è+8 Ó  >`   _ =›  >_   Æ  $ $ ! 0_ _	 [ _ =D   ¢  îFê8 Ô  >`   _ =½  $ ! 0~ hşÿÿ‚İ&  ³_ O>}  ¾$ I™  _ I  # úÿ0 
+  }C ˜
+ ¡	    ¬
+  °®
+ °Ò °²
+ °Ì
+ °â
+ °¸
+ °Ò °Œ °Â	 °Ì Î   Œ  Ò  ú  Ğ ˆ  –  †  Š  ^ ^ ^  Ğ”é6Ğ==  ´ªé*8  >  Ğ=—  $ ”é8  >  Ğ=œ  $ ”è8 É  ! 0İÏíÇŞ_  íÈ^ Ğ=—  {ëÉ^ 8 _ =™  é¿íÊ[ >W  _ $ ”è8 Ê  >`   _ $ ! 0_ =¼  l   ©èM_ >g   _ $ è8 Ë  >`   _ $ ! 0_ >F   _ 8 _ =  ®è¿í$ ëf_ =¼  	   ©èW_ >g   _ $ ”é_ >E   _ $ _ =¯  ªè8 Ì  >`   _ $ ! 0_ >	   _ $ ë _ =¼  Â  ©hÒ   ^ ^ _ >E   _ $ Á8 _ =±  íÁ_ •L   ªéB8 >  _ $ ”é/_ ³¡é&_ >  _ _ _ =·  ç›$ _ =·  ªè8 Í  >`   _ $ ! 0_ >F   _ _ >  ³_ $ _ =¸  ›_ >  _ _ =·  ç›$ ›$ ê8 Î  >`   _ =¼  $ ! 0~ hşıÿÿ‚[ _  =œ     îÁ^ Ğ=œ  {ëäÁ^	 ^ 8  >  _ =™  $ ”é#_ =™  ç³©é_ =™  >v  ¾ $ è8 Ï  ! 0ğéo>Æ  Á>!  Á	ê[ _ _ =™  îêİ_ ”é_ •M   ªé8  >  _ $ è+8 Ğ  >`   _ =™  >_   Å  $ $ ! 0_ =¼  	   ©è[[	 _ _	 î”é[
+ _ _	 C_ =¯  î”è+8 Ñ  >`   _ =™  >_   Å  $ $ ! 0_ _	 –ë± _ =¼  F   ©hƒ   _ =½  è[	 _ _	 îê$[	 _ _	 î”é[
+ _ _	 C_ =¯  î”è+8 Ò  >`   _ =™  >_   Å  $ $ ! 0_ _	 [ _ =D      îFê8 Ó  >`   _ =¼  $ ! 0~ hşÿÿ‚İ&  ³_ O>{  ¾$ I—  _ Iœ  # øÿ–0 
  
 
 *$
@@ -3433,21 +3387,21 @@ X+
       } else throw new Error(`Unsupported configuration operation: ${operation.op}`);
     }
     return normalizeProjectSnapshot({ files: [...files].map(([path, content2]) => ({ path, content: content2 })), config });
-  }B      ª  Ï•L   ªéÏ”(ú	¦_"
-9"+(key2) => typeof key2 !== "string" || !key2@        ¶
-   Ğ
-  Ï{~ Ç~ È‚ÃI›  ÄI€  (ú±<\P3([path, content2]) => ({ path, content: content2 })C œ    ;’  Ï®èê=>  ´©è(Ï=™  ®èêç³©èÏ=  ®èêç³©(ú³
+  }B      ¨  Ï•L   ªéÏ”(ø	®_"
+9"+(key2) => typeof key2 !== "string" || !key2@        ²
+   Ì
+  Ï{~ Ç~ È‚ÃI™  ÄI  (ø¹<\P3([path, content2]) => ({ path, content: content2 })C š    ;  Ï®èê==  ´©è(Ï=—  ®èêç³©èÏ=œ  ®èêç³©(ø»
 H
 4
 4¡…function projectPatchIsEmpty(patch) {
     return patch?.version === 1 && patch.files?.length === 0 && patch.config?.length === 0;
-  }A   ¯   ¬   ®  °    ²  ´  ¶   ¸  º  ¼	  ¾
-  Ğ Î Ê Ïo=Ö  Ç=×  È=Ø  É=   Ê=Ù  Á=Ú  Á^
- ^	 ^ ^ ^ Ã•K   ªé]Ä•K   ªéQÅ•K   ªéEÀ•K   ªé88  >  À$ ”é&À³¡éà  á  â  & >«  Æ$ ”è8 ã  ! 0ÃhŠ   Æá  ªéÄè:8 >ˆ  ä  Iå  ÀIÛ  IÜ  Iİ  IŞ  ä  Iß  % 8 >ˆ  æ  Iå  À´›IÛ  á  IÜ  Iİ  IŞ  Ä  Iß  % ÀÁÁÁÁ	ä  Á
-Åé	Æâ  ©èQÄ”èç  ` _ ` Ä  `	 ê	æ  `	 Æâ  ©èâ  êØ  ` n   `
- _ ` ê@Àé	Æá  ©è1Æá  ©èá  êà  ` æ  `	 n   `
- _ ` 8 >ˆ  è  Iå  _ IÛ  _ IÜ  _ Iİ  _	 IŞ  _
- Iß  % ú’¶ >90.90909$*2(uR!‘/
+  }A œ  ¯   ª   ¬  ®    °  ²  ´   ¶  ¸  º	  ¼
+  Ğ Î Ê Ïo=Õ  Ç=Ö  È=×  É=   Ê=Ø  Á=Ù  Á^
+ ^	 ^ ^ ^ Ã•K   ªé]Ä•K   ªéQÅ•K   ªéEÀ•K   ªé88  >  À$ ”é&À³¡éß  à  á  & >©  Æ$ ”è8 â  ! 0ÃhŠ   Æà  ªéÄè:8 >‡  ã  Iä  ÀIÚ  IÛ  IÜ  Iİ  ã  IŞ  % 8 >‡  å  Iä  À´›IÚ  à  IÛ  IÜ  Iİ  Ã  IŞ  % ÀÁÁÁÁ	ã  Á
+Åé	Æá  ©èQÄ”èæ  ` _ ` Ã  `	 ê	å  `	 Æá  ©èá  ê×  ` n   `
+ _ ` ê@Àé	Æà  ©è1Æà  ©èà  êß  ` å  `	 n   `
+ _ ` 8 >‡  ç  Iä  _ IÚ  _ IÛ  _ IÜ  _	 Iİ  _
+ IŞ  % ø’¾ >90.90909$*2(uR!‘/
 	!  #T # 
 T( &? &! %+ 5
 + ]5+ & "  ]5+ +  8 ¯function planProjectVersionUpdate({
@@ -3509,31 +3463,31 @@ H
       nextVersionBase,
       checkpointTarget
     });
-  }C          Û&  I™  I  # úòRefunction emptyProjectSnapshot() {
+  }C         Û&  I—  Iœ  # øúRefunction emptyProjectSnapshot() {
     return normalizeProjectSnapshot({ files: [], config: {} });
-  }Ä    El  lÿÿÿÿ  î  ì    ö% ÈÉ^ +^  Ïğèé  ×ÇÄ5ÅÏ! b d  è_ $  _ S  ?:   c (úÉ…q	®class extends Error {
+  }Ä    El  lÿÿÿÿ  î  ì    ö% ÈÉ^ +^  Ïğèè  ×ÇÄ5ÅÏ! b d  è_ $  _ R  ?:   c (øÑ…q	®class extends Error {
     constructor(message = "Organization administration is not available") {
       super(message);
       this.name = "OrganizationAccessError";
     }
-  }Æ   >¦	  l  î  ì    ö' ÇÈ^ +Ã5ÄĞ! b d  è_ $  _ T  ?:   _ Ï?S  c (úÏ5q	5class extends Error {
+  }Æ   >¢	  l  î  ì    ö' ÇÈ^ +Ã5ÄĞ! b d  è_ $  _ S  ?:   _ Ï?Q  c (ø×5q	5class extends Error {
     constructor(field, message) {
       super(message);
       this.name = "OrganizationInputError";
       this.field = field;
     }
-  }C ª  <ˆ  Ä  °Ò  ¨&  ^  8  Ïéê  íÇ_  ê  ªè_  ‰  ªèÜU  ë  ! 0_  (úÕ"4* *.>,?OØfunction role(value) {
+  }C ¨  <ˆ  À  °Ò  ¦&  ^  8  Ïéé  íÇ_  é  ªè_  ˆ  ªèÜT  ê  ! 0_  (øİ"4* *.>,?OØfunction role(value) {
     const result = String(value || "member");
     if (result !== "member" && result !== "admin") throw new OrganizationInputError("role", "Role must be member or admin");
     return result;
-  }C ¬ ?â  ˆ  °Ò  ¨&  ^  8  Ï®èê=6   éÏíÇ½ ½4>Y  _  $ èÜU  ì  ! ((úÚ 
+  }C ª ?à  ˆ  °Ò  ¦&  ^  8  Ï®èê=6   éÏíÇ½ ½4>W  _  $ èÜT  ë  ! ((øâ 
 W%!¦­>,AÏfunction invitationConflict(error) {
     const value = String(error?.message || error);
     if (/resource_organization_single_admin|resource_organization_pending_admin|unique constraint/i.test(value)) {
       return new OrganizationInputError("role", "This organization already has or is inviting an admin");
     }
     return null;
-  }°resource_organization_single_admin|resource_organization_pending_admin|unique constraintÜ  &     õÿÿÿ Ş   k   R E S O U R C E _ O R G A N I Z A T I O N _ S I N G L E _ A D M I N i   R E S O U R C E _ O R G A N I Z A T I O N _ P E N D I N G _ A D M I N 3   U N I Q U E   C O N S T R A I N T  C ®   ¯Ú	  Ê Ò  Ğ 8  >ˆ  8 Ï=+  íI+  8 Ï=í  íIí  Ï=î  ¨Iï  8 Ï=ğ  íIñ  8 Ï=ò  íIó  8 Ï=ô  íIõ  8 Ï=ö  íI÷  8 Ï=ø  íIù  8 Ï=U  íIU  8 Ï=   íI   8 Ï=ú  íIû  % úaá!!! !!!!!!!! %function notification(row) {
+  }°resource_organization_single_admin|resource_organization_pending_admin|unique constraintÜ  &     õÿÿÿ Ş   k   R E S O U R C E _ O R G A N I Z A T I O N _ S I N G L E _ A D M I N i   R E S O U R C E _ O R G A N I Z A T I O N _ P E N D I N G _ A D M I N 3   U N I Q U E   C O N S T R A I N T  C ¬   ¯Ö	  Ê Ò  Ğ 8  >‡  8 Ï=*  íI*  8 Ï=ì  íIì  Ï=í  ¨Iî  8 Ï=ï  íIğ  8 Ï=ñ  íIò  8 Ï=ó  íIô  8 Ï=õ  íIö  8 Ï=÷  íIø  8 Ï=T  íIT  8 Ï=   íI   8 Ï=ù  íIú  % øaé!!! !!!!!!!! %function notification(row) {
     return Object.freeze({
       id: String(row.id),
       kind: String(row.kind),
@@ -3547,10 +3501,10 @@ W%!¦­>,AÏfunction invitationConflict(error) {
       status: String(row.status),
       createdAt: Number(row.created_at)
     });
-  }A °
+  }A ®
 Ğ
-à	@   à	ÿÿÿÿ   	  ¢	  ¢	 @ 	@ä	 àæ	@€@ò ¢"  è  ¤#  Ò  Ê Ğ ¦$  ¨&  ª(  ¬)  ®*  Ô Ş Î ^ ^ ^  ÏÇĞğé*o>P  ğè
-8 =P  È>Q  ğè	¾ JQ  ÉêêÔ_ Ê_ Á¾Á¾Á^ Ï®èê=N  ”éÏ®èê=O  ”è8 ü  ! 0Á8 >ˆ  ÀI†  ¾Qı  ¾Qş  ¾Qÿ  ¾QĞ  ¾QÔ  ¾QÚ  ¾	QÜ  % ú#ğ‰b 3[\R&/
+Ü	@   Ü	ÿÿÿÿ  œ	  	  	 @œ	@à	 àâ	@ş@ğ  "  æ  ¢#  Ò  Ê Ğ ¤$  ¦&  ¨(  ª)  ¬*  Ô Ş Î ^ ^ ^  ÏÇĞğé*o>N  ğè
+8 =N  È>O  ğè	¾ JO  ÉêêÔ_ Ê_ Á¾Á¾Á^ Ï®èê=L  ”éÏ®èê=M  ”è8 û  ! 0Á8 >‡  ÀI…  ¾Qü  ¾Qı  ¾Qş  ¾QÏ  ¾QÓ  ¾QÙ  ¾	QÛ  % ø#ø‰b 3[\R&/
  "A! ?×2function createOrganizationStore(client, { now = Date.now, randomId = () => crypto.randomUUID() } = {}) {
     if (!client?.execute || !client?.batch) throw new Error("Organization store requires a libSQL-compatible client");
     let initialized2;
@@ -3699,18 +3653,17 @@ W%!¦­>,AÏfunction invitationConflict(error) {
         }
       }
     });
-  }B        ò  8  >{  %  ú	ğH() => crypto.randomUUID()C æ	    . ä	 à	  ¢ d  é$Ü>O  İ>}  ¾ $ $ >   ¾$ e  d  (úó%"&%/n% ¥ãfunction initialize2() {
+  }B        ğ  8  >y  %  ø	øH() => crypto.randomUUID()C â	    . à	 Ü	    d  é$Ü>M  İ>{  ¾ $ $ >   ¾$ e  d  (øû%"&%/n% ¥ãfunction initialize2() {
       initialized2 ||= client.batch(ORGANIZATION_SCHEMA.map((sql) => ({ sql, args: [] }))).catch((error) => {
         initialized2 = null;
         throw error;
       });
       return initialized2;
-    }B      ü	  ÏI~  &  I  (úô<(sql) => ({ sql, args: [] })B     â  ä	  e  Ï0ú
-ôa±!F(error) => {
+    }B      ø	  ÏI|  &  I}  (øü<(sql) => ({ sql, args: [] })B     à  à	  e  Ï0ø
+üa±!F(error) => {
         initialized2 = null;
         throw error;
-      }b €  V€  €
-  ‚  °Ä °è à	  ¤ Ò ^ ^  ÛÏ  IS  îÇÜ>N  İ=À  I~  8 Ğí8 Ğí_  8 Ğí& I  $ ‰È_ =l  ³Cé/ú7ú! >!'(5# 	%+  
+      }b ş  Vş  ü	  €  °À °æ Ü	  ¢ Ò ^ ^  ÛÏ  IQ  îÇÜ>L  İ=¿  I|  8 Ğí8 Ğí_  8 Ğí& I}  $ ‰È_ =j  ³Cé/ø7‚! >!'(5# 	%+  
  #ãasync function managedOrganization(slugValue, userId) {
       const slug2 = namespaceName(slugValue, { field: "organization name" });
       const result = await client.execute({
@@ -3718,8 +3671,7 @@ W%!¦­>,AÏfunction invitationConflict(error) {
         args: [String(userId), String(userId), slug2, String(userId)]
       });
       return result.rows[0] || null;
-    }b   Ú€  €
-  †  °„ °Ê Ò Ğ æ	  €  à	  ¤ ^ ^  Şì‰[ ÏĞî‰Ç_  ”è/[ >N  [ =Â  I~  _  =+  & I  $ ‰È8  >ˆ  8 _  =+  íI+  8 _  =`  íI`  8 _  =:   íI:   8 _  =  íI  8 _  =  íI  8 _  =  íI  8  >ˆ  _ =l  >}  ¾ $ $ IÂ  $ /úq„!(5	%
+    }b   Úş  ü	  „  °‚ °Ê Ò Ğ â	  ş  Ü	  ¢ ^ ^  Şì‰[ ÏĞî‰Ç_  ”è/[ >L  [ =Á  I|  _  =*  & I}  $ ‰È8  >‡  8 _  =*  íI*  8 _  =_  íI_  8 _  =:   íI:   8 _  =  íI  8 _  =  íI  8 _  =  íI  8  >‡  _ =j  >{  ¾ $ $ IÁ  $ /øqŒ!(5	%
 !)(5# 0+ !!!!!!!
 %! 'ƒasync getManagedOrganization(slugValue, userId) {
         await initialize2();
@@ -3744,22 +3696,21 @@ W%!¦­>,AÏfunction invitationConflict(error) {
             createdAt: Number(row.created_at)
           })))
         });
-      }B     WÚ	  Ê  Ò Ğ 8  >ˆ  8 Ï=	  íI€  8 Ï=n  íIn  8 Ï=o  íI:   8 Ï=U  íIU  8 Ï=ú  íIû  % ú3“2!Y!!!! 	Vø(row) => Object.freeze({
+      }B     WÖ	  Ê  Ò Ğ 8  >‡  8 Ï=  íI~  8 Ï=l  íIl  8 Ï=m  íI:   8 Ï=T  íIT  8 Ï=ù  íIú  % ø3›2!Y!!!! 	Vø(row) => Object.freeze({
             userId: String(row.user_id),
             username: String(row.username),
             name: String(row.display_name),
             role: String(row.role),
             createdAt: Number(row.created_at)
-          })`    ½€  ”     Ü	   –  †  °˜ °´ °š °œ °’ °‚
- °â	 °
- °â ƒæ	  €  ¦ è à	  ¤ ¨ Ò ª	  	  ¢	  ¬
- Ê Ño=n  Ç=U  È^
- ^	 ^ ^ ^ ^ ^ ^ Ûì‰ÜÏĞî‰É_ ”èİ!  0ŞÃn  IS  îÊ[ >N  [ =Ä  I~  _ & I  $ ‰=l  ³CÁ_ ”è[ n    ! 08 _ =+  í8 _ =  í©è[ n    ! 0[ >N  [ =Æ  I~  _ =+  _ =+  & I  $ ‰Á_ =l  ³Cè[ n    ! 0[ ÄíÁ_ ‰  ©èN^ [ >N  [ =È  I~  _ =+  & I  $ ‰Á_ =l  ³Cè[ U  ì  ! 0[	 ìÁ[
+          })`    ½ş  ’     Ø	   ”  „  °– °´ °˜ °š ° °ş	 °à	 °œ
+ °à ƒâ	  ş  ¤ æ Ü	  ¢ ¦ Ò ¨	 œ	  	  ª
+ Ê Ño=l  Ç=T  È^
+ ^	 ^ ^ ^ ^ ^ ^ Ûì‰ÜÏĞî‰É_ ”èİ!  0ŞÃl  IQ  îÊ[ >L  [ =Ã  I|  _ & I}  $ ‰=j  ³CÁ_ ”è[ l    ! 08 _ =*  í8 _ =  í©è[ l    ! 0[ >L  [ =Å  I|  _ =*  _ =*  & I}  $ ‰Á_ =j  ³Cè[ l    ! 0[ ÄíÁ_ ˆ  ©èN^ [ >L  [ =Ç  I|  _ =*  & I}  $ ‰Á_ =j  ³Cè[ T  ë  ! 0[	 ìÁ[
  ìÁ	[
  ìÁ
-ku   [ >O  [ =Ê  I~  _	 _ =+  8 Ğí_ =+  _ _ _ & I  [ =Ì  I~  _
- _ =+  _	 _ & I  & $ ‰êÁk   [ ÀíéÀ008 >ˆ  _	 I+  _
- I  8 _ =n  íIn  $ /úŠœĞ(5	 .A>
+ku   [ >M  [ =É  I|  _	 _ =*  8 Ğí_ =*  _ _ _ & I}  [ =Ë  I|  _
+ _ =*  _	 _ & I}  & $ ‰êÁk   [ ÀíéÀ008 >‡  _	 I*  _
+ I  8 _ =l  íIl  $ /øŠ¤Ğ(5	 .A>
 !)(5# 6A 
  
   $H,? RH,?;!+(5#
@@ -3811,8 +3762,7 @@ ku   [ >O  [ =Ê  I~  _	 _ =+  8 Ğí_ =+  _ _ _ & I  [ =Ì  I~
           throw invitationConflict(error) || error;
         }
         return Object.freeze({ id: invitationId, notificationId, username: String(target.username) });
-      }b    J€
-  Ä  °æ	  à	  ¤ Ò Ê ® ^  Ûì‰Ü>N  İ=Î  I~  8 Ïí& I  $ ‰Ç8 >ˆ  _  =l  >}  [ $ $ /ú/Ä!'(5# 	(+ 
+      }b    Jü	  À  °â	  Ü	  ¢ Ò Ê ¬ ^  Ûì‰Ü>L  İ=Í  I|  8 Ïí& I}  $ ‰Ç8 >‡  _  =j  >{  [ $ $ /ø/Ì!'(5# 	(+ 
 
 '‘async listNotifications(userId) {
         await initialize2();
@@ -3821,13 +3771,11 @@ ku   [ >O  [ =Ê  I~  _	 _ =+  8 Ğí_ =+  _ _ _ & I  [ =Ì  I~
           args: [String(userId)]
         });
         return Object.freeze(result.rows.map(notification));
-      }b    ?€
-    Ä  °æ	  à	  ¤  	  Ò Ô ^  Ûì‰Ü>N  İ=Ğ  I~  Şì8 Ğí8 Ïí& I  $ ‰Ç8 _  =„  í/ú.Ì  (4<$/½+async markNotificationRead(userId, notificationId) {
+      }b    ?ü	  œ  À  °â	  Ü	  ¢ œ	  Ò Ô ^  Ûì‰Ü>L  İ=Ï  I|  Şì8 Ğí8 Ïí& I}  $ ‰Ç8 _  =‚  í/ø.Ô  (4<$/½+async markNotificationRead(userId, notificationId) {
         await initialize2();
         const result = await client.execute({ sql: ORGANIZATION_QUERIES.markNotificationRead, args: [now(), String(notificationId), String(userId)] });
         return Boolean(result.rowsAffected);
-      }b    ~€
-    ¦  °æ	  à	  ¤ Ò Ô ^  Ûì‰Ü>O  İ=Ò  I~  8 Ğí8 Ïí& I  İ=Ô  I~  8 Ğí8 Ïí& I  & $ ‰Ç8 _  ³C®èê=„  é_  ´C®èê=„  í/úEÑ
+      }b    ~ü	  œ  ¤  °â	  Ü	  ¢ Ò Ô ^  Ûì‰Ü>M  İ=Ñ  I|  8 Ğí8 Ïí& I}  İ=Ó  I|  8 Ğí8 Ïí& I}  & $ ‰Ç8 _  ³C®èê=‚  é_  ´C®èê=‚  í/øEÙ
 !)(5#$6?(5#$ 		' W$CMÔasync deleteNotification(userId, notificationId) {
         await initialize2();
         const results = await client.batch([{
@@ -3839,10 +3787,8 @@ ku   [ >O  [ =Ê  I~  _	 _ =+  8 Ğí_ =+  _ _ _ & I  [ =Ì  I~
         }]);
         return Boolean(results[0]?.rowsAffected || results[1]?.rowsAffected);
       }b  
-  „€
-    ¨  °ü °‚
- °â ƒæ	  à	  ¤ Ò  	  ¬
- ^ ^ ^  Ûì‰Ü>N  İ=Ö  I~  8 Ğí8 Ïí& I  $ ‰Ç_  =l  ³CÈ_ ”é_ =   ş   ªè/[ ìÉk„   Ü>O  İ=Ø  I~  _ =ò  8 Ïí_ =U  _ _ & I  İ=Ú  I~  _ _ =ğ  & I  İ=Ğ  I~  _ 8 Ğí8 Ïí& I  & $ ‰êÊk   [ ÆíéÆ008 _ =`  í/úŒÜ0!%(5#$ 		+ 
+  „ü	  œ  ¦  °ú °ş	 °à ƒâ	  Ü	  ¢ Ò œ	  ª
+ ^ ^ ^  Ûì‰Ü>L  İ=Õ  I|  8 Ğí8 Ïí& I}  $ ‰Ç_  =j  ³CÈ_ ”é_ =   ı   ªè/[ ìÉk„   Ü>M  İ=×  I|  _ =ñ  8 Ïí_ =T  _ _ & I}  İ=Ù  I|  _ _ =ï  & I}  İ=Ï  I|  _ 8 Ğí8 Ïí& I}  & $ ‰êÊk   [ ÆíéÆ008 _ =_  í/øŒä0!%(5#$ 		+ 
  
 *43	"!	(5#$@ƒ(5#J%(5#$ ? &E
 Öasync acceptInvitation(userId, notificationId) {
@@ -3870,8 +3816,8 @@ ku   [ >O  [ =Ê  I~  _	 _ =+  8 Ğí_ =+  _ _ _ & I  [ =Ì  I~
         }
         return String(invite.slug);
       }b  	 
- x€  ”  ª  –  †  °Ä °â ƒæ	  €  ¦ à	  ¤ ª	  	  Ò Ô ¬
- ^  Ûì‰ÜÏĞî‰Ç_  ”èİ!  0kL   ^ Ş>N  [ =Ü  I~  [ Òí[ ì_  =+  8 Ñí& I  $ ‰È8 _ =„  ín/Ék   [	 ÅíéÅ00úQõ(5	 .A1!'(5#
+ xş  ’  ¨  ”  „  °À °à ƒâ	  ş  ¤ Ü	  ¢ ¨	 œ	  Ò Ô ª
+ ^  Ûì‰ÜÏĞî‰Ç_  ”èİ!  0kL   ^ Ş>L  [ =Û  I|  [ Òí[ ì_  =*  8 Ñí& I}  $ ‰È8 _ =‚  ín/Ék   [	 ÅíéÅ00øQı(5	 .A1!'(5#
 "
  	+ ,&E¼async changeRole(slugValue, actorUserId, memberUserId, requestedRole) {
         await initialize2();
@@ -3886,28 +3832,28 @@ ku   [ >O  [ =Ê  I~  _	 _ =+  8 Ğí_ =+  _ _ _ & I  [ =Ì  I~
         } catch (error) {
           throw invitationConflict(error) || error;
         }
-      }L^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$º  U      õÿÿÿ 	$ 0 9 a z 3   *    =   $ - - 0 9 a z =   çÿÿÿ$ 0 9 a z +  Æ   ^Ú  î  ì    ö1 ÇÈ^ +Ã5Ä  >`   Ï  $ ! b d  è_ $  _ ]  ?:   _ ¿>`   Ï  $ ?]  c (ú	5C/q	5 ¼class extends Error {
+      }L^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$º  U      õÿÿÿ 	$ 0 9 a z 3   *    =   $ - - 0 9 a z =   çÿÿÿ$ 0 9 a z +  Æ   ^Ø  î  ì    ö1 ÇÈ^ +Ã5Ä  >`   Ï  $ ! b d  è_ $  _ \  ?:   _ ¿>`   Ï  $ ?[  c (ø¦	5C/q	5 ¼class extends Error {
     constructor(kind) {
       super(`A ${kind} with that name already exists`);
       this.name = "ContentConflictError";
       this.code = `${kind}_taken`;
     }
-  }Æ   >¦	  l  î  ì    ö3 ÇÈ^ +Ã5ÄĞ! b d  è_ $  _ ^  ?:   _ Ï?S  c (ú¥	5q	5class extends Error {
+  }Æ   >¢	  l  î  ì    ö3 ÇÈ^ +Ã5ÄĞ! b d  è_ $  _ ]  ?:   _ Ï?Q  c (ø­	5q	5class extends Error {
     constructor(field, message) {
       super(message);
       this.name = "ContentValidationError";
       this.field = field;
     }
-  }A ¾  `²  ´  ²ÿÿÿÿ  ´  ¶  °ô
- Ü ^ ^  ÏÇĞğè¿ØÈ^ Ï”è(8  !  É_ >M  Ï$ =¤  _ >M  Ğ$ =¤  ›»F¼ ˜¼ ˜£è(8 >  Ï% ú4«	g!= `(·#Œfunction workspaceOutput(json, workspaceJson = "") {
+  }A ¼  `°  ²  °ÿÿÿÿ  ²  ş  °î
+ Ü ^ ^  ÏÇĞğè¿ØÈ^ Ï”è(8  !  É_ >  Ï$ =¢  _ >  Ğ$ =¢  ›»F¼ ˜¼ ˜£è(8 >  Ï% ø4³	g!= `(·#Œfunction workspaceOutput(json, workspaceJson = "") {
     if (!json) return null;
     const encoder = new TextEncoder();
     if (encoder.encode(json).byteLength + encoder.encode(workspaceJson).byteLength > 70 * 1024 * 1024) return null;
     return JSON.parse(json);
-  }A Œ  ‚
-ˆ  ¦	     ˆÿÿÿÿ  ¦	  î
-  –  –   î
-  Ä °Ò  ¼2  ^ ^ ^ ^  ÏÇĞÈÑo>·  ğè³É>  Ê_ Á_ Á^ 8  Ïé¿í>U  $  Á_ çÀ¡é	_ çÀ£è%ÜĞ¿>`   ĞW  À  À  $ ! 0_ (ú1±	ı" 
+  }A   ‚
+ˆ  ¢	     ˆÿÿÿÿ  ¢	  ê
+  š  š   ê
+  À °Ò  º2  ^ ^ ^ ^  ÏÇĞÈÑo>µ  ğè³É>  Ê_ Á_ Á^ 8  Ïé¿í>S  $  Á_ çÀ¡é	_ çÀ£è%ÜĞ¿>`   ĞU  À  À  $ ! 0_ (ø1¹	ı" 
 39.% 2%4]?	
 ™function text(value, field, { min = 0, max }) {
     const result = String(value || "").trim();
@@ -3915,7 +3861,7 @@ ku   [ >O  [ =Ê  I~  _	 _ =+  8 Ğí_ =+  _ _ _ & I  [ =Ì  I~
       throw new ContentValidationError(field, `${field} must be between ${min} and ${max} characters`);
     }
     return result;
-  }C À  Eˆ  Ä  °Œ5  ¶.  ¼2  ^  ÛÏ`  ´I·  »?I  ï>V  $  ÇÜ>Y  _  $ ”èİ`    ! 0_  (ú!¸	"
+  }C ¾  Eˆ  À  °5  ´.  º2  ^  ÛÏ_  ´Iµ  »?I  ï>T  $  ÇÜ>W  _  $ ”èİ_    ! 0_  (ø!À	"
 fHk!>,?	
 Œfunction slug(value) {
     const result = text(value, "slug", { min: 1, max: 63 }).toLowerCase();
@@ -3923,17 +3869,17 @@ fHk!>,?
       throw new ContentValidationError("slug", "name must use lowercase letters, numbers, and single hyphens");
     }
     return result;
-  }C Â  $â  Ò  ½ ½4>Y  8  Ï®èê=6   éÏí% ú¿	:
+  }C À  $à  Ò  ½ ½4>W  8  Ï®èê=6   éÏí% øÇ	:
 W%Mjfunction isUniqueError(error) {
     return /unique constraint/i.test(String(error?.message || error));
-  }"unique constraint–  C      õÿÿÿ U N I Q U E   C O N S T R A I N T  C Ä  ƒâ  l  °Ò  ¼2  ^  8  Ï®èê=6   éÏíÇ_  >«     $ èÜ!  "  ! (_  >«  #  $ èÜ!  $  ! (_  >«  %  $ èÜ&  '  ! ((ú5Â	$
+  }"unique constraint–  C      õÿÿÿ U N I Q U E   C O N S T R A I N T  C Â  ƒà  l  °Ò  º2  ^  8  Ï®èê=6   éÏíÇ_  >©    $ èÜ     ! (_  >©  !  $ èÜ  "  ! (_  >©  #  $ èÜ$  %  ! ((ø5Ê	$
 W%4^>,Ag4\>,Ae4f>,AwÃfunction limitError(error) {
     const message = String(error?.message || error);
     if (message.includes("resource_projects_global_limit")) return new ContentValidationError("project_limit", "The site project limit has been reached");
     if (message.includes("resource_projects_owner_limit")) return new ContentValidationError("project_limit", "An account can have at most 20 projects");
     if (message.includes("resource_organizations_owner_limit")) return new ContentValidationError("organization_limit", "An account can have at most 5 organizations");
     return null;
-  }C Æ   ¢Ú	  Ê Ò  Ğ 8  >ˆ  8 Ï=+  íI+  8 Ï=  íI  8 Ï=(  íI)  8 Ï=*  íI+  8 Ï=`  íI`  8 Ï=:   íI:   8 Ï=  íI  8 Ï=,  íI,  8 Ï=-  íI-  8 Ï=ú  íIû  % ú[É	!!!!!!!!!!	 %Äfunction project(row) {
+  }C Ä   ¢Ö	  Ê Ò  Ğ 8  >‡  8 Ï=*  íI*  8 Ï=  íI  8 Ï=&  íI'  8 Ï=(  íI)  8 Ï=_  íI_  8 Ï=:   íI:   8 Ï=  íI  8 Ï=*  íI*  8 Ï=+  íI+  8 Ï=ù  íIú  % ø[Ñ	!!!!!!!!!!	 %Äfunction project(row) {
     return Object.freeze({
       id: String(row.id),
       ownerUserId: String(row.owner_user_id),
@@ -3946,11 +3892,11 @@ W%4^>,Ag4\>,Ae4f>,AwÃfunction limitError(error) {
       template: String(row.template),
       createdAt: Number(row.created_at)
     });
-  }C È   ˆ  Ü   8  >—  ÜÏí% ú×	2[^function snapshotJson(value) {
+  }C Æ   ˆ  Ü   8  >•  ÜÏí% øß	2[^function snapshotJson(value) {
     return JSON.stringify(normalizeProjectSnapshot(value));
-  }C Ê   ˆ    Ü Ò  Û8 >  8 Ïí$ # úÚ	2Sdfunction parsedSnapshot(value) {
+  }C È   ˆ    Ü Ò  Û8 >  8 Ïí$ # øâ	2Sdfunction parsedSnapshot(value) {
     return normalizeProjectSnapshot(JSON.parse(String(value)));
-  }C Ì  iˆ  ’  °Ü Ò  Ì Î ^  8  >  8 Ïí$ Ç_  ”é<_  =>  ´ªé.8 >  _  =™  $ ”é8 >  _  =  $ ”è8 .  ! 0_  (ú8İ	 *
+  }C Ê  iˆ    °Ü Ò  Ì Î ^  8  >  8 Ïí$ Ç_  ”é<_  ==  ´ªé.8 >  _  =—  $ ”é8 >  _  =œ  $ ”è8 ,  ! 0_  (ø8å	 *
  
 
 *$
@@ -3960,19 +3906,19 @@ W%4^>,Ag4\>,Ae4f>,AwÃfunction limitError(error) {
     const patch = JSON.parse(String(value));
     if (!patch || patch.version !== 1 || !Array.isArray(patch.files) || !Array.isArray(patch.config)) throw new Error("Stored project patch is invalid");
     return patch;
-  }C Î  "ˆ  â  ƒ  ¼2  k	   ÛÏín(Çk   Ü˜  Ã=6   ! 00úâ	2=,%F
+  }C Ì  "ˆ  à  ƒ  º2  k	   ÛÏín(Çk   Ü–  Ã=6   ! 00øê	2=,%F
 #?¾function validatedSnapshot(value) {
     try {
       return normalizeProjectSnapshot(value);
     } catch (error) {
       throw new ContentValidationError("snapshot", error.message);
     }
-  }C Ğ   ’  Ï=™  >x  ¾ $ éÏ=  ç³£(úé	
+  }C Î     Ï=—  >v  ¾ $ éÏ=œ  ç³£(øñ	
 %
 %\
 ±ˆfunction destructivePatch(patch) {
     return patch.files.some((operation) => operation.op === "delete") || patch.config.length > 0;
-  }B      Ô  Ï=½  	   ©(ú	ê	4((operation) => operation.op === "delete"C Ò   WÚ	  Ê Ò  Ğ 8  >ˆ  8 Ï=+  íI+  8 Ï=`  íI`  8 Ï=:   íI:   8 Ï=  íI  8 Ï=ú  íIû  % ú3ì	!!!!! 	%ífunction organization(row) {
+  }B      Ò  Ï=¼  	   ©(ø	ò	4((operation) => operation.op === "delete"C Ğ   WÖ	  Ê Ò  Ğ 8  >‡  8 Ï=*  íI*  8 Ï=_  íI_  8 Ï=:   íI:   8 Ï=  íI  8 Ï=ù  íIú  % ø3ô	!!!!! 	%ífunction organization(row) {
     return Object.freeze({
       id: String(row.id),
       slug: String(row.slug),
@@ -3980,12 +3926,12 @@ W%4^>,Ag4\>,Ae4f>,AwÃfunction limitError(error) {
       description: String(row.description),
       createdAt: Number(row.created_at)
     });
-  }A Ô%£à	@   à	ÿÿÿÿ   	  ¢	  Ş  à  ¤	  ¤	 @à@Ş@¢		@ 	
-@ä	 àæ	@ò ²,  ¢"  ´-  À6  Ò  Æ9  Ê Ê;  ¾4  Ğ Î=  Ü ¼2  Ì ô
- Ú  Ô  !  š  Ì<  ª Ò?  è  Œ5  º0  Ä8  Â7  ¸/  –  È:  œ  Ğ>  Î Ş    ^ ^ ^ ^ ^ ^  ÏÇĞğéZo>P  ğè
-8# =P  È>Q  ğè	¾ JQ  É>/  ğè[$ Ê>0  ğè[ Á>R  ğè	¾JR  Áêê¤_ Á_ Á_ Á_ Á	_ Á
-¾Á^ Ï®èê=N  ”éÏ®èê=O  ”è8" 1  ! 0Àóé8" 2  ! 0Àóé8" 3  ! 0Àóé8" 4  ! 0Á8 >ˆ  ÀI†  ¾Q5  ¾Q6  ¾Q7  ¾Q8  ¾Q9  ¾Q:  ¾	Q;  ¾
-Q<  ¾Q=  ¾Q>  ¾Q?  ¾Q@  ¾Q  ¾QA  ¾QB  ¾QC  ¾Q.  ¾QD  % úFõ	·®I  ?\R&/
+  }A Ò%£Ü	@   Ü	ÿÿÿÿ  œ	  	  Ú  Ü   	   	 @Ü@Ú@		@œ	
+@à	 àâ	@ğ °,   "  ²-  ¾6  Ò  Ä9  Ê È;  ¼4  Ğ Ì=  Ü º2  Ì î
+ Ú  Ô !  ˜  Ê<  ª Ğ?  æ  5  ¸0  Â8  À7  ¶/  ”  Æ:  š  Î>  Î Ş œ   ^ ^ ^ ^ ^ ^  ÏÇĞğéZo>N  ğè
+8# =N  È>O  ğè	¾ JO  É>-  ğè[$ Ê>.  ğè[ Á>P  ğè	¾JP  Áêê¤_ Á_ Á_ Á_ Á	_ Á
+¾Á^ Ï®èê=L  ”éÏ®èê=M  ”è8" /  ! 0Àóé8" 0  ! 0Àóé8" 1  ! 0Àóé8" 2  ! 0Á8 >‡  ÀI…  ¾Q3  ¾Q4  ¾Q5  ¾Q6  ¾Q7  ¾Q8  ¾	Q9  ¾
+Q:  ¾Q;  ¾Q<  ¾Q=  ¾Q>  ¾Q  ¾Q?  ¾Q@  ¾QA  ¾Q-  ¾QB  % øFı	·®I  ?\R&/
 94/
 =4/
 =$4/
@@ -4525,21 +4471,22 @@ Q<  ¾Q=  ¾Q>  ¾Q?  ¾Q@  ¾Q  ¾QA  ¾QB  ¾QC  ¾Q.  ¾
         return this.saveProjectSnapshot(userId, projectId, parsedSnapshot(found.rows[0].snapshot_json), { reason: "restore", destructive: true });
       }
     });
-  }B        ò  8  >{  %  ú	÷	() => crypto.randomUUID()b         /úú	async () => {
-    }C æ	    6 ä	 à	  ² ¢ d  é,Ü>O  &  ³İOŞO>}  ¾ $ $ >   ¾$ e  d  (ú‚
+  }B        ğ  8  >y  %  ø	ÿ	() => crypto.randomUUID()b         /ø‚
+async () => {
+    }C â	    6 à	 Ü	  °   d  é,Ü>M  &  ³İOŞO>{  ¾ $ $ >   ¾$ e  d  (øŠ
 %"/&(%_% Õûfunction initialize2() {
       initialized2 ||= client.batch([...CONTENT_SCHEMA, ...ORGANIZATION_SCHEMA].map((sql) => ({ sql, args: [] }))).catch((error) => {
         initialized2 = null;
         throw error;
       });
       return initialized2;
-    }B      ü	  ÏI~  &  I  (úƒ
-T(sql) => ({ sql, args: [] })B     â  ä	  e  Ï0ú
-ƒ
+    }B      ø	  ÏI|  &  I}  (ø‹
+T(sql) => ({ sql, args: [] })B     à  à	  e  Ï0ø
+‹
 yá!F(error) => {
         initialized2 = null;
         throw error;
-      }`    ŒÖ  Š  Œ  Öÿÿÿÿ  Š  Œ  ¨  °Ú	 °æ	  à	  ´ À Ò Æ ^ ^ ^  ÏÇĞÈÑğèÙÉ^ ^ Ûì‰Ü>N  İ=ö  I~  ŞÏíŞĞí& I  $ ‰Ê_ =l  ³CÁ_ ”é)_ =,  )   ©è8 _ =  í8 Ñé¿íªè/[ _ í/úN‹
+      }`    ŒÒ  †  ˆ  Òÿÿÿÿ  †  ˆ  ¦  °Ö	 °â	  Ü	  ² ¾ Ò Ä ^ ^ ^  ÏÇĞÈÑğèÙÉ^ ^ Ûì‰Ü>L  İ=õ  I|  ŞÏíŞĞí& I}  $ ‰Ê_ =j  ³CÁ_ ”é)_ =*  )   ©è8 _ =  í8 Ñé¿íªè/[ _ í/øN“
 !%5
 
  	+  
@@ -4554,9 +4501,8 @@ yá!F(error) => {
         if (!row || row.visibility === "private" && String(row.owner_user_id) !== String(viewerUserId || "")) return null;
         return project(row);
       }b   
- ÛÖ  Š  €
-  ¨  °Ú	 °æ	  à	  ´ À Ò Ê Æ Ê ¾	 Ğ
- ^ ^  Ûì‰Ü>N  İ=ø  I~  ŞÏíŞĞí8 Ñí& I  $ ‰Ç_  =l  ³CÈ_ ”è/8 >ˆ  [ _ íIc  [ _ =G  íI˜  [ _ =H  _ =G  îII  [ _ =J  íI0  8 _ =G  í8 _ =J  íªIK  8	 _ =L  íIM  8	 _ =N  íIO  $ /úƒ•
+ ÛÒ  †  ü	  ¦  °Ö	 °â	  Ü	  ² ¾ Ò Ê Ä È ¼	 Ğ
+ ^ ^  Ûì‰Ü>L  İ=÷  I|  ŞÏíŞĞí8 Ñí& I}  $ ‰Ç_  =j  ³CÈ_ ”è/8 >‡  [ _ íIb  [ _ =E  íI–  [ _ =F  _ =E  îIG  [ _ =H  íI/  8 _ =E  í8 _ =H  íªII  8	 _ =J  íIK  8	 _ =L  íIM  $ /øƒ
 !!%5
 
  	!+  
@@ -4579,8 +4525,8 @@ yá!F(error) => {
           versionCount: Number(row.last_version_sequence),
           updatedAt: Number(row.updated_at)
         });
-      }b   	 §Ö  Š  ¨  °Ú	 °æ	  à	  ´ À Ê Æ Ê ¾	 Ğ
- ^ ^  Ûì‰Ü>N  İ=ú  I~  ŞÏíŞĞí& I  $ ‰Ç_  =l  ³CÈ_ ”è/8 >ˆ  [ _ íIc  [ _ =G  íI˜  [ _ =H  _ =G  îII  8 _ =L  íIM  8 _ =N  íIO  $ /úc§
+      }b   	 §Ò  †  ¦  °Ö	 °â	  Ü	  ² ¾ Ê Ä È ¼	 Ğ
+ ^ ^  Ûì‰Ü>L  İ=ù  I|  ŞÏíŞĞí& I}  $ ‰Ç_  =j  ³CÈ_ ”è/8 >‡  [ _ íIb  [ _ =E  íI–  [ _ =F  _ =E  îIG  8 _ =J  íIK  8 _ =L  íIM  $ /øc¯
 !!%5
 
  	+  
@@ -4601,9 +4547,7 @@ yá!F(error) => {
           versionCount: Number(row.last_version_sequence),
           updatedAt: Number(row.updated_at)
         });
-      }`    ]   €
-   ÿÿÿÿ  €
-  Ä  °æ	  à	  ´ Ò ¾	 ^ ^  ÏÇĞğè¿ØÈ^ Ûì‰Ü>N  İ=ğ  I~  8 Ïí8 Ğí& I  $ ‰É[ _ =l  ³C®èê=Q  í/ú1·
+      }`    ]œ  ü	  œÿÿÿÿ  ü	  À  °â	  Ü	  ² Ò ¼	 ^ ^  ÏÇĞğè¿ØÈ^ Ûì‰Ü>L  İ=ï  I|  8 Ïí8 Ğí& I}  $ ‰É[ _ =j  ³C®èê=O  í/ø1¿
 g!'5 	+   
 C+±async getProjectBuildOutput(projectId, userId = "") {
         await initialize2();
@@ -4612,13 +4556,12 @@ yá!F(error) => {
           args: [String(projectId), String(userId)]
         });
         return workspaceOutput(result.rows[0]?.output_json);
-      }b  		  õ€
-     à  ¤  ¦  °°
- °¨  ª °¬ °® °° °² °Ä °æ	  à	  ´ Ò Î Ü ¼ Ì ¤	  Ê ô  	
+      }b  		  õü	  œ  à     ¢  °¬
+ °¤  ¦ °¨ °ª °¬ °® °À °â	  Ü	  ² Ò Ì Ü º Ì  	  È î œ	
   Ğ
- ^ ^ ^ ^ ^ ^ ^ ^ ^  Ûì‰Ü>N  İ=   I~  8 Ğí8 Ïí& I  $ ‰Ç_  =l  ³C”è/[ ÑíÈÉkB   Ò®èê=T  •L   ©è8 >  Ò=T  $ êÒ®èê=T  ` êk   [ ˜  Z  ! 00Ò®èê=[  \  ªéAÒ=c  ”é6_ ”é.8 >  _ =]  $ ”é8 >  _ =^  $ ”è[ ˜  Z  ! 0[ Ò=c  íÊ[ _ í‰8 >—  _ $ Á8 _  =l  ³C=G  íÁ8 >—  [	 _ í$ _ ªè		I_  /8 >—  Ò=[  I[  _ Ic  8 >—  _ $ IT  $ Á8
- !  >M  _ $ =¤  8
- !  >M  _ $ =¤  ›»F¼ ˜¼ ˜£è[ ˜  `  ! 0İ=ò  I~  8 Ğí8 Ïí& I  ÁÜ>O  _ İ=ô  I~  _ [ ì8 Ğí8 Ïí_ & I  _ & $ ‰Á8 _ ´C=„  í³£I_  /ú¹¿
+ ^ ^ ^ ^ ^ ^ ^ ^ ^  Ûì‰Ü>L  İ=  I|  8 Ğí8 Ïí& I}  $ ‰Ç_  =j  ³C”è/[ ÑíÈÉkB   Ò®èê=R  •L   ©è8 >  Ò=R  $ êÒ®èê=R  ` êk   [ –  X  ! 00Ò®èê=Y  Z  ªéAÒ=b  ”é6_ ”é.8 >  _ =[  $ ”é8 >  _ =\  $ ”è[ –  X  ! 0[ Ò=b  íÊ[ _ í‰8 >•  _ $ Á8 _  =j  ³C=E  íÁ8 >•  [	 _ í$ _ ªè		I]  /8 >•  Ò=Y  IY  _ Ib  8 >•  _ $ IR  $ Á8
+ !  >  _ $ =¢  8
+ !  >  _ $ =¢  ›»F¼ ˜¼ ˜£è[ –  ^  ! 0İ=ñ  I|  8 Ğí8 Ïí& I}  ÁÜ>M  _ İ=ó  I|  _ [ ì8 Ğí8 Ïí_ & I}  _ & $ ‰Á8 _ ´C=‚  í³£I]  /ø¹Ç
 Š!%5 	 + 
  
 
@@ -4663,9 +4606,9 @@ yá!F(error) => {
           args: [outputJson, now(), String(projectId), String(userId), storedSource]
         }, retain]);
         return { saved: Number(result[1].rowsAffected) > 0 };
-      }`     Ÿ	   Âÿÿÿÿ  Ä  Ä   Â  Æ °È  Ê °¨ °æ	  Ú Ğ
- Ì ¼  À Ê Ü à	  ´ Æ ^ ^  Ïğéo>a  ğè»Ç>b  Èêêæ_ É_  Ê^ ^ ^ ^ Ûì‰8 >  ´8 >·  »d8 Æíé»$ $ ÁÁÅğéQ8 >  Å$ ”è[ b  f  ! 0&  ³8 Å>}  [ $ ! Oa ç”è8 >ˆ  &  $ /_ è8 >—  _ $ êÁ[	 >N  [
- =ü  I~  _ _ _ & I  $ ‰Á8 >ˆ  _ =l  >}  [ $ $ /ú}ã
+      }`     Ÿ	   ¾ÿÿÿÿ  À  À   ¾  Â °Ä  Æ °¦ °â	  Ú Ğ
+ Ì º  ¾ Ê Ü Ü	  ² Ä ^ ^  Ïğéo>_  ğè»Ç>`  Èêêæ_ É_  Ê^ ^ ^ ^ Ûì‰8 >  ´8 >µ  »d8 Æíé»$ $ ÁÁÅğéQ8 >  Å$ ”è[ `  d  ! 0&  ³8 Å>{  [ $ ! Oa ç”è8 >‡  &  $ /_ è8 >•  _ $ êÁ[	 >L  [
+ =û  I|  _ _ _ & I}  $ ‰Á8 >‡  _ =j  >{  [ $ $ /ø}ë
  : %%#
  0H,??8
 + *'	( G !%5 	+ 	
@@ -4686,8 +4629,8 @@ yá!F(error) => {
           args: [namespaceJson, namespaceJson, bounded]
         });
         return Object.freeze(found.rows.map(project));
-      }`    ûÎ  Œ  Îÿÿÿÿ  Œ  Ö  °Š
- °¨ °æ	  À à	  ´ Ò Ê Æ ^ ^  ÏÇĞğèØÈ^ ^ ^ Ûì‰ÜÏíÉİ>N  Ş=ş  I~  _ _ & I  $ ‰Ê_ =l  ³C”è/İ>N  Ş=   I~  _ 8 Ğé¿í& I  $ ‰Á8 >ˆ  8 _ =l  ³C=í  íIí  8 _ =l  ³C=`  íI+  8 _ =l  ³C=:   íI:   8 >ˆ  _ =l  >}  [ $ $ I’  $ /úó
+      }`    ûÊ  ˆ  Êÿÿÿÿ  ˆ  Ò  °†
+ °¦ °â	  ¾ Ü	  ² Ò Ê Ä ^ ^  ÏÇĞğèØÈ^ ^ ^ Ûì‰ÜÏíÉİ>L  Ş=ı  I|  _ _ & I}  $ ‰Ê_ =j  ³C”è/İ>L  Ş=ÿ  I|  _ 8 Ğé¿í& I}  $ ‰Á8 >‡  8 _ =j  ³C=ì  íIì  8 _ =j  ³C=_  íI)  8 _ =j  ³C=:   íI:   8 >‡  _ =j  >{  [ $ $ I‘  $ /øû
 …
 !+5 "+  
 
@@ -4715,9 +4658,8 @@ yá!F(error) => {
           name: String(identity.rows[0].name),
           projects: Object.freeze(found.rows.map(project))
         });
-      }b   T   €
-  ¨  °Ê Ğ
- Ò Ô æ	  à	  ´ ^  [ ì‰[ >N  [ =  I~  8 Ïí8 Ğí& I  $ ‰Ç8  >ˆ  _  =l  >}  ¾ $ $ /ú3†!%5 	 + 	
+      }b   Tœ  ü	  ¦  °Ê Ğ
+ Ò Ô â	  Ü	  ² ^  [ ì‰[ >L  [ =  I|  8 Ïí8 Ğí& I}  $ ‰Ç8  >‡  _  =j  >{  ¾ $ $ /ø3!%5 	 + 	
 
 %'Ğasync listProjectVersions(projectId, userId) {
         await initialize2();
@@ -4733,7 +4675,7 @@ yá!F(error) => {
           savedAt: row.saved_at == null ? null : Number(row.saved_at),
           latest: Boolean(row.latest)
         })));
-      }B     xÚ	  Ê  Ğ Ò Ô 8  >ˆ  8 Ï=Û  íIÛ  8 Ï=   íI   8 Ï=ú  íIû  8 Ï=h  é¿íIh  Ï=i  §èê8 Ï=i  íIj  8 Ï=k  íIk  % úAŒ,!M!!!4!  "!I R·(row) => Object.freeze({
+      }B     xÖ	  Ê  Ğ Ò Ô 8  >‡  8 Ï=Ú  íIÚ  8 Ï=   íI   8 Ï=ù  íIú  8 Ï=f  é¿íIf  Ï=g  §èê8 Ï=g  íIh  8 Ï=i  íIi  % øA”,!M!!!4!  "!I R·(row) => Object.freeze({
           sequence: Number(row.sequence),
           reason: String(row.reason),
           createdAt: Number(row.created_at),
@@ -4741,11 +4683,9 @@ yá!F(error) => {
           savedAt: row.saved_at == null ? null : Number(row.saved_at),
           latest: Boolean(row.latest)
         })b   
- ·   ¶  €
-  ´  °Ö °¨ °°
-  Ú	 °æ	  Ğ
- ¼ à	  ´ Ò Ê   š Ì ^ ^ ^ ^  Ûì‰8 ĞíÇ8 >  _  $ ”é_  ´¡èİ>  l  ! 0Ş>N  [ =  I~  8 Ïí8 Ñí& I  $ ‰È_ =l  ³Cè.8 _ =l  ³C=L  í_  ©è[ _ =l  ³C=m  í/Ş>N  [ =  I~  8 Ïí8 Ñí_  & I  $ ‰É_ =l  ç”é 8 _ =l  >
-  ²$ =Û  í_  ªè/[ ìÊ^ _ =l  {êÁ[ _ [	 _ =n  íî` ~ èå‚_ /ú·•?*>,?7!'5 	+  
+ ·œ  ´  ü	  ´  °Ò °¦ °¬
+  Ö	 °â	  Ğ
+ º Ü	  ² Ò È  ˜ Ê ^ ^ ^ ^  Ûì‰8 ĞíÇ8 >  _  $ ”é_  ´¡èİ=  j  ! 0Ş>L  [ =  I|  8 Ïí8 Ñí& I}  $ ‰È_ =j  ³Cè.8 _ =j  ³C=J  í_  ©è[ _ =j  ³C=k  í/Ş>L  [ =  I|  8 Ïí8 Ñí_  & I}  $ ‰É_ =j  ç”é 8 _ =j  >  ²$ =Ú  í_  ªè/[ ìÊ^ _ =j  {êÁ[ _ [	 _ =l  íî` ~ èå‚_ /ø·?*>,?7!'5 	+  
  
 Vs 
 )	$!%5 + 
@@ -4773,9 +4713,7 @@ yá!F(error) => {
         let snapshot = emptyProjectSnapshot();
         for (const row of found.rows) snapshot = applyProjectPatch(snapshot, parsedPatch(row.patch_json));
         return snapshot;
-      }b    É€
-  Ş  °¤ °æ	  ª à	  ´ Ò Ê Ò Æ ^ ^  Ûì‰ğé{~ Ç~ È‚ê\8 >p  İ>N  Ş=  I~  8 Ïí8 Ïí& I  $ İ>N  Ş=
-  I~  8 Ïí& I  $ & $ ‰êš8 >ˆ  8 >ˆ  _  =l  >}  [ $ $ I  8 >ˆ  _ =l  >}  [ $ $ I’  $ /úg©!l0[!5 	! !5 	 	H Y!
+      }b    Éü	  Ú  °¢ °â	  ª Ü	  ² Ò Ê Ğ Ä ^ ^  Ûì‰ğé{~ Ç~ È‚ê\8 >n  İ>L  Ş=  I|  8 Ïí8 Ïí& I}  $ İ>L  Ş=	  I|  8 Ïí& I}  $ & $ ‰êš8 >‡  8 >‡  _  =j  >{  [ $ $ I€  8 >‡  _ =j  >{  [ $ $ I‘  $ /øg±!l0[!5 	! !5 	 	H Y!
 
 /+#
 
@@ -4795,12 +4733,10 @@ yá!F(error) => {
           organizations: Object.freeze(organizations2.rows.map(organization)),
           projects: Object.freeze(projects.rows.map(project))
         });
-      }b    ı	€
-  ¸  ê   â ƒˆ °‚
- °„
- °â ƒâ °æ	  è ¼ ¢		  Œ  	
-  à	  ´ º Ò Ä Â Ò ^ ^ ^  Ûì‰Çk   ÜĞ=`    IS  î`  êÈk   İö  Ä=6   ! 00ŞìI+  _  I`  [ Ğ=:   :   ·I·  »PI  ïI:   [ Ğ=    ¼ôI  ïI  É[ ìÊk˜   ^ [ >N  [ =  I~  _  & I  $ ‰Á_ =l  ³Cè[ i  ! 0[ >N  [ =  I~  _ =+  8	 Ïí_ =`  _ =:   _ =  _ _ & I  $ ‰ê5Ák0   ^ [
- ÀíÁ_ è_ 0[ Àíè[ i  ! 0À00[ _ P_ Iú  í/úªº07
+      }b    ı	ü	  ¸  è   à ƒˆ °ş	 °€
+ °à ƒŞ °â	  æ º 		   œ	
+  Ü	  ² ¸ Ò Â À Ğ ^ ^ ^  Ûì‰Çk   ÜĞ=_    IQ  î`  êÈk   İõ  Ä=6   ! 00ŞìI*  _  I_  [ Ğ=:   :   ·Iµ  »PI  ïI:   [ Ğ=    ¼ôI  ïI  É[ ìÊk˜   ^ [ >L  [ =  I|  _  & I}  $ ‰Á_ =j  ³Cè[ h  ! 0[ >L  [ =  I|  _ =*  8	 Ïí_ =_  _ =:   _ =  _ _ & I}  $ ‰ê5Ák0   ^ [
+ ÀíÁ_ è_ 0[ Àíè[ h  ! 0À00[ _ P_ Iù  í/øªÂ07
 RE+%X
 5?!+ 
 
@@ -4847,19 +4783,17 @@ async createOrganization(userId, input) {
           throw error;
         }
         return organization({ ...value, created_at: timestamp });
-      }b    œ€
-  ¸  ä  °Ö °Ò  æ  è  ¨ °Ú °Ø °ˆ °‚
-	 °ê
- °ì °â ƒâ °æ	  Ò Œ à	  ´ ¼ ¸ ¢		  À  	
-  Î ¤	  –   È Ü Ä Â º Æ ^ ^
- ^	 ^ ^ ^ ^ ^ ^ ^ ^  Ûì‰8 ÏíÇ8 Ğ=+  ér  íÈr  É_  ÊİĞ=w  w  ´I·  »?I  ïÁ_ r  ªè^ Ş>N  [ =  I~  _ _  & I  $ ‰Á_ =l  ³C”è[ +  x  ! 0i  ` 8 _ =l  ³C=+  í` 8 _ =l  ³C=`  í` 8 Ğ=-  é9  íÁ[ >g   _ $ ”è[ -  y  ! 08 Ğ=,  é+   íÁ_ +   ªè_ )   ªè[ ,  z  ! 0[ ìI+  _  I  _ I(  _ I{  _ I*  [ Ğ=`  íI`  İĞ=:   :   ´I·  »PI  ïI:   İĞ=    ¼ôI  ïI  _ I,  _ I-  Á[	 ìÁ	[
- Ğ=˜  é&  I™  I  íÁ
+      }b    œü	  ¸  à  °Ò °Î  â  ä  ¦ °Ö °Ô °ˆ °ş		 °æ
+ °è °à ƒŞ °â	  Ò  Ü	  ² º ¶ 		  ¾ œ	
+  Ì  	  ”  Æ Ü Â À ¸ Ä ^ ^
+ ^	 ^ ^ ^ ^ ^ ^ ^ ^  Ûì‰8 ÏíÇ8 Ğ=)  ép  íÈp  É_  ÊİĞ=u  u  ´Iµ  »?I  ïÁ_ p  ªè^ Ş>L  [ =  I|  _ _  & I}  $ ‰Á_ =j  ³C”è[ )  v  ! 0h  ` 8 _ =j  ³C=*  í` 8 _ =j  ³C=_  í` 8 Ğ=+  é8  íÁ[ >g   _ $ ”è[ +  w  ! 08 Ğ=*  é+   íÁ_ +   ªè_ )   ªè[ *  x  ! 0[ ìI*  _  I  _ I&  _ Iy  _ I(  [ Ğ=_  íI_  İĞ=:   :   ´Iµ  »PI  ïI:   İĞ=    ¼ôI  ïI  _ I*  _ I+  Á[	 ìÁ	[
+ Ğ=–  é&  I—  Iœ  íÁ
 [ _
  í‰[ [ ì_
- îÁk,  Ş>O  [ =  I~  _ =+  _  _ =(  _ ={  _ =*  _ =`  _ =:   _ =  _ =,  _ =-  _	 _	 & I  [ =  I~  _ =+  [ _
+ îÁk,  Ş>M  [ =  I|  _ =*  _  _ =&  _ =y  _ =(  _ =_  _ =:   _ =  _ =*  _ =+  _	 _	 & I}  [ =  I|  _ =*  [ _
  í[ _
- í_	 _	 & I  [ =  I~  _ =+  ´|  8 >—  _ $ _	 & I  [ =  I~  _ =+  _	 & I  [ =  I~  _ =+  [ _
- í_	 & I  & $ ‰ê5Ák0   ^ [ ÀíÁ_ è_ 0[ Àíè[ c  ! 0À00[ _ P_	 Iú  í/úˆÛ¨
+ í_	 _	 & I}  [ =  I|  _ =*  ´z  8 >•  _ $ _	 & I}  [ =  I|  _ =*  _	 & I}  [ =  I|  _ =*  [ _
+ í_	 & I}  & $ ‰ê5Ák0   ^ [ ÀíÁ_ è_ 0[ Àíè[ b  ! 0À00[ _ P_	 Iù  í/øˆã¨
 H! 
 
 z*!!%5 + 
@@ -4971,15 +4905,14 @@ z%$*(1+'!	6#
           throw error;
         }
         return project({ ...value, created_at: timestamp });
-      }b    Õ€
-     ¸  ä  °Ö °Ò  æ  è  ú °Ú °Ø °Ä °â ƒ¨ °æ	  Ò Œ à	  ´ ¼ ¸ À  	
+      }b    Õü	  œ  ¸  à  °Ò °Î  â  ä  ö °Ö °Ô °À °à ƒ¦ °â	  Ò  Ü	  ² º ¶ ¾ œ	
   Ğ
- Â º Æ ^
- ^ ^ ^ ^ ^ ^ ^  Ûì‰8 ÏíÇ8 Ñ=+  ér  íÈr  É_  ÊİÑ=w  w  ´I·  »?I  ïÁ_ r  ªè^ Ş>N  [ =  I~  _ _  & I  $ ‰Á_ =l  ³C”è[ +  x  ! 0i  ` 8 _ =l  ³C=+  í` 8 _ =l  ³C=`  í` 8 Ñ=-  é9  íÁ[ >g   _ $ ”è[ -  y  ! 08 Ñ=,  é+   íÁ_ +   ªè_ )   ªè[ ,  z  ! 0k”   ^ Ş>N  [ =  I~  _ _ _ [ Ñ=`  íİÑ=:   :   ´I·  »PI  ïİÑ=    ¼ôI  ï_ _ [ ì8 Ğí_  & I  $ ‰Á8	 _ =„  í”èn/ê!Á	k   [
- À	íè[ c  ! 0À	00Ş>N  [ =  I~  8 Ğí& I  $ ‰Á
+ À ¸ Ä ^
+ ^ ^ ^ ^ ^ ^ ^  Ûì‰8 ÏíÇ8 Ñ=)  ép  íÈp  É_  ÊİÑ=u  u  ´Iµ  »?I  ïÁ_ p  ªè^ Ş>L  [ =  I|  _ _  & I}  $ ‰Á_ =j  ³C”è[ )  v  ! 0h  ` 8 _ =j  ³C=*  í` 8 _ =j  ³C=_  í` 8 Ñ=+  é8  íÁ[ >g   _ $ ”è[ +  w  ! 08 Ñ=*  é+   íÁ_ +   ªè_ )   ªè[ *  x  ! 0k”   ^ Ş>L  [ =  I|  _ _ _ [ Ñ=_  íİÑ=:   :   ´Iµ  »PI  ïİÑ=    ¼ôI  ï_ _ [ ì8 Ğí_  & I}  $ ‰Á8	 _ =‚  í”èn/ê!Á	k   [
+ À	íè[ b  ! 0À	00Ş>L  [ =  I|  8 Ğí& I}  $ ‰Á
 _
- =l  ³Cè[ _
- =l  ³Cíê/ú—¨{
+ =j  ³Cè[ _
+ =j  ³Cíê/ø—°{
 H! 
 
 z*!!'5 +  
@@ -5046,27 +4979,24 @@ a   >+  .@;&/(;'$!%5 	&+ 	
           args: [String(projectId)]
         });
         return found.rows[0] ? project(found.rows[0]) : null;
-      }`    	€
-          €
-ÿÿÿÿ         ü  °  °   ü    ¨	 °Ú	
- °ˆ °Ì °Ü °ş °€ °‚
- °‚ °„ °†  ˆ °Š °æ	  à	  ´ Ò Ê Î ¤	  à   	
-  Ş  œ  Ğ! Ğ
- Ê Ü Î" È ¸ ^ ^ ^ ^ ^ ^  ÏÇĞÈÑÉÒğé3o>   ğèà  Ê>~  ğèà“ Á>Ø  ğè	ÁêêË_ Á_ Á_ Á^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
- ^	 Ûì‰Ü>N  İ=   I~  8 Ğí8 Ïí& I  $ ‰Á	_	 =l  ³CÁ
+      }`    	ü	  œ       ü	ÿÿÿÿ  œ      ø  ®  ®   ø    ¦	 °Ö	
+ °† °Ê °Ü °ú °ü °ş	 °ş °€ °‚  „ °† °â	  Ü	  ² Ò È Ì  	  Ü  œ	
+  Ú  š  Î! Ğ
+ Ê Ü Î" Æ ¶ ^ ^ ^ ^ ^ ^  ÏÇĞÈÑÉÒğé3o>   ğèß  Ê>|  ğèà“ Á>×  ğè	ÁêêË_ Á_ Á_ Á^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+ ^	 Ûì‰Ü>L  İ=  I|  8 Ğí8 Ïí& I}  $ ‰Á	_	 =j  ³CÁ
 _
  ”è/[ _
- =G  íÁ[ _
- =m  íÁ[ ÑíÁ[ _ í‰[ _ _ î‰Á[ _ _ î‰Á[ ìÁ[	 [
- _ íIÖ  [
- _ íI×  Àé	[ _ íIØ  ÀI   _ 8 _
- =†  íœÀ¤IÙ  8 _
- =L  íIÚ  í‰Á_ =å  ä  ©è-8 >ˆ  	Iƒ  8 _
- =L  íIM  _ I˜  $ /_ =å  æ  ©h›   Ü>O  İ=  I~  8 Ğí_ =Û  _ =Ü  8 >—  _ $ _ & I  İ="  I~  _ =Û  _ _ 8 Ğí& I  & $ ‰8 >ˆ  
-Iƒ  _ =Û  IM  _ I˜  $ /&  Á8 _
- =L  íÁ_ =Ü  èJ_ ` _ >  İ=  I~  8 Ğí_ _ =Ü  8 >—  _ $ _ & I  $ _ =İ  èo^ _ ` _ =Ş  Ä  ©è_ ê[ _ _ î‰Á_ >  İ=  I~  8 Ğí_ _ =İ  8 >—  _ $ _ & I  $ _ _ =Û  ªè8 ‡  ! 0_ =ß  n   ©è_ ê_ Á_ >  İ=$  I~  [ _ í[ _ í_ =Û  _ =ß  ä  ©è8 _
- =†  íê_ _ 8 Ğí& I  İ=&  I~  _ [ >g   8 _ =  ®èê=-  é¿í$ è8 _ =  =-  íê¿[ >g   8 _ =  ®èê=-  é¿í$ è8 _ =  =-  íê¿8 Ğí& I  $ Ü>O  _ $ ‰8 >ˆ  
-Iƒ  _ =Û  IM  _ I˜  $ /úªÙ †!%5 	 +  
+ =E  íÁ[ _
+ =k  íÁ[ ÑíÁ[ _ í‰[ _ _ î‰Á[ _ _ î‰Á[ ìÁ[	 [
+ _ íIÕ  [
+ _ íIÖ  Àé	[ _ íI×  ÀI   _ 8 _
+ =„  íœÀ¤IØ  8 _
+ =J  íIÙ  í‰Á_ =ä  ã  ©è-8 >‡  	I  8 _
+ =J  íIK  _ I–  $ /_ =ä  å  ©h›   Ü>M  İ=  I|  8 Ğí_ =Ú  _ =Û  8 >•  _ $ _ & I}  İ=!  I|  _ =Ú  _ _ 8 Ğí& I}  & $ ‰8 >‡  
+I  _ =Ú  IK  _ I–  $ /&  Á8 _
+ =J  íÁ_ =Û  èJ_ ` _ >"  İ=  I|  8 Ğí_ _ =Û  8 >•  _ $ _ & I}  $ _ =Ü  èo^ _ ` _ =İ  Ã  ©è_ ê[ _ _ î‰Á_ >"  İ=  I|  8 Ğí_ _ =Ü  8 >•  _ $ _ & I}  $ _ _ =Ú  ªè8 …  ! 0_ =Ş  n   ©è_ ê_ Á_ >"  İ=#  I|  [ _ í[ _ í_ =Ú  _ =Ş  ã  ©è8 _
+ =„  íê_ _ 8 Ğí& I}  İ=%  I|  _ [ >g   8 _ =œ  ®èê=+  é¿í$ è8 _ =œ  =+  íê¿[ >g   8 _ =œ  ®èê=+  é¿í$ è8 _ =œ  =+  íê¿8 Ğí& I}  $ Ü>M  _ $ ‰8 >‡  
+I  _ =Ú  IK  _ I–  $ /øªá †!%5 	 +  
  
 	%
 
@@ -5171,27 +5101,23 @@ Iƒ  _ =Û  IM  _ I˜  $ /úªÙ †!%5 	 +  
         });
         await client.batch(queries);
         return Object.freeze({ changed: true, versionCount: plan.sequence, snapshot: next });
-      }b     ;€
-     ¶  °
-  °  È^  Ä>=  ĞÑÏ$ ‰Ç_  ”è/Ä>A  ÏĞ_  â  I   
-IØ  $ /ú¼!:&+;%*f'=ªasync restoreProjectVersion(userId, projectId, sequence) {
+      }b     ;ü	  œ  ´  ¬
+  °  È^  Ä>;  ĞÑÏ$ ‰Ç_  ”è/Ä>?  ÏĞ_  á  I   
+I×  $ /øÄ!:&+;%*f'=ªasync restoreProjectVersion(userId, projectId, sequence) {
         const snapshot = await this.getProjectVersion(projectId, sequence, userId);
         if (!snapshot) return null;
         return this.saveProjectSnapshot(userId, projectId, snapshot, { reason: "restore", destructive: true });
-      }`    Ñ€
-        €
-ÿÿÿÿ     Ğ  ¶  ¶   Ğ  ‚
- ° °„ °´ °¨
-  Ú	  ’ °Ä	 °  æ	   	
-  Œ ¤	  à	  ´ Ò Ê È Ğ
- ¸ Á^ ^ ^ ^  ÏÇĞÈÑğéo>h  ğè¿É>Û  ğèÊêêá_ Á_ Á^ ^ ^ ^ Ûì‰ÜìÁİÀŠ  »PI  ïÁ&  ÁÀñi  ^ ^ ^
- ^	 À>=  ĞÀÏ$ ‰Á	_	 ”è	/Ş_	 í‰[ >N  [ =   I~  8 Ğí8 Ïí& I  $ ‰Á
+      }`    Ñü	  œ     ü	ÿÿÿÿ  œ  Ì  ´  ´   Ì  ş	 °Œ °€ °´ °¦
+  Ö	   °À	 °  â	  œ	
+    	  Ü	  ² Ò È Æ Ğ
+ ¶ Á^ ^ ^ ^  ÏÇĞÈÑğéo>f  ğè¿É>Ú  ğèÊêêá_ Á_ Á^ ^ ^ ^ Ûì‰ÜìÁİÀˆ  »PI  ïÁ&  ÁÀñi  ^ ^ ^
+ ^	 À>;  ĞÀÏ$ ‰Á	_	 ”è	/Ş_	 í‰[ >L  [ =  I|  8 Ğí8 Ïí& I}  $ ‰Á
 _
- =l  ³CÁ[ >N  [ =0  I~  8 Ğí8 Ïí& I  $ ‰Á8 _ =G  í8 _ =l  ³C®èê=G  íªè_À>A  ÏĞ[ _ =G  íá  I   $ ‰[ >N  [ =   I~  8 Ğí8 Ïí& I  $ ‰a
- =l  ³C` _ >  [ =$  I~  [ _	 í8 _ =m  í8	 _ =L  í8	 _ =†  í_ 8 Ğí& I  [ =&  I~  _ [
- >g   8 _	 =  ®èê=-  é¿í$ è8 _	 =  =-  íê¿[
- >g   8 _	 =  ®èê=-  é¿í$ è8 _	 =  =-  íê¿8 Ğí& I  $ [ >O  &  ³_ O[ =(  I~  8 Ğí8 Ïí_ 8 Ğí8 Ğí8 Ïí& I  NÀñè[ =*  ê	[ =,  I~  _ _ 8 Ğí8 Ïí& ·Àñè&  ê
-8	 Àí& OI  N[ =ò  I~  8 Ğí8 Ïí& I  N$ ‰Á8	 _ _ çC=„  í³£/ú©Á N	
+ =j  ³CÁ[ >L  [ =/  I|  8 Ğí8 Ïí& I}  $ ‰Á8 _ =E  í8 _ =j  ³C®èê=E  íªè_À>?  ÏĞ[ _ =E  íà  I   $ ‰[ >L  [ =  I|  8 Ğí8 Ïí& I}  $ ‰a
+ =j  ³C` _ >"  [ =#  I|  [ _	 í8 _ =k  í8	 _ =J  í8	 _ =„  í_ 8 Ğí& I}  [ =%  I|  _ [
+ >g   8 _	 =œ  ®èê=+  é¿í$ è8 _	 =œ  =+  íê¿[
+ >g   8 _	 =œ  ®èê=+  é¿í$ è8 _	 =œ  =+  íê¿8 Ğí& I}  $ [ >M  &  ³_ O[ ='  I|  8 Ğí8 Ïí_ 8 Ğí8 Ğí8 Ïí& I}  NÀñè[ =)  ê	[ =+  I|  _ _ 8 Ğí8 Ïí& ·Àñè&  ê
+8	 Àí& OI}  N[ =ñ  I|  8 Ğí8 Ïí& I}  N$ ‰Á8	 _ _ çC=‚  í³£/ø©É N	
 
 M	g&+;%$	!!5 	+  
  
@@ -5256,18 +5182,16 @@ M	g&+;%$	!!5 	+  
           args: [String(projectId), String(userId)]
         }]);
         return Number(result[queries.length].rowsAffected) > 0;
-      }b    ?€
-     Ä  °æ	  à	  ´ Ò Ğ
- ^  Ûì‰Ü>N  İ=.  I~  8 Ğí8 Ïí& I  $ ‰Ç8 _  =„  í³£/ú/û!'5 	+ ,E™async deleteProject(userId, projectId) {
+      }b    ?ü	  œ  À  °â	  Ü	  ² Ò Ğ
+ ^  Ûì‰Ü>L  İ=-  I|  8 Ğí8 Ïí& I}  $ ‰Ç8 _  =‚  í³£/ø/ƒ!'5 	+ ,E™async deleteProject(userId, projectId) {
         await initialize2();
         const result = await client.execute({
           sql: CONTENT_QUERIES.deleteProject,
           args: [String(projectId), String(userId)]
         });
         return Number(result.rowsAffected) > 0;
-      }b    q€
-     ¨  °  æ	  à	  ´ Ò Ê È^  Ûì‰Ü>N  İ=0  I~  8 Ğí8 Ïí& I  $ ‰Ç_  =l  ³C”è/Ä>A  ÏĞ[ _  =l  ³C=G  íâ  I   
-IØ  $ /úAƒ!%5 	 + 
+      }b    qü	  œ  ¦  °  â	  Ü	  ² Ò È È^  Ûì‰Ü>L  İ=/  I|  8 Ğí8 Ïí& I}  $ ‰Ç_  =j  ³C”è/Ä>?  ÏĞ[ _  =j  ³C=E  íá  I   
+I×  $ /øA‹!%5 	 + 
  
 
 *
@@ -5280,9 +5204,9 @@ IØ  $ /úAƒ!%5 	 + 
         });
         if (!found.rows[0]) return null;
         return this.saveProjectSnapshot(userId, projectId, parsedSnapshot(found.rows[0].snapshot_json), { reason: "restore", destructive: true });
-      }      –  Ï>«  Œ  % ú	š4_(statement) => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_version_labels")      –  Ï>«    % ú	›4Z(statement) => statement.includes("INSERT OR IGNORE INTO resource_project_version_labels")      –  Ï>«    % ú	4](statement) => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_build_output")A Ú
-à	 @   à	ÿÿÿÿ     	   	 @@ àœ@¢@Ê Ğ Ò  ÖA  Î ØB  Ş ^ ^ ^  ÏÇĞğé'o=‚  ğè[ È>P  ğè
-8 =P  Éêê×_ Ê_ Á¾ Á¾Á^ Ï®èê=N  ”éÏ®èê=O  ”è8 ’  ! 0Á8  >ˆ  ÀI   ¾Q“  % ú!¡†H,¨«\R&/
+      }      ’  Ï>©  Š  % ø	¢4_(statement) => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_version_labels")      ’  Ï>©  ‹  % ø	£4Z(statement) => statement.includes("INSERT OR IGNORE INTO resource_project_version_labels")      ’  Ï>©  Œ  % ø	¦4](statement) => statement.includes("CREATE TABLE IF NOT EXISTS resource_project_build_output")A Ø
+Ü	 @   Ü	ÿÿÿÿ  š  œ	  œ	 @š@œàœ@@Ê Ğ Ò  ÔA  Î ÖB  Ş ^ ^ ^  ÏÇĞğé'o=  ğè[ È>N  ğè
+8 =N  Éêê×_ Ê_ Á¾ Á¾Á^ Ï®èê=L  ”éÏ®èê=M  ”è8   ! 0Á8  >‡  ÀI   ¾Q‘  % ø!©†H,¨«\R&/
  NAk’function createMigrationRunner(client, { migrations: migrations2 = HUB_MIGRATIONS, now = Date.now } = {}) {
     if (!client?.execute || !client?.batch) throw new Error("Migration runner requires a libSQL-compatible client");
     let readyPromise;
@@ -5333,8 +5257,7 @@ IØ  $ /úAƒ!%5 	 + 
         return readyPromise;
       }
     });
-  }b œ  ²Ä  °¨ ğÊ  Ğ Ò à	  Ö   ^ ^  Ş>N  [ I~  &  I  $ ‰Ş>N  •  I~  &  I  $ ‰Ç_  =l  >}  ¾ $ È8  >ˆ  [ >–  ¾$ IÄ  [ >
-  ²$ ®èê=>  é³I  8  >ˆ  _ >}  ¾$ $ I—  $ /úG¤!  Rz+ 
+  }b œ  ²À  °¤ ğÊ  Ğ Ò Ü	  Ô š  ^ ^  Ş>L  [ I|  &  I}  $ ‰Ş>L  “  I|  &  I}  $ ‰Ç_  =j  >{  ¾ $ È8  >‡  [ >”  ¾$ IÃ  [ >  ²$ ®èê==  é³I  8  >‡  _ >{  ¾$ $ I•  $ /øG¬!  Rz+ 
 %! !%+v% 'ßasync function status() {
       await client.execute({ sql: MIGRATION_LEDGER_SCHEMA, args: [] });
       const result = await client.execute({
@@ -5350,16 +5273,16 @@ IØ  $ /úAƒ!%5 	 + 
         latestVersion: migrations2.at(-1)?.version || 0,
         appliedVersions: Object.freeze(applied.map((entry) => entry.version))
       });
-    }B     *Ú	  Ê  Ğ Ò 8  >ˆ  8 Ï=>  íI>  8 Ï=:   íI:   % úª&!G! Pf(row) => Object.freeze({
+    }B     *Ö	  Ê  Ğ Ò 8  >‡  8 Ï==  íI=  8 Ï=:   íI:   % ø²&!G! Pf(row) => Object.freeze({
         version: Number(row.version),
         name: String(row.name)
-      })B   ° @¨ d  >x  ¾ % ú	¯#%
-l(migration) => applied.some((entry) => entry.version === migration.version && entry.name === migration.name)B     ¨  °  Ï=>  Û=>  ©èÏ=:   Û=:   ©(ú¯?
+      })B   ¬ @¤ d  >v  ¾ % ø	·#%
+l(migration) => applied.some((entry) => entry.version === migration.version && entry.name === migration.name)B     ª  ¬  Ï==  Û==  ©èÏ=:   Û=:   ©(ø·?
 2
-O(entry) => entry.version === migration.version && entry.name === migration.nameB      ¨  Ï=>  (ú±3
-(entry) => entry.versionb ¢   ‹â
-  °° °¨ °ä
- °œ    à	  Ò Î  	  ^ ^  Ûì‰Ç_  =Ä  è_  /^ Ü{ëÄ È^ İ>N  ™  I~  _ =>  & I  $ ‰É_ =l  ³CèA8 _ =l  ³C=:   í_ =:   ªèo8 š  >`   _ =>  ›  $ ! 0İ>O  &  ³_ =@  >}  ¾ $ Oœ  I~  _ =>  _ =:   [ ì& I  N$ ‰~ h;ÿÿÿ‚Ûì‰Ê_ =Ä  ”è8   ! 0_ /úy´!.%"0T!  + 
+O(entry) => entry.version === migration.version && entry.name === migration.nameB      ª  Ï==  (ø¹3
+(entry) => entry.versionb    ‹Ş
+  °¬ °¦ °à
+ °œ  š  Ü	  Ò Î œ	  ^ ^  Ûì‰Ç_  =Ã  è_  /^ Ü{ëÄ È^ İ>L  —  I|  _ ==  & I}  $ ‰É_ =j  ³CèA8 _ =j  ³C=:   í_ =:   ªèo8 ˜  >`   _ ==  ™  $ ! 0İ>M  &  ³_ =?  >{  ¾ $ Oš  I|  _ ==  _ =:   [ ì& I}  N$ ‰~ h;ÿÿÿ‚Ûì‰Ê_ =Ã  ”è8 ›  ! 0_ /øy¼!.%"0T!  + 
  
 
  
@@ -5387,25 +5310,25 @@ l(migration) => applied.some((entry) => entry.version === migration.version && e
       const after = await status();
       if (!after.current) throw new Error("Database migration did not reach the current version");
       return after;
-    }B      ü	  ÏI~  &  I  (úÁ&(sql) => ({ sql, args: [] })B         ¢  d  ”èÜì>   ¾ $ e  d  (úË :% S·ready() {
+    }B      ø	  ÏI|  &  I}  (øÉ&(sql) => ({ sql, args: [] })B       œ   d  ”èÜì>   ¾ $ e  d  (øÓ :% S·ready() {
         if (!readyPromise) readyPromise = migrate().catch((error) => {
           readyPromise = null;
           throw error;
         });
         return readyPromise;
-      }B     â     e  Ï0ú	Ì:_!L(error) => {
+      }B     à  œ  e  Ï0ø	Ô:_!L(error) => {
           readyPromise = null;
           throw error;
-        }Z^(?:\*|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$Ô b      õÿÿÿ 	   * C   % 0 9 A Z 3   *    =   % - - 0 9 A Z =   çÿÿÿ% 0 9 A Z +  A Ş  Tˆ     ˆÿÿÿÿ  ¼  ¼   ^ ^  ÏÇĞğéo>  ğè	Èêêí_ ÉÏ>a   ‚   $ >}  ¾ $ >_   ÅèŸ  ê   % ú×¼
+        }Z^(?:\*|[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)$Ô b      õÿÿÿ 	   * C   % 0 9 A Z 3   *    =   % - - 0 9 A Z =   çÿÿÿ% 0 9 A Z +  A Ü  Tˆ     ˆÿÿÿÿ  ¸  ¸   ^ ^  ÏÇĞğéo>œ  ğè	Èêêí_ ÉÏ>a   ‚   $ >{  ¾ $ >_   Åè  ê  % øß¼
 4
 %nM¯·function wildcardSource(value, { dotAware = false } = {}) {
     return value.split("*").map((part) => part.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")).join(dotAware ? "[^.]+" : ".*");
-  }B     Â  Ï>¢  ½ ½4£  % ú	Ø M5(part) => part.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")$[\\^$.*+?()[\]{}|]f  +      õÿÿÿ $ $ $ ( + . . ? ? [ ^ { }  C àì¸  à  °È ğÊ °Ì °ÎğĞ °Ò °¶
- °Ô °Ö	 °Ø
-ğÚğÒ  ÜD  ö Î æ ŞE  ^ ^
- ^	 ^ ^ ^ ^ ^  8  Ïé¿í>U  $  Ç_  ”è8 ®  ! 0_  >¯  °  $ é_  >±  °  $ h‘   ^ ^ _  çµ£è&_  >¯  °  $ è_  >±  °  $ ”è8 ²  ! 0_  >  ´²$ È8 _ ! É_ =³  ´  ªè_ =³  µ  ªè8 ¶  ! 0¾ (_  >¯  E  $ èW^ ^ _  >h  E  $ Ê_ ³©è8 ·  ! 08 _  >  ´_ $ _  >  _ ´›$ ! Á¾(_  >¸  E  $ Á_ ³¡è_  ê_  >  ³_ $ >V  $  Á_ ³¡è¹  ê_  >  _ $ Á_ >«  Æ  $ ”é_ >a   Æ  $ >x  ¾$ è8 º  ! 0_ >¯  E  $ ”è8 »  ! 0[ _ 
-I  îÁ[ _ íÁ	8 ¼  >`   _ ½  $ ¾  ! Á
-8 ¼  >`   _	 ½  $ ! Á¾(ú…Ú{" 
+  }B     ¾  Ï>   ½ ½4¡  % ø	à M5(part) => part.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&")$[\\^$.*+?()[\]{}|]f  +      õÿÿÿ $ $ $ ( + . . ? ? [ ^ { }  C Şì¸  à  °Ä ğÆ °È °ÊğÌ °Î °²
+ °Ğ °Ò	 °Ô
+ğÖğÒ  ÚD  ò Î æ ÜE  ^ ^
+ ^	 ^ ^ ^ ^ ^  8  Ïé¿í>S  $  Ç_  ”è8 ¬  ! 0_  >­  ®  $ é_  >¯  ®  $ h‘   ^ ^ _  çµ£è&_  >­  ®  $ è_  >¯  ®  $ ”è8 °  ! 0_  >  ´²$ È8 _ ! É_ =±  ²  ªè_ =±  ³  ªè8 ´  ! 0¾ (_  >­  D  $ èW^ ^ _  >f  D  $ Ê_ ³©è8 µ  ! 08 _  >  ´_ $ _  >  _ ´›$ ! Á¾(_  >¶  D  $ Á_ ³¡è_  ê_  >  ³_ $ >T  $  Á_ ³¡è·  ê_  >  _ $ Á_ >©  Å  $ ”é_ >a   Å  $ >v  ¾$ è8 ¸  ! 0_ >­  D  $ ”è8 ¹  ! 0[ _ 
+Iœ  îÁ[ _ íÁ	8 º  >`   _ »  $ ¼  ! Á
+8 º  >`   _	 »  $ ! Á¾(ø…â{" 
 3 $/
 4%4II4%4 $/
 { 4 4./
@@ -5453,23 +5376,23 @@ HR	H9	¤function compileAllowedUrlPattern(input) {
       }
     };
   }B     
-ˆ  Ò  È 8  Ïíd ©(úâ"(value) => String(value) === exactB     ˆ  Î Ò  d  ³?Y   d  >Y  8 Ïí% úè	!;g(value) => {
+ˆ  Ò  Ä 8  Ïíd ©(øê"(value) => String(value) === exactB     ˆ  Ê Ò  d  ³?Y   d  >W  8 Ïí% øğ	!;g(value) => {
         expression2.lastIndex = 0;
         return expression2.test(String(value));
-      }B      
-  Ü Û>Y  Ï$ ”(úğ<"(label) => !HOST_LABEL.test(label)B    ˆˆ  ş  °ö Ò  Ø
- Ú k}   ^  8  8 Ïí! Ç_  =³  ´  ©é_  =³  µ  ©èEd >Y  _  =©  $ è.d >Y  ¿>`   _  =­  _  =À  _  =Á  $ $ n(k   	n(0ú<ö,4 4 %$9*Eß1 (value) => {
+      }B     œ
+  Ú Û>W  Ï$ ”(øø<"(label) => !HOST_LABEL.test(label)B    ˆˆ  ú  °ò Ò  Ô
+ Ö k}   ^  8  8 Ïí! Ç_  =±  ²  ©é_  =±  ³  ©èEd >W  _  =§  $ è.d >W  ¿>`   _  =«  _  =¾  _  =¿  $ $ n(k   	n(0ø<ş,4 4 %$9*Eß1 (value) => {
       try {
         const url = new URL(String(value));
         return (url.protocol === "https:" || url.protocol === "http:") && expression.test(url.hostname) && pathname.test(`${url.pathname}${url.search}${url.hash}`);
       } catch {
         return false;
       }
-    }C â  „  †  °àF  ^  Ïé&  {êÇÛ_  í~ èö‚Ï(úÿ0> 2+m•function validateAllowedUrlPatterns(patterns) {
+    }C à  €  ‚  °ŞF  ^  Ïé&  {êÇÛ_  í~ èö‚Ï(ø‡0> 2+m•function validateAllowedUrlPatterns(patterns) {
     for (const pattern of patterns || []) compileAllowedUrlPattern(pattern);
     return patterns;
-  }C ä ¶°
-  „  °â ƒÌ ¼2  âG  ^  Ï®èê =  ®èê=Ä  ®èê=Å  é*Ï®èê =  ®èê=Æ  ®èê=Å  Ç_  ğè)8  >  _  $ ”é_  >x  ¾ $ èÜ˜  Ç  ! 0k   İ_  í)Èk   Ü˜  Ä=6   ! 00ú@…&CC$W2CCC¯'
+  }C â ¶¬
+  €  °à ƒÌ º2  àG  ^  Ï®èê =œ  ®èê=Â  ®èê=Ã  é*Ï®èê =œ  ®èê=Ä  ®èê=Ã  Ç_  ğè)8  >  _  $ ”é_  >v  ¾ $ èÜ–  Å  ! 0k   İ_  í)Èk   Ü–  Ä=6   ! 00ø@&CC$W2CCC¯'
 *%
 A>,?# 66%F
 #?µfunction validateProjectUrlPatterns(snapshot) {
@@ -5483,11 +5406,11 @@ HR	H9	¤function compileAllowedUrlPattern(input) {
     } catch (error) {
       throw new ContentValidationError("snapshot", error.message);
     }
-  }B      	†  Ï•L   ª(úˆ2(((pattern) => typeof pattern !== "string"C ì   ˆ  ä   Ïç»?¢èÛ>Y  Ï>V  $  $ (ú¦
+  }B      	‚  Ï•L   ª(ø2(((pattern) => typeof pattern !== "string"C ê   ˆ  â   Ïç»?¢èÛ>W  Ï>T  $  $ (ø®
 
 #_jfunction routeName(value) {
     return value.length <= 63 && NAMESPACE_NAME.test(value.toLowerCase());
-  }C î fÚ    °ê ìL  k[   ^  ½ ½4>‹   8  Ïí$ Ç_  è:Ü_  ´Cíè1Ü_  µCíè(_  ´CI+  _  µCI`  _  ¶CÉ  ©IÉ  ên(k   n(0ú4©El&%U	
+  }C ì fÖ  Œ  °ô êL  k[   ^  ½ ½4>‹   8  Ïí$ Ç_  è:Ü_  ´Cíè1Ü_  µCíè(_  ´CI)  _  µCI_  _  ¶CÇ  ©IÇ  ên(k   n(0ø4±El&%U	
 
 4
  
@@ -5499,7 +5422,7 @@ HR	H9	¤function compileAllowedUrlPattern(input) {
     } catch {
       return null;
     }
-  }D^\/([^/]+)\/([^/]+)(?:\/(embed))?$Ì   ^      õÿÿÿ 	/ $   . 0 ÿÿğÿÿÿ/ $   . 0 ÿÿğÿÿÿ   / e m b e d  C ğ =Ú    °ê ìL  k2   ^  ½ ½4>‹   8  Ïí$ Ç_  èÜ_  ´Cíè_  ´Cên(k   n(0ú!±E>&%'	
+  }D^\/([^/]+)\/([^/]+)(?:\/(embed))?$Ì   ^      õÿÿÿ 	/ $   . 0 ÿÿğÿÿÿ/ $   . 0 ÿÿğÿÿÿ   / e m b e d  C î =Ö  Œ  °ô êL  k2   ^  ½ ½4>‹   8  Ïí$ Ç_  èÜ_  ´Cíè_  ´Cên(k   n(0ø!¹E>&%'	
 
 U1 Ûfunction namespaceRoute(pathname) {
     try {
@@ -5508,9 +5431,9 @@ HR	H9	¤function compileAllowedUrlPattern(input) {
     } catch {
       return null;
     }
-  }^\/([^/]+)$b   )      õÿÿÿ 	/ $   . 0 ÿÿğÿÿÿ A ò8   ” @Ğ
- @Ş@Â êK  èJ  îM  ğN  Ô æI  Ïo=  Ç=€  È=  ÉÃ”é
-Ä”éÅ”è8  Ë  ! 0¾ (ú¹{  '/%¯#function createResourcesDocumentPlanner({ accounts: accounts2, content: content2, organizations: organizations2 }) {
+  }^\/([^/]+)$b   )      õÿÿÿ 	/ $   . 0 ÿÿğÿÿÿ A ğ8    @Ì
+ @Ú@Â èK  æJ  ìM  îN  Ô äI  Ïo=~  Ç=  È=€  ÉÃ”é
+Ä”éÅ”è8  É  ! 0¾ (øÁ{  '/%¯#function createResourcesDocumentPlanner({ accounts: accounts2, content: content2, organizations: organizations2 }) {
     if (!accounts2 || !content2 || !organizations2) {
       throw new TypeError("Document planner requires application stores");
     }
@@ -5581,21 +5504,21 @@ HR	H9	¤function compileAllowedUrlPattern(input) {
         focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate)
       };
     };
-  }b ˜ 
-Õ¸  š °œ  ° °  °Ú °¢ °¤ °¦ °¨ °ª	 °€
- °¬ °® °ø °œ °Ú  ° °Â  ê Ğ
-  è î ğ Ô Ş  æ ”   ^ ^ ^ ^ ^ ^ ^
- ^	 ^ ^ ^ ^ ^ ^ ^ ^ Ï”éÏ•M   ªéÏ=­  •L   ªè8  Ù  ! 0Ï=Ú  
-©hÇ   ^  ½ ½4>‹   Ï=­  $ ®èê´Cé¿Ç_  è"Ü>g   _  $ è_  IÎ  ê
-IÛ  /Ï=Ü  İ  ©éÏ=Ü  Ş  ©èRÏ=­  ß  ©èDÏ=-  •L   ©è5Ü>g   Ï=-  $ èà  >`   Ï=-  $ Iá  ê
-IÛ  /¿IÎ  /Ï=Î  •L   ©è	Ï=Î  ê¿ÈÏ=Ï  èÏ=Ï  =â  •L   ©è	Ï=Ï  êÉ_ èß  ê3Ï=­  E  ©è_ éÏ=­  I  ©èã  êÏ=­  ÊÏ=ä  
-©è_ IĞ  /Ï=å  
-©èİ>:  ¹Ia  ŞIb  $ ‰Iü  /Ï=­  Á_ èê[ _ íÁ_ èê[ _ íÁ_ è-İ>5  _ =+  _ =`  _ ®èê=â  $ ‰êÁ8 _ è_ è_ =  _ =â  ©íÁÏ=æ  ”è%_ è İ>;  _ _ ®èê=â  $ ‰êÁ	_	 ®èê=í  i  ©è$_ è[ >ı  _	 =+  _ =â  $ ‰êÁ
-_ é_ è%[ >g   _ $ èİ>>  _ =â  $ ‰êÁ_ è"_ I  ©è[	 >t  _ =â  $ ‰êÁ_ E  ©è_ ”é_ ç  ©è)İ>:  _ E  ©è¹ê»0Ia  ŞIb  $ ‰êÁ_ è[ >ÿ  _ =â  $ ‰ê&  Á,   Á_ èc  ` ëŸ _	 è_
- èè  ê+  ` ëƒ _ ß  ©é_ è   ` êf_ èa[ >g   _ $ èQ_ E  ©èé  ê<_ F  ©è’  ê*_ G  ©èê  ê_ H  ©èë  êì  ` &  Á_ è%_ >  í  >`   _ =+  $ $ ë‘ _
- è$_ >  î  >`   _
- =`  $ $ êh_ è_ ê  ©è_ >  F  $ êE_ è_ ë  ©è_ >  ï  $ ê"_ è_ ì  ©è_ >  ì  $ _ è_ >  Î  $ _ IÑ  _ IÓ  _ IÔ  _	 IÕ  _
- IÀ  _ IÖ  _ I×  _ Iü  _ IÎ  _ Ií  _ IØ  _ IĞ  _ é_	 èã  ê_ Iğ  8 _ íé#_ G  ©é_ ß  ©é	8 _ íIñ  /ú‘½ó   9.
+  }b ” 
+Õ¸  – °˜  °š °œ °Ö ° °  °¢ °¤ °¦	 °ş
+ °¨ °ª °ö °š °Ø  ¬ °Â  è Ì
+  æ ì î Ô Ú  ä    ^ ^ ^ ^ ^ ^ ^
+ ^	 ^ ^ ^ ^ ^ ^ ^ ^ Ï”éÏ•M   ªéÏ=«  •L   ªè8  ×  ! 0Ï=Ø  
+©hÇ   ^  ½ ½4>‹   Ï=«  $ ®èê´Cé¿Ç_  è"Ü>g   _  $ è_  IÌ  ê
+IÙ  /Ï=Ú  Û  ©éÏ=Ú  Ü  ©èRÏ=«  İ  ©èDÏ=+  •L   ©è5Ü>g   Ï=+  $ èŞ  >`   Ï=+  $ Iß  ê
+IÙ  /¿IÌ  /Ï=Ì  •L   ©è	Ï=Ì  ê¿ÈÏ=Í  èÏ=Í  =à  •L   ©è	Ï=Í  êÉ_ èİ  ê3Ï=«  D  ©è_ éÏ=«  H  ©èá  êÏ=«  ÊÏ=â  
+©è_ IÎ  /Ï=ã  
+©èİ>8  ¹I_  ŞI`  $ ‰Iû  /Ï=«  Á_ èê[ _ íÁ_ èê[ _ íÁ_ è-İ>3  _ =)  _ =_  _ ®èê=à  $ ‰êÁ8 _ è_ è_ =  _ =à  ©íÁÏ=ä  ”è%_ è İ>9  _ _ ®èê=à  $ ‰êÁ	_	 ®èê=ì  h  ©è$_ è[ >ü  _	 =)  _ =à  $ ‰êÁ
+_ é_ è%[ >g   _ $ èİ><  _ =à  $ ‰êÁ_ è"_ H  ©è[	 >r  _ =à  $ ‰êÁ_ D  ©è_ ”é_ å  ©è)İ>8  _ D  ©è¹ê»0I_  ŞI`  $ ‰êÁ_ è[ >ş  _ =à  $ ‰ê&  Á,   Á_ èb  ` ëŸ _	 è_
+ èæ  ê)  ` ëƒ _ İ  ©é_ è   ` êf_ èa[ >g   _ $ èQ_ D  ©èç  ê<_ E  ©è‘  ê*_ F  ©èè  ê_ G  ©èé  êê  ` &  Á_ è%_ >"  ë  >`   _ =*  $ $ ë‘ _
+ è$_ >"  ì  >`   _
+ =_  $ $ êh_ è_ è  ©è_ >"  E  $ êE_ è_ é  ©è_ >"  í  $ ê"_ è_ ê  ©è_ >"  ê  $ _ è_ >"  Í  $ _ IÏ  _ IÑ  _ IÒ  _	 IÓ  _
+ I¿  _ IÔ  _ IÕ  _ Iû  _ IÍ  _ Iì  _ IÖ  _ IÎ  _ é_	 èá  ê_ Iî  8 _ íé#_ F  ©é_ İ  ©é	8 _ íIï  /ø‘Åó   9.
 0i/%	
  ID
 >  w
@@ -5696,63 +5619,8 @@ p…,	>
         shellPath: dynamicProject || dynamicNamespace ? "/dashboard" : accountShellPath,
         focused: Boolean(dynamicProject) || pathname === "/projects/new" || pathname === "/try" || Boolean(directTryTemplate)
       };
-    }F^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$´   R      õÿÿÿ 	/ t r y / $ 0 9 a z ğÿÿÿ   - $ 0 9 a z ğÿÿÿãÿÿÿ B   ‚	ˆ  ä  °d  æ °è °’ °”  æ °è  Ò  ğ ^ ^ ^ ^  8  ÏíÇ³È^ _  {ê@É^ _ >õ  ³$ Ê_ _ ¼€ ¡è´ê_ ¼ ¡èµê_    ¡è¶ê·›` ~ è¾‚8 _ ! Á³Á^ _  {ëü Á^ _ >õ  ³$ Á_  Ø  ¤è_ ÿß  ¢è	ıÿ  ` _ ¼€ ¡è_ _ ` _ Fë± _ ¼ ¡è,_ _ ` ¼À _ ¹Ÿ­F_ _ ` ¼€ _ »?«­Fê|_    ¤è0_ _ ` ¼ğ _ »Ÿ­F_ _ ` ¼€ _ »Ÿ»?«­Fê_ _ ` ¼à _ »Ÿ­F_ _ ` ¼€ _ ¹Ÿ»?«­F_ _ ` ¼€ _ »?«­F~ hÿÿÿ‚_ (úÃ…? 5 -    *%[6	"? -**+C &+ #*#1
-#<ãencode(value) {
-        const text2 = String(value);
-        let length = 0;
-        for (const character of text2) {
-          const point = character.codePointAt(0);
-          length += point < 128 ? 1 : point < 2048 ? 2 : point < 65536 ? 3 : 4;
-        }
-        const bytes = new Uint8Array(length);
-        let at = 0;
-        for (const character of text2) {
-          let point = character.codePointAt(0);
-          if (point >= 55296 && point <= 57343) point = 65533;
-          if (point < 128) bytes[at++] = point;
-          else if (point < 2048) {
-            bytes[at++] = 192 | point >> 6;
-            bytes[at++] = 128 | point & 63;
-          } else {
-            if (point >= 65536) {
-              bytes[at++] = 240 | point >> 18;
-              bytes[at++] = 128 | point >> 12 & 63;
-            } else bytes[at++] = 224 | point >> 12;
-            bytes[at++] = 128 | point >> 6 & 63;
-            bytes[at++] = 128 | point & 63;
-          }
-        }
-        return bytes;
-      }@       öQ Ç+d  èÃ$  )ú ƒclass TextEncoder {
-      encode(value) {
-        const text2 = String(value);
-        let length = 0;
-        for (const character of text2) {
-          const point = character.codePointAt(0);
-          length += point < 128 ? 1 : point < 2048 ? 2 : point < 65536 ? 3 : 4;
-        }
-        const bytes = new Uint8Array(length);
-        let at = 0;
-        for (const character of text2) {
-          let point = character.codePointAt(0);
-          if (point >= 55296 && point <= 57343) point = 65533;
-          if (point < 128) bytes[at++] = point;
-          else if (point < 2048) {
-            bytes[at++] = 192 | point >> 6;
-            bytes[at++] = 128 | point & 63;
-          } else {
-            if (point >= 65536) {
-              bytes[at++] = 240 | point >> 18;
-              bytes[at++] = 128 | point >> 12 & 63;
-            } else bytes[at++] = 224 | point >> 12;
-            bytes[at++] = 128 | point >> 6 & 63;
-            bytes[at++] = 128 | point & 63;
-          }
-        }
-        return bytes;
-      }
-    }C ôLÄ  ì  ğŞ °ˆ
- °Ê ^ ^ ^  ğé{~ Ç~ È~ É‚êÏêí_  Iö  _ >}  ¾ $ Il  _ I„  I÷  (ú¢TA?% #©function compatibleResult(result) {
+    }F^\/try\/([a-z0-9]+(?:-[a-z0-9]+)*)$´   R      õÿÿÿ 	/ t r y / $ 0 9 a z ğÿÿÿ   - $ 0 9 a z ğÿÿÿãÿÿÿ C òLÀ  à  ğŞ °„
+ °Ê ^ ^ ^  ğé{~ Ç~ È~ É‚êÏêí_  Iğ  _ >{  ¾ $ Ij  _ I‚  Iñ  (ø‹TA?% #©function compatibleResult(result) {
     const [columns, values, rowsAffected] = result;
     return {
       columns,
@@ -5762,9 +5630,9 @@ p…,	>
       rowsAffected,
       lastInsertRowid: null
     };
-  }B   Ú	 @Ê  ì  8  >’  d >}  ¾ $ % ú¦;%>a(row) => Object.fromEntries(
+  }B   Ö	 @Ê  à  8  >  d >{  ¾ $ % ø;%>a(row) => Object.fromEntries(
         columns.map((column, index) => [column, row[index]])
-      )B     ğ  ¶  Ú	  ÏÛĞC& (ú§('(column, index) => [column, row[index]]b     (ò  ôR  ø Û8 ~  N  Ï=~  Ï=  é&  & ï‰í/ú®.F5
+      )B     ä  ¶  Ö	  ÏÛĞC& (ø('(column, index) => [column, row[index]]b     (æ  òP  ö Û8 |  L  Ï=|  Ï=}  é&  & ï‰í/ø—.F5
 
  &-œasync execute(query) {
       return compatibleResult(await hostCall(
@@ -5772,7 +5640,7 @@ p…,	>
         "execute",
         [query.sql, query.args || []]
       ));
-    }b   ,„  ô  °ø ^  8  ~  O  Ï>}  ¾ $ ï‰Ç_  >}  ¾$ /úµ2F)% $ 
+    }b   ,€  è  °ö ^  8  |  M  Ï>{  ¾ $ ï‰Ç_  >{  ¾$ /ø2F)% $ 
 %%¿async batch(queries) {
       const affected = await hostCall(
         "sql",
@@ -5785,19 +5653,19 @@ p…,	>
         rowsAffected,
         lastInsertRowid: null
       }));
-    }B      ò  Ï=~  Ï=  é&  & (ú¹
+    }B      æ  Ï=|  Ï=}  é&  & (ø¢
 
-((query) => [query.sql, query.args || []]B      ˆ
-  &  Iö  &  Il  ÏI„  I÷  (ú»x(rowsAffected) => ({
+((query) => [query.sql, query.args || []]B      „
+  &  Iğ  &  Ij  ÏI‚  Iñ  (ø¤x(rowsAffected) => ({
         columns: [],
         rows: [],
         rowsAffected,
         lastInsertRowid: null
-      })C ü      úU  Î Ûç”è8 û  ! 0Û>ü  %  úÅ&/
+      })C ú      øS  Î Ûç”è8 õ  ! 0Û>ö  %  ø®&/
 šfunction nextRandomId() {
     if (!randomIds.length) throw new Error("Application operation lacks a random identifier");
     return randomIds.shift();
-  }        øT  Û(úÊ	() => operationNow        øT  Û(úÎ	() => operationNow        øT  Û(úÓ	() => operationNowC ˆ   ¹â  Ò  Ì 8  Ï®èê=:   é§   íI:   8  Ï®èê=6   éÏíI6   Ï®èê=]  •L   ©è	Ï=]  ê¿I]  Ï®èê=S  •L   ©è	Ï=S  ê¿IS  8 >  Ï®èê=^  $ è&  ³Ï=^  Oê&  I^  (ú;Ø	
+  }        öR  Û(ø³	() => operationNow        öR  Û(ø·	() => operationNow        öR  Û(ø¼	() => operationNowC †   ¹à  Ò  Ì 8  Ï®èê=:   é§   íI:   8  Ï®èê=6   éÏíI6   Ï®èê=[  •L   ©è	Ï=[  ê¿I[  Ï®èê=Q  •L   ©è	Ï=Q  ê¿IQ  8 >  Ï®èê=\  $ è&  ³Ï=\  Oê&  I\  (ø;Á	
 p!
 W%!
 C/
@@ -5814,7 +5682,7 @@ C/2
       field: typeof error?.field === "string" ? error.field : "",
       providers: Array.isArray(error?.providers) ? [...error.providers] : []
     };
-  }b Š 	 œú  ¸  ş	  ü  °ş °â ƒşW  €X  ‚Y  Ì Œ^  ø øT  úU  ˆ\  ^ ^  ÛI×  ÜI€  İIi  Ç_  ÏCÈ_ ”é_ ĞC•   ªé8 >  Ñ$ ”è31  §   I:      I6   ¿I]  ¿IS  &  I^  & /ky   [ ì‰8 4  P  &  ï‰\ Ğz  ©éÏ€  ©è!Ğ@  ©è8     &  ï‰& ê&  \    _ ĞD&  ³ÑO'  ‰& nl%   /Ék   1  [ Åí& nl   /l   0&  \ m/úYá&8>B [* 9&
+  }b ˆ 	 œî  ´  ú	  ğ  °ò °à ƒüU  şV  €W  Ì Š\  ö öR  øS  †Z  ^ ^  ÛIÕ  ÜI  İIh  Ç_  ÏCÈ_ ”é_ ĞC•   ªé8 >  Ñ$ ”è30  §   I:   ú  I6   ¿I[  ¿IQ  &  I\  & /ky   [ ì‰8 3  N  &  ï‰\ Ğx  ©éÏ  ©è!Ğ>  ©è8 û  ü  &  ï‰& ê&  \    _ ĞD&  ³ÑO'  ‰& nl%   /Ék   0  [ Åí& nl   /l   0&  \ m/øYÊ&8>B [* 9&
  7 
 R! < " :R]Ç*A^"5E Æasync function storeCall(storeName, method, args) {
     const stores = { account: accounts, content, organization: organizations };
@@ -5838,7 +5706,7 @@ R! < " :R]Ç*A^"5E Æasync function storeCall(storeName, m
     } finally {
       randomIds = [];
     }
-  }C Œ    . ª şW  €X  ‚Y  †[  „Z  [ é$[ >“  $  >„   ¾ $ >   ¾$ ] [ (úø% %
+  }C Š    . ª üU  şV  €W  „Y  ‚X  [ é$[ >‘  $  >„   ¾ $ >   ¾$ ] [ (øá% %
  G% function initialize() {
     initialized ||= migrations.ready().then(() => Promise.all([
       accounts.initialize(),
@@ -5849,14 +5717,14 @@ R! < " :R]Ç*A^"5E Æasync function storeCall(storeName, m
       throw error;
     });
     return initialized;
-  }B       ) ª  ş € ‚ 8  >p  Ü>†  $  İ>†  $  Ş>†  $  & % úù,e%# >t() => Promise.all([
+  }B       ) ª  ü ş € 8  >n  Ü>…  $  İ>…  $  Ş>…  $  & % øâ,e%# >t() => Promise.all([
       accounts.initialize(),
       content.initialize(),
       organizations.initialize()
-    ])B     â  † ßÏ0ú	ı?(error) => {
+    ])B     à  „ ßÏ0ø	æ?(error) => {
       initialized = null;
       throw error;
-    }b ğ  º¸  â  ƒâ  ƒÌ Œ^  ˆ\  Š]  _  8  >  Ï$ ”è1    & /Ï³C†  ©è(k   Üì‰   & n/Çk   1  İÃí& n/0Ï³Cÿ  ©èÏç·©èŞÏ´CÏµCÏ¶Cï/Ï³C  ©è6Ïçµ©è0k   Üì‰   [ Ï´Cí‰& n/Èk   1  İÄí& n/01    & /úcˆ%
+    }b ì  º¸  à  ƒà  ƒÌ Š\  †Z  ˆ[  Œ]  8  >  Ï$ ”è0  ı  & /Ï³C…  ©è(k   Üì‰   & n/Çk   0  İÃí& n/0Ï³Cù  ©èÏç·©èŞÏ´CÏµCÏ¶Cï/Ï³Cş  ©è6Ïçµ©è0k   Üì‰   [ Ï´Cí‰& n/Èk   0  İÄí& n/00  ı  & /øcñ%
 b	
  ,:E"5 
  

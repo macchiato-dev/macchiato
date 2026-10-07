@@ -41,6 +41,42 @@ static void drain_jobs(void) {
   if (status < 0) report_exception();
 }
 
+// Convert inside the engine, not one interpreted JS operation per byte.
+// The JS runtime supplies well-formed strings so UTF-16 lone surrogates have
+// the same replacement behavior as TextEncoder in the browser.
+static JSValue encode_utf8(JSContext *ctx, JSValueConst self,
+                           int argc, JSValueConst *argv) {
+  size_t length;
+  (void)self;
+  if (argc != 1 || !JS_IsString(argv[0]))
+    return JS_ThrowTypeError(ctx, "encode requires one string");
+  const char *text = JS_ToCStringLen(ctx, &length, argv[0]);
+  if (!text) return JS_EXCEPTION;
+  JSValue result = JS_NewArrayBufferCopy(ctx, (const uint8_t *)text, length);
+  JS_FreeCString(ctx, text);
+  return result;
+}
+
+static JSValue decode_utf8(JSContext *ctx, JSValueConst self,
+                           int argc, JSValueConst *argv) {
+  size_t offset, length, element_size, buffer_length;
+  (void)self;
+  if (argc != 1)
+    return JS_ThrowTypeError(ctx, "decode requires one byte array");
+  JSValue buffer = JS_GetTypedArrayBuffer(ctx, argv[0], &offset, &length,
+                                         &element_size);
+  if (JS_IsException(buffer)) return buffer;
+  uint8_t *bytes = JS_GetArrayBuffer(ctx, &buffer_length, buffer);
+  JSValue result;
+  if (!bytes || element_size != 1 || offset > buffer_length ||
+      length > buffer_length - offset)
+    result = JS_ThrowTypeError(ctx, "decode requires a bounded byte array");
+  else
+    result = JS_NewStringLen(ctx, (const char *)bytes + offset, length);
+  JS_FreeValue(ctx, buffer);
+  return result;
+}
+
 static JSValue send_message(JSContext *ctx, JSValueConst self,
                             int argc, JSValueConst *argv) {
   JSValue buffer;
@@ -89,6 +125,10 @@ static int evaluate_program(void) {
   global = JS_GetGlobalObject(context);
   JS_SetPropertyStr(context, global, "__hostSend",
     JS_NewCFunction(context, send_message, "__hostSend", 1));
+  JS_SetPropertyStr(context, global, "__utf8Encode",
+    JS_NewCFunction(context, encode_utf8, "__utf8Encode", 1));
+  JS_SetPropertyStr(context, global, "__utf8Decode",
+    JS_NewCFunction(context, decode_utf8, "__utf8Decode", 1));
   JS_FreeValue(context, global);
   result = JS_ReadObject(context, bytecode, used, JS_READ_OBJ_BYTECODE);
   free(bytecode);

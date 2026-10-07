@@ -27,3 +27,12 @@ test("runs asynchronous application code through a host device", async () => {
   assert.deepEqual(await machine.request(["health"]), [200, [], "QuickJS ready"]);
   assert.deepEqual(await machine.request(["title", 7]), [200, [], "Macchiato"]);
 });
+
+test("round-trips large resources and Unicode through the byte protocol", async () => {
+  const machine = new ServerMachineController(module, { bytecodes: [bytecode] });
+  const samples = ["", "zero\0byte", "café 日本語 🐈", "resource ".repeat(100000)];
+  for (const text of samples) assert.equal(await machine.request(["echo", text]), text);
+  const units = [[], [0], [0xd800], [0xdc00], [0xd83d, 0xdc08], [0xd800, 65]];
+  const expected = units.map(value => new TextEncoder().encode(String.fromCharCode(...value)));
+  assert.deepEqual(await machine.request(["utf8", units]), expected);
+});

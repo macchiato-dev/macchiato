@@ -5,45 +5,6 @@ import { createOrganizationStore } from "@macchiato-dev/hub/organizations";
 import { validateProjectUrlPatterns } from "./project-snapshot-validation.js";
 import { createResourcesDocumentPlanner } from "./resources-document-plan.js";
 
-// QuickJS intentionally has no browser globals. The content model currently
-// uses TextEncoder only to enforce its UTF-8 snapshot byte limit; keep that
-// compatibility surface local to the application machine until the hybrid
-// runtime can delegate this safe operation directly.
-if (typeof globalThis.TextEncoder !== "function") {
-  globalThis.TextEncoder = class TextEncoder {
-    encode(value) {
-      const text = String(value);
-      let length = 0;
-      for (const character of text) {
-        const point = character.codePointAt(0);
-        length += point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4;
-      }
-      // Snapshot limits require byte counts, not a number-array allocation
-      // many times larger than the project. Keep this TextEncoder-compatible,
-      // including replacement of lone UTF-16 surrogates.
-      const bytes = new Uint8Array(length);
-      let at = 0;
-      for (const character of text) {
-        let point = character.codePointAt(0);
-        if (point >= 0xd800 && point <= 0xdfff) point = 0xfffd;
-        if (point < 0x80) bytes[at++] = point;
-        else if (point < 0x800) {
-          bytes[at++] = 0xc0 | point >> 6;
-          bytes[at++] = 0x80 | point & 0x3f;
-        } else {
-          if (point >= 0x10000) {
-            bytes[at++] = 0xf0 | point >> 18;
-            bytes[at++] = 0x80 | point >> 12 & 0x3f;
-          } else bytes[at++] = 0xe0 | point >> 12;
-          bytes[at++] = 0x80 | point >> 6 & 0x3f;
-          bytes[at++] = 0x80 | point & 0x3f;
-        }
-      }
-      return bytes;
-    }
-  };
-}
-
 function compatibleResult(result) {
   const [columns, values, rowsAffected] = result;
   return {

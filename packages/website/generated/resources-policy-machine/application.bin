@@ -1,4 +1,4 @@
-ÿSQL_OPERATIONS(STORE_SQL_OPERATIONSpolicyPendingpolicyFailpolicyValuespolicyOperationserverHandleconvertedpolicyResultserverResumebeginPolicyunescape$encodeURIComponent$decodeURIComponentescape__hostSendisFinitehostCallreadkind"SELECT 1 AS readysqlmaxRows
+◊SQL_OPERATIONS(STORE_SQL_OPERATIONSpolicyPendingpolicyFailpolicyValuespolicyOperationserverHandleconvertedpolicyResultserverResumebeginPolicy__utf8Encode__utf8Decode__hostSendTextEncoderisFinitehostCallreadkind"SELECT 1 AS readysqlmaxRows
 readyresultsystem.readyîSELECT 1 FROM resource_organizations WHERE slug = ? COLLATE NOCASE LIMIT 1usernameparametersexists@account.organization-slug-exists
 writetUPDATE users SET username = ?, updated_at = ? WHERE id = ?updated-atuser-idaffected.account.update-usernameÑUPDATE resource_projects SET namespace_slug = ?, updated_at = ?
                 WHERE namespace_kind = 'user' AND namespace_id = ?@account.update-project-namespacerSELECT id, display_name, username FROM users WHERE id = ?iddisplay_nameaccount.getzSELECT 1 FROM users WHERE username = ? COLLATE NOCASE LIMIT 1slug.content.username-existsÃINSERT INTO resource_organizations
@@ -318,26 +318,58 @@ SELECT CASE WHEN p.owner_user_id = requested.viewer
   version INTEGER PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   applied_at INTEGER NOT NULL
-) STRICT,migration.list-applied¢SELECT version, name, applied_at FROM resource_schema_migrations ORDER BY version,migration.find-versionzSELECT name FROM resource_schema_migrations WHERE version = ?0migration.record-version∫INSERT OR IGNORE INTO resource_schema_migrations (version, name, applied_at) VALUES (?, ?, ?)*server-application.jspendingnextCallWriterReadersendreservebyteuinttexttake__serverReceive
+) STRICT,migration.list-applied¢SELECT version, name, applied_at FROM resource_schema_migrations ORDER BY version,migration.find-versionzSELECT name FROM resource_schema_migrations WHERE version = ?0migration.record-version∫INSERT OR IGNORE INTO resource_schema_migrations (version, name, applied_at) VALUES (?, ?, ?)*server-application.jspendingnextCallencoderWriterReadersendencodereservebyteuinttexttake__serverReceivetoWellFormed
 bytesatmaxsubarrayisSafeIntegerinvalid integer
-floorcharCodeAt
+floor
 depthitementries
 entry"value is too deep6only integers are supportedisArray"unsupported valuetruncated value
 scale&integer is too longtruncated bytes
-slicechunkspushfromCharCodetypekeyhasOwnPropertycall<unsafe or duplicate object key&unknown value type writerdeviceoperationreadercontinuation,invalid server message.unknown device response,invalid server request
+slicetypekeypushhasOwnPropertycall<unsafe or duplicate object key&unknown value type writerdeviceoperationreadercontinuation,invalid server message.unknown device response,invalid server request
 error$resources policy: 
 count@SQL operation has invalid valuesHSQL operation value is not supportedselectedSQL operation  is not allowedstoreOperationstoreIndex
 querybatchOperationqueries$request is invaliddatabase-clientexecute,store query is invalid<store statement is not allowedcompatibilitydatabase
 batch,store batch is invalidHstore batch statement is not allowed$compatibilityBatch@store operation is not available>request device is not available batch is invalid*batch call is invalid:batch may contain only writes
-namesrowscolumnsDstore result exceeds its row limitmapJdatabase result exceeds its row limitrowcolumnindexOf,database result lacks   ®  	 	º+™   Ê  Ë Í ÏDÓDDÚDÙDˆD¯	D˙
-   ⁄  –  ¬  ¸  ˛  Ã     “  Ä  Ç  Ñ  ™  å  †  Œ  Ü  ‘  à  æ‚æ\ æ\ æ\ æ\ æ\ æ\	 æ Ï«  I    I  ¥I	  
-  J   & I  I    I    I    & I  ¥I	    I  I    I    I        & I    I  I    I    I        & I    I  I    I    I    & I  ¥I	    L   &   L   &   L   & & I  I    I    I    & I  ¥I	    I  I     I  !  I    "    :   #  $    & I    I  I%    I  &  I  '    & I  ºËI	  (  J   & è   L   & )  J   & *  +  & ,  -  & .  K   & & I  I/    I  0  I  '    & I  ¥I	  1  J   & 2  L   & & I  I3    I  4  I  '    (  & I  ºËI	  (  J   & 5  L   & & I  I6    I  7  I  8  9    & I    I  I:    I  ;  I  9    & I    I  I<    I  =  I  9    & I    I  I>    I  ?  I  9    & I  ¥I	  @  L   & A  L   & B  L   & é   L   &   L   & & I  IC    I  D  I  E    B  $    & I    I  IF    I  G  I    H  & I    I  II    I  J  I  K  L    M  & I  ¥I	    L   &   L   & N  L   & O  L   & & I  IP    I  Q  I    & I  ¥I	    L   &   L   & & I  IR    I  S  I  E    & I  ¥I	    I  IT    I  U  I  E  & I  ¥I	    I  IV    I  W  I    E  X  Y  B  $    & I    I  IZ    I  [  I      H  $  & I    I  I\    I  ]  I  B    E    & I    I  I^  9  _  I:     I  ≥I`  ºËI	  Ia  b  I:     I  ≥I`  ºËI	  Ic  d  I:     I  ≥I`  ºËI	  Ie  f  I:     I  ≥I`  ºËI	  Ig  h  I:     I  ≥I`  ºËI	  Ii  j  I:     I  ≥I`  ºËI	  Ik  l  I:     I  ¥I`  ºËI	  Im    I:     I  ¥I`  ºËI	  I    I:     I  ¥I`  ºËI	  I    I:     I  ∂I`  ºËI	  I    I:     I  ∂I`  ºËI	  I  n  I:     I  µI`  ºËI	  Io  p  I:     I  ∂I`  ºËI	  Iq  r  I:     I  ∑I`  ºËI	  Is  t  I:     I  ¥I`  ºËI	  Iu  v  I:     I  ∏I`  ºËI	  Iw  x  I:     I  ∏I`  ºËI	  Iy  z  I:     I  πI`  ºËI	  I{  |  I:     I  ≥I`  ºËI	  I}  ~  I:     I  ≥I`  ºËI	  I  Ä  I:     I  ≥I`  ºËI	  IÅ  Ç  I:     I  ≥I`  ºËI	  IÉ  Ñ  I:     I  ≥I`  ºËI	  IÖ  Ü  I:     I  ≥I`  ºËI	  Iá  à  I:     I  ≥I`  ºËI	  Iâ  ä  I:     I  ≥I`  ºËI	  Iã  å  I:     I  ≥I`  ºËI	  Iç  é  I:     I  ≥I`  ºËI	  Iè  ê  I:     I  ≥I`  ºËI	  Ië  í  I:     I  ≥I`  ºËI	  Iì  î  I:     I  ≥I`  ºËI	  Iï  ñ  I:     I  ≥I`  ºËI	  Ió  ò  I:     I  ≥I`  ºËI	  Iô  ö  I:     I  ≥I`  ºËI	  Iõ  ú  I:     I  ≥I`  ºËI	  Iù  û  I:     I  ≥I`  ºËI	  Iü  †  I:     I  ≥I`  ºËI	  I°  ¢  I:     I  ≥I`  ºËI	  I£  §  I:     I  ≥I`  ºËI	  I•  ¶  I:     I  ≥I`  ºËI	  Iß  ®  I:     I  ≥I`  ºËI	  I©  ™  I:     I  ≥I`  ºËI	  I´  ¨  I:     I  ≥I`  ºËI	  I≠  Æ  I:     I  µI`  ºËI	  IØ  ∞  I:     I  ∏I`  ºËI	  I±  ≤  I:     I  µI`  ºËI	  I≥  ¥  I:     I  µI`  ºËI	  Iµ  ∂  I:     I  ∂I`  ºËI	  I∑  ∏  I:     I  µI`  ºËI	  Iπ  ∫  I:     I  ∂I`  ºËI	  Iª  º  I:     I  µI`  ºËI	  IΩ  æ  I:     I  µI`  ºËI	  Iø  /  I:     I  µI`  ºËI	  I&  3  I:     I  µI`  ºËI	  I0  6  I:     I  ∂I`  ºËI	  I4  ¿  I:     I  µI`  ºËI	  I¡  ¬  I:     I  ¥I`  ºËI	  I√     I:     I  ¥I`  ºËI	  I  %  I:     I  ∫I`  ºËI	  I!  ƒ  I:     I  µI`  ºËI	  I≈  ∆  I:     I  ªI`  ºËI	  I«  »  I:     I  ∏I`  ºËI	  I…     I:     I  ∏I`  ºËI	  IÀ  Ã  I:     I  µI`  ºËI	  IÕ  Œ  I:     I  ∂I`  ºËI	  Iœ  –  I:     I  ªI`  ºËI	  I—  “  I:     I  ¥I`  ºËI	  I”  ‘  I:     I  µI`  ºËI	  I’  ÷  I:     I  ∑I`  ºËI	  I◊  ÿ  I:     I  πI`  ºËI	  IŸ  ⁄  I:     I  ∑I`  ºËI	  I€  ‹  I:     I  πI`  ºËI	  I›  ﬁ  I:     I  ∑I`  ºËI	  Iﬂ  ‡  I:     I  ∏I`  ºËI	  I·  ‚  I:     I  µI`  ºËI	  I„  ‰  I:     I  µI`  ºËI	  IÂ  P  I:     I  ∑I`  ºËI	  IJ  Ê  I:     I  ¥I`  ºËI	  IÁ  R  I:     I  ¥I`  ºËI	  IQ  T  I:     I  µI`  ºËI	  IS  V  I:     I  ¥I`  ºËI	  IU  Z  I:     I  ∫I`  ºËI	  IW  \  I:     I  ∑I`  ºËI	  I[  Ë  I:     I  ¥I`  ºËI	  IÈ  :  I:     I  ∂I`  ºËI	  I7  <  I:     I  µI`  ºËI	  I;  >  I:     I  µI`  ºËI	  I=  C  I:     I  µI`  ºËI	  I?  F  I:     I  ∏I`  ºËI	  ID  I  I:     I  µI`  ºËI	  IG  ^  I:     I  ∑I`  ºËI	  I]  Í  I:     I  ≥I`  ºËI	  IÎ  Ï  I:     I  ≥I`  ºËI	  IÌ  Ó  I:     I  ¥I`  ¥I	  IÔ    I:     I  ∂I`  ºËI	  IÒ  9 9 8 :
- æJ˘   9 À(‰   #∫ £$ ‹ Ê# C   ´Ê @Ë@Í @Ï@Ó@ ⁄ – ¬ ¸ ˛ Ã   “ Ä Ç Ñ ™ ÚCå † æ …æ æ¡8 !  «¥»≈=?   æ?¯  ≈=?   æ?˘  ≈=?   æ?˙  ≈=?   æ?˚  ≈=?   æ?D   ∆=?   æ?˘  ∆=?   æ?˙  ∆=?   æ	?¸  ∆=?   æ
-?˚  ∆=?   æ?D   8 æ?  8 æ?˝  )‰f 6& 
-     D     F •/function () {
+namesrowscolumnsDstore result exceeds its row limitmapJdatabase result exceeds its row limitrowcolumnindexOf,database result lacks   ®  	 	º+™   Ê  Ë Í ÏDÓDDÚDÙDˆD¯	D˙
+   ¸  “  ⁄  –  ¬  Ã     ˛  Ä  ™  å  †  Ç  Œ  Ñ  ‘  Ü  æ‚æ\ æ\ æ\ æ\ æ\ æ\	 æ Ï«  I    I  ¥I  	  J   & I
+  I    I    I    & I  ¥I    I
+  I    I    I        & I    I
+  I    I    I        & I    I
+  I    I    I    & I  ¥I    L   &   L   &   L   & & I
+  I    I    I    & I  ¥I    I
+  I    I     I    !    :   "  #    & I    I
+  I$    I  %  I  &    & I  ºËI  '  J   & è   L   & (  J   & )  *  & +  ,  & -  K   & & I
+  I.    I  /  I  &    & I  ¥I  0  J   & 1  L   & & I
+  I2    I  3  I  &    '  & I  ºËI  '  J   & 4  L   & & I
+  I5    I  6  I  7  8    & I    I
+  I9    I  :  I  8    & I    I
+  I;    I  <  I  8    & I    I
+  I=    I  >  I  8    & I  ¥I  ?  L   & @  L   & A  L   & é   L   &   L   & & I
+  IB    I  C  I  D    A  #    & I    I
+  IE    I  F  I    G  & I    I
+  IH    I  I  I  J  K    L  & I  ¥I    L   &   L   & M  L   & N  L   & & I
+  IO    I  P  I    & I  ¥I    L   &   L   & & I
+  IQ    I  R  I  D    & I  ¥I    I
+  IS    I  T  I  D  & I  ¥I    I
+  IU    I  V  I    D  W  X  A  #    & I    I
+  IY    I  Z  I      G  #  & I    I
+  I[    I  \  I  A    D    & I    I
+  I]  9  ^  I:     I  ≥I_  ºËI  I`  a  I:     I  ≥I_  ºËI  Ib  c  I:     I  ≥I_  ºËI  Id  e  I:     I  ≥I_  ºËI  If  g  I:     I  ≥I_  ºËI  Ih  i  I:     I  ≥I_  ºËI  Ij  k  I:     I  ¥I_  ºËI  Il    I:     I  ¥I_  ºËI  I    I:     I  ¥I_  ºËI  I    I:     I  ∂I_  ºËI  I    I:     I  ∂I_  ºËI  I  m  I:     I  µI_  ºËI  In  o  I:     I  ∂I_  ºËI  Ip  q  I:     I  ∑I_  ºËI  Ir  s  I:     I  ¥I_  ºËI  It  u  I:     I  ∏I_  ºËI  Iv  w  I:     I  ∏I_  ºËI  Ix  y  I:     I  πI_  ºËI  Iz  {  I:     I  ≥I_  ºËI  I|  }  I:     I  ≥I_  ºËI  I~    I:     I  ≥I_  ºËI  IÄ  Å  I:     I  ≥I_  ºËI  IÇ  É  I:     I  ≥I_  ºËI  IÑ  Ö  I:     I  ≥I_  ºËI  IÜ  á  I:     I  ≥I_  ºËI  Ià  â  I:     I  ≥I_  ºËI  Iä  ã  I:     I  ≥I_  ºËI  Iå  ç  I:     I  ≥I_  ºËI  Ié  è  I:     I  ≥I_  ºËI  Iê  ë  I:     I  ≥I_  ºËI  Ií  ì  I:     I  ≥I_  ºËI  Iî  ï  I:     I  ≥I_  ºËI  Iñ  ó  I:     I  ≥I_  ºËI  Iò  ô  I:     I  ≥I_  ºËI  Iö  õ  I:     I  ≥I_  ºËI  Iú  ù  I:     I  ≥I_  ºËI  Iû  ü  I:     I  ≥I_  ºËI  I†  °  I:     I  ≥I_  ºËI  I¢  £  I:     I  ≥I_  ºËI  I§  •  I:     I  ≥I_  ºËI  I¶  ß  I:     I  ≥I_  ºËI  I®  ©  I:     I  ≥I_  ºËI  I™  ´  I:     I  ≥I_  ºËI  I¨  ≠  I:     I  µI_  ºËI  IÆ  Ø  I:     I  ∏I_  ºËI  I∞  ±  I:     I  µI_  ºËI  I≤  ≥  I:     I  µI_  ºËI  I¥  µ  I:     I  ∂I_  ºËI  I∂  ∑  I:     I  µI_  ºËI  I∏  π  I:     I  ∂I_  ºËI  I∫  ª  I:     I  µI_  ºËI  Iº  Ω  I:     I  µI_  ºËI  Iæ  .  I:     I  µI_  ºËI  I%  2  I:     I  µI_  ºËI  I/  5  I:     I  ∂I_  ºËI  I3  ø  I:     I  µI_  ºËI  I¿  ¡  I:     I  ¥I_  ºËI  I¬    I:     I  ¥I_  ºËI  I  $  I:     I  ∫I_  ºËI  I   √  I:     I  µI_  ºËI  Iƒ  ≈  I:     I  ªI_  ºËI  I∆  «  I:     I  ∏I_  ºËI  I»  …  I:     I  ∏I_  ºËI  I   À  I:     I  µI_  ºËI  IÃ  Õ  I:     I  ∂I_  ºËI  IŒ  œ  I:     I  ªI_  ºËI  I–  —  I:     I  ¥I_  ºËI  I“  ”  I:     I  µI_  ºËI  I‘  ’  I:     I  ∑I_  ºËI  I÷  ◊  I:     I  πI_  ºËI  Iÿ  Ÿ  I:     I  ∑I_  ºËI  I⁄  €  I:     I  πI_  ºËI  I‹  ›  I:     I  ∑I_  ºËI  Iﬁ  ﬂ  I:     I  ∏I_  ºËI  I‡  ·  I:     I  µI_  ºËI  I‚  „  I:     I  µI_  ºËI  I‰  O  I:     I  ∑I_  ºËI  II  Â  I:     I  ¥I_  ºËI  IÊ  Q  I:     I  ¥I_  ºËI  IP  S  I:     I  µI_  ºËI  IR  U  I:     I  ¥I_  ºËI  IT  Y  I:     I  ∫I_  ºËI  IV  [  I:     I  ∑I_  ºËI  IZ  Á  I:     I  ¥I_  ºËI  IË  9  I:     I  ∂I_  ºËI  I6  ;  I:     I  µI_  ºËI  I:  =  I:     I  µI_  ºËI  I<  B  I:     I  µI_  ºËI  I>  E  I:     I  ∏I_  ºËI  IC  H  I:     I  µI_  ºËI  IF  ]  I:     I  ∑I_  ºËI  I\  È  I:     I  ≥I_  ºËI  IÍ  Î  I:     I  ≥I_  ºËI  IÏ  Ì  I:     I  ¥I_  ¥I  IÓ  Ô  I:     I  ∂I_  ºËI  I  9 9 8 :
+ æJ˘   9 À(‚   #  £$ ‹ Ê# C   È‰ @Ê@Ç ∞ˆ Ë Í@Ï@Ó@ ¸ “ ⁄ – ¬ Ã   ˛ Ä ™ ÚCå † Ç æ¡æ¡æ¡^ 8 !  «¥»8 ^ ^ ΩS   æ Q¯    Õg ?  8 !  ¡¿=?   æ?˘  ¿=?   æ?˙  ¿=?   æ?˚  ¿=?   æ?¸  ¿=?   æ?D   ¿=?   æ	?˙  ¿=?   æ
+?˚  ¿=?   æ?˝  ¿=?   æ?¸  ¿=?   æ?D   8 æ?  8 æ?˛  )‚t O&  #
+! 
+     D     F î0function () {
   "use strict";
   var pending = new Map();
   var nextCall = 1;
+
+  // Native conversion is also useful to guest applications enforcing byte
+  // limits. It grants no host access and keeps large resources byte-sized.
+  globalThis.TextEncoder = class TextEncoder {
+    encode(value = "") {
+      return new Uint8Array(__utf8Encode(String(value).toWellFormed()));
+    }
+  };
+  const encoder = new TextEncoder();
 
   // Byte storage must stay byte-sized even when a project contains megabytes
   // of text or images. A JS number array multiplies that memory cost.
@@ -361,10 +393,11 @@ namesrowscolumnsDstore result exceeds its row limitmapJdatabase result exceed
     } while (value);
   };
   Writer.prototype.text = function (value) {
-    var text = unescape(encodeURIComponent(value));
-    this.uint(text.length);
-    this.reserve(text.length);
-    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
+    var bytes = encoder.encode(value);
+    this.uint(bytes.length);
+    this.reserve(bytes.length);
+    this.bytes.set(bytes, this.at);
+    this.at += bytes.length;
   };
   Writer.prototype.value = function (value, depth) {
     depth = depth || 0;
@@ -421,13 +454,11 @@ namesrowscolumnsDstore result exceeds its row limitmapJdatabase result exceed
     return value;
   };
   Reader.prototype.text = function () {
-    var bytes = this.take(this.uint()), chunks = [];
-    // Bounded native calls avoid repeated concatenation of a growing string
-    // and do not put a whole project on the interpreter's argument stack.
-    for (var index = 0; index < bytes.length; index += 2048) {
-      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
-    }
-    return decodeURIComponent(escape(chunks.join("")));
+    var length = this.uint();
+    if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
+    var text = __utf8Decode(this.bytes.subarray(this.at, this.at + length));
+    this.at += length;
+    return text;
   };
   Reader.prototype.value = function (depth) {
     depth = depth || 0;
@@ -491,30 +522,39 @@ namesrowscolumnsDstore result exceeds its row limitmapJdatabase result exceed
       function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }
     );
   };
-}CÍ        «√8  º ! ?˛  √≥?ˇ  )‰("%*Efunction Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }C   _d  ‹       ⁄ »œƒ=˛  Áƒ=ˇ  ú¢Ë)8  8 >   ƒ=ˇ  œõƒ=˛  Áµò$ ! À>F   ƒ=˛  >  ≥ƒ=ˇ  $ $ ƒ√?˛  )‰8))@7 I1 %"'Êfunction (length) {
+}@    %à  àˇˇˇˇ †  ¸ “ ^  œËø◊«8  8 8 œÌ>ˇ  $  Ì! (‚?5)cencode(value = "") {
+      return new Uint8Array(__utf8Encode(String(value).toWellFormed()));
+    }@       ˆ «+d  Ë√$  )‚class TextEncoder {
+    encode(value = "") {
+      return new Uint8Array(__utf8Encode(String(value).toWellFormed()));
+    }
+  }CÍ        «√8  º ! ?   √≥?  )‚("%*Efunction Writer() { this.bytes = new Uint8Array(1024); this.at = 0; }C   _d  ‹       ⁄ »œƒ=   Áƒ=  ú¢Ë)8  8 >  ƒ=  œõƒ=   Áµò$ ! À>F   ƒ=   >  ≥ƒ=  $ $ ƒ√?   )‚8))@7 I1 %"'Êfunction (length) {
     if (length <= this.bytes.length - this.at) return;
     var next = new Uint8Array(Math.max(this.at + length, this.bytes.length * 2));
     next.set(this.bytes.subarray(0, this.at));
     this.bytes = next;
-  }C    #à    «√>¯  ¥$ √=˛  √>ˇ  è?ˇ  œF)‰+  %Nfunction (value) {
+  }C    #à    «√>˘  ¥$ √=   √>  è?  œF)‚+  %Nfunction (value) {
     this.reserve(1);
     this.bytes[this.at++] = value;
-  }C   Uà  Ú     – ¬ ⁄ »8  >  œ$ îÈœ≥°Ë8   ! 0œºÄ ö«8 >  œºÄ ô$ ”ƒ>˘  √œËºÄ Í≥≠$ œÈ“)‰2!*/%	C#/ˇfunction (value) {
+  }C   Uà  Ù     – ¬ ⁄ »8  >  œ$ îÈœ≥°Ë8   ! 0œºÄ ö«8 >  œºÄ ô$ ”ƒ>˙  √œËºÄ Í≥≠$ œÈ“)‚2!*/%	C#/ˇfunction (value) {
     if (!Number.isSafeInteger(value) || value < 0) throw new TypeError("invalid integer");
     do {
       var byte = value % 128;
       value = Math.floor(value / 128);
       this.byte(byte | (value ? 128 : 0));
     } while (value);
-  }C   Oà  ˆ   ∂    ¸ ˛ …8  8 œÌÌ«≈>˙  √Á$ ≈>¯  √Á$ ≥»ƒ√Á°Ë#≈=˛  ≈>ˇ  è?ˇ  √>  ƒ$ FëÍŸ)‰>&%		
-0 %UÎfunction (value) {
-    var text = unescape(encodeURIComponent(value));
-    this.uint(text.length);
-    this.reserve(text.length);
-    for (var index = 0; index < text.length; index++) this.bytes[this.at++] = text.charCodeAt(index);
-  }C   ∑à  å  é   ê  í    ¬ –   Ã    –È≥ÿª £Ë8  
-  ! 0œÒË∆>˘  ≥% œ	©Ë∆>˘  ¥% œ
-©Ë∆>˘  µ% œïJ   ©ËE8 >  œ$ îË8    ! 0∆>˘  œ≥§Ë∂Í∑$ ∆>˙  œ≥§ËœÍœä¥ú% œïL   ©Ë∆>˘  ∏$ ∆>˚  œ% œ8 •ËI∆>˘  π$ ∆>˙  œÁ$ ∆>¯  œÁ$ ∆=˛  >F   œ∆=ˇ  $ ∆>ˇ  œÁõ?ˇ  )8 >  œ$ Ë2∆>˘  ∫$ ∆>˙  œÁ$ œ{Í«∆>D   √–¥õ$ ~ ËÓÇ)œËf8 >c   œ$ 8 =?   ©ËO8 >  œ$ »∆>˘  ª$ ∆>˙  ƒÁ$ ƒ{Í…∆>˚  ≈≥C$ ∆>D   ≈¥C–¥õ$ ~ ËﬂÇ)8    ! 0‰é & /%* , !* 0 &/%C%Y/  
+  }C   Là  Ä     Ë »d  >¯  œ$ «ƒ>˚  √Á$ ƒ>˘  √Á$ ƒ=   >F   √ƒ=  $ ƒ>  √Áõ?  )‚6#
+
+
+
+ªfunction (value) {
+    var bytes = encoder.encode(value);
+    this.uint(bytes.length);
+    this.reserve(bytes.length);
+    this.bytes.set(bytes, this.at);
+    this.at += bytes.length;
+  }C   ∑à  é  ê   í  î    ¬ –   Ã    –È≥ÿª £Ë8    ! 0œÒË∆>˙  ≥% œ	©Ë∆>˙  ¥% œ
+©Ë∆>˙  µ% œïJ   ©ËE8 >  œ$ îË8    ! 0∆>˙  œ≥§Ë∂Í∑$ ∆>˚  œ≥§ËœÍœä¥ú% œïL   ©Ë∆>˙  ∏$ ∆>¸  œ% œ8 •ËI∆>˙  π$ ∆>˚  œÁ$ ∆>˘  œÁ$ ∆=   >F   œ∆=  $ ∆>  œÁõ?  )8 >  œ$ Ë2∆>˙  ∫$ ∆>˚  œÁ$ œ{Í«∆>D   √–¥õ$ ~ ËÓÇ)œËf8 >c   œ$ 8 =?   ©ËO8 >	  œ$ »∆>˙  ª$ ∆>˚  ƒÁ$ ƒ{Í…∆>¸  ≈≥C$ ∆>D   ≈¥C–¥õ$ ~ ËﬂÇ)8    ! 0‚é*& /%* , !* 0 &/%C%Y/  
  !U" 
 
 
@@ -561,11 +601,11 @@ namesrowscolumnsDstore result exceeds its row limitmapJdatabase result exceed
       return;
     }
     throw new TypeError("unsupported value");
-  }CÏ   ¸    «√œ?˛  √≥?ˇ  )‰
-A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C     4  ¬ «√=ˇ  √=˛  Á§Ë8    ! 0√=˛  √>ˇ  è?ˇ  C(‰B @/%- %!Åfunction () {
+  }CÏ   Ä    «√œ?   √≥?  )‚
+K2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C     4  ¬ «√=  √=   Á§Ë8    ! 0√=   √>  è?  C(‚L @/%- %!Åfunction () {
     if (this.at >= this.bytes.length) throw new TypeError("truncated value");
     return this.bytes[this.at++];
-  }C     Dà   û  ∂  Ú    ¬ ¡≥«¥»≥…≈ª°Ë)¿>˘  $   √∆ª´ƒòõ«∆ºÄ ´îË√(ƒºÄ ò»ëÍ”8    ! 0‰6F
+  }C     Dà   †  ∂  Ù    ¬ ¡≥«¥»≥…≈ª°Ë)¿>˙  $   √∆ª´ƒòõ«∆ºÄ ´îË√(ƒºÄ ò»ëÍ”8    ! 0‚6P
 
 
  
@@ -578,29 +618,20 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
       scale *= 128;
     }
     throw new TypeError("integer is too long");
-  }C   Md  à     ¬ »œƒ=˛  Áƒ=ˇ  ú£Ë8    ! 0ƒ=˛  >  ƒ=ˇ  ƒ=ˇ  œõ$ «ƒ>ˇ  œõ?ˇ  √(‰0P#'R/%3  ##!”function (length) {
+  }C   Md  à     ¬ »œƒ=   Áƒ=  ú£Ë8    ! 0ƒ=   >  ƒ=  ƒ=  œõ$ «ƒ>  œõ?  √(‚0Z#'R/%3  ##!”function (length) {
     if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
     var value = this.bytes.slice(this.at, this.at + length);
     this.at += length;
     return value;
-  }C   
-  f¸   ¶  ∂    “ Ä	 Ç
-  ∆>¸  ∆>˙  $  $ «&  »≥…≈√Á°Ë2ƒ>  8  =  >^   √>  ≈≈º õ$ $ $ º íÍ 8 8 ƒ>_   ø$ Ì# ‰BV 
-B7
-
-/ 
-)3F(Q& 
-?¥function () {
-    var bytes = this.take(this.uint()), chunks = [];
-    // Bounded native calls avoid repeated concatenation of a growing string
-    // and do not put a whole project on the interpreter's argument stack.
-    for (var index = 0; index < bytes.length; index += 2048) {
-      chunks.push(String.fromCharCode.apply(null, bytes.subarray(index, index + 2048)));
-    }
-    return decodeURIComponent(escape(chunks.join("")));
-  }C   ∫å  ¨   d  ñ  ∂  Æ    ¬   ¡œÈ≥◊ª £Ë8  
-  ! 0¿>˘  $  À≥©Ë(√¥©Ë	(√µ©Ë
-(√∂©Ë¿>˙  %  √∑©Ë¿>˙  $  ä¥ú(√∏©Ë¿>˚  %  √π©Ë¿>¸  ¿>˙  $  % √∫©Ë4&  …¿>˙  $  »≥ ∆ƒ°Ë≈>  ¿>D   œ¥õ$ $ ëÍ·≈(√ª©Ëi…¿>˙  $  »≥ ∆ƒ°ËS¿>˚  $  ¬H   ©È8 =?   =  >  ≈¿$ Ë8    ! 0≈¿¿>D   œ¥õ$ FëÍ™≈(8    √õ! 0‰»_& /%
+  }C     Zd   ¯    ¬ ˛ …≈>˚  $  À≈=   Á≈=  ú£Ë8    ! 08 ≈=   >  ≈=  ≈=  √õ$ Ì»≈>  √õ?  ƒ(‚8`	
+#'R/%="  #'!˙function () {
+    var length = this.uint();
+    if (length > this.bytes.length - this.at) throw new TypeError("truncated bytes");
+    var text = __utf8Decode(this.bytes.subarray(this.at, this.at + length));
+    this.at += length;
+    return text;
+  }C   ∫é  ®   d  î  ∂  ™    ¬   ¡œÈ≥◊ª £Ë8    ! 0¿>˙  $  À≥©Ë(√¥©Ë	(√µ©Ë
+(√∂©Ë¿>˚  %  √∑©Ë¿>˚  $  ä¥ú(√∏©Ë¿>¸  %  √π©Ë¿>˝  ¿>˚  $  % √∫©Ë4&  …¿>˚  $  »≥ ∆ƒ°Ë≈>  ¿>D   œ¥õ$ $ ëÍ·≈(√ª©Ëi…¿>˚  $  »≥ ∆ƒ°ËS¿>¸  $  ¬H   ©È8 =?   =  >  ≈¿$ Ë8    ! 0≈¿¿>D   œ¥õ$ FëÍ™≈(8    √õ! 0‚»g& /%
 
 
 
@@ -643,22 +674,24 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
       return result;
     }
     throw new TypeError("unknown value type " + type);
-  }CÓ  *à  ∏   Í  Ñ €!  À>D   œ$ 8 √=˛  >  ≥√=ˇ  $ Ì)‰}&- +áfunction send(value) {
+  }CÓ  *à  ∂   Í  Ä	 €!  À>D   œ$ 8 √=   >  ≥√=  $ Ì)‚Ö&- +áfunction send(value) {
     var writer = new Writer();
     writer.value(value);
     __hostSend(writer.bytes.subarray(0, writer.at));
-  }C ∫@º@∏@∂  @Ê   Ó  Ë  ™ ›è·«8 æ ! (‰Ç #◊function (device, operation, input) {
+  }C ∏@∫@∏@¥  @‰   Ó  Ê  ™
+ ›è·«8 æ ! (‚ä #◊function (device, operation, input) {
     var id = nextCall++;
     return new Promise(function (resolve, reject) {
       pending.set(id, [resolve, reject]);
       send([2, id, device, operation, input]);
     });
-  }C    ä  å  Ê  ∂   Ó ∫  º ∏ €>F   ‹œ–& $ ›µ‹ﬁ[ [ & Ì)‰Ñ!
+  }C    ä  å  ‰  ¥   Ó ∏  ∫ ∏ €>F   ‹œ–& $ ›µ‹ﬁ[ [ & Ì)‚å!
 
  7{function (resolve, reject) {
       pending.set(id, [resolve, reject]);
       send([2, id, device, operation, input]);
-    }C 	Õ¸  æ   l @¿  Ó  “ Ï    Ã ¬ Ê   ÚC™ ›8 œ! ! À>D   $  »√=ˇ  √=˛  Á™È8 >  ƒ$ îË8 !  ! 0ƒ≥C∂©ËB[ >E   ƒ¥C$ ÕîË8 "  ! 0[ >	   ƒ¥C$ ƒµCË≈≥CÍ≈¥Cƒ∂C# ƒ≥C≥™È7 ï   ™Ë8 #  ! 08 >Ö   8 ƒµCÌ$ >Ñ   æ æ% ‰Öâ8
+    }C 	ÕÄ  º   l @æ  Ó  “ Ï    Ã ¬ ‰   ÚC™
+ ›8 œ! ! À>D   $  »√=  √=   Á™È8 >  ƒ$ îË8    ! 0ƒ≥C∂©ËB[ >E   ƒ¥C$ ÕîË8 !  ! 0[ >	   ƒ¥C$ ƒµCË≈≥CÍ≈¥Cƒ∂C# ƒ≥C≥™È7 ï   ™Ë8 "  ! 08 >Ö   8 ƒµCÌ$ >Ñ   æ æ% ‚Öë8
 !U/%	
 10/%%
 } 0?/%	
@@ -681,9 +714,9 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
       function (result) { send([1, message[1], result]); },
       function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }
     );
-  }C    ñ  Ó  l  €¥‹¥Cœ& Ì)‰ô(
-!4function (result) { send([1, message[1], result]); }C    '»  Ó  l  “ €¥‹¥CºÙ&  8 œËœ=6   ÈœÌ& & Ì)‰ö&%
-/5%A_function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }C Ï   l  Œ 8  %  œõ! 0‰§ R/:+Qfunction policyFail(message) { throw new Error("resources policy: " + message); }C Ó  zﬁ  Ã  ∂   à  Ã ÏCÜ ⁄  œ8  •îÈœÁ–™Ë8 '  Ì≥«√œÁ°ËXœ√CÃÒÈMƒïL   ™ËCƒïK   ™Ë9ƒïJ   ©Ë8 ƒÌË8 >  ƒ$ ƒ©îËƒ8 •îË8 (  Ìë Í§)‰V¶ $ *[*
+  }C    î  Ó  l  €¥‹¥Cœ& Ì)‚°(
+!4function (result) { send([1, message[1], result]); }C    '∆  Ó  l  “ €¥‹¥CºÙ&  8 œËœ=6   ÈœÌ& & Ì)‚¢&%
+/5%A_function (error) { send([1, message[1], [500, [], String(error && error.message || error)]]); }C Ï   l  Œ 8  $  œõ! 0‚¨ R/:+Qfunction policyFail(message) { throw new Error("resources policy: " + message); }C Ó  zﬁ     ∂   à  Ã ÏCÑ ⁄  œ8  •îÈœÁ–™Ë8 &  Ì≥«√œÁ°ËXœ√CÃÒÈMƒïL   ™ËCƒïK   ™Ë9ƒïJ   ©Ë8 ƒÌË8 >  ƒ$ ƒ©îËƒ8 •îË8 '  Ìë Í§)‚VÆ $ *[*
 &/.0e9 É"0*  Öfunction policyValues(values, count) {
   if (!(values instanceof Array) || values.length !== count) {
     policyFail("SQL operation has invalid values");
@@ -694,15 +727,16 @@ A2 ;function Reader(bytes) { this.bytes = bytes; this.at = 0; }C    
         !(typeof value === "number" && isFinite(value) && Math.floor(value) === value) &&
         !(value instanceof Uint8Array)) policyFail("SQL operation value is not supported");
   }
-}C   1t  ﬁ  “   Ê  ÏCÓC8  œCÀîË8 *  œõ+  õÌ8 –√=  È&  ÁÓ√(‰%≤ "/*< 11>$G	Ífunction policyOperation(name, values) {
+}C   1t  ﬁ  –   Ê  ÏCÓC8  œCÀîË8 )  œõ*  õÌ8 –√=  È&  ÁÓ√(‚%∫ "/*< 11>$G	Ífunction policyOperation(name, values) {
   var selected = SQL_OPERATIONS[name];
   if (!selected) policyFail("SQL operation " + name + " is not allowed");
   policyValues(values, (selected.parameters || []).length);
   return selected;
 }C Ú	  ‚
-∏  ÿ   ⁄  ‹  ﬁ  ‡  ∂  ≤  “  º  Ã ÏCË ÓCÍ Cœ8  •îÈœÁ∂™Èœ¥CïL   ™Ë8 1  Ìœ≥C2  ©h+  œ¥C3  ©Ë{œµC8  •îÈœµCÁµ™ÈœµC≥CïL   ™Ë8 4  Ì8 œµC≥CCÀîË8 5  Ì8 œµC¥C√=`  Ó
-I6  √I  9 µ7  √=  œµC& (œ¥C8  ©hé   œµC8  •îÈœµCÁîË8 9  Ì≥»ƒœµCÁ°ËFœµCƒCÕ8  •Ë	8 ≈≥CCŒîÈ∆=    ™Ë8 :  Ì8 ≈¥C∆=`  ÓëÍ¥
-I;  9 µ7  8  œµC& (8 <  Ìœ≥C  ™Ë8 =  Ìœ¥C8  ©h∑   œµC8  •îÈœµCÁîË8 >  Ì&  ¡≥¡¿œµCÁ°ËeœµC¿C¬8  •îÈ¿Áµ™Ë8 ?  Ì8 ¿≥C¿¥CÓ¬=    ™Ë8 @  Ì¿>  ¿=  ¿¥C& $ ëÍî8  I  9 µ7  8  ¿& (8 œ¥CœµCÓ¬9 µ7  ¿=  ¿=  œµC& & (‰Áπ " *
+∏  ÷   ÿ  ⁄  ‹  ﬁ  ∂  ∞  –  ∫  Ã ÏCË ÓCÍ Cœ8  •îÈœÁ∂™Èœ¥CïL   ™Ë8 0  Ìœ≥C1  ©h+  œ¥C2  ©Ë{œµC8  •îÈœµCÁµ™ÈœµC≥CïL   ™Ë8 3  Ì8 œµC≥CCÀîË8 4  Ì8 œµC¥C√=_  Ó
+I5  √I  9 µ6  √=  œµC& (œ¥C7  ©hé   œµC8  •îÈœµCÁîË8 8  Ì≥»ƒœµCÁ°ËFœµCƒCÕ8  •Ë	8 ≈≥CCŒîÈ∆=    ™Ë8 9  Ì8 ≈¥C∆=_  ÓëÍ¥
+I:  9 µ6  7  œµC& (8 ;  Ìœ≥C  ™Ë8 <  Ìœ¥C7  ©h∑   œµC8  •îÈœµCÁîË8 =  Ì&  ¡≥¡¿œµCÁ°ËeœµC¿C¬8  •îÈ¿Áµ™Ë8 >  Ì8 ¿≥C¿¥CÓ¬=    ™Ë8 ?  Ì¿>  ¿=  ¿¥C& $ ëÍî7  I
+  9 µ6  7  ¿& (8 œ¥CœµCÓ¬9 µ6  ¿=  ¿=  œµC& & (‚Á¡ " *
  
 0â*
  !
@@ -781,7 +815,7 @@ I;  9 µ7  8  œµC& (8 <  Ìœ≥C  ™Ë8 =  Ìœ¥C8  ©h∑   œµC8  •
   var operation = policyOperation(input[1], input[2]);
   policyPending = operation;
   return [2, "database", operation.kind, [operation.sql, input[2]]];
-}C Ù   Qà  å  – ‘ “ –J   ©Ë8  œ# –-  ©ËœÒË(8  œÌ(–K   ©Ë8 œ# –+  ©Ë8 œÈø# 8 œ# ‰7È  
+}C Ù   Qà  ä  – ‘ “ –J   ©Ë8  œ# –,  ©ËœÒË(8  œÌ(–K   ©Ë8 œ# –*  ©Ë8 œÈø# 8 œ# ‚7Ò  
 *% 
 <$I7 
 ,' 
@@ -792,7 +826,14 @@ I;  9 µ7  8  œµC& (8 <  Ìœ≥C  ™Ë8 =  Ìœ¥C8  ©h∑   œµC8  •
   if (kind === "string-empty") return String(value || "");
   return String(value);
 }C ˆ    
-à  û   œ& (‰Ò Z6function policyResult(value) { return ["ok", value]; }C ¯÷º  ñ  “   Ç	 @Ñ	  Ü	@– ÏCÙCÍ Œ “ ˆCÃ œîË9 8 8 –Ì! 08 «9 √=;  Ë8 –# √=6  ËC–¥C8 •îÈ%√=  =    ©Ë–¥CÁ√=  =	  £Ë8 D  Ì8 –# √=  8  ©Ë8 –>E  æ $ # –≥C»–¥CÕ8 •îÈ≈Á√=	  È≥£Ë√=    ©Ë8 F  Ì√=    ©Ë8 8  –µCÌÈ≥& # √=    ©Ë8 ≈ÁË¥& Í&  # √=  8 •Ë√=  ≥CïL   ©Ë√=  & Í√=   8 ≈>E  æ$ # ‰…Û  @#!%8'9& *4q'<*k'4%;  *4:4©*4./5?4*>/'&6 0ç4'		%7Í
+à  û   œ& (‚˘ Z6function policyResult(value) { return ["ok", value]; }C ¯÷º  î  –   Ä	 @Ç	  Ñ	@– ÏCÙCÍ Œ “ ˆCÃ œîË9 8 8 –Ì! 08 «9 √=:  Ë8 –# √=5  ËC–¥C8 •îÈ%√=  =    ©Ë–¥CÁ√=  =  £Ë8 C  Ì8 –# √=
+  7  ©Ë8 –>D  æ $ # –≥C»–¥CÕ8 •îÈ≈Á√=  È≥£Ë√=    ©Ë8 E  Ì√=
+    ©Ë8 8  –µCÌÈ≥& # √=
+    ©Ë8 ≈ÁË¥& Í&  # √=
+  8 •Ë√=
+  ≥CïL   ©Ë√=
+  & Í√=
+   8 ≈>D  æ$ # ‚…˚  @#!%8'9& *4q'<*k'4%;  *4:4©*4./5?4*>/'&6 0ç4'		%7Í
 function serverResume(ok, result) {
   if (!ok) { policyPending = null; throw new Error(String(result)); }
   var selected = policyPending;
@@ -822,21 +863,21 @@ function serverResume(ok, result) {
       return converted(row[index], column[1]);
     });
   }));
-}C     é  –  8  œÌÈ≥(‰˛#2 -function (item) { return Number(item) || 0; }C   é	 @Ç	  ÏCÙCÜ	  ﬁ>E  æ % ‰	â'%Èfunction (row) {
+}C     ê  –  8  œÌÈ≥(‚Ü#2 -function (item) { return Number(item) || 0; }C   å	 @Ä	  ÏCÙCÑ	  ﬁ>D  æ % ‚	ë'%Èfunction (row) {
     return columns.map(function (column) {
       var index = names.indexOf(column[0]);
       if (index < 0) policyFail("database result lacks " + column[0]);
       return converted(row[index], column[1]);
     });
-  }C    +ê	  ∂   Ç	  ÏCÙCé	  €>I  œ≥C$ À≥°Ë8 J  œ≥CõÌ8 ﬁ√Cœ¥C# ‰)ä	
+  }C    +é	  ∂   Ä	  ÏCÙCå	  €>H  œ≥C$ À≥°Ë8 I  œ≥CõÌ8 ﬁ√Cœ¥C# ‚)í	
 )
 *L3#Eªfunction (column) {
       var index = names.indexOf(column[0]);
       if (index < 0) policyFail("database result lacks " + column[0]);
       return converted(row[index], column[1]);
-    }b    n∏  ñ  †à †» É˙
- Ã à ¯	C“ ^  8  œÌ«8 >  _  $ ËR_  ≥Cµ©ËI^ »k   8 _  ¥C_  µC_  ∂CÔâ` Í…k   8 	8 ≈ÌÓ`  ÍÆ08 
-_ Ó`  Í†_  /‰=ñ 
+    }b    n∏  î  †à †∆ É˙
+ Ã Ü ¯	C“ ^  8  œÌ«8 >  _  $ ËR_  ≥Cµ©ËI^ »k   8 _  ¥C_  µC_  ∂CÔâ` Í…k   8 	8 ≈ÌÓ`  ÍÆ08 
+_ Ó`  Í†_  /‚=û 
 F/
 
 9J(-&"Êasync function (input) {
