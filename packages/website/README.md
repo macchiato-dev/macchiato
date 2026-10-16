@@ -543,7 +543,7 @@ project paths. The checked-in `content-space/` is the development fixture; use
 an external checkout in a deployment build with:
 
 ```sh
-RESOURCES_CONTENT_ROOT=/srv/resources-content ./scripts/build-resources-bunny.sh
+RESOURCES_CONTENT_ROOT=/srv/resources-content deno run -A scripts/build-resources-bunny.js
 ```
 
 For example, the Spanish description for `/macchiato/app` is read from
@@ -575,32 +575,33 @@ the edge security headers.
 
 ## Bunny deployment
 
-For a reproducible local build:
+Build without credentials, then deploy from a separate key-bearing container;
+[`deploy/bunny/README.md`](../../deploy/bunny/README.md) covers both steps:
 
 ```sh
-./scripts/build-resources-bunny.sh
+deno run -A scripts/build-resources-bunny.js
 ```
 
 The editor and frontend build commands regenerate their QuickJS/MicroQuickJS
 guest environments from source. The runtime builder's `--environments-only`
 mode skips standalone demo applications and fixtures; it must not be replaced
 with a dependency on whichever generated facade happens to be in the checkout.
+The build ends by re-hashing its inventory and checking the release structure.
 
-Verify the resulting inventory and run the exported backend artifact in Deno
-before uploading. Substitute the build's seven-character revision below:
+Run the exported backend artifact in Deno before deploying. Substitute the
+build's seven-character revision below:
 
 ```sh
-node scripts/verify-resources-bunny-build.js dist/resources-bunny
 node --test packages/website/test/*.test.js
 deno test --config packages/website/deno.json --allow-read \
   packages/website/test/bunny-machine-artifact.test.ts -- \
-  dist/resources-bunny/site/resources-co-REVISION/machines/backend.bin
+  dist/resources-bunny/release/site/resources-co-REVISION/machines/backend.bin
 deno test --allow-read --allow-env \
   packages/website/test/bunny-entry-artifact.test.ts -- \
-  dist/resources-bunny
+  dist/resources-bunny/release
 deno test --allow-read --allow-env \
   packages/website/test/bunny-deferred-artifact.test.ts -- \
-  dist/resources-bunny
+  dist/resources-bunny/release
 ```
 
 The Deno smoke test decompresses the actual upload, compiles both runtimes,
@@ -633,16 +634,19 @@ This produces one reviewed Edge script and the validated Storage objects:
 
 ```text
 dist/resources-bunny/
-  deployment.json                    hashes and roles for every build artifact
-  edge/script.ts                     conventional Bunny upload entry
-  site/resources-co-<sha>/
-    manifest.json
-    machines/backend.bin              private runtime and backend bytecode bundle
-    ...published site objects
+  Containerfile                      narrow deployment image
+  bunny-deploy                       compiled deploy client
+  release/
+    deployment.json                  size and SHA-256 of every release file
+    edge/script.ts                   Bunny Edge Script code
+    site/resources-co-<sha>/
+      manifest.json
+      machines/backend.bin            private runtime and backend bytecode bundle
+      ...published site objects
 ```
 
 The browser and server sources use the same scoped names. The Bunny build
-bundles `backend/controller.ts` and its generated `machine.js` into the single
+bundles `backend/controller.ts` and `backend/machine.ts` into the single
 published `edge/script.ts` artifact.
 
 Both runnable Edge forms embed the seven-character Git revision used by the
@@ -659,8 +663,8 @@ them through `Accept-Encoding` and returns the original MIME type with
 `Content-Encoding: gzip`; browser URLs and streaming compilation stay unchanged.
 Local resources-edge uses the same preparation and negotiation. This does not
 enable caching or compress user/API responses. Upload the complete export,
-including the variants; the deployment verifier checks that each decompresses
-to its original asset. No additional environment variable is needed.
+including the variants; the build checks that each decompresses to its
+original asset. No additional environment variable is needed.
 
 The Resources application and its SQL policy run in separate Wasm machines.
 Application `sql` messages are forwarded to the policy machine, which owns the
@@ -732,16 +736,13 @@ plan, signed tokens, and localized messages, then performs all dynamic region
 composition. Consequently the host coordinates storage, authentication, and
 machine messages without carrying the page-kind switch or direct store calls.
 
-### Update an existing staging deployment manually
+### Update an existing staging deployment
 
-1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co ./scripts/build-resources-bunny.sh`.
-2. Upload the *contents* of `dist/resources-bunny/site/` to the Storage zone
-   root. This creates the revisioned directory already embedded in the
-   function. Upload its `manifest.json` last, then keep older revisioned
-   directories until the new function is deployed and verified.
-3. Replace the staging Edge Script contents with
-   `dist/resources-bunny/edge/script.ts`, then save and deploy it.
-4. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
+1. Run `BLOG_EXAMPLES_ORIGIN=https://staging-blog-examples.resources.co deno run -A scripts/build-resources-bunny.js`.
+2. Build and run the deployment image with the staging Storage zone and Edge
+   Script IDs, as in [`deploy/bunny/README.md`](../../deploy/bunny/README.md).
+   Older revisioned Storage directories remain available for rollback.
+3. Purge the staging Pull Zone cache and check `/`, `/projects/new`, `/blog`,
    and both locale choices before testing OAuth.
 
 For cacheable anonymous HTML, configure Bunny's cookie vary list with
@@ -752,14 +753,12 @@ with a valid session remain `private, no-store`; do not override that policy
 with a broad HTML cache rule. Immutable scripts, styles, fonts, and example
 assets may retain their long public lifetime.
 
-1. Build the deployment and upload the *contents* of
-   `dist/resources-bunny/site/` to the root of a private Bunny Storage zone.
-   The build-created revision directory is part of every uploaded object key.
-2. Create one Bunny standalone Edge Script from
-   `dist/resources-bunny/edge/script.ts`. The authored TypeScript controller is
-   `packages/website/backend/controller.ts`; the build bundles its machine and
-   embedded compressed runtime into the single Set Code artifact.
-3. Configure the main Resources.co script with:
+### First Edge Script setup
+
+1. Create a private Bunny Storage zone and an empty standalone Edge Script.
+2. Build and deploy once with their IDs, as above. The deploy client uploads
+   the revisioned Storage directory and sets the script's code.
+3. Configure the Resources.co script with:
 
    - `BUNNY_STORAGE_ORIGIN`: HTTPS Storage API origin, including the zone path
      if required by the selected endpoint.
@@ -855,24 +854,13 @@ from the `benatkin`, `resources`, and `macchiato` namespaces. This does not make
 other public projects private: their direct namespace/project URLs continue to
 work, and account project lists remain complete.
 
-Deployment is manual; this repository does not contain a Bunny deployment
-workflow. Build and package without deployment credentials. Before uploading,
-`scripts/verify-resources-bunny-build.js` re-hashes the complete
-deployment inventory, verifies the revision embedded in the Edge controller,
-requires both private machines, and proves that neither machine entered the
-public site manifest. Upload the revisioned Storage artifacts with the manifest
-last, then deploy the matching standalone script. Keep staging and production
-credentials separate. The existing Storage upload script uses:
-
-| Kind | Name |
-| --- | --- |
-| Upload credential | `BUNNY_STORAGE_UPLOAD_KEY` |
-| Upload destination | `BUNNY_STORAGE_UPLOAD_ORIGIN` |
-
-The upload key belongs only in the deployment step. The Edge Script receives
-a separate read-only `STORAGE_API_KEY` through Bunny. A deployment container
-must remain a narrow, Fedora-based, Podman-compatible client: builds, packaging,
-and development servers stay outside it and do not receive its credentials.
+Deployment uses the narrow image described in
+[`deploy/bunny/README.md`](../../deploy/bunny/README.md). It receives only the
+Bunny account API key, re-verifies the release inventory, uploads the
+revisioned Storage objects with the manifest last, then sets and publishes the
+Edge Script code. Builds, packaging, and development servers stay outside it
+and never receive the key. The Edge Script receives a separate read-only
+`STORAGE_API_KEY` through Bunny.
 
 For staging, create a separate Storage prefix, Edge Script, and Bunny Database;
 do not point the staging script at production state. In the staging script set
