@@ -98,7 +98,6 @@ const site = `${release}/site/${storagePrefix(revision)}`;
 await Deno.remove(out, { recursive: true }).catch((error) => {
   if (!(error instanceof Deno.errors.NotFound)) throw error;
 });
-await Deno.mkdir(`${site}/machines`, { recursive: true });
 await Deno.mkdir(`${release}/edge`, { recursive: true });
 
 for (const example of ["vtv", "markdown-editor"]) {
@@ -112,6 +111,8 @@ for (const builder of ["build-project-editor", "build-resources-frontend",
   await run("node", `${website}/${builder}.js`);
 }
 await run("node", `${website}/export-static.js`, "--out", site);
+// The exporter replaces its output directory, so add the private machine after it.
+await Deno.mkdir(`${site}/machines`);
 await Deno.copyFile(`${website}/generated/resources-backend.bin`, `${site}/machines/backend.bin`);
 await buildEdgeScript(revision);
 

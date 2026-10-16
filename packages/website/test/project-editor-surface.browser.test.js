@@ -37,7 +37,7 @@ test("editor surface keeps commands, input, themes and languages in its document
   const shell = (await readFile(join(website, "project-editor-frame.html"), "utf8"))
     .replace("/* PROJECT_EDITOR_FRAME_CONTROLLER */", () => frameController);
   const machine = await readFile(join(root, "dev/wasm-web-machine/dist/module/machine.js"));
-  const styles = await readFile(join(website, "seed.js"), "utf8");
+  const styles = await readFile(join(website, "site.css"), "utf8");
   const palettes = styles.split("\n").filter(line =>
     /^(?:html\[data-theme="light"\] )?\.project-editor__mount \{ --resources-editor-/.test(line)).join("\n");
   assert.equal(palettes.split("\n").length, 2);

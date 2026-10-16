@@ -101,7 +101,7 @@ globalThis.__bulkParseProgress = ${process.env.MACCHIATO_PARSE_PROGRESS === "1"}
   // This isolated editor has no site shell to supply its theme variables.
   // Read the actual light palette, failing if it moves rather than silently
   // recording uncolored text as evidence of correct syntax highlighting.
-  const siteSource = await readFile(join(root, "packages/website/seed.js"), "utf8");
+  const siteSource = await readFile(join(root, "packages/website/site.css"), "utf8");
   const palette = siteSource.match(/html\[data-theme="light"\] \.project-editor__mount \{ (--resources-editor-[^}]+) \}/)?.[1];
   assert.ok(palette, "the Resources editor light palette must be available");
   const methods = (process.env.MACCHIATO_TEST_INPUT_METHODS || "paste,insertText,replaceText").split(",");

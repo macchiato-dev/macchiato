@@ -23,7 +23,10 @@ test("Resources.co runtime profiles select behavior without changing models", ()
   assert.match(routes[0].css, /--accent: #ffb86b/);
   assert.equal(routes[0].transition.mode, "document");
   assert.doesNotMatch(routes[0].html, /<script/);
-  for (const route of routes) assert.equal(route.head, themeBootstrapHtml);
+  // Focused workspace routes also mark the document for first-paint workspace styles.
+  const workspaceMarker = '<meta name="resources-workspace" content="true">\n';
+  for (const route of routes) assert.ok(route.head === themeBootstrapHtml || route.head === workspaceMarker + themeBootstrapHtml, route.path);
+  assert.ok(routes.some((route) => route.head.startsWith(workspaceMarker)));
 });
 
 test("output color schemes accept only the two resolved appearance values", () => {
