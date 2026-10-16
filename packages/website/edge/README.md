@@ -48,7 +48,7 @@ repository route/view models
   -> style-use validates the complete stylesheet
   -> dom-use + html-use strictly sanitize document-profile markup
   -> exporter writes immutable objects and manifest evidence
-  -> operator uploads one export prefix to private Bunny Storage
+  -> deploy image (deploy/bunny) uploads one export prefix, manifest last
   -> build emits a minified Edge entry plus one private backend.bin containing
      the runtime, application, policy, and disposable-worker bytecode
   -> edge validates manifest structure and security profile
@@ -255,8 +255,9 @@ public project paths such as `macchiato/app/es.md`. The in-repo
 
 ## Remaining deployment work
 
-- Add a least-privilege upload job and keep its write credential out of the Edge
-  Script environment.
+- Run the first deployment through `deploy/bunny` against a staging zone and
+  script. Its client takes only the account API key and never shares it with
+  the Edge Script environment.
 - Confirm the chosen Storage endpoint and read credential with a staging zone.
 - Add deployment provenance/signing if the manifest must defend against a
   compromised Storage writer; hashes currently support audit and accidental
