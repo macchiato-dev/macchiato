@@ -93,7 +93,7 @@
       "pattern": "^[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s(?:\\s+(?:ease|linear|ease-in|ease-out|ease-in-out|cubic-bezier\\([0-9.,\\s]+\\)))?(?:\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s)?(?:,\\s*[a-z-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s(?:\\s+(?:ease|linear|ease-in|ease-out|ease-in-out|cubic-bezier\\([0-9.,\\s]+\\)))?(?:\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s)?)*$"
     },
     "animation": {
-      "pattern": "^(?:none|[a-zA-Z0-9_-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s\\s+(?:ease|linear|ease-in|ease-out|ease-in-out)(?:\\s+(?:both|forwards|backwards|infinite|alternate|\\d+)){0,2})$"
+      "pattern": "^(?:none|[a-zA-Z0-9_-]+\\s+(?:\\d+(?:\\.\\d+)?|\\.\\d+)s\\s+(?:ease|linear|ease-in|ease-out|ease-in-out|cubic-bezier\\([0-9.,\\s]+\\))(?:\\s+(?:both|forwards|backwards|infinite|alternate|\\d+)){0,2})$"
     },
     "time": {
       "pattern": "^(?:\\d+(?:\\.\\d+)?|\\.\\d+)s$"
@@ -821,7 +821,7 @@
     "src": "^/-/fonts/(?:resourcesco-space-grotesk/space-grotesk-(latin|latin-ext|vietnamese)|resourcesco-design/(?:instrument-sans-latin|jetbrains-mono-latin))\\.woff2$"
   },
   "selectors": {
-    "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}]+$"
+    "pattern": "^[A-Za-z0-9\\s.,:#*>+@\\-\\[\\]=\"()/_{}%]+$"
   },
   "limits": {
     "maxStylesheetLength": 128000,

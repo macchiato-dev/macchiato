@@ -149,9 +149,6 @@ body:has(.focused-view) .instant-tooltip {
   font-family: 'Instrument Sans', system-ui, sans-serif;
   font-weight: 400;
 }
-.focused-view .project-editor__pane-loading::after {
-  background: var(--muted);
-}
 .focused-view .project-editor__status {
   border-color: var(--track-border);
   border-radius: 4px;

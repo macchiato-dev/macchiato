@@ -101,7 +101,21 @@ The shared controller adapter is `packages/website/project-fetch.js`.
 The editor surface regression covers input, commands, themes, and languages.
 Mahjong ZIP import/export still renders the modern example. Screenshots were
 inspected for the board, REST Desk in light/dark modes, and the two separate
-loading indicators. The indicators are 38 by 3 pixel opacity pulses, not
-rotating circles; reduced-motion mode reports no animation. All timing and
+loading indicators. All timing and
 screenshot instrumentation stays outside the production controller, under
 `/root/macchiato-work/design-refresh/`.
+
+## Pane loading indicator
+
+The opacity pulse did not read as loading, so each pane now shows a 46 by 32
+pixel frame whose fill grows from the left and then empties toward the right:
+repeating progress rather than rotation. It appears after 150 ms, so fast
+loads do not flash it. With reduced motion, the filled frame only pulses its
+opacity. The frame and fill use the theme's `--track-border` and `--muted`.
+Both are pseudo-elements of the existing `.project-editor__pane-loading`
+overlay, so the markup and its one-indicator-per-pane checks are unchanged.
+
+The style-use schema now allows `cubic-bezier()` animation timing and `%` in
+keyframe step selectors (its parser checks every step after the first as a
+selector). Screenshots of both themes and reduced motion are in
+`/root/macchiato-work/loader-design/`.
